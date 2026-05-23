@@ -1,0 +1,65 @@
+spring:
+  application:
+    name: sqlive-backend
+  datasource:
+    url: jdbc:sqlite:file:playground?mode=memory&cache=shared
+    driver-class-name: org.sqlite.JDBC
+
+logging:
+  level:
+    root: info
+    com.douzi.sqlive: debug
+    org.springframework.web: info
+  file:
+    name: logs/sqlive.log
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 30
+      total-size-cap: 500MB
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"
+
+ai:
+  provider: deepseek
+  providers:
+    deepseek:
+      base-url: https://api.deepseek.com/v1
+      api-key: ${DEEPSEEK_API_KEY:}
+      model: deepseek-v4-flash
+      max-tokens: 4096
+      max-context-tokens: 16384
+      temperature: 1
+    openai-compatible:
+      base-url: http://localhost:1234/v1
+      api-key: ${OPENAI_API_KEY:not-required}
+      model: google/gemma-4-e2b
+      max-tokens: 4096
+      max-context-tokens: 16384
+      temperature: 1
+    lmstudio:
+      base-url: http://localhost:1234
+      api-key: ${LM_STUDIO_API_KEY:not-required}
+      model: ibm/granite-4-micro
+      max-tokens: 4096
+      max-context-tokens: 16384
+      temperature: 1
+      reasoning-effort: "medium"
+    ollama:
+      base-url: http://172.16.1.200:11434
+      api-key: ""
+      model: gemma4:e2b
+      max-tokens: 4096
+      max-context-tokens: 16384
+      temperature: 1
+      reasoning-effort: "true"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

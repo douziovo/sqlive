@@ -1,0 +1,27 @@
+sqlive-backend/gradle
+
+# IDE
+.idea/
+
+# Claude Code
+.claude/worktrees/
+.claude/scheduled_tasks.json
+.claude/settings.local.json
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Root node (if any)
+node_modules/
