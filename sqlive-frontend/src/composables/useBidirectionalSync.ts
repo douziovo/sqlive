@@ -1,0 +1,184 @@
+import type { Ref, WritableComputedRef } from 'vue';
+import type { DatabaseModel, Row } from '../model/DatabaseTypes';
+import { toSqlLiteral, parsePrimaryType } from '../utils/sql';
+import { extractSqlStatements, enforceTypeConstraints, normalizeAndCompare, parseExplicitColumns } from '../utils/sqlStatements';
+import { extractTuplesWithDepth, splitTupleContent } from '../utils/tupleParser';
+
+type EngineMode = 'user' | 'reconciling' | 'rollback';
+
+export function useBidirectionalSync(
+    code: WritableComputedRef<string>,
+    db: DatabaseModel,
+    mode: Ref<EngineMode>,
+    flashCode: (sql: string) => void,
+    transitionFn: (from: EngineMode, to: EngineMode, ctx: string) => EngineMode,
+) {
+    let lastValidCode = code.value;
+
+    const beginReconcile = () => {
+        lastValidCode = code.value;
+        mode.value = transitionFn(mode.value, 'reconciling', 'beginReconcile');
+    };
+
+    const generateValuesTuple = (tableName: string, row: Row, columns: string[]) => {
+        const tableInfo = db.tables.find(t => t.name === tableName);
+        const values = columns.map(colName => {
+            let val = row[colName];
+            const rawType = tableInfo?.columnTypes[colName] || '';
+            val = enforceTypeConstraints(val, rawType);
+            const type = parsePrimaryType(rawType);
+            return toSqlLiteral(val, type);
+        });
+        return `(${values.join(', ')})`;
+    };
+
+    const findTupleInBatch = (stmtText: string, tableName: string, rowData: Row) => {
+        const cleanStmt = stmtText.replace(/--.*$/gm, '');
+        const insertRegex = new RegExp(`INSERT\\s+INTO\\s+(?:[\`"']?)${tableName}(?:[\`"']?)\\b`, 'i');
+        if (!insertRegex.test(cleanStmt)) return null;
+
+        let compareCols: string[] = [];
+        const explicitCols = parseExplicitColumns(cleanStmt);
+        if (explicitCols) {
+            compareCols = explicitCols;
+        } else {
+            const table = db.tables.find(t => t.name === tableName);
+            if (!table) return null;
+            compareCols = table.columns.filter(c => !table.columnTypes[c]?.includes('VIRTUAL'));
+        }
+
+        const tuples = extractTuplesWithDepth(cleanStmt);
+
+        for (const tuple of tuples) {
+            const sqlValues = splitTupleContent(tuple.content);
+
+            if (sqlValues.length !== compareCols.length) continue;
+
+            const isMatch = compareCols.every((col, index) => {
+                const rowVal = rowData[col];
+                const sqlVal = sqlValues[index];
+                return normalizeAndCompare(rowVal, sqlVal);
+            });
+
+            if (isMatch) {
+                const realStart = stmtText.indexOf('(' + tuple.content + ')');
+                if (realStart !== -1) {
+                    const originalTupleStr = '(' + tuple.content + ')';
+                    return { start: realStart, end: realStart + originalTupleStr.length, explicitCols: compareCols };
+                }
+            }
+        }
+        return null;
+    };
+
+    const updateRow = (tableName: string, oldRow: Row, newRowData: Row) => {
+        beginReconcile();
+
+        const statements = extractSqlStatements(code.value);
+        for (const stmt of statements) {
+            const match = findTupleInBatch(stmt.text, tableName, oldRow);
+            if (match) {
+                const absoluteStart = stmt.start + match.start;
+                const absoluteEnd = stmt.start + match.end;
+                const newTupleSql = generateValuesTuple(tableName, newRowData, match.explicitCols);
+                code.value = code.value.substring(0, absoluteStart) + newTupleSql + code.value.substring(absoluteEnd);
+                flashCode(newTupleSql);
+                return;
+            }
+        }
+        console.warn("无法定位原始代码行 (Batch Mode)");
+    };
+
+    const deleteRow = (row: Row, tableName?: string) => {
+        beginReconcile();
+        let targetTableName = tableName || '';
+        if (!targetTableName) {
+            for (const t of db.tables) {
+                if (t.data.includes(row)) { targetTableName = t.name; break; }
+            }
+        }
+        if (!targetTableName) return;
+
+        const statements = extractSqlStatements(code.value);
+        for (const stmt of statements) {
+            const match = findTupleInBatch(stmt.text, targetTableName, row);
+            if (match) {
+                const absoluteStart = stmt.start + match.start;
+                const absoluteEnd = stmt.start + match.end;
+                let deleteStart = absoluteStart;
+                let deleteEnd = absoluteEnd;
+                const charAfter = code.value.substring(absoluteEnd).match(/^\s*,/);
+                const charBefore = code.value.substring(0, absoluteStart).match(/,\s*$/);
+                if (charAfter) deleteEnd += charAfter[0].length;
+                else if (charBefore) deleteStart -= charBefore[0].length;
+                else {
+                    const contentAfter = stmt.text.substring(match.end).trim();
+                    if (contentAfter === ';' || contentAfter === '') {
+                        code.value = (code.value.substring(0, stmt.start) + code.value.substring(stmt.end)).replace(/\n{3,}/g, '\n\n');
+                        return;
+                    }
+                }
+                code.value = code.value.substring(0, deleteStart) + code.value.substring(deleteEnd);
+                return;
+            }
+        }
+    };
+
+    const insertRowUI = (tableName: string, newRowData: Row) => {
+        beginReconcile();
+        const table = db.tables.find(t => t.name === tableName);
+        if (!table) return;
+        const physicalColumns = table.columns.filter(c => !table.columnTypes[c].includes('VIRTUAL'));
+        const valuesSql = generateValuesTuple(tableName, newRowData, physicalColumns);
+        const newSql = `INSERT INTO ${tableName} (${physicalColumns.join(', ')}) VALUES ${valuesSql};`;
+        let currentCode = code.value.trimEnd();
+        if (!currentCode.endsWith(';')) currentCode += ';';
+        code.value = currentCode + '\n' + newSql;
+        flashCode(newSql);
+    };
+
+    const addNewTable = (name: string, columns: string[], data: Record<string, unknown>[]) => {
+        beginReconcile();
+        const colDefs = columns.join(',\n  ');
+        let sql = `CREATE TABLE ${name} (\n  ${colDefs}\n);`;
+        if (data && data.length > 0) {
+            for (const row of data) {
+                const vals = columns.map(col => {
+                    const rawType = col.split(/\s+/).slice(1).join(' ');
+                    return toSqlLiteral(row[col], rawType);
+                });
+                sql += `\nINSERT INTO ${name} VALUES (${vals.join(', ')});`;
+            }
+        }
+        const trimmed = code.value.trimEnd();
+        code.value = (trimmed.endsWith(';') ? trimmed : trimmed + ';') + '\n' + sql;
+        flashCode(sql);
+    };
+
+    const dropTableUI = (tableName: string) => {
+        beginReconcile();
+
+        const escaped = tableName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const tableRefRe = new RegExp(`\\b${escaped}\\b`, 'i');
+
+        const statements = extractSqlStatements(code.value);
+        let newCode = code.value;
+        for (let i = statements.length - 1; i >= 0; i--) {
+            if (tableRefRe.test(statements[i].text)) {
+                const s = statements[i];
+                newCode = newCode.substring(0, s.start) + newCode.substring(s.end);
+            }
+        }
+        code.value = newCode.replace(/\n{2,}/g, '\n').replace(/^\n+/, '').trimEnd() + '\n';
+    };
+
+    return {
+        beginReconcile,
+        getLastValidCode: () => lastValidCode,
+        updateRow,
+        deleteRow,
+        insertRowUI,
+        addNewTable,
+        dropTableUI,
+    };
+}

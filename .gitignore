@@ -1,0 +1,22 @@
+sqlive-backend/gradle
+
+# IDE
+.idea/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Root node (if any)
+node_modules/

@@ -1,0 +1,31 @@
+import type { TableSchema, IndexInfo, ViewInfo, TriggerInfo, ForeignKeyInfo, ExecutionMetadata } from './DatabaseTypes';
+
+// ── Execute (SQL) ──────────────────────────────────────────
+
+export interface ExecuteRequest {
+  sql: string;
+  dbName?: string;
+  reset?: boolean;
+}
+
+export interface ExecuteResponse {
+  success: boolean;
+  data?: ExecuteDataPayload;
+  error?: ExecuteErrorPayload;
+}
+
+export interface ExecuteDataPayload {
+  tables: TableSchema[];
+  queryResults: TableSchema[];
+  indexes: IndexInfo[];
+  views: ViewInfo[];
+  triggers: TriggerInfo[];
+  foreignKeys: ForeignKeyInfo[];
+  metadata: ExecutionMetadata | null;
+}
+
+export interface ExecuteErrorPayload {
+  message: string;
+  line: number;
+}
+
