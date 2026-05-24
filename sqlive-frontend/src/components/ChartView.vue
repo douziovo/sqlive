@@ -267,17 +267,26 @@ function renderChart() {
 }
 
 watch(() => [chartType.value, labelCol.value, selectedNumCol.value], () => {
-  nextTick(renderChart);
-}, { deep: true });
+  nextTick(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(renderChart);
+    });
+  });
+});
 
 watch(() => props.result, () => {
   autoSelect();
-  nextTick(renderChart);
+  nextTick(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(renderChart);
+    });
+  });
 }, { immediate: true });
 
 onMounted(() => {
-  autoSelect();
-  nextTick(renderChart);
+  // Safety net: if immediate watcher somehow didn't fire, autoSelect still runs.
+  // renderChart is handled by watch(() => props.result, ..., { immediate: true }).
+  if (!labelCol.value) autoSelect();
 });
 
 onBeforeUnmount(() => {

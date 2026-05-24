@@ -192,8 +192,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, computed, onUnmounted } from 'vue';
+import { ref, reactive, watch, computed, inject, onUnmounted } from 'vue';
 import type { HighlightState, Row, TableSchema, IndexInfo, TriggerInfo, ViewInfo } from '../model/DatabaseTypes';
+import { SQL_CONTEXT_KEY } from '../viewmodel/injectionKeys';
 import { useTablePipeline } from '../composables/useTablePipeline';
 import { isNumericType, extractTriggerTiming } from '../utils/sql';
 import HoverPreview from './HoverPreview.vue';
@@ -201,7 +202,6 @@ import type { PreviewItem } from './HoverPreview.vue';
 
 const props = defineProps<{
   table: TableSchema;
-  highlight: HighlightState;
   indexes: IndexInfo[];
   triggers: TriggerInfo[];
   views: ViewInfo[];
@@ -209,6 +209,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits(['update-cell', 'delete-row', 'drop-table', 'insert-row', 'navigate-tab']);
+const { highlight } = inject(SQL_CONTEXT_KEY)!;
 
 const isFlashTarget = computed(() => props.flashTableName === props.table.name);
 
@@ -388,7 +389,7 @@ const {
 filterColumns.value = props.table.columns;
 
 // --- Animation ---
-watch(() => props.highlight.refreshSeed, () => {
+watch(() => highlight.refreshSeed, () => {
   isAnimating.value = true;
   if (animationTimer) clearTimeout(animationTimer);
   animationTimer = setTimeout(() => { isAnimating.value = false; }, 1000);
@@ -441,12 +442,12 @@ const handleBlur = (e: FocusEvent, row: Row, col: string) => {
 const getRowId = (row: any) => row.id !== undefined ? row.id : row._highlightId;
 const rowKey = (row: any) => `${props.table.name}:${getRowId(row)}`;
 
-const activeRowSet = computed(() => new Set(props.highlight.activeRows));
-const activeColumnSet = computed(() => new Set(props.highlight.activeColumns));
+const activeRowSet = computed(() => new Set(highlight.activeRows));
+const activeColumnSet = computed(() => new Set(highlight.activeColumns));
 
 const isRowHighlighted = (row: any) => activeRowSet.value.has(rowKey(row));
 const isColumnActive = (colName: string) => activeColumnSet.value.has(colName);
-const flashingRowSet = computed(() => new Set(props.highlight.flashingRows));
+const flashingRowSet = computed(() => new Set(highlight.flashingRows));
 
 const getCellClasses = (row: any, col: string) => {
   const classes: string[] = [];

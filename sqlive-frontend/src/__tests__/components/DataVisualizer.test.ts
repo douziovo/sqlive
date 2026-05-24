@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 import DataVisualizer from '../../components/DataVisualizer.vue';
+import { SQL_CONTEXT_KEY } from '../../viewmodel/injectionKeys';
 import type { DatabaseModel, HighlightState } from '@/model/DatabaseTypes';
 
 const mockDb: DatabaseModel = {
@@ -31,6 +32,10 @@ const defaultHighlight: HighlightState = {
   refreshSeed: 0,
 };
 
+function provideContext(db: DatabaseModel, highlight: HighlightState) {
+  return { [SQL_CONTEXT_KEY as symbol]: { db, highlight } };
+}
+
 const minimalStubs = {
   ErDiagram: true,
   ChartView: true,
@@ -40,8 +45,10 @@ const minimalStubs = {
 describe('DataVisualizer', () => {
   it('renders 6 tab buttons', () => {
     const wrapper = mount(DataVisualizer, {
-      props: { db: mockDb, highlight: defaultHighlight },
-      global: { stubs: minimalStubs },
+      global: {
+        provide: provideContext(mockDb, defaultHighlight),
+        stubs: minimalStubs,
+      },
     });
 
     expect(wrapper.text()).toContain('表数据');
@@ -54,8 +61,10 @@ describe('DataVisualizer', () => {
 
   it('shows metadata when present', () => {
     const wrapper = mount(DataVisualizer, {
-      props: { db: mockDb, highlight: defaultHighlight },
-      global: { stubs: minimalStubs },
+      global: {
+        provide: provideContext(mockDb, defaultHighlight),
+        stubs: minimalStubs,
+      },
     });
     expect(wrapper.text()).toContain('42ms');
     expect(wrapper.text()).toContain('3 条语句');
@@ -63,33 +72,31 @@ describe('DataVisualizer', () => {
 
   it('shows table data in the default (tables) tab', () => {
     const wrapper = mount(DataVisualizer, {
-      props: { db: mockDb, highlight: defaultHighlight },
-      global: { stubs: minimalStubs },
+      global: {
+        provide: provideContext(mockDb, defaultHighlight),
+        stubs: minimalStubs,
+      },
     });
-    // TableSection and ResultTable are rendered (not stubbed)
     expect(wrapper.text()).toContain('users');
   });
 
   it('shows empty table state when no tables', () => {
     const wrapper = mount(DataVisualizer, {
-      props: {
-        db: { ...mockDb, tables: [] },
-        highlight: defaultHighlight,
+      global: {
+        provide: provideContext({ ...mockDb, tables: [] }, defaultHighlight),
+        stubs: minimalStubs,
       },
-      global: { stubs: minimalStubs },
     });
     expect(wrapper.text()).toContain('暂无数据表');
   });
 
   it('shows index data on the indexes tab', () => {
     const wrapper = mount(DataVisualizer, {
-      props: {
-        db: { ...mockDb, tables: [], queryResults: [], views: [], triggers: [] },
-        highlight: defaultHighlight,
+      global: {
+        provide: provideContext({ ...mockDb, tables: [], queryResults: [], views: [], triggers: [] }, defaultHighlight),
+        stubs: minimalStubs,
       },
-      global: { stubs: minimalStubs },
     });
-    // Index tab should be accessible
     const buttons = wrapper.findAll('button');
     const idxTabBtn = buttons.find(b => b.text() === '索引');
     expect(idxTabBtn).toBeTruthy();
@@ -97,8 +104,10 @@ describe('DataVisualizer', () => {
 
   it('navigates from tables tab to ER tab and back', async () => {
     const wrapper = mount(DataVisualizer, {
-      props: { db: mockDb, highlight: defaultHighlight },
-      global: { stubs: minimalStubs },
+      global: {
+        provide: provideContext(mockDb, defaultHighlight),
+        stubs: minimalStubs,
+      },
     });
 
     const buttons = wrapper.findAll('button');
@@ -116,18 +125,21 @@ describe('DataVisualizer', () => {
 
   it('renders "添加新表格" button in tables tab', () => {
     const wrapper = mount(DataVisualizer, {
-      props: { db: mockDb, highlight: defaultHighlight },
-      global: { stubs: minimalStubs },
+      global: {
+        provide: provideContext(mockDb, defaultHighlight),
+        stubs: minimalStubs,
+      },
     });
     expect(wrapper.text()).toContain('添加新表格');
   });
 
   it('shows index count badge', () => {
     const wrapper = mount(DataVisualizer, {
-      props: { db: mockDb, highlight: defaultHighlight },
-      global: { stubs: minimalStubs },
+      global: {
+        provide: provideContext(mockDb, defaultHighlight),
+        stubs: minimalStubs,
+      },
     });
-    // One index exists in mockDb
     expect(wrapper.text()).toContain('1');
   });
 });

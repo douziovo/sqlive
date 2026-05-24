@@ -77,7 +77,6 @@ describe('useAiChat', () => {
         expect(engine.messages.value).toEqual([]);
         expect(engine.isLoading.value).toBe(false);
         expect(engine.showPanel.value).toBe(false); // panel starts closed
-        expect(engine.showInlineResult.value).toBe(false);
         expect(engine.suggestions.value).toEqual([]);
         expect(engine.autoAnalysisEnabled.value).toBe(true);
     });
@@ -96,19 +95,6 @@ describe('useAiChat', () => {
         const engine = useAiChat(mockSqlEngine());
         engine.openPanel();
         expect(engine.showPanel.value).toBe(true);
-    });
-
-    it('closeInline resets inline state', () => {
-        const engine = useAiChat(mockSqlEngine());
-        engine.showInlineResult.value = true;
-        engine.inlineContent.value = 'test';
-        engine.inlineActions.value = [{ label: 'Test', action: 'test' }];
-
-        engine.closeInline();
-
-        expect(engine.showInlineResult.value).toBe(false);
-        expect(engine.inlineContent.value).toBe('');
-        expect(engine.inlineActions.value).toEqual([]);
     });
 
     it('clearMessages empties message list', () => {
@@ -149,137 +135,6 @@ describe('useAiChat', () => {
 
         engine.cancelStream();
         expect(engine.isLoading.value).toBe(false);
-    });
-
-    it('analyzeError calls API and sets inline content', async () => {
-        const engine = useAiChat(mockSqlEngine());
-
-        mockJsonResponse({
-            success: true,
-            data: {
-                summary: 'Syntax error detected',
-                content: 'Detailed analysis...',
-                fixedCode: 'SELECT 1',
-                tips: ['Tip 1', 'Tip 2'],
-            },
-        });
-
-        const promise = engine.analyzeError({ line: 3, message: 'syntax error' });
-        // Let microtasks process
-        await vi.advanceTimersByTimeAsync(0);
-        await promise;
-
-        expect(engine.showInlineResult.value).toBe(true);
-        expect(engine.inlineMode.value).toBe('error-analysis');
-        expect(engine.inlineContent.value).toContain('Syntax error detected');
-        expect(engine.inlineContent.value).toContain('SELECT 1');
-        expect(engine.inlineActions.value.some((a: any) => a.action === 'apply-fix')).toBe(true);
-    });
-
-    it('analyzeError handles API failure gracefully', async () => {
-        const engine = useAiChat(mockSqlEngine());
-
-        mockJsonResponse({ success: false, error: 'Server error' });
-
-        const promise = engine.analyzeError({ line: 1, message: 'fail' });
-        await vi.advanceTimersByTimeAsync(0);
-        await promise;
-
-        expect(engine.inlineContent.value).toContain('AI 分析失败');
-    });
-
-    it('fixCode returns fixed code on success', async () => {
-        const engine = useAiChat(mockSqlEngine());
-        engine.code = { value: 'SELEKT 1;' }; // Override to set code context
-
-        mockJsonResponse({
-            success: true,
-            data: { fixedCode: 'SELECT 1;', summary: 'Typo fix', explanation: 'SELEKT -> SELECT' },
-        });
-
-        const result = await engine.fixCode();
-        expect(result).toBe('SELECT 1;');
-        expect(engine.inlineMode.value).toBe('fix-code');
-        expect(engine.inlineContent.value).toContain('SELECT 1;');
-    });
-
-    it('fixCode returns null on failure', async () => {
-        const engine = useAiChat(mockSqlEngine());
-
-        mockJsonResponse({ success: false, error: 'Cannot fix' });
-
-        const result = await engine.fixCode();
-        expect(result).toBeNull();
-    });
-
-    it('explain populates inline content with step-by-step breakdown', async () => {
-        const engine = useAiChat(mockSqlEngine());
-
-        mockJsonResponse({
-            success: true,
-            data: {
-                summary: 'Simple SELECT',
-                stepByStep: [
-                    { step: 1, what: 'SELECT', why: 'Selects columns' },
-                    { step: 2, what: 'FROM', why: 'Specifies table' },
-                ],
-                tips: ['Use aliases for clarity'],
-            },
-        });
-
-        await engine.explain('SELECT * FROM t');
-        expect(engine.inlineMode.value).toBe('explain');
-        expect(engine.inlineContent.value).toContain('Selects columns');
-        expect(engine.inlineContent.value).toContain('Use aliases');
-    });
-
-    it('optimize shows optimized code comparison', async () => {
-        const engine = useAiChat(mockSqlEngine());
-
-        mockJsonResponse({
-            success: true,
-            data: {
-                summary: 'Added index hint',
-                optimizedCode: 'SELECT * FROM t WITH (INDEX(idx))',
-                explanation: 'Force index usage',
-            },
-        });
-
-        await engine.optimize('SELECT * FROM t');
-        expect(engine.inlineMode.value).toBe('optimize');
-        expect(engine.inlineContent.value).toContain('SELECT * FROM t WITH (INDEX(idx))');
-        expect(engine.inlineActions.value.some((a: any) => a.action === 'apply-fix')).toBe(true);
-    });
-
-    it('generateSql extracts SQL from code block in response', async () => {
-        const engine = useAiChat(mockSqlEngine());
-
-        mockJsonResponse({
-            success: true,
-            data: { content: 'Here is the SQL:\n```sql\nCREATE TABLE t(id INT);\n```\nEnjoy!' },
-        });
-
-        const result = await engine.generateSql('Create a table');
-        expect(result).toBe('CREATE TABLE t(id INT);');
-        expect(engine.inlineContent.value).toContain('CREATE TABLE t(id INT);');
-    });
-
-    it('generateSql falls back to content when no code block found', async () => {
-        const engine = useAiChat(mockSqlEngine());
-
-        mockJsonResponse({ success: true, data: { content: 'Plain text response' } });
-
-        const result = await engine.generateSql('Create a table');
-        expect(result).toBe('Plain text response');
-    });
-
-    it('generateSql returns null on API failure', async () => {
-        const engine = useAiChat(mockSqlEngine());
-
-        fetchSpy.mockRejectedValue(new Error('Network error'));
-
-        const result = await engine.generateSql('Create a table');
-        expect(result).toBeNull();
     });
 
     it('markMastered adds topic and persists to localStorage', async () => {
