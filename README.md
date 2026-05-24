@@ -118,7 +118,10 @@ sqlive/
 │   │   │   ├── ChartView.vue           # Chart.js 可视化
 │   │   │   ├── AiChatPanel.vue         # AI 对话面板
 │   │   │   ├── AiInlineResult.vue      # AI 内联结果展示
+│   │   │   ├── AiMessageFooter.vue     # AI 消息底部操作栏
 │   │   │   ├── CreateTableModal.vue    # 可视化建表
+│   │   │   ├── SortFilterToolbar.vue   # 排序/过滤工具栏
+│   │   │   ├── HoverPreview.vue        # 悬停预览弹窗（索引/触发器详情）
 │   │   │   ├── EmptyState.vue          # 空状态引导
 │   │   │   ├── er/                     # ER 图子组件
 │   │   │   │   ├── ErDiagram.vue       # VueFlow 容器
@@ -129,12 +132,15 @@ sqlive/
 │   │   ├── viewmodel/
 │   │   │   ├── useSqlEngine.ts         # 核心状态机（SQL 执行 / 双向同步）
 │   │   │   ├── useAiChat.ts            # AI 聊天状态管理
-│   │   │   └── useErDiagram.ts         # ER 图数据转换 + dagre 布局
+│   │   │   ├── useErDiagram.ts         # ER 图数据转换 + dagre 布局
+│   │   │   ├── useInlineActions.ts     # 内联 AI 操作处理
+│   │   │   └── injectionKeys.ts        # provide/inject 依赖注入键
 │   │   ├── composables/
 │   │   │   ├── useMultiTabs.ts         # 多 Tab 状态管理
 │   │   │   ├── useBidirectionalSync.ts # 双向同步引擎
 │   │   │   ├── useDatabaseLifecycle.ts # 数据库生命周期
 │   │   │   ├── useHighlight.ts         # 代码高亮与动画
+│   │   │   ├── useSortFilter.ts        # 列级排序/过滤状态
 │   │   │   ├── useTablePipeline.ts     # 表格数据管道
 │   │   │   └── useAiStreaming.ts       # AI 流式传输封装
 │   │   ├── model/
@@ -143,8 +149,14 @@ sqlive/
 │   │       ├── sse.ts                  # SSE 流解析器
 │   │       ├── sqlStatements.ts        # SQL 语句解析工具
 │   │       ├── tupleParser.ts          # VALUES 元组提取器
-│   │       └── aiQuickFix.ts           # AI 快速修复工具
-│   └── tests/e2e/                      # Playwright E2E 测试
+│   │       ├── aiQuickFix.ts           # AI 快速修复工具
+│   │       ├── aiFormatter.ts          # AI 响应格式化
+│   │       ├── sql.ts                  # SQL 字面量生成
+│   │       ├── sqlTopics.ts            # SQL 主题常量
+│   │       ├── file.ts                 # 文件下载工具
+│   │       └── html.ts                 # HTML 处理工具
+│   ├── tests/e2e/                      # Playwright E2E 测试（8 个 spec）
+│   └── src/__tests__/                  # Vitest 单元测试（27 个文件，476 用例）
 │
 └── sqlive-backend/             # Spring Boot 4 后端
     └── src/main/java/com/douzi/sqlive/
@@ -166,7 +178,8 @@ sqlive/
         │   │   ├── OllamaProtocol.java       # Ollama 协议
         │   │   ├── LmStudioProtocol.java     # LM Studio 协议
         │   │   ├── OpenAiCompatibleProvider.java  # Provider 工厂
-        │   │   └── PromptBuilder.java        # Prompt 模板引擎
+        │   │   ├── PromptBuilder.java        # Prompt 模板引擎
+        │   │   └── RequestContext.java       # 请求上下文封装
         │   └── knowledge/
         │       ├── KnowledgeGraphService.java # 知识图谱服务
         │       └── SqlTopicClassifier.java   # SQL 主题分类器
@@ -181,7 +194,19 @@ sqlive/
         └── config/
             └── RateLimitFilter.java     # 滑动窗口限流
 
+## 测试
+
+```bash
+# 前端单元测试
+cd sqlive-frontend
+npm test                 # 运行全部 476 个 Vitest 用例
+npm run test:e2e         # Playwright E2E 测试
+
+# 后端测试
+cd sqlive-backend
+./gradlew test            # 运行全部 JUnit 5 用例
+```
+
 ## 许可证
 
 Copyright (c) 2026 douzi. All Rights Reserved.
-```
