@@ -162,9 +162,15 @@ describe('useMultiTabs', () => {
     tabs.value[0].name = 'myquery';
 
     exportTab();
-    expect(createObjectURLSpy).toHaveBeenCalled();
-    expect(clickSpy).toHaveBeenCalled();
-    expect(revokeObjectURLSpy).toHaveBeenCalled();
+    expect(createObjectURLSpy).toHaveBeenCalledTimes(1);
+    const blob = createObjectURLSpy.mock.calls[0][0] as Blob;
+    expect(blob).toBeInstanceOf(Blob);
+    expect(blob.type).toBe('text/sql;charset=utf-8');
+
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+
+    expect(revokeObjectURLSpy).toHaveBeenCalledTimes(1);
+    expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:xxx');
 
     vi.unstubAllGlobals();
     vi.restoreAllMocks();

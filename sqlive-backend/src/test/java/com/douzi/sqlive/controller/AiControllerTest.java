@@ -16,6 +16,7 @@ import reactor.core.publisher.Flux;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -43,9 +44,9 @@ class AiControllerTest {
             data.setContent("AI response");
             data.setSummary("summary");
             resp.setData(data);
-            when(mock.executeNonStreaming(any(AiChatRequest.class))).thenReturn(resp);
+            when(mock.executeNonStreaming(argThat(req -> req != null && req.getMode() != null))).thenReturn(resp);
 
-            when(mock.streamChat(any(AiChatRequest.class)))
+            when(mock.streamChat(argThat(req -> req != null && req.getMode() != null)))
                     .thenReturn(Flux.just(StreamChunk.text("hello"), StreamChunk.text(" world")));
 
             return mock;

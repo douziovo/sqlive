@@ -84,6 +84,7 @@ class RateLimitFilterConcurrencyTest {
             CountDownLatch latch = new CountDownLatch(threadCount);
             AtomicInteger successCount = new AtomicInteger(0);
             AtomicInteger rejectCount = new AtomicInteger(0);
+            List<Exception> errors = Collections.synchronizedList(new ArrayList<>());
 
             SqlRequest req = new SqlRequest();
             req.setSql("SELECT 1;");
@@ -104,14 +105,17 @@ class RateLimitFilterConcurrencyTest {
                             } else if (resp.getStatusCode().value() == 200) {
                                 successCount.incrementAndGet();
                             }
-                        } catch (Exception ignored) {
-                            // Network-level errors are acceptable under extreme load
+                        } catch (Exception e) {
+                            errors.add(e);
                         } finally {
                             latch.countDown();
                         }
                     });
                 }
                 assertTrue(latch.await(30, TimeUnit.SECONDS));
+                if (!errors.isEmpty()) {
+                    System.err.println("[WARN] " + errors.size() + " network errors during rate-limit test: " + errors.get(0).getMessage());
+                }
                 assertTrue(successCount.get() <= sqlLimit,
                     "At most " + sqlLimit + " should pass, got: " + successCount.get());
                 assertTrue(rejectCount.get() > 0,

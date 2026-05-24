@@ -93,7 +93,7 @@ describe('TableSection', () => {
     const deleteBtn = wrapper.find('button[title="删除表格"]');
     if (deleteBtn.exists()) {
       await deleteBtn.trigger('click');
-      expect(wrapper.emitted('drop-table')).toBeTruthy();
+      expect(wrapper.emitted('drop-table')?.[0]).toEqual(['users']);
     }
   });
 
@@ -114,7 +114,13 @@ describe('TableSection', () => {
       el.dispatchEvent(new Event('input'));
       await nameCell.trigger('blur');
 
-      expect(wrapper.emitted('update-cell')).toBeTruthy();
+      const updateCellEvents = wrapper.emitted('update-cell');
+      expect(updateCellEvents).toBeTruthy();
+      expect(updateCellEvents![0][0]).toMatchObject({
+        tableName: 'users',
+        oldRow: expect.objectContaining({ name: 'Alice' }),
+        newRow: expect.objectContaining({ name: 'UpdatedName' }),
+      });
     }
   });
 
@@ -136,7 +142,12 @@ describe('TableSection', () => {
     const deleteBtns = wrapper.findAll('button[title="删除此行"]');
     if (deleteBtns.length > 0) {
       await deleteBtns[0].trigger('click');
-      expect(wrapper.emitted('delete-row')).toBeTruthy();
+      const deleteRowEvents = wrapper.emitted('delete-row');
+      expect(deleteRowEvents).toBeTruthy();
+      expect(deleteRowEvents![0][0]).toMatchObject({
+        tableName: 'users',
+        row: expect.objectContaining({ id: 1 }),
+      });
     }
   });
 
@@ -184,7 +195,12 @@ describe('TableSection', () => {
     const badgeEls = buttons.filter(b => b.text().includes('📋'));
     if (badgeEls.length > 0) {
       await badgeEls[0].trigger('click');
-      expect(wrapper.emitted('navigate-tab')).toBeTruthy();
+      const navEvents = wrapper.emitted('navigate-tab');
+      expect(navEvents).toBeTruthy();
+      expect(navEvents![0][0]).toMatchObject({
+        tab: expect.any(String),
+        targetId: expect.any(String),
+      });
     }
   });
 });

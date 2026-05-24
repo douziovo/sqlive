@@ -66,7 +66,9 @@ describe('useSqlEngine', () => {
         const engine = useSqlEngine();
         await tick();
 
-        expect(console.error).toHaveBeenCalled();
+        expect(console.error).toHaveBeenCalledTimes(1);
+        const errorArg = (console.error as ReturnType<typeof vi.fn>).mock.calls[0][0];
+        expect(errorArg).toContain('执行 SQL 请求失败');
         expect(engine.executionError.value).toBeTruthy();
         expect(engine.executionError.value.line).toBe(0);
     });

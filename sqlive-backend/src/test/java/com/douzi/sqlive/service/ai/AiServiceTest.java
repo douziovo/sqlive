@@ -91,7 +91,7 @@ class AiServiceTest {
 
     @Test
     void streamChatSuccess() {
-        when(mockProvider.streamChat(anyString(), any(), anyString()))
+        when(mockProvider.streamChat(eq("system"), isNull(), eq("hello")))
                 .thenReturn(Flux.just(StreamChunk.text("a"), StreamChunk.text("b")));
         var chunks = service.streamChat("system", null, "hello").collectList().block();
         assertNotNull(chunks);
@@ -100,7 +100,7 @@ class AiServiceTest {
 
     @Test
     void streamChatError() {
-        when(mockProvider.streamChat(anyString(), any(), anyString()))
+        when(mockProvider.streamChat(eq("system"), isNull(), eq("hello")))
                 .thenReturn(Flux.error(new RuntimeException("stream failed")));
         var chunks = service.streamChat("system", null, "hello").collectList().block();
         assertNotNull(chunks);

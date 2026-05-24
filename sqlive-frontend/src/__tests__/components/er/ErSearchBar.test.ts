@@ -65,7 +65,7 @@ describe('ErSearchBar', () => {
     });
     await wrapper.find('input').trigger('keydown', { key: 'Escape' });
     // First ESC should clear (emit empty)
-    expect(wrapper.emitted('update:modelValue')).toBeTruthy();
+    expect(wrapper.emitted('update:modelValue')?.[0]).toEqual(['']);
   });
 
   it('emits next on Enter without shift', async () => {
