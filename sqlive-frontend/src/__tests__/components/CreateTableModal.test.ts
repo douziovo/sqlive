@@ -60,7 +60,7 @@ describe('CreateTableModal', () => {
         const buttons = wrapper.findAll('button');
         const closeBtn = buttons[0];
         await closeBtn.trigger('click');
-        expect(wrapper.emitted('update:open')).toBeTruthy();
+        expect(wrapper.emitted('update:open')?.[0]).toEqual([false]);
     });
 
     it('emits close when cancel button is clicked', async () => {
@@ -70,7 +70,7 @@ describe('CreateTableModal', () => {
         for (const btn of buttons) {
             if (btn.text().includes('取消')) {
                 await btn.trigger('click');
-                expect(wrapper.emitted('update:open')).toBeTruthy();
+                expect(wrapper.emitted('update:open')?.[0]).toEqual([false]);
                 return;
             }
         }
@@ -91,6 +91,10 @@ describe('CreateTableModal', () => {
 
         const submitCalls = wrapper.emitted('submit');
         expect(submitCalls).toBeTruthy();
+        expect(submitCalls![0][0]).toMatchObject({
+            name: 'users',
+            columns: ['id INTEGER'],
+        });
     });
 
     it('adds a row when "添加新字段" is clicked', async () => {

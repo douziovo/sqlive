@@ -38,7 +38,8 @@ describe('downloadFile', () => {
         const blob = createObjectURLSpy.mock.calls[0][0] as Blob;
         expect(blob.type).toBe('text/sql;charset=utf-8');
 
-        expect(clickSpy).toHaveBeenCalled();
+        expect(clickSpy).toHaveBeenCalledTimes(1);
+        expect(revokeObjectURLSpy).toHaveBeenCalledTimes(1);
         expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:test');
     });
 

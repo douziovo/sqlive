@@ -104,7 +104,9 @@ describe('HoverPreview', () => {
 
     const firstItem = wrapper.find('[class*="cursor-pointer"]');
     await firstItem.trigger('click');
-    expect(wrapper.emitted('select')).toBeTruthy();
+    const selectEvents = wrapper.emitted('select');
+    expect(selectEvents).toBeTruthy();
+    expect(selectEvents![0]).toEqual(['idx-1']);
   });
 
   it('handles empty items array gracefully', async () => {

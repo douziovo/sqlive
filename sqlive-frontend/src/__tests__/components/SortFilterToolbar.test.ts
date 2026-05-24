@@ -43,7 +43,7 @@ describe('SortFilterToolbar', () => {
     const input = wrapper.find('input');
     await input.setValue('test');
     // The component likely debounces; check emitted events
-    expect(wrapper.emitted('update:filter')).toBeTruthy();
+    expect(wrapper.emitted('update:filter')?.[0]).toEqual(['test']);
   });
 
   it('emits toggle-sort when sort button clicked', async () => {
@@ -52,7 +52,7 @@ describe('SortFilterToolbar', () => {
     const nameBtn = buttons.find(b => b.text().includes('名称'));
     if (nameBtn) {
       await nameBtn.trigger('click');
-      expect(wrapper.emitted('toggle-sort')).toBeTruthy();
+      expect(wrapper.emitted('toggle-sort')?.[0]).toEqual(['name']);
     }
   });
 
