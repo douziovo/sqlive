@@ -29,3 +29,12 @@ export interface ExecuteErrorPayload {
   line: number;
 }
 
+// ── AI Chat (schema sent to AI API) ────────────────────────────
+
+/** Matches backend AiChatRequest.SchemaInfo contract */
+export interface AiSchemaInfo {
+  table: string;
+  columns: string[];
+  columnTypes: Record<string, string>;
+}
+
