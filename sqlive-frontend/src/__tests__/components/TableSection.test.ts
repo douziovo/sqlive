@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import TableSection from '../../components/TableSection.vue';
+import { SQL_CONTEXT_KEY } from '../../viewmodel/injectionKeys';
 import type { TableSchema, HighlightState } from '@/model/DatabaseTypes';
 
 const mockTable: TableSchema = {
@@ -25,16 +26,19 @@ const defaultHighlight: HighlightState = {
 };
 
 function mountTable(overrides: Record<string, any> = {}) {
+  const { highlight, ...propOverrides } = overrides;
   return mount(TableSection, {
     props: {
       table: mockTable,
-      highlight: defaultHighlight,
       indexes: [],
       triggers: [],
       views: [],
-      ...overrides,
+      ...propOverrides,
     },
     global: {
+      provide: {
+        [SQL_CONTEXT_KEY as symbol]: { highlight: highlight ?? defaultHighlight },
+      },
       stubs: { HoverPreview: true },
     },
   });

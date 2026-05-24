@@ -203,8 +203,9 @@
 </template>
 
 <script setup lang="ts">
-import {ref, watch, nextTick, provide, onUnmounted} from 'vue';
+import {ref, watch, nextTick, provide, inject, onUnmounted} from 'vue';
 import type {DatabaseModel, HighlightState, IndexInfo, ViewInfo, TriggerInfo, CellUpdateEvent, RowDeleteEvent, CreateTableEvent, RowInsertEvent} from '../model/DatabaseTypes';
+import { SQL_CONTEXT_KEY } from '../viewmodel/injectionKeys';
 import {useSortFilter, type SortField} from '../composables/useSortFilter';
 import TableSection from './TableSection.vue';
 import ResultTable from './ResultTable.vue';
@@ -214,10 +215,7 @@ import ErDiagram from './er/ErDiagram.vue';
 import EmptyState from './EmptyState.vue';
 import type {SortFieldDef} from './SortFilterToolbar.vue';
 
-const props = defineProps<{
-  db: DatabaseModel;
-  highlight: HighlightState;
-}>();
+  const { db, highlight } = inject(SQL_CONTEXT_KEY)!;
 
 const emit = defineEmits<{
   'update-cell': [event: CellUpdateEvent];
@@ -308,7 +306,7 @@ const {
   filterText: idxFilter, toggleSort: idxToggleSort,
   result: idxFiltered,
 } = useSortFilter(
-    () => props.db.indexes,
+    () => db.indexes,
     idxSortFields,
     (idx, f) => idx.name.toLowerCase().includes(f)
         || idx.tableName.toLowerCase().includes(f)
@@ -329,7 +327,7 @@ const {
   filterText: viewFilter, toggleSort: viewToggleSort,
   result: viewFiltered,
 } = useSortFilter(
-    () => props.db.views,
+    () => db.views,
     viewSortFields,
     (v, f) => v.name.toLowerCase().includes(f) || (v.sql || '').toLowerCase().includes(f),
 );
@@ -337,7 +335,7 @@ const {
 // Navigate from view to table (best effort: match table name in SQL)
 function navigateToViewTable(v: ViewInfo) {
   const sql = v.sql || '';
-  for (const t of props.db.tables) {
+  for (const t of db.tables) {
     if (sql.includes(t.name) || sql.includes(`"${t.name}"`) || sql.includes(`\`${t.name}\``)) {
       handleNavigate({tab: 'tables', targetId: 'table-' + t.name});
       return;
@@ -362,7 +360,7 @@ const {
   filterText: trgFilter, toggleSort: trgToggleSort,
   result: trgFiltered,
 } = useSortFilter(
-    () => props.db.triggers,
+    () => db.triggers,
     trgSortFields,
     (t, f) => t.name.toLowerCase().includes(f)
         || t.tableName.toLowerCase().includes(f)

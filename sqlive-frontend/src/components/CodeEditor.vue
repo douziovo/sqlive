@@ -174,7 +174,8 @@ import { registerAiQuickFix, registerAiCommands } from '../utils/aiQuickFix';
 import type { SchemaTableInfo } from '../utils/aiQuickFix';
 import { highlightMatch } from '../utils/html';
 import AiInlineResult from './AiInlineResult.vue';
-import type { AiPanelMode } from '../viewmodel/useAiChat';
+import { SQL_CONTEXT_KEY, AI_ACTIONS_KEY } from '../viewmodel/injectionKeys';
+import type { AiActions } from '../viewmodel/useAiChat';
 
 self.MonacoEnvironment = {
   getWorker() {
@@ -182,32 +183,9 @@ self.MonacoEnvironment = {
   },
 };
 
-interface AiActions {
-  isLoading: { value: boolean };
-  inlineVisible: { value: boolean };
-  inlineContent: { value: string };
-  inlineMode: { value: AiPanelMode };
-  inlineActions: { value: { label: string; action: string }[] };
-  onAnalyzeError: (error: { line: number; message: string }) => void;
-  onFixCode: () => void;
-  onExplain: (code: string) => void;
-  onOptimize: (code: string) => void;
-  onOpenChat: (context?: string) => void;
-  onGenerateSql: (description: string) => void;
-  onTogglePanel: () => void;
-  onInlineClose: () => void;
-  onInlineAction: (action: string) => void;
-}
 
 const props = defineProps<{
   code: string;
-  tabs: { id: string; name: string; code: string; dbName: string; isModified: boolean }[];
-  activeTabId: string;
-  activeDbName: string;
-  dbList: string[];
-  highlightChunk: string | null;
-  error: { line: number; message: string } | null;
-  schemaTables?: SchemaTableInfo[];
 }>();
 
 const emit = defineEmits<{
@@ -223,7 +201,9 @@ const emit = defineEmits<{
   'export-all': [];
 }>();
 
-const ai = inject<AiActions>('aiActions');
+const ctx = inject(SQL_CONTEXT_KEY)!;
+const { tabs, activeTabId, activeDbName, dbList, highlightChunk, error, schemaTables } = ctx;
+const ai = inject(AI_ACTIONS_KEY)!;
 
 const editorContainer = ref<HTMLElement | null>(null);
 const fileInput = ref<HTMLInputElement | null>(null);
@@ -346,7 +326,7 @@ onMounted(() => {
       onOptimize: ai.onOptimize,
       onOpenChat: ai.onOpenChat,
       onGenerateSql: () => ai.onGenerateSql(''),
-      getSchemaTables: () => props.schemaTables || [],
+      getSchemaTables: () => schemaTables.value || [],
     });
 
     const commandDisposables = registerAiCommands(state.editor, {
@@ -356,7 +336,7 @@ onMounted(() => {
       onOptimize: ai.onOptimize,
       onOpenChat: ai.onOpenChat,
       onGenerateSql: () => ai.onGenerateSql(''),
-      getSchemaTables: () => props.schemaTables || [],
+      getSchemaTables: () => schemaTables.value || [],
     });
 
     disposables.push(quickFixDisposable, ...commandDisposables);
@@ -421,7 +401,7 @@ watch(() => props.code, (newVal) => {
 });
 
 let flashTimeout: ReturnType<typeof setTimeout> | null = null;
-watch(() => props.highlightChunk, (chunk) => {
+watch(() => highlightChunk.value, (chunk) => {
   if (flashTimeout) { clearTimeout(flashTimeout); flashTimeout = null; }
   applyHighlight();
   if (chunk) {
@@ -434,7 +414,7 @@ watch(() => props.highlightChunk, (chunk) => {
 
 function applyHighlight() {
   if (!state.editor) return;
-  const chunk = props.highlightChunk;
+  const chunk = highlightChunk.value;
   if (!chunk) {
     state.highlightDeco?.clear();
     return;
@@ -452,22 +432,22 @@ function applyHighlight() {
   }]);
 }
 
-watch(() => props.error, () => { applyErrorMarkers(); });
+watch(() => error.value, () => { applyErrorMarkers(); });
 
 function applyErrorMarkers() {
   if (!state.editor) return;
   const model = state.editor.getModel();
   if (!model) return;
-  if (props.error) {
+  if (error.value) {
     monaco.editor.setModelMarkers(model, 'sql-error', [{
       severity: monaco.MarkerSeverity.Error,
-      message: props.error.message,
-      startLineNumber: props.error.line,
+      message: error.value.message,
+      startLineNumber: error.value.line,
       startColumn: 1,
-      endLineNumber: props.error.line,
+      endLineNumber: error.value.line,
       endColumn: Number.MAX_SAFE_INTEGER,
     }]);
-    state.editor.revealLineInCenter(props.error.line);
+    state.editor.revealLineInCenter(error.value.line);
   } else {
     monaco.editor.setModelMarkers(model, 'sql-error', []);
   }
@@ -492,8 +472,8 @@ function onDrop(e: DragEvent) {
 // --- Tab search ---
 const filteredTabs = computed(() => {
   const q = tabSearchText.value.trim().toLowerCase();
-  if (!q) return props.tabs;
-  return props.tabs.filter(t => t.name.toLowerCase().includes(q));
+  if (!q) return tabs.value;
+  return tabs.value.filter(t => t.name.toLowerCase().includes(q));
 });
 
 function switchToTab(id: string) {
@@ -522,7 +502,7 @@ watch(showTabSearch, (val) => {
 // --- Rename ---
 
 function handleSubmit() {
-  let dbName: string | null = props.activeDbName;
+  let dbName: string | null = activeDbName.value;
   if (!dbName) {
     dbName = prompt('输入数据库名称以保存当前状态:');
     if (!dbName || !dbName.trim()) return;
@@ -531,13 +511,13 @@ function handleSubmit() {
       alert('数据库名称不能包含特殊字符 (? & = # ; / \\ :)，且长度不能超过 64 个字符');
       return;
     }
-    emit('set-db-name', props.activeTabId, dbName);
+    emit('set-db-name', activeTabId.value, dbName);
   }
   emit('submit');
 }
 
 function confirmDeleteDb() {
-  const name = props.activeDbName;
+  const name = activeDbName.value;
   if (!name) return;
   if (confirm(`确定删除数据库 "${name}"？\n所有关联标签页将切换回实时模式。`)) {
     emit('delete-db', name);
