@@ -180,4 +180,8 @@ sqlive/
         │   └── SqlExecutionException.java    # SQL 执行异常
         └── config/
             └── RateLimitFilter.java     # 滑动窗口限流
+
+## 许可证
+
+Copyright (c) 2026 douzi. All Rights Reserved.
 ```
