@@ -121,6 +121,11 @@ html, body, #app {
     }
 }
 
+/* Prevent splitpanes slide-in animation on initial page load */
+.splitpanes.no-animate .splitpanes__pane {
+  transition: none !important;
+}
+
 /* Splitpanes splitter customization */
 .splitpanes.default-theme .splitpanes__splitter {
   background-color: var(--border);
