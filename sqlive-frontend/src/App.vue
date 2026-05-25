@@ -1,11 +1,11 @@
 <template>
-  <Splitpanes class="default-theme h-screen">
+  <Splitpanes class="default-theme h-screen" :class="{ 'no-animate': noAnimate }">
     <Pane :size="28" :min-size="20">
       <!-- CodeEditor container -->
       <div class="h-full flex flex-col relative">
         <div class="flex-1 min-h-0">
           <CodeEditor
-            v-model:code="engine.code"
+            v-model:code="code"
             @switch-tab="engine.switchTab"
             @add-tab="engine.addTab('')"
             @close-tab="engine.closeTab"
@@ -54,7 +54,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, provide } from 'vue';
+import { computed, onMounted, provide, ref } from 'vue';
 import { Splitpanes, Pane } from 'splitpanes';
 import 'splitpanes/dist/splitpanes.css';
 import CodeEditor from './components/CodeEditor.vue';
@@ -68,6 +68,7 @@ import type { SchemaTableInfo } from './utils/aiQuickFix';
 import type { CellUpdateEvent, RowDeleteEvent, CreateTableEvent, RowInsertEvent } from './model/DatabaseTypes';
 
 const engine = useSqlEngine();
+const { code } = engine;
 
 // ── AI composables (split) ─────────────────────────────────────
 const aiChat = useAiChat({
@@ -216,14 +217,12 @@ const handleInsertRow = ({ tableName, newRow }: RowInsertEvent) => {
   engine.insertRowUI(tableName, newRow);
 };
 
-// Prevent splitpanes from animating on initial page load
+const noAnimate = ref(true);
+
+// Enable splitpanes transitions after initial layout (prevents slide-in animation on load)
 onMounted(() => {
-  const panes = document.querySelectorAll('.splitpanes__pane');
-  panes.forEach(p => ((p as HTMLElement).style.transition = 'none'));
   requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      panes.forEach(p => ((p as HTMLElement).style.transition = ''));
-    });
+    noAnimate.value = false;
   });
 });
 </script>
