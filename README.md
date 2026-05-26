@@ -2,6 +2,7 @@
 
 在线 SQL 演练环境：左侧编写 SQL，右侧实时渲染表结构与数据。支持可视化编辑数据后反向同步至 SQL 源码，集成多 AI 提供商智能辅助。
 
+![主界面](docs/screenshots/01-editor-tables.png)
 
 ## 功能特性
 
@@ -24,13 +25,28 @@
 - **多模式交互**：聊天问答 / 错误分析 / 代码修复 / SQL 解释 / 性能优化
 - **流式响应**：SSE 流式传输，实时显示 AI 回复与推理过程
 - **学习建议**：基于知识图谱的 SQL 主题分类与学习路径推荐
+- **知识图谱**：可视化 SQL 知识体系，24 个知识点节点 + 学习路径连线，支持搜索和进度追踪
+
+![AI 对话](docs/screenshots/07-ai-chat.png)
 
 ### 数据可视化
 
 - **数据表格**：排序、过滤、分页，列类型约束标注
 - **ER 图**：自动生成实体关系图，外键基数检测（1:1 / 1:N），dagre 自动布局
+
+![ER 图](docs/screenshots/02-er-diagram.png)
+
 - **图表视图**：查询结果支持柱状图、折线图、饼图等 Chart.js 可视化
+
+![图表视图](docs/screenshots/03-chart-view.png)
+
 - **元数据浏览**：索引、视图、触发器、外键关系一览
+
+![索引](docs/screenshots/04-indexes.png)
+
+![视图](docs/screenshots/05-views.png)
+
+![触发器](docs/screenshots/06-triggers.png)
 
 ## 技术栈
 
@@ -123,6 +139,11 @@ sqlive/
 │   │   │   ├── SortFilterToolbar.vue   # 排序/过滤工具栏
 │   │   │   ├── HoverPreview.vue        # 悬停预览弹窗（索引/触发器详情）
 │   │   │   ├── EmptyState.vue          # 空状态引导
+│   │   │   ├── knowledge/                # 知识图谱子组件
+│   │   │   │   ├── KnowledgePanel.vue    # 知识图谱侧边栏面板
+│   │   │   │   ├── KnowledgeGraph.vue    # VueFlow 知识图谱画布
+│   │   │   │   ├── KnowledgeNode.vue     # 自定义知识点节点
+│   │   │   │   └── KnowledgeDetail.vue   # 知识点详情浮层
 │   │   │   ├── er/                     # ER 图子组件
 │   │   │   │   ├── ErDiagram.vue       # VueFlow 容器
 │   │   │   │   ├── ErTableNode.vue     # 自定义表节点
@@ -142,7 +163,8 @@ sqlive/
 │   │   │   ├── useHighlight.ts         # 代码高亮与动画
 │   │   │   ├── useSortFilter.ts        # 列级排序/过滤状态
 │   │   │   ├── useTablePipeline.ts     # 表格数据管道
-│   │   │   └── useAiStreaming.ts       # AI 流式传输封装
+│   │   │   ├── useAiStreaming.ts       # AI 流式传输封装
+│   │   │   └── useKnowledgeGraph.ts    # 知识图谱数据管理
 │   │   ├── model/
 │   │   │   └── DatabaseTypes.ts        # TypeScript 类型定义
 │   │   └── utils/
