@@ -3,6 +3,7 @@ import { watchDebounced, useLocalStorage } from '@vueuse/core';
 import type { DatabaseModel } from '../model/DatabaseTypes';
 import { useAiStreaming } from '../composables/useAiStreaming';
 import { API_BASE } from '../config';
+import type { DisplayHandler } from './useInlineActions';
 
 export interface AiMessage {
   id: string;
@@ -24,29 +25,16 @@ export interface AiMessage {
   };
 }
 
-export interface SuggestionItem {
-  id: string;
-  label: string;
-  reason: string;
-  difficulty: number;
-  prerequisites?: string[];
-}
-
 export interface AiActions {
   isLoading: Ref<boolean>;
-  inlineVisible: Ref<boolean>;
-  inlineContent: Ref<string>;
-  inlineMode: Ref<AiPanelMode>;
-  inlineActions: Ref<{ label: string; action: string }[]>;
-  onAnalyzeError: (error: { line: number; message: string }) => void;
-  onFixCode: () => void;
-  onExplain: (code: string) => void;
-  onOptimize: (code: string) => void;
+  analyzeError: (error: { line: number; message: string }, display: DisplayHandler) => Promise<void>;
+  fixCode: (display: DisplayHandler) => Promise<string | null>;
+  explain: (code: string, display: DisplayHandler) => Promise<void>;
+  optimize: (code: string, display: DisplayHandler) => Promise<string | null>;
+  generateSql: (description: string, display: DisplayHandler) => Promise<string | null>;
   onOpenChat: (context?: string) => void;
-  onGenerateSql: (description: string) => void;
+  sendToAi: (text: string) => void;
   onTogglePanel: () => void;
-  onInlineClose: () => void;
-  onInlineAction: (action: string) => void;
 }
 
 export type AiPanelMode = 'chat' | 'error-analysis' | 'fix-code' | 'explain' | 'optimize' | 'generate-sql' | 'general-chat';
@@ -75,7 +63,6 @@ export function useAiChat(ctx: {
   const messages = ref<AiMessage[]>([]);
   const isLoading = ref(false);
   const showPanel = ref(false);
-  const suggestions = ref<SuggestionItem[]>([]);
   const masteredTopicsRaw = useLocalStorage<string[]>('ai-mastered-topics', []);
   const masteredTopics = computed({
     get: () => new Set(masteredTopicsRaw.value),
@@ -107,16 +94,6 @@ export function useAiChat(ctx: {
       }
     },
     { debounce: 500 },
-  );
-
-  // ── Fetch learning suggestions on code change ─────────────────
-  watchDebounced(
-    () => ctx.code.value,
-    (newCode) => {
-      if (!newCode || !newCode.trim()) return;
-      void fetchSuggestions(newCode);
-    },
-    { debounce: 2000 },
   );
 
   // ── Streaming SSE ─────────────────────────────────────────────
@@ -204,33 +181,6 @@ export function useAiChat(ctx: {
     }
   }
 
-  // ── Suggestions ───────────────────────────────────────────────
-  async function fetchSuggestions(sql: string): Promise<void> {
-    try {
-      const resp = await fetch(`${API_BASE}/suggest-next`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          currentSql: sql,
-          masteredTopics: [...masteredTopics.value],
-        }),
-      });
-      if (!resp.ok) return;
-      const json: { success: boolean; data?: { suggestions?: SuggestionItem[] } } = await resp.json();
-      if (json.success && json.data?.suggestions) {
-        suggestions.value = json.data.suggestions;
-      }
-    } catch {
-      // Silently ignore - suggestions are non-critical
-    }
-  }
-
-  function markMastered(topicId: string): void {
-    const s = new Set(masteredTopics.value);
-    s.add(topicId);
-    masteredTopics.value = s;
-  }
-
   // ── Panel control ─────────────────────────────────────────────
   function togglePanel(): void {
     showPanel.value = !showPanel.value;
@@ -246,9 +196,8 @@ export function useAiChat(ctx: {
 
   return {
     messages, isLoading, showPanel,
-    suggestions, masteredTopics, autoAnalysisEnabled,
+    masteredTopics, autoAnalysisEnabled,
     sendMessage, cancelStream, clearMessages,
     togglePanel, openPanel,
-    markMastered,
   };
 }

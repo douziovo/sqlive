@@ -3,10 +3,7 @@ package com.douzi.sqlive.controller;
 import com.douzi.sqlive.dto.ai.AiChatRequest;
 import com.douzi.sqlive.dto.ai.AiChatResponse;
 import com.douzi.sqlive.dto.ai.StreamChunk;
-import com.douzi.sqlive.dto.ai.SuggestRequest;
-import com.douzi.sqlive.dto.ai.SuggestResponse;
 import com.douzi.sqlive.service.ai.AiService;
-import com.douzi.sqlive.service.knowledge.KnowledgeGraphService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +21,6 @@ import java.util.UUID;
 public class AiController {
 
     private final AiService aiService;
-    private final KnowledgeGraphService knowledgeGraphService;
 
     /** General chat — streaming SSE. */
     @PostMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -82,12 +78,6 @@ public class AiController {
         request.setMode("optimize");
         log.info("[{}] Optimize request", reqId);
         return logAndReturn(reqId, request.getMode(), aiService.executeNonStreaming(request));
-    }
-
-    /** Learning suggestions — rule-based, no LLM call */
-    @PostMapping("/suggest-next")
-    public SuggestResponse suggestNext(@RequestBody SuggestRequest request) {
-        return knowledgeGraphService.generateSuggestions(request);
     }
 
     private AiChatResponse logAndReturn(String reqId, String mode, AiChatResponse resp) {
