@@ -77,7 +77,6 @@ describe('useAiChat', () => {
         expect(engine.messages.value).toEqual([]);
         expect(engine.isLoading.value).toBe(false);
         expect(engine.showPanel.value).toBe(false); // panel starts closed
-        expect(engine.suggestions.value).toEqual([]);
         expect(engine.autoAnalysisEnabled.value).toBe(true);
     });
 
@@ -137,13 +136,4 @@ describe('useAiChat', () => {
         expect(engine.isLoading.value).toBe(false);
     });
 
-    it('markMastered adds topic and persists to localStorage', async () => {
-        const engine = useAiChat(mockSqlEngine());
-
-        engine.markMastered('joins');
-        expect(engine.masteredTopics.value.has('joins')).toBe(true);
-        // useLocalStorage writes are async; flush pending tasks
-        await vi.runAllTimersAsync();
-        expect(JSON.parse(localStorage.getItem('ai-mastered-topics')!)).toContain('joins');
-    });
 });

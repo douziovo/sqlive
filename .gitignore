@@ -1,4 +1,5 @@
 sqlive-backend/gradle
+music
 
 # IDE
 .idea/
@@ -9,6 +10,7 @@ sqlive-backend/gradle
 .claude/settings.local.json
 docs/superpowers
 .playwright-mcp
+.superpowers
 
 # Environment
 .env
