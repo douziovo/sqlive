@@ -1,6 +1,6 @@
 import { ref, computed, watch, nextTick } from 'vue';
-import dagre from 'dagre';
 import { MarkerType } from '@vue-flow/core';
+import { layoutNodes } from '../composables/useDagreLayout';
 import type { Node, Edge } from '@vue-flow/core';
 import { parsePrimaryType } from '../utils/sql';
 import type { TableSchema, ForeignKeyInfo, ColumnMeta, ErTableNodeData } from '../model/DatabaseTypes';
@@ -108,39 +108,11 @@ export function useErDiagram(
 
   async function autoLayout() {
     await nextTick();
-
-    const g = new dagre.graphlib.Graph();
-    g.setGraph({ rankdir: 'LR', ranksep: 140, nodesep: 80, marginx: 40, marginy: 40 });
-    g.setDefaultEdgeLabel(() => ({}));
-
-    const elMap = new Map<string, HTMLElement>();
-    const root = containerRef.value || document;
-    root.querySelectorAll<HTMLElement>('[data-id]').forEach(el => {
-      if (el.dataset.id) elMap.set(el.dataset.id, el);
-    });
-
-    for (const node of nodes.value) {
-      const el = elMap.get(node.id);
-      const w = el?.offsetWidth || 200;
-      const h = el?.offsetHeight || 120;
-      g.setNode(node.id, { width: w, height: h });
-    }
-
-    for (const edge of edges.value) {
-      g.setEdge(edge.source, edge.target);
-    }
-
-    dagre.layout(g);
-
-    nodes.value = (nodes.value as any[]).map((node: any) => {
-      const pos = g.node(node.id);
-      if (!pos) return node;
-      return {
-        ...node,
-        position: { x: pos.x - pos.width / 2, y: pos.y - pos.height / 2 },
-      };
-    }) as Node<ErTableNodeData>[];
-
+    nodes.value = layoutNodes(
+      nodes.value as any,
+      edges.value,
+      containerRef.value,
+    ) as Node<ErTableNodeData>[];
     await nextTick();
   }
 

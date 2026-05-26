@@ -1,7 +1,6 @@
 <template>
   <Splitpanes class="default-theme h-screen" :class="{ 'no-animate': noAnimate }">
     <Pane :size="28" :min-size="20">
-      <!-- CodeEditor container -->
       <div class="h-full flex flex-col relative">
         <div class="flex-1 min-h-0">
           <CodeEditor
@@ -20,21 +19,6 @@
       </div>
     </Pane>
 
-    <!-- Floating AI chat panel — at root level so it moves freely across the page -->
-    <AiChatPanel
-      v-if="aiPanelVisible"
-      :messages="aiMessages"
-      :suggestions="aiSuggestions"
-      :is-loading="aiLoading"
-      @send="handleAiSend"
-      @close="aiPanelVisible = false"
-      @clear="handleAiClear"
-      @regenerate="handleAiRegenerate"
-      @edit="handleAiEdit"
-      @delete="handleAiDelete"
-      @cancel-stream="aiChat.cancelStream"
-    />
-
     <Pane :min-size="20">
       <div class="h-full relative">
         <div v-if="isLoading" class="absolute top-4 right-4 bg-primary text-primary-foreground px-3 py-1 rounded-full text-xs font-bold shadow-lg z-50 animate-pulse pointer-events-none">
@@ -51,6 +35,31 @@
       </div>
     </Pane>
   </Splitpanes>
+
+  <!-- Floating panels — outside Splitpanes so they don't get removed -->
+  <AiChatPanel
+    v-if="aiPanelVisible"
+    :messages="aiMessages"
+    :is-loading="aiLoading"
+    @send="handleAiSend"
+    @close="aiPanelVisible = false"
+    @clear="handleAiClear"
+    @regenerate="handleAiRegenerate"
+    @edit="handleAiEdit"
+    @delete="handleAiDelete"
+    @cancel-stream="aiChat.cancelStream"
+  />
+
+  <KnowledgePanel
+    :is-open="isKnowledgePanelOpen"
+    @close="isKnowledgePanelOpen = false"
+    @ask-ai="handleKnowledgeAskAi"
+  />
+
+  <LearningCompanion
+    v-if="!isKnowledgePanelOpen"
+    @open="isKnowledgePanelOpen = true"
+  />
 </template>
 
 <script setup lang="ts">
@@ -60,9 +69,12 @@ import 'splitpanes/dist/splitpanes.css';
 import CodeEditor from './components/CodeEditor.vue';
 import DataVisualizer from './components/DataVisualizer.vue';
 import AiChatPanel from './components/AiChatPanel.vue';
+import KnowledgePanel from './components/knowledge/KnowledgePanel.vue';
+import LearningCompanion from './components/knowledge/LearningCompanion.vue';
 import { useSqlEngine } from './viewmodel/useSqlEngine';
 import { useAiChat } from './viewmodel/useAiChat';
 import { useInlineActions } from './viewmodel/useInlineActions';
+
 import { SQL_CONTEXT_KEY, AI_ACTIONS_KEY } from './viewmodel/injectionKeys';
 import type { SchemaTableInfo } from './utils/aiQuickFix';
 import type { CellUpdateEvent, RowDeleteEvent, CreateTableEvent, RowInsertEvent } from './model/DatabaseTypes';
@@ -77,7 +89,7 @@ const aiChat = useAiChat({
   db: engine.db,
 });
 
-const inlineActions = useInlineActions({
+const { analyzeError, fixCode, explain, optimize, generateSql } = useInlineActions({
   isLoading: aiChat.isLoading,
   messages: aiChat.messages,
   code: engine.code,
@@ -102,7 +114,6 @@ const activeDbName = computed(() =>
 const isLoading = engine.isLoading;
 const aiMessages = aiChat.messages;
 const aiLoading = aiChat.isLoading;
-const aiSuggestions = aiChat.suggestions;
 const aiPanelVisible = aiChat.showPanel;
 
 // ── Provide SQL context (replaces 9 props across 3 components) ──
@@ -118,22 +129,17 @@ provide(SQL_CONTEXT_KEY, {
   highlight: engine.highlight,
 });
 
-// ── Provide AI actions (explicit, not hidden in composable) ─────
+// ── Provide AI actions ─────
 provide(AI_ACTIONS_KEY, {
   isLoading: aiChat.isLoading,
-  inlineVisible: inlineActions.showInlineResult,
-  inlineContent: inlineActions.inlineContent,
-  inlineMode: inlineActions.inlineMode,
-  inlineActions: inlineActions.inlineActions,
-  onAnalyzeError: inlineActions.analyzeError,
-  onFixCode: inlineActions.fixCode,
-  onExplain: inlineActions.explain,
-  onOptimize: inlineActions.optimize,
-  onGenerateSql: inlineActions.generateSql,
+  analyzeError,
+  fixCode,
+  explain,
+  optimize,
+  generateSql,
   onOpenChat: (context?: string) => { aiChat.openPanel(); if (context) void aiChat.sendMessage(context); },
+  sendToAi: (text: string) => { void aiChat.sendMessage(text); },
   onTogglePanel: aiChat.togglePanel,
-  onInlineClose: inlineActions.closeInline,
-  onInlineAction: (_action: string) => { /* handled by AiInlineResult */ },
 });
 
 // ── AI event handlers ───────────────────────────────────────────
@@ -218,6 +224,15 @@ const handleInsertRow = ({ tableName, newRow }: RowInsertEvent) => {
 };
 
 const noAnimate = ref(true);
+
+// ── Knowledge graph ───────────────────────────────────────────────
+const isKnowledgePanelOpen = ref(false);
+
+function handleKnowledgeAskAi(label: string) {
+  isKnowledgePanelOpen.value = false;
+  aiChat.openPanel();
+  void aiChat.sendMessage('教我学习：' + label);
+}
 
 // Enable splitpanes transitions after initial layout (prevents slide-in animation on load)
 onMounted(() => {
