@@ -1,10 +1,44 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import ChartView from '../../components/ChartView.vue';
 import type { TableSchema } from '@/model/DatabaseTypes';
 
-// Chart.js is globally mocked in setup.ts
+// jsdom has no ResizeObserver — polyfill to avoid unhandled rejections in useECharts
+beforeAll(() => {
+  (globalThis as any).ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+});
+
+// Mock echarts: jsdom has no canvas support, so prevent ECharts from trying to init
+vi.mock('echarts', () => {
+  const mockInstance: Record<string, any> = {
+    setOption: vi.fn(),
+    resize: vi.fn(),
+    dispose: vi.fn(),
+    on: vi.fn(),
+    off: vi.fn(),
+    clear: vi.fn(),
+    isDisposed: vi.fn().mockReturnValue(false),
+  };
+  return {
+    default: {
+      init: vi.fn(() => mockInstance),
+      dispose: vi.fn(),
+      registerTheme: vi.fn(),
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+    },
+    init: vi.fn(() => mockInstance),
+    dispose: vi.fn(),
+    registerTheme: vi.fn(),
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+  };
+});
 
 function makeResult(overrides: Partial<TableSchema> = {}): TableSchema {
   return {
@@ -58,22 +92,25 @@ describe('ChartView', () => {
     expect(wrapper.text()).toContain('需要至少 1 个数值列');
   });
 
-  it('renders canvas element when valid data present', () => {
+  it('renders chart container div when valid data present', () => {
     const wrapper = mount(ChartView, {
       props: { result: makeResult() },
     });
-    const canvas = wrapper.find('canvas');
-    expect(canvas.exists()).toBe(true);
+    const chartContainer = wrapper.find('.chart-container');
+    expect(chartContainer.exists()).toBe(true);
   });
 
-  it('renders axis picker selectors', async () => {
+  it('renders label column select and numeric column checkboxes', async () => {
     const wrapper = mount(ChartView, {
       props: { result: makeResult() },
     });
     await nextTick();
-    // Two selects: label column and numeric column
+    // Should have at least 2 selects: chart type + label column
     const selects = wrapper.findAll('select');
     expect(selects.length).toBeGreaterThanOrEqual(2);
+    // Should have numeric column checkboxes
+    const checkboxes = wrapper.findAll('input[type="checkbox"]');
+    expect(checkboxes.length).toBeGreaterThan(0);
   });
 
   it('auto-selects first non-numeric column as label', async () => {
@@ -81,19 +118,20 @@ describe('ChartView', () => {
       props: { result: makeResult() },
     });
     await nextTick();
-    // name is TEXT (non-numeric) → should be auto-selected as label
     expect(wrapper.text()).toContain('标签列');
     expect(wrapper.text()).toContain('数值列');
   });
 
-  it('changes chart container size for pie chart', async () => {
+  it('changes chartType when pie is selected', async () => {
     const wrapper = mount(ChartView, {
       props: { result: makeResult() },
     });
-    const select = wrapper.find('select');
-    await select.setValue('pie');
     await nextTick();
-    // Chart type change should reflect in vm and trigger 400px container
+    // chart type select is the first select
+    const selects = wrapper.findAll('select');
+    const chartTypeSelect = selects[0];
+    await chartTypeSelect.setValue('pie');
+    await nextTick();
     expect((wrapper.vm as any).chartType).toBe('pie');
   });
 });
