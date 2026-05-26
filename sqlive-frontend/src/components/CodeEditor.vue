@@ -149,18 +149,6 @@
       </div>
     </div>
 
-    <!-- AI inline result popover -->
-    <AiInlineResult
-      v-if="ai"
-      :visible="ai.inlineVisible.value"
-      :loading="ai.isLoading.value"
-      :content="ai.inlineContent.value"
-      :mode="ai.inlineMode.value"
-      :actions="ai.inlineActions.value"
-      :anchor-rect="aiAnchorRect"
-      @close="ai.onInlineClose()"
-      @action="ai.onInlineAction"
-    />
   </div>
 </template>
 
@@ -170,12 +158,8 @@ import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import 'monaco-editor/esm/vs/basic-languages/sql/sql.contribution';
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import { format } from 'sql-formatter';
-import { registerAiQuickFix, registerAiCommands } from '../utils/aiQuickFix';
-import type { SchemaTableInfo } from '../utils/aiQuickFix';
 import { highlightMatch } from '../utils/html';
-import AiInlineResult from './AiInlineResult.vue';
 import { SQL_CONTEXT_KEY, AI_ACTIONS_KEY } from '../viewmodel/injectionKeys';
-import type { AiActions } from '../viewmodel/useAiChat';
 
 self.MonacoEnvironment = {
   getWorker() {
@@ -202,7 +186,7 @@ const emit = defineEmits<{
 }>();
 
 const ctx = inject(SQL_CONTEXT_KEY)!;
-const { tabs, activeTabId, activeDbName, dbList, highlightChunk, error, schemaTables } = ctx;
+const { tabs, activeTabId, activeDbName, dbList, highlightChunk, error } = ctx;
 const ai = inject(AI_ACTIONS_KEY)!;
 
 const editorContainer = ref<HTMLElement | null>(null);
@@ -317,55 +301,40 @@ onMounted(() => {
     run: () => emit('export-all'),
   });
 
-  // ── AI QuickFix registration ───────────────────────────────
+  // ── AI: right-click context menu ──
   if (ai) {
-    const quickFixDisposable = registerAiQuickFix(monaco, state.editor, {
-      onAnalyzeError: ai.onAnalyzeError,
-      onFixCode: ai.onFixCode,
-      onExplain: ai.onExplain,
-      onOptimize: ai.onOptimize,
-      onOpenChat: ai.onOpenChat,
-      onGenerateSql: () => ai.onGenerateSql(''),
-      getSchemaTables: () => schemaTables.value || [],
+    state.editor.addAction({
+      id: 'ai-send-selection',
+      label: '💬 发送选中代码到 AI 对话',
+      contextMenuGroupId: '9_sql',
+      contextMenuOrder: 10,
+      run: () => {
+        const sel = state.editor?.getModel()?.getValueInRange(state.editor.getSelection()!);
+        if (sel?.trim()) {
+          ai.sendToAi(`请帮我看看这段 SQL：\n\n\`\`\`sql\n${sel.trim()}\n\`\`\``);
+        }
+      },
     });
 
-    const commandDisposables = registerAiCommands(state.editor, {
-      onAnalyzeError: ai.onAnalyzeError,
-      onFixCode: ai.onFixCode,
-      onExplain: ai.onExplain,
-      onOptimize: ai.onOptimize,
-      onOpenChat: ai.onOpenChat,
-      onGenerateSql: () => ai.onGenerateSql(''),
-      getSchemaTables: () => schemaTables.value || [],
+    state.editor.addAction({
+      id: 'ai-generate-sql',
+      label: '✨ AI 帮我写 SQL',
+      contextMenuGroupId: '9_sql',
+      contextMenuOrder: 11,
+      run: () => ai.sendToAi('请帮我写一段 SQL 查询。'),
     });
 
-    disposables.push(quickFixDisposable, ...commandDisposables);
+    state.editor.addAction({
+      id: 'ai-open-chat',
+      label: '🤖 打开 AI 对话',
+      contextMenuGroupId: '9_sql',
+      contextMenuOrder: 12,
+      run: () => ai.onOpenChat(),
+    });
   }
-
-  // Alt+Enter: unified quick fix via Monaco's built-in widget
-  state.editor.addAction({
-    id: 'trigger-ai-quickfix',
-    label: 'AI QuickFix',
-    keybindings: [monaco.KeyMod.Alt | monaco.KeyCode.Enter],
-    run: (ed) => {
-      ed.trigger('keyboard', 'editor.action.quickFix', null);
-    },
-  });
 
   applyHighlight();
   applyErrorMarkers();
-});
-
-// Computed anchor rect for AiInlineResult positioning
-const aiAnchorRect = computed(() => {
-  if (!state.editor || !editorContainer.value) return null;
-  const selection = state.editor.getSelection();
-  if (!selection) return null;
-  const domNode = state.editor.getDomNode();
-  if (!domNode) return null;
-  const containerRect = domNode.getBoundingClientRect();
-  const top = containerRect.top + state.editor.getTopForLineNumber(selection.startLineNumber) - state.editor.getScrollTop();
-  return { top, left: containerRect.left, width: containerRect.width, height: 24 };
 });
 
 onBeforeUnmount(() => {

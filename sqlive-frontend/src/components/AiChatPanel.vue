@@ -128,13 +128,6 @@
       </ConversationContent>
     </Conversation>
 
-    <!-- Suggestions -->
-    <div v-if="suggestions.length > 0" class="px-4 py-2 border-t border-border bg-muted/80 flex-shrink-0">
-      <Suggestions>
-        <Suggestion v-for="s in suggestions" :key="s.id" :suggestion="'教我学习：' + s.label" size="sm" variant="outline" class="text-xs border-border hover:border-primary/40 hover:text-primary transition-colors rounded-xl" @click="emit('send', '教我学习：' + s.label)">📚 {{ s.label }}</Suggestion>
-      </Suggestions>
-    </div>
-
     <!-- Input -->
     <div class="px-4 py-2 border-t border-border flex-shrink-0 bg-card">
       <div class="relative flex items-end bg-muted rounded-2xl border border-border focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/20 pl-4 pr-12 py-2 transition-colors transition-shadow">
@@ -163,13 +156,12 @@ import { marked } from 'marked';
 import { Conversation, ConversationContent, ConversationEmptyState } from '@/components/ai-elements/conversation';
 import AiMessageFooter from '@/components/AiMessageFooter.vue';
 import { Reasoning, ReasoningTrigger, ReasoningContent } from '@/components/ai-elements/reasoning';
-import { Suggestion, Suggestions } from '@/components/ai-elements/suggestion';
+import { Suggestion } from '@/components/ai-elements/suggestion';
 import { Loader } from '@/components/ai-elements/loader';
-import type { AiMessage, SuggestionItem } from '../viewmodel/useAiChat';
+import type { AiMessage } from '../viewmodel/useAiChat';
 
 const props = defineProps<{
   messages: AiMessage[];
-  suggestions: SuggestionItem[];
   isLoading: boolean;
 }>();
 
