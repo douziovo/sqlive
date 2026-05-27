@@ -13,14 +13,13 @@ test.describe('Import / Export', () => {
 
     // Look for export option in context menu
     const exportOption = page.locator('text=导出当前标签页');
-    if (await exportOption.isVisible()) {
-      const [download] = await Promise.all([
-        page.waitForEvent('download', { timeout: 5_000 }),
-        exportOption.click(),
-      ]);
+    await expect(exportOption).toBeVisible({ timeout: 5_000 });
+    const [download] = await Promise.all([
+      page.waitForEvent('download', { timeout: 5_000 }),
+      exportOption.click(),
+    ]);
 
-      expect(download.suggestedFilename()).toMatch(/\.sql$/);
-    }
+    expect(download.suggestedFilename()).toMatch(/\.sql$/);
   });
 
   test('exports all tabs as multiple files', async ({ page }) => {
@@ -28,11 +27,9 @@ test.describe('Import / Export', () => {
     await page.waitForTimeout(300);
 
     const exportAllOption = page.locator('text=导出全部标签页');
-    if (await exportAllOption.isVisible()) {
-      await exportAllOption.click();
-      await page.waitForTimeout(500);
-      // Exported files would be downloaded; verify no crash
-    }
+    await expect(exportAllOption).toBeVisible({ timeout: 5_000 });
+    await exportAllOption.click();
+    await page.waitForTimeout(500);
   });
 
   test('resize handle is present and draggable', async ({ page }) => {

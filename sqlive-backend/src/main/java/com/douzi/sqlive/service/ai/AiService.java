@@ -93,7 +93,7 @@ public class AiService {
                 });
     }
 
-    private AiProvider getProvider() {
+    AiProvider getProvider() {
         String name = aiProperties.getProvider();
         if (name == null || name.isBlank()) name = "deepseek";
         var provider = providers.get(name);

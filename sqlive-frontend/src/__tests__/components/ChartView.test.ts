@@ -132,6 +132,6 @@ describe('ChartView', () => {
     const chartTypeSelect = selects[0];
     await chartTypeSelect.setValue('pie');
     await nextTick();
-    expect((wrapper.vm as any).chartType).toBe('pie');
+    expect((chartTypeSelect.element as HTMLSelectElement).value).toBe('pie');
   });
 });

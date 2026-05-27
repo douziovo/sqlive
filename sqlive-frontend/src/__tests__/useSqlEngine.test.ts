@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { jsonOk, mockSuccess, mockError, mockReject, tick, setupSqlEngine, teardownSqlEngine, API_URL } from './test-utils';
+import { jsonOk, mockSuccess, mockError, mockReject, tick, setupSqlEngine, teardownSqlEngine, API_URL, type SqlEngineSetup } from './test-utils';
 
 describe('useSqlEngine', () => {
-    let useSqlEngine: any;
+    let useSqlEngine: SqlEngineSetup['useSqlEngine'];
     let fetchSpy: ReturnType<typeof vi.fn>;
 
     beforeEach(async () => {
@@ -16,7 +16,7 @@ describe('useSqlEngine', () => {
     });
 
     it('should set isLoading to true during execution', async () => {
-        let resolveLater: any;
+        let resolveLater: (value: unknown) => void;
         const delayed = new Promise(r => { resolveLater = r; });
         fetchSpy.mockReturnValue(delayed.then(() => jsonOk({ success: true, data: { tables: [] } })));
 
@@ -370,5 +370,33 @@ describe('useSqlEngine', () => {
         engine.dropTableUI('t');
         expect(engine.code.value).not.toBe(oldCode);
         expect(engine.code.value).not.toContain('CREATE TABLE t');
+    });
+
+    it('handles malformed JSON response gracefully', async () => {
+        fetchSpy.mockResolvedValue({
+            status: 200,
+            ok: true,
+            json: () => Promise.reject(new Error('Unexpected token < in JSON')),
+        });
+
+        const engine = useSqlEngine();
+        await tick();
+
+        // Should not crash, should have error state
+        expect(engine.executionError.value).toBeTruthy();
+    });
+
+    it('handles empty response body gracefully', async () => {
+        fetchSpy.mockResolvedValue({
+            status: 200,
+            ok: true,
+            json: () => Promise.resolve(null),
+        });
+
+        const engine = useSqlEngine();
+        await tick();
+
+        // Should not crash
+        expect(engine.isLoading.value).toBe(false);
     });
 });

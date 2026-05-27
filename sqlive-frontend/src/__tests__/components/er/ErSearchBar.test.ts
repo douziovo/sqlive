@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount } from '@vue/test-utils';
+import { nextTick } from 'vue';
 import ErSearchBar from '../../../components/er/ErSearchBar.vue';
 
 describe('ErSearchBar', () => {
@@ -47,7 +48,7 @@ describe('ErSearchBar', () => {
   it('shows filter count when modelValue has content', async () => {
     const wrapper = mount(ErSearchBar, { props: defaultProps });
     await wrapper.setProps({ modelValue: 'test', matchCount: 3, currentIndex: 0 });
-    await wrapper.vm.$nextTick();
+    await nextTick();
     const count = wrapper.find('.er-findbar-count');
     expect(count.exists()).toBe(true);
     expect(count.text()).toBe('1/3');

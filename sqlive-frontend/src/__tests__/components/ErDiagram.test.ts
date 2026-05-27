@@ -23,8 +23,6 @@ const stubs = {
   Background: true,
   MiniMap: true,
   ErTableNode: true,
-  ErToolbar: true,
-  ErSearchBar: true,
 };
 
 describe('ErDiagram', () => {
