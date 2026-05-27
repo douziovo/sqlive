@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body">
-    <Transition name="panel-slide">
+    <Transition name="panel-expand">
       <div v-if="isOpen" class="knowledge-panel" @keydown.esc="close">
         <div class="knowledge-panel__backdrop" @click="close" />
 
@@ -17,34 +17,47 @@
               type="text"
               placeholder="搜索知识点..."
             />
+            <div class="knowledge-panel__filters">
+              <button
+                v-for="f in difficultyOptions"
+                :key="f.key"
+                class="knowledge-panel__filter-btn"
+                :class="{ 'knowledge-panel__filter-btn--active': activeDifficulty === f.key }"
+                @click="activeDifficulty = activeDifficulty === f.key ? null : f.key"
+              >
+                {{ f.label }}
+              </button>
+              <span class="knowledge-panel__filter-sep" />
+              <button
+                v-for="f in statusOptions"
+                :key="f.key"
+                class="knowledge-panel__filter-btn"
+                :class="{ 'knowledge-panel__filter-btn--active': activeStatus === f.key }"
+                @click="activeStatus = activeStatus === f.key ? null : f.key"
+              >
+                {{ f.label }}
+              </button>
+            </div>
             <span class="knowledge-panel__progress">
               {{ kgProgress.count }}/{{ kgProgress.total }}  {{ kgProgress.level }}
             </span>
           </div>
 
-          <!-- Body: graph + sidebar -->
+          <!-- Body: full-width graph -->
           <div class="knowledge-panel__body">
             <KnowledgeGraph
               ref="graphRef"
               class="knowledge-panel__graph"
-              :nodes="kgNodes"
-              :edges="kgEdges"
+              :nodes="filteredNodes"
+              :edges="filteredEdges"
               :search-query="searchQuery"
+              :selected-topic="kgSelectedNodeData"
+              :mastered-topics="kgMasteredTopics"
               @node-select="onNodeSelect"
+              @toggle-mastered="kg.toggleMastered"
+              @ask-ai="onAskAi"
+              @deselect-node="onDeselectNode"
             />
-
-            <aside class="knowledge-panel__sidebar">
-              <KnowledgeDetail
-                v-if="kgSelectedNodeData"
-                :topic="kgSelectedNodeData"
-                :is-mastered="kgMasteredTopics.includes(kgSelectedNode ?? '')"
-                @toggle-mastered="kg.toggleMastered"
-                @ask-ai="onAskAi"
-              />
-              <div v-else class="knowledge-panel__sidebar-empty">
-                <p class="text-sm text-muted-foreground">点击左侧节点查看详情</p>
-              </div>
-            </aside>
           </div>
         </div>
       </div>
@@ -53,69 +66,117 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, inject, watch, onMounted, onUnmounted } from 'vue';
-import KnowledgeGraph from './KnowledgeGraph.vue';
-import KnowledgeDetail from './KnowledgeDetail.vue';
-import { useKnowledgeGraph } from '@/composables/useKnowledgeGraph';
-import { SQL_CONTEXT_KEY } from '@/viewmodel/injectionKeys';
+import { ref, computed, inject, watch, onMounted, onUnmounted } from 'vue'
+import KnowledgeGraph from './KnowledgeGraph.vue'
+import { useKnowledgeGraph } from '@/composables/useKnowledgeGraph'
+import type { KnowledgeNodeData } from '@/composables/useKnowledgeGraph'
+import type { Node, Edge } from '@vue-flow/core'
+import { SQL_CONTEXT_KEY } from '@/viewmodel/injectionKeys'
 
 const props = defineProps<{
-  isOpen: boolean;
-}>();
+  isOpen: boolean
+}>()
 
 const emit = defineEmits<{
-  (e: 'close'): void;
-  (e: 'ask-ai', label: string): void;
-}>();
+  (e: 'close'): void
+  (e: 'ask-ai', label: string): void
+}>()
 
-const sqlContext = inject(SQL_CONTEXT_KEY)!;
-const searchQuery = ref('');
+const sqlContext = inject(SQL_CONTEXT_KEY)!
+const searchQuery = ref('')
+const activeDifficulty = ref<string | null>(null)
+const activeStatus = ref<string | null>(null)
+
+interface FilterOption {
+  key: string
+  label: string
+}
+
+const difficultyOptions: FilterOption[] = [
+  { key: '1', label: '入门' },
+  { key: '2', label: '进阶' },
+  { key: '3', label: '高级' },
+]
+
+const statusOptions: FilterOption[] = [
+  { key: 'mastered', label: '已掌握' },
+  { key: 'in-progress', label: '学习中' },
+  { key: 'unlearned', label: '未学习' },
+]
 
 const kg = useKnowledgeGraph({
   sqlSource: () => {
-    const tab = sqlContext.tabs.value.find(t => t.id === sqlContext.activeTabId.value);
-    return tab?.code ?? '';
+    const tab = sqlContext.tabs.value.find(t => t.id === sqlContext.activeTabId.value)
+    return tab?.code ?? ''
   },
-});
+})
 
-const graphRef = ref<InstanceType<typeof KnowledgeGraph> | null>(null);
+const graphRef = ref<InstanceType<typeof KnowledgeGraph> | null>(null)
 
-const kgNodes = computed(() => kg.nodes.value);
-const kgEdges = computed(() => kg.edges.value);
-const kgSelectedNode = computed(() => kg.selectedNode.value);
-const kgSelectedNodeData = computed(() => kg.selectedNodeData.value);
-const kgProgress = computed(() => kg.progress.value);
-const kgMasteredTopics = computed(() => kg.masteredTopics.value);
+const kgNodes = computed(() => kg.nodes.value)
+const kgEdges = computed(() => kg.edges.value)
+const kgSelectedNode = computed(() => kg.selectedNode.value)
+const kgSelectedNodeData = computed(() => kg.selectedNodeData.value)
+const kgProgress = computed(() => kg.progress.value)
+const kgMasteredTopics = computed(() => kg.masteredTopics.value)
+
+const filteredNodes = computed(() => {
+  let nodes: Node<KnowledgeNodeData>[] = kgNodes.value
+
+  if (activeDifficulty.value) {
+    const d = parseInt(activeDifficulty.value)
+    nodes = nodes.filter(n => n.data.difficulty === d)
+  }
+  if (activeStatus.value) {
+    nodes = nodes.filter(n => n.data.status === activeStatus.value)
+  }
+
+  return nodes
+})
+
+const filteredEdges = computed(() => {
+  if (!activeDifficulty.value && !activeStatus.value) return kgEdges.value
+  const visibleIds = new Set(filteredNodes.value.map(n => n.id))
+  return kgEdges.value.filter(e => visibleIds.has(e.source) && visibleIds.has(e.target))
+})
 
 function close(): void {
-  emit('close');
+  emit('close')
 }
 
 function onNodeSelect(topicId: string): void {
-  kg.selectedNode.value = topicId;
+  kg.selectedNode.value = topicId
 }
 
 function onAskAi(label: string): void {
-  emit('ask-ai', label);
+  emit('ask-ai', label)
+}
+
+function onDeselectNode(): void {
+  kg.selectedNode.value = null
 }
 
 watch(() => props.isOpen, async (open) => {
   if (open) {
-    await kg.fetchGraph();
+    searchQuery.value = ''
+    activeDifficulty.value = null
+    activeStatus.value = null
+    kg.selectedNode.value = null
+    await kg.fetchGraph()
   }
-});
+})
 
 function onKeydown(e: KeyboardEvent): void {
-  if (e.key === 'Escape') close();
+  if (e.key === 'Escape') close()
 }
 
 onMounted(() => {
-  document.addEventListener('keydown', onKeydown);
-});
+  document.addEventListener('keydown', onKeydown)
+})
 
 onUnmounted(() => {
-  document.removeEventListener('keydown', onKeydown);
-});
+  document.removeEventListener('keydown', onKeydown)
+})
 </script>
 
 <style scoped>
@@ -138,16 +199,18 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   background: var(--background);
+  clip-path: circle(150% at calc(100% - 52px) calc(100% - 52px));
 }
 
 .knowledge-panel__topbar {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   padding: 12px 20px;
   border-bottom: 1px solid var(--border);
   background: white;
   flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 .knowledge-panel__back-btn {
@@ -168,7 +231,7 @@ onUnmounted(() => {
 
 .knowledge-panel__search {
   flex: 1;
-  max-width: 240px;
+  max-width: 200px;
   padding: 5px 10px;
   font-size: 12px;
   border: 1px solid var(--border);
@@ -184,49 +247,68 @@ onUnmounted(() => {
   color: var(--muted-foreground);
 }
 
+.knowledge-panel__filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.knowledge-panel__filter-sep {
+  width: 1px;
+  background: var(--border);
+  margin: 0 4px;
+}
+
+.knowledge-panel__filter-btn {
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--muted);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.knowledge-panel__filter-btn:hover {
+  background: var(--secondary);
+  color: var(--foreground);
+}
+.knowledge-panel__filter-btn--active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
 .knowledge-panel__progress {
   margin-left: auto;
   font-size: 13px;
   color: var(--muted-foreground);
+  white-space: nowrap;
 }
 
 .knowledge-panel__body {
   flex: 1;
   min-height: 0;
-  display: flex;
 }
 
 .knowledge-panel__graph {
-  flex: 1;
-  min-width: 0;
-}
-
-.knowledge-panel__sidebar {
-  width: 300px;
-  flex-shrink: 0;
-  border-left: 1px solid var(--border);
-  background: white;
-  overflow-y: auto;
-}
-
-.knowledge-panel__sidebar-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 100%;
   height: 100%;
-  color: var(--muted-foreground);
 }
 
-/* Transitions */
-.panel-slide-enter-active .knowledge-panel__content,
-.panel-slide-leave-active .knowledge-panel__content {
-  transition: transform 0.3s ease-out;
+/* Transitions — expand from / collapse to companion button (bottom-right) */
+.panel-expand-enter-active .knowledge-panel__content {
+  transition: clip-path 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease-out;
 }
-.panel-slide-leave-active .knowledge-panel__content {
-  transition: transform 0.2s ease-in;
+.panel-expand-leave-active .knowledge-panel__content {
+  transition: clip-path 0.3s cubic-bezier(0.4, 0, 1, 1), opacity 0.2s ease-in;
 }
-.panel-slide-enter-from .knowledge-panel__content,
-.panel-slide-leave-to .knowledge-panel__content {
-  transform: translateY(100%);
+.panel-expand-enter-from .knowledge-panel__content {
+  clip-path: circle(28px at calc(100% - 52px) calc(100% - 52px));
+  opacity: 0;
+}
+.panel-expand-leave-to .knowledge-panel__content {
+  clip-path: circle(28px at calc(100% - 52px) calc(100% - 52px));
+  opacity: 0;
 }
 </style>

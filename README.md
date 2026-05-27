@@ -25,9 +25,11 @@
 - **多模式交互**：聊天问答 / 错误分析 / 代码修复 / SQL 解释 / 性能优化
 - **流式响应**：SSE 流式传输，实时显示 AI 回复与推理过程
 - **学习建议**：基于知识图谱的 SQL 主题分类与学习路径推荐
-- **知识图谱**：可视化 SQL 知识体系，24 个知识点节点 + 学习路径连线，支持搜索和进度追踪
+- **知识图谱**：全屏知识图谱面板，语义缩放（3 级细节），难度/状态双组筛选，浮层详情卡片，圆形扩展动画从悬浮伴侣按钮入口
 
 ![AI 对话](docs/screenshots/07-ai-chat.png)
+
+![知识图谱](docs/screenshots/08-knowledge-graph.png)
 
 ### 数据可视化
 
@@ -36,7 +38,7 @@
 
 ![ER 图](docs/screenshots/02-er-diagram.png)
 
-- **图表视图**：查询结果支持柱状图、折线图、饼图等 Chart.js 可视化
+- **图表视图**：查询结果支持柱状图、折线图、饼图等 ECharts 可视化，支持双轴和自动图表推荐
 
 ![图表视图](docs/screenshots/03-chart-view.png)
 
@@ -58,7 +60,7 @@
 | 代码编辑器 | Monaco Editor | 0.55 |
 | UI 组件 | Reka-ui (Radix Vue) | 2.x |
 | ER 图 | Vue Flow + dagre | 1.48 / 0.8 |
-| 图表 | Chart.js | 4.5 |
+| 图表 | ECharts | 5.x |
 | AI 流式 | Vercel AI SDK | 6.x |
 | 后端框架 | Spring Boot | 4.0.6 |
 | JDK | Java 21 (Zulu) | 21 |
@@ -140,10 +142,11 @@ sqlive/
 │   │   │   ├── HoverPreview.vue        # 悬停预览弹窗（索引/触发器详情）
 │   │   │   ├── EmptyState.vue          # 空状态引导
 │   │   │   ├── knowledge/                # 知识图谱子组件
-│   │   │   │   ├── KnowledgePanel.vue    # 知识图谱侧边栏面板
-│   │   │   │   ├── KnowledgeGraph.vue    # VueFlow 知识图谱画布
-│   │   │   │   ├── KnowledgeNode.vue     # 自定义知识点节点
-│   │   │   │   └── KnowledgeDetail.vue   # 知识点详情浮层
+│   │   │   │   ├── KnowledgePanel.vue    # 全屏知识图谱面板（圆形展开动画 + 筛选标签）
+│   │   │   │   ├── KnowledgeGraph.vue    # VueFlow 图谱画布（语义缩放 + 浮层卡片）
+│   │   │   │   ├── KnowledgeNode.vue     # 自定义节点（3 级缩放细节）
+│   │   │   │   ├── KnowledgeDetail.vue   # 浮层详情卡片
+│   │   │   │   └── LearningCompanion.vue # 浮动伴侣按钮（入口）
 │   │   │   ├── er/                     # ER 图子组件
 │   │   │   │   ├── ErDiagram.vue       # VueFlow 容器
 │   │   │   │   ├── ErTableNode.vue     # 自定义表节点

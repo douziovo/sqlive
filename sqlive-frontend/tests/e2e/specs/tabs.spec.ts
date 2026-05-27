@@ -46,8 +46,11 @@ test.describe('Multi-Tab System', () => {
     const firstTabTitle = page.locator('div[title*="SQL"], span:has-text("SQL")').first();
     if (await firstTabTitle.isVisible()) {
       await firstTabTitle.click();
+      await expect(firstTabTitle).toBeVisible();
     } else {
-      await page.locator('[class*="overflow-x-auto"] > div').first().click();
+      const fallback = page.locator('[class*="overflow-x-auto"] > div').first();
+      await fallback.click();
+      await expect(fallback).toBeVisible();
     }
     await page.waitForTimeout(1500);
 

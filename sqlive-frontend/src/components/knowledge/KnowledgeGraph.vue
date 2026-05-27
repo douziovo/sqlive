@@ -14,108 +14,137 @@
         :fit-view-on-init="true"
         :min-zoom="0.1"
         :max-zoom="2"
+        :nodes-draggable="false"
         @node-click="onNodeClick"
+        @move="onMove"
+        @pane-click="onPaneClick"
         @pane-ready="onPaneReady"
       >
         <Background :gap="20" :size="1" pattern-color="#e2e8f0" />
-        <Controls position="bottom-left" />
-        <MiniMap
-          v-if="showMinimap"
-          position="bottom-right"
-          :node-color="miniMapNodeColor"
-          :width="180"
-          :height="120"
-        />
       </VueFlow>
+
+      <Transition name="card-pop">
+        <KnowledgeDetail
+          v-if="selectedTopic"
+          class="knowledge-graph__detail-card"
+          :topic="selectedTopic"
+          :is-mastered="masteredTopics.includes(selectedTopic!.id)"
+          @toggle-mastered="handleToggleMastered"
+          @ask-ai="handleAskAi"
+          @close="handleDetailClose"
+        />
+      </Transition>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, markRaw, nextTick } from 'vue';
-import { VueFlow } from '@vue-flow/core';
-import { Background } from '@vue-flow/background';
-import { Controls } from '@vue-flow/controls';
-import { MiniMap } from '@vue-flow/minimap';
-import '@vue-flow/core/dist/style.css';
-import '@vue-flow/core/dist/theme-default.css';
-import '@vue-flow/minimap/dist/style.css';
-import '@vue-flow/controls/dist/style.css';
+import { ref, computed, watch, markRaw, nextTick, provide } from 'vue'
+import { VueFlow } from '@vue-flow/core'
+import { Background } from '@vue-flow/background'
+import '@vue-flow/core/dist/style.css'
+import '@vue-flow/core/dist/theme-default.css'
 
-import KnowledgeNode from './KnowledgeNode.vue';
-import { layoutNodes } from '@/composables/useDagreLayout';
-import type { Node, Edge } from '@vue-flow/core';
-import type { KnowledgeNodeData } from '@/composables/useKnowledgeGraph';
+import KnowledgeNode from './KnowledgeNode.vue'
+import KnowledgeDetail from './KnowledgeDetail.vue'
+import { layoutNodes } from '@/composables/useDagreLayout'
+import type { Node, Edge } from '@vue-flow/core'
+import type { KnowledgeNodeData, KnowledgeTopic } from '@/composables/useKnowledgeGraph'
 
 const props = defineProps<{
-  nodes: Node<KnowledgeNodeData>[];
-  edges: Edge[];
-  searchQuery?: string;
-}>();
+  nodes: Node<KnowledgeNodeData>[]
+  edges: Edge[]
+  searchQuery?: string
+  selectedTopic: KnowledgeTopic | null
+  masteredTopics: string[]
+}>()
 
 const emit = defineEmits<{
-  (e: 'node-select', topicId: string): void;
-}>();
+  (e: 'node-select', topicId: string): void
+  (e: 'toggle-mastered', topicId: string): void
+  (e: 'ask-ai', label: string): void
+  (e: 'deselect-node'): void
+}>()
 
-const nodeTypes = markRaw({ 'knowledge-node': KnowledgeNode }) as any;
-const flowRef = ref<any>(null);
-const showMinimap = ref(true);
-const displayNodes = ref<Node<KnowledgeNodeData>[]>([...props.nodes]);
+const nodeTypes = markRaw({ 'knowledge-node': KnowledgeNode }) as any
+const flowRef = ref<any>(null)
+const displayNodes = ref<Node<KnowledgeNodeData>[]>([...props.nodes])
 
-// Sync displayNodes when props.nodes change
-watch(() => props.nodes, (newNodes) => {
-  displayNodes.value = [...newNodes];
-}, { deep: true });
+const zoomLevel = ref(0.8)
+provide('zoomLevel', zoomLevel)
+
+// Sync displayNodes when props.nodes change, re-run layout
+watch(() => props.nodes, async (newNodes) => {
+  displayNodes.value = [...newNodes]
+  if (newNodes.length === 0) return
+  await nextTick()
+  const el = flowRef.value?.$el as HTMLElement | undefined
+  const layouted = layoutNodes(displayNodes.value as any, props.edges, el, { rankdir: 'LR', ranksep: 160, nodesep: 100 })
+  displayNodes.value = layouted as Node<KnowledgeNodeData>[]
+}, { deep: true })
 
 const filteredNodes = computed(() => {
-  if (!props.searchQuery) return displayNodes.value;
-  const q = props.searchQuery.toLowerCase();
+  if (!props.searchQuery) return displayNodes.value
+  const q = props.searchQuery.toLowerCase()
   return displayNodes.value.map(node => {
     const matches = node.data.label.toLowerCase().includes(q)
-      || (node.data.description || '').toLowerCase().includes(q);
+      || (node.data.description || '').toLowerCase().includes(q)
     return {
       ...node,
       style: { ...node.style, opacity: matches ? 1 : 0.2 },
-    };
-  });
-});
-
-function miniMapNodeColor(node: any): string {
-  const d = node.data?.difficulty;
-  if (d === 1) return '#10b981';
-  if (d === 2) return '#f59e0b';
-  return '#ef4444';
-}
+    }
+  })
+})
 
 function onNodeClick(event: any): void {
-  const topicId = event.node?.data?.topicId;
+  const topicId = event.node?.data?.topicId
   if (topicId) {
-    emit('node-select', topicId);
+    emit('node-select', topicId)
   }
 }
 
+function onPaneClick(): void {
+  emit('deselect-node')
+}
+
+function handleDetailClose(): void {
+  emit('deselect-node')
+}
+
+function handleToggleMastered(topicId: string): void {
+  emit('toggle-mastered', topicId)
+}
+
+function handleAskAi(label: string): void {
+  emit('ask-ai', label)
+}
+
+function onMove(_event: any, viewport: any): void {
+  zoomLevel.value = viewport.zoom
+}
+
 async function onPaneReady(): Promise<void> {
-  await nextTick();
-  const el = flowRef.value?.$el as HTMLElement | undefined;
-  const layouted = layoutNodes(displayNodes.value as any, props.edges, el, { rankdir: 'LR', ranksep: 160, nodesep: 100 });
-  displayNodes.value = layouted as Node<KnowledgeNodeData>[];
+  await nextTick()
+  const el = flowRef.value?.$el as HTMLElement | undefined
+  const layouted = layoutNodes(displayNodes.value as any, props.edges, el, { rankdir: 'LR', ranksep: 160, nodesep: 100 })
+  displayNodes.value = layouted as Node<KnowledgeNodeData>[]
 }
 
 function fitView(): void {
   if (flowRef.value) {
-    flowRef.value.fitView({ duration: 300 });
+    flowRef.value.fitView({ duration: 300 })
   }
 }
 
 function focusNode(topicId: string): void {
-  const nodeId = `topic-${topicId}`;
-  const node = displayNodes.value.find(n => n.id === nodeId);
+  const nodeId = `topic-${topicId}`
+  const node = displayNodes.value.find(n => n.id === nodeId)
   if (flowRef.value && node) {
-    flowRef.value.setCenter(node.position.x + 60, node.position.y + 30, { zoom: 1.2, duration: 400 });
+    flowRef.value.setCenter(node.position.x + 60, node.position.y + 30, { zoom: 1.2, duration: 400 })
   }
 }
 
-defineExpose({ fitView, focusNode });
+defineExpose({ fitView, focusNode })
 </script>
 
 <style scoped>
@@ -142,4 +171,19 @@ defineExpose({ fitView, focusNode });
   align-items: center;
   justify-content: center;
 }
+
+.knowledge-graph__detail-card {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  width: 320px;
+  max-height: 60vh;
+  z-index: 10;
+}
+
+/* Card pop transition */
+.card-pop-enter-active { transition: opacity 0.2s ease-out, transform 0.2s ease-out; }
+.card-pop-leave-active { transition: opacity 0.15s ease-in, transform 0.15s ease-in; }
+.card-pop-enter-from { opacity: 0; transform: translateY(12px) scale(0.95); }
+.card-pop-leave-to   { opacity: 0; transform: translateY(12px) scale(0.95); }
 </style>

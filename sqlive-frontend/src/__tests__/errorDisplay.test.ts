@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mockSuccess, mockError, tick, setupSqlEngine, teardownSqlEngine } from './test-utils';
+import { mockSuccess, mockError, tick, setupSqlEngine, teardownSqlEngine, type SqlEngineSetup } from './test-utils';
 
 describe('Error display with multiple statements', () => {
-    let useSqlEngine: any;
+    let useSqlEngine: SqlEngineSetup['useSqlEngine'];
     let fetchSpy: ReturnType<typeof vi.fn>;
 
     beforeEach(async () => {
