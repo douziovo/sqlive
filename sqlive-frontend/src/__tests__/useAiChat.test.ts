@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { AiMessage } from '../viewmodel/useAiChat';
+import { setupAiChat, type AiChatSetup } from './test-utils';
 
 describe('useAiChat', () => {
-    let useAiChat: any;
+    let useAiChat: AiChatSetup['useAiChat'];
     let fetchSpy: ReturnType<typeof vi.fn>;
 
     const mockSqlEngine = () => ({
@@ -12,24 +13,9 @@ describe('useAiChat', () => {
     });
 
     beforeEach(async () => {
-        vi.useFakeTimers();
-        fetchSpy = vi.fn();
-        globalThis.fetch = fetchSpy as any;
-
-        // Mock localStorage (compatible with @vueuse/core useLocalStorage)
-        const store: Record<string, string> = {};
-        vi.stubGlobal('localStorage', {
-            getItem: (key: string) => store[key] ?? null,
-            setItem: (key: string, val: string) => { store[key] = val; },
-            removeItem: (key: string) => { delete store[key]; },
-            clear: () => { Object.keys(store).forEach(k => delete store[k]); },
-            get length() { return Object.keys(store).length; },
-            key: (i: number) => Object.keys(store)[i] ?? null,
-        });
-
-        vi.resetModules();
-        const mod = await import('../viewmodel/useAiChat');
-        useAiChat = mod.useAiChat;
+        const setup = await setupAiChat();
+        useAiChat = setup.useAiChat;
+        fetchSpy = setup.fetchSpy;
     });
 
     afterEach(() => {
@@ -134,6 +120,70 @@ describe('useAiChat', () => {
 
         engine.cancelStream();
         expect(engine.isLoading.value).toBe(false);
+    });
+
+    it('handles streaming error mid-response', async () => {
+        const engine = useAiChat(mockSqlEngine());
+
+        // Mock a stream that throws mid-way
+        const encoder = new TextEncoder();
+        let readCount = 0;
+        fetchSpy.mockResolvedValue({
+            ok: true,
+            status: 200,
+            body: {
+                getReader: () => ({
+                    read: () => {
+                        readCount++;
+                        if (readCount === 1) {
+                            return Promise.resolve({ done: false, value: encoder.encode('data: partial\n\n') });
+                        }
+                        return Promise.reject(new Error('Stream connection lost'));
+                    },
+                }),
+            },
+        });
+
+        const promise = engine.sendMessage('test');
+        await vi.advanceTimersByTimeAsync(50);
+        await promise;
+
+        // Should have recorded the error without crashing
+        expect(engine.messages.value.length).toBeGreaterThanOrEqual(1);
+        expect(engine.isLoading.value).toBe(false);
+    });
+
+    it('handles SSE parse failure gracefully', async () => {
+        const engine = useAiChat(mockSqlEngine());
+
+        // Mock malformed SSE data
+        const encoder = new TextEncoder();
+        fetchSpy.mockResolvedValue({
+            ok: true,
+            status: 200,
+            body: {
+                getReader: () => {
+                    let sent = false;
+                    return {
+                        read: () => {
+                            if (!sent) {
+                                sent = true;
+                                return Promise.resolve({ done: false, value: encoder.encode('garbage-data-without-proper-format\n\n') });
+                            }
+                            return Promise.resolve({ done: true, value: undefined });
+                        },
+                    };
+                },
+            },
+        });
+
+        const promise = engine.sendMessage('test');
+        await vi.advanceTimersByTimeAsync(50);
+        await promise;
+
+        // Should not crash on malformed data
+        expect(engine.isLoading.value).toBe(false);
+        expect(engine.messages.value.length).toBeGreaterThanOrEqual(1);
     });
 
 });

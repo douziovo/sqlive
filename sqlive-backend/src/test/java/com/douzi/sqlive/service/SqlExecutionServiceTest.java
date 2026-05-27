@@ -855,7 +855,7 @@ class SqlExecutionServiceTest {
                             "CREATE TABLE t (x INTEGER); INSERT INTO t VALUES (1); SELECT * FROM t;",
                             "con_reset_db", true
                         );
-                        assertNotNull(r);
+                        assertTrue(r.isSuccess());
                     } catch (Exception e) {
                         errors.add(e);
                     } finally {

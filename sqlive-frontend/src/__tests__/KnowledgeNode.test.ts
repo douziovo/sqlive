@@ -58,4 +58,50 @@ describe('KnowledgeNode', () => {
     const w = mount(KnowledgeNode, { props: { id: 'x', data: makeData({ status: 'mastered' }) } });
     expect(w.find('svg').exists()).toBe(false);
   });
+
+  it('renders dot-only circle when zoomLevel < 0.5', () => {
+    const w = mount(KnowledgeNode, {
+      props: { id: 'x', data: makeData({ label: 'JOIN' }) },
+      global: { provide: { zoomLevel: 0.3 } },
+    });
+    expect(w.find('.knowledge-node-dot').exists()).toBe(true);
+    expect(w.find('.knowledge-node').exists()).toBe(false);
+  });
+
+  it('renders compact mode when zoom between 0.5 and 1.2', () => {
+    const w = mount(KnowledgeNode, {
+      props: { id: 'x', data: makeData({ label: 'JOIN' }) },
+      global: { provide: { zoomLevel: 0.8 } },
+    });
+    expect(w.find('.knowledge-node').exists()).toBe(true);
+    expect(w.find('.knowledge-node--expanded').exists()).toBe(false);
+    expect(w.find('.knowledge-node-dot').exists()).toBe(false);
+  });
+
+  it('renders expanded mode with description when zoom >= 1.2', () => {
+    const w = mount(KnowledgeNode, {
+      props: { id: 'x', data: makeData({ label: 'JOIN', description: 'Learn how to combine tables' }) },
+      global: { provide: { zoomLevel: 1.5 } },
+    });
+    expect(w.find('.knowledge-node--expanded').exists()).toBe(true);
+    expect(w.text()).toContain('Learn how to combine tables');
+  });
+
+  it('truncates long description in expanded mode', () => {
+    const longDesc = 'A very long description that exceeds thirty characters definitely';
+    const w = mount(KnowledgeNode, {
+      props: { id: 'x', data: makeData({ label: 'Test', description: longDesc }) },
+      global: { provide: { zoomLevel: 1.5 } },
+    });
+    expect(w.text()).toContain('...');
+  });
+
+  it('renders difficulty tag in expanded mode', () => {
+    const w = mount(KnowledgeNode, {
+      props: { id: 'x', data: makeData({ difficulty: 2 }) },
+      global: { provide: { zoomLevel: 1.5 } },
+    });
+    expect(w.find('.knowledge-node__diff-tag').exists()).toBe(true);
+    expect(w.text()).toContain('进阶');
+  });
 });

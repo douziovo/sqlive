@@ -1,0 +1,91 @@
+package com.douzi.sqlive.service.database;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.JdbcTemplate;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class DatabasePoolManagerTest {
+
+    private final List<DatabasePoolManager> managers = new ArrayList<>();
+
+    @AfterEach
+    void cleanup() {
+        for (var mgr : managers) {
+            try { mgr.cleanup(); } catch (Exception ignored) {}
+        }
+        managers.clear();
+    }
+
+    private DatabasePoolManager createManager() {
+        var mgr = new DatabasePoolManager();
+        managers.add(mgr);
+        return mgr;
+    }
+
+    @Test
+    void shouldCreateJdbcTemplateForValidName() {
+        var mgr = createManager();
+        JdbcTemplate jdbc = mgr.getOrCreateJdbcTemplate("test_db");
+        assertNotNull(jdbc);
+        assertNotNull(jdbc.getDataSource());
+    }
+
+    @Test
+    void shouldReuseJdbcTemplateForSameName() {
+        var mgr = createManager();
+        var jdbc1 = mgr.getOrCreateJdbcTemplate("reuse_db");
+        var jdbc2 = mgr.getOrCreateJdbcTemplate("reuse_db");
+        assertSame(jdbc1, jdbc2);
+    }
+
+    @Test
+    void shouldRejectNullDbName() {
+        var mgr = createManager();
+        assertThrows(IllegalArgumentException.class, () -> mgr.getOrCreateJdbcTemplate(null));
+    }
+
+    @Test
+    void shouldRejectInvalidDbNameWithSpecialChars() {
+        var mgr = createManager();
+        assertThrows(IllegalArgumentException.class, () -> mgr.getOrCreateJdbcTemplate("test; DROP TABLE"));
+    }
+
+    @Test
+    void shouldRejectDbNameWithSlashes() {
+        var mgr = createManager();
+        assertThrows(IllegalArgumentException.class, () -> mgr.getOrCreateJdbcTemplate("../../etc/passwd"));
+    }
+
+    @Test
+    void shouldAcceptDbNameWithUnderscoreAndDash() {
+        var mgr = createManager();
+        assertNotNull(mgr.getOrCreateJdbcTemplate("my-db_01"));
+    }
+
+    @Test
+    void shouldEvictWhenPoolExceedsMaxDatabases() {
+        var mgr = createManager();
+        // MAX_DATABASES = 20, create 21 to trigger eviction
+        for (int i = 0; i < 21; i++) {
+            assertNotNull(mgr.getOrCreateJdbcTemplate("evict_db_" + i));
+        }
+        // After eviction, pool should be at most 20
+        assertTrue(mgr.getPoolSize() <= 20, "Pool size should not exceed MAX_DATABASES");
+    }
+
+    @Test
+    void shouldCleanupAllConnectionsWithoutThrowing() {
+        var mgr = createManager();
+        mgr.getOrCreateJdbcTemplate("cleanup_a");
+        mgr.getOrCreateJdbcTemplate("cleanup_b");
+        mgr.getOrCreateJdbcTemplate("cleanup_c");
+
+        assertDoesNotThrow(mgr::cleanup);
+        assertEquals(0, mgr.getPoolSize(), "Pool should be empty after cleanup");
+    }
+}

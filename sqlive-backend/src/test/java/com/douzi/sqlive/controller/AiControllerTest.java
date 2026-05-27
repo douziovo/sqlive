@@ -80,6 +80,8 @@ class AiControllerTest {
 
         assertEquals(HttpStatus.OK, resp.getStatusCode());
         assertNotNull(resp.getBody());
+        assertTrue(resp.getBody().contains("hello"), "SSE response should contain 'hello' chunk content");
+        assertTrue(resp.getBody().contains("world"), "SSE response should contain 'world' chunk content");
     }
 
     // ── /api/ai/analyze-error ────────────────────────────────
@@ -101,6 +103,7 @@ class AiControllerTest {
 
         assertEquals(HttpStatus.OK, resp.getStatusCode());
         assertNotNull(resp.getBody());
+        assertTrue(resp.getBody().isSuccess());
     }
 
     // ── /api/ai/explain ──────────────────────────────────────

@@ -91,4 +91,8 @@ public class DatabasePoolManager {
         log.info("Created DataSource for database '{}'", name);
         return new JdbcTemplate(new HikariDataSource(config));
     }
+
+    int getPoolSize() {
+        return jdbcTemplates.size();
+    }
 }

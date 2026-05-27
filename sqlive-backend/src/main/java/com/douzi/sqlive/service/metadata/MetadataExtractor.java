@@ -249,7 +249,7 @@ public class MetadataExtractor {
         return !identifier.matches("^[a-zA-Z_][a-zA-Z0-9_]*$");
     }
 
-    private static String quoteIdentifier(String identifier) {
+    static String quoteIdentifier(String identifier) {
         if (isInvalidIdentifier(identifier)) {
             throw new IllegalArgumentException("Invalid identifier: " + identifier);
         }

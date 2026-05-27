@@ -39,7 +39,7 @@ function mountTable(overrides: Record<string, any> = {}) {
       provide: {
         [SQL_CONTEXT_KEY as symbol]: { highlight: highlight ?? defaultHighlight },
       },
-      stubs: { HoverPreview: true },
+      stubs: {},
     },
   });
 }

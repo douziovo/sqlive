@@ -60,4 +60,12 @@ describe('KnowledgeDetail', () => {
     await w.find('.knowledge-detail__btn--ai').trigger('click');
     expect(w.emitted('ask-ai')![0]).toEqual(['JOIN 查询']);
   });
+
+  it('emits close on close button click', async () => {
+    const w = mount(KnowledgeDetail, {
+      props: { topic: mockTopic, isMastered: false },
+    });
+    await w.find('.knowledge-detail__close').trigger('click');
+    expect(w.emitted('close')).toBeTruthy();
+  });
 });

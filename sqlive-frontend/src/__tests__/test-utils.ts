@@ -1,4 +1,6 @@
 import { vi } from 'vitest';
+import type { useSqlEngine } from '../viewmodel/useSqlEngine';
+import type { useAiChat } from '../viewmodel/useAiChat';
 
 export function jsonOk(data: any) {
   return Promise.resolve({ status: 200, ok: true, json: () => Promise.resolve(data) });
@@ -22,7 +24,12 @@ export async function tick(ms = 150) {
 
 const API_URL = 'http://localhost:8080/api/execute';
 
-export async function setupSqlEngine() {
+export interface SqlEngineSetup {
+  useSqlEngine: typeof useSqlEngine;
+  fetchSpy: ReturnType<typeof vi.fn>;
+}
+
+export async function setupSqlEngine(): Promise<SqlEngineSetup> {
   vi.useFakeTimers();
   const fetchSpy = vi.fn();
   globalThis.fetch = fetchSpy as any;
@@ -30,6 +37,32 @@ export async function setupSqlEngine() {
   const mod = await import('../viewmodel/useSqlEngine');
   const useSqlEngine = mod.useSqlEngine;
   return { useSqlEngine, fetchSpy };
+}
+
+export interface AiChatSetup {
+  useAiChat: typeof useAiChat;
+  fetchSpy: ReturnType<typeof vi.fn>;
+}
+
+export async function setupAiChat(): Promise<AiChatSetup> {
+  vi.useFakeTimers();
+  const fetchSpy = vi.fn();
+  globalThis.fetch = fetchSpy as any;
+
+  const store: Record<string, string> = {};
+  vi.stubGlobal('localStorage', {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, val: string) => { store[key] = val; },
+    removeItem: (key: string) => { delete store[key]; },
+    clear: () => { Object.keys(store).forEach(k => delete store[k]); },
+    get length() { return Object.keys(store).length; },
+    key: (i: number) => Object.keys(store)[i] ?? null,
+  });
+
+  vi.resetModules();
+  const mod = await import('../viewmodel/useAiChat');
+  const useAiChat = mod.useAiChat;
+  return { useAiChat, fetchSpy };
 }
 
 export function teardownSqlEngine() {

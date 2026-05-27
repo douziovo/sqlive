@@ -133,6 +133,7 @@ class RateLimitFilterConcurrencyTest {
         String url = "http://localhost:" + port + "/api/execute";
         CountDownLatch latch = new CountDownLatch(threadCount);
         AtomicInteger errorCount = new AtomicInteger(0);
+        AtomicInteger successCount = new AtomicInteger(0);
 
         SqlRequest req = new SqlRequest();
         req.setSql("SELECT 1;");
@@ -146,7 +147,11 @@ class RateLimitFilterConcurrencyTest {
                 executor.submit(() -> {
                     try {
                         HttpEntity<SqlRequest> entity = new HttpEntity<>(req, headers);
-                        restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+                        ResponseEntity<String> resp =
+                            restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+                        if (resp.getStatusCode().value() == 200) {
+                            successCount.incrementAndGet();
+                        }
                     } catch (Exception e) {
                         errorCount.incrementAndGet();
                     } finally {
@@ -157,6 +162,8 @@ class RateLimitFilterConcurrencyTest {
             assertTrue(latch.await(15, TimeUnit.SECONDS));
             assertEquals(0, errorCount.get(),
                 "No network/connection errors under concurrent load");
+            assertTrue(successCount.get() > 0,
+                "At least some requests should succeed under concurrent load");
         }
     }
 }

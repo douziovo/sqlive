@@ -162,14 +162,6 @@ class AiServiceTest {
     // ── helpers ──────────────────────────────────────────────
 
     private AiProvider invokeGetProvider() {
-        try {
-            var method = AiService.class.getDeclaredMethod("getProvider");
-            method.setAccessible(true);
-            return (AiProvider) method.invoke(service);
-        } catch (java.lang.reflect.InvocationTargetException e) {
-            throw (RuntimeException) e.getCause();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        return service.getProvider();
     }
 }

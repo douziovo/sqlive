@@ -81,6 +81,14 @@
 | UQ | `bg-[#ede9fe] text-[#6d28d9]` | 唯一约束（紫） |
 | ER 匹配 | `border-[#eab308]` | 搜索匹配（黄） |
 | ER 激活匹配 | `border-[#f97316]` | 当前匹配项（橙） |
+| 图谱入门底色 | `bg-[#ecfdf5]` | 基础知识点 |
+| 图谱进阶底色 | `bg-[#eef2ff]` | 中级知识点 |
+| 图谱高级底色 | `bg-[#fff1f2]` | 高级知识点 |
+| 图谱已掌握圆点 | `bg-[#10b981]` | 绿色实心 |
+| 图谱学习中圆点 | `bg-[#fbbf24]` | 黄色实心 |
+| 图谱未学习圆点 | `border-[#94a3b8]` | 灰色空心 |
+| 图谱边 | `stroke: #94a3b8` | 知识点依赖关系 |
+| 图谱网格 | `pattern-color: #e2e8f0` | vue-flow 背景 |
 
 ---
 
@@ -256,7 +264,94 @@ Google Fonts 导入（`input.css` 第 1 行）：
 
 ---
 
-## 6. 组件分类与设计标准边界
+## 6. 知识图谱面板
+
+### 节点设计（混合着色 v3）
+
+底色按难度分级，状态通过边框样式 + 小圆点表达。节点仅含知识点名 + 状态圆点。
+
+| 维度 | 入门 (1) | 进阶 (2) | 高级 (3) |
+|------|---------|---------|---------|
+| 底色 | `#ecfdf5` | `#eef2ff` | `#fff1f2` |
+| 实线边框 | `#6ee7b7` | `#a5b4fc` | `#fda4af` |
+| 虚线边框 | `#a7f3d0` | `#c7d2fe` | `#fecdd3` |
+
+| 状态 | 边框 | 圆点 | 透明度 |
+|------|------|------|--------|
+| 已掌握 | 实线 2px | 实心 `#10b981` | 100% |
+| 学习中 | 实线 2px | 实心 `#fbbf24` | 100% |
+| 未学习 | dashed 2px | 空心 `#94a3b8` | 70% |
+
+优先级：已掌握 > 学习中 > 未学习。圆角 8px，悬停 `scale(1.05)` + `box-shadow: 0 4px 12px rgba(0,0,0,0.1)`。
+
+### 语义缩放
+
+根据 vue-flow 缩放级别自动切换节点细节：
+
+| 缩放 | 节点形态 | 尺寸 |
+|------|---------|------|
+| < 0.5 | 彩色圆点（难度色），无文字 | 32×32 |
+| 0.5–1.2 | 知识点名 + 状态圆点 | min-width 110px |
+| ≥ 1.2 | 知识点名 + 描述(30字截断) + 难度标签 | min-width 140px |
+
+zoom 由 KnowledgeGraph 通过 `@move` → `provide('zoomLevel')` → KnowledgeNode `inject` 传递。
+
+### 筛选标签
+
+顶部栏 pill 按钮，分两组独立筛选，组间竖线分隔：
+
+```
+[入门] [进阶] [高级] │ [已掌握] [学习中] [未学习]
+```
+
+| 状态 | 样式 |
+|------|------|
+| 默认 | `text-xs px-3 py-0.5 rounded-full border border-border bg-muted text-muted-foreground` |
+| 激活 | `bg-primary text-white border-primary` |
+| 悬停 | `bg-secondary text-foreground` |
+
+### 浮层详情卡片
+
+右下角弹出，点击 × 或图谱空白关闭。
+
+```css
+position: absolute; bottom: 16px; right: 16px; width: 320px;
+max-height: 60vh; z-index: 10;
+border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+background: white;
+```
+
+动画：`card-pop` transition — 200ms ease-out 从下方淡入 + scale(0.95→1)。
+
+### 面板展开动画
+
+从 LearningCompanion 按钮位置（右下角）圆形扩展/收缩：
+
+```css
+clip-path: circle(28px at calc(100% - 52px) calc(100% - 52px))  /* 收起 */
+         → circle(150% at calc(100% - 52px) calc(100% - 52px))  /* 展开 */
+```
+
+展开 350ms `cubic-bezier(0.4, 0, 0.2, 1)` + opacity 250ms；收起反向 300ms。
+
+### 知识图谱色（保留硬编码）
+
+图谱节点配色有固定语义含义，不通过 CSS 变量统一：
+
+| 元素 | 颜色 | 含义 |
+|------|------|------|
+| 入门底色 | `#ecfdf5` | 基础知识点 |
+| 进阶底色 | `#eef2ff` | 中级知识点 |
+| 高级底色 | `#fff1f2` | 高级知识点 |
+| 已掌握圆点 | `#10b981` | 绿色实心 |
+| 学习中圆点 | `#fbbf24` | 黄色实心 |
+| 未学习圆点 | `#94a3b8` | 灰色空心 |
+| 图谱边 | `#94a3b8` / `strokeWidth: 1.5` | 知识点依赖关系 |
+| 搜索背景 | `#e2e8f0` | 图谱网格 |
+
+---
+
+## 7. 组件分类与设计标准边界
 
 ### 组件分类
 
