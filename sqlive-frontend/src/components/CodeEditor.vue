@@ -159,7 +159,7 @@ import 'monaco-editor/esm/vs/basic-languages/sql/sql.contribution';
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import { format } from 'sql-formatter';
 import { highlightMatch } from '../utils/html';
-import { SQL_CONTEXT_KEY, AI_ACTIONS_KEY } from '../viewmodel/injectionKeys';
+import { SQL_CONTEXT_KEY, AI_ACTIONS_KEY } from '../model/injectionKeys';
 
 self.MonacoEnvironment = {
   getWorker() {

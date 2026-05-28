@@ -71,11 +71,11 @@ import DataVisualizer from './components/DataVisualizer.vue';
 import AiChatPanel from './components/AiChatPanel.vue';
 import KnowledgePanel from './components/knowledge/KnowledgePanel.vue';
 import LearningCompanion from './components/knowledge/LearningCompanion.vue';
-import { useSqlEngine } from './viewmodel/useSqlEngine';
-import { useAiChat } from './viewmodel/useAiChat';
-import { useInlineActions } from './viewmodel/useInlineActions';
+import { useSqlEngine } from './composables/useSqlEngine';
+import { useAiChat } from './composables/useAiChat';
+import { useInlineActions } from './composables/useInlineActions';
 
-import { SQL_CONTEXT_KEY, AI_ACTIONS_KEY } from './viewmodel/injectionKeys';
+import { SQL_CONTEXT_KEY, AI_ACTIONS_KEY } from './model/injectionKeys';
 import type { SchemaTableInfo } from './utils/aiQuickFix';
 import type { CellUpdateEvent, RowDeleteEvent, CreateTableEvent, RowInsertEvent } from './model/DatabaseTypes';
 

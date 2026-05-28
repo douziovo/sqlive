@@ -194,7 +194,7 @@
 <script setup lang="ts">
 import { ref, reactive, watch, computed, inject, onUnmounted } from 'vue';
 import type { HighlightState, Row, TableSchema, IndexInfo, TriggerInfo, ViewInfo } from '../model/DatabaseTypes';
-import { SQL_CONTEXT_KEY } from '../viewmodel/injectionKeys';
+import { SQL_CONTEXT_KEY } from '../model/injectionKeys';
 import { useTablePipeline } from '../composables/useTablePipeline';
 import { isNumericType, extractTriggerTiming } from '../utils/sql';
 import HoverPreview from './HoverPreview.vue';

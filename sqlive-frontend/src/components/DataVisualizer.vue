@@ -205,7 +205,7 @@
 <script setup lang="ts">
 import {ref, watch, nextTick, provide, inject, onUnmounted} from 'vue';
 import type {DatabaseModel, HighlightState, IndexInfo, ViewInfo, TriggerInfo, CellUpdateEvent, RowDeleteEvent, CreateTableEvent, RowInsertEvent} from '../model/DatabaseTypes';
-import { SQL_CONTEXT_KEY } from '../viewmodel/injectionKeys';
+import { SQL_CONTEXT_KEY } from '../model/injectionKeys';
 import {useSortFilter, type SortField} from '../composables/useSortFilter';
 import TableSection from './TableSection.vue';
 import ResultTable from './ResultTable.vue';
