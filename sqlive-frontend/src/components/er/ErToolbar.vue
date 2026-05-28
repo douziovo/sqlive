@@ -33,14 +33,14 @@
 
 <script setup lang="ts">
 defineProps<{
-  showMinimap: boolean;
-}>();
+  showMinimap: boolean
+}>()
 
 defineEmits<{
-  (e: 'auto-layout'): void;
-  (e: 'fit-view'): void;
-  (e: 'toggle-minimap'): void;
-}>();
+  (e: 'auto-layout'): void
+  (e: 'fit-view'): void
+  (e: 'toggle-minimap'): void
+}>()
 </script>
 
 <style scoped>

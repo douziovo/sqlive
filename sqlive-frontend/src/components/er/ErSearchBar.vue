@@ -51,71 +51,74 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue';
-import { useDebounceFn } from '@vueuse/core';
+import { useDebounceFn } from '@vueuse/core'
+import { nextTick, ref, watch } from 'vue'
 
 const props = defineProps<{
-  modelValue: string;
-  visible: boolean;
-  totalCount: number;
-  matchCount: number;
-  currentIndex: number;
-}>();
+  modelValue: string
+  visible: boolean
+  totalCount: number
+  matchCount: number
+  currentIndex: number
+}>()
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: string): void;
-  (e: 'close'): void;
-  (e: 'prev'): void;
-  (e: 'next'): void;
-}>();
+  (e: 'update:modelValue', value: string): void
+  (e: 'close'): void
+  (e: 'prev'): void
+  (e: 'next'): void
+}>()
 
-const inputRef = ref<HTMLInputElement | null>(null);
+const inputRef = ref<HTMLInputElement | null>(null)
 
 const debouncedEmit = useDebounceFn((value: string) => {
-  emit('update:modelValue', value);
-}, 150);
+  emit('update:modelValue', value)
+}, 150)
 
-const filterCountText = ref('');
+const filterCountText = ref('')
 
 watch([() => props.matchCount, () => props.currentIndex], ([mc, ci]) => {
   if (mc > 0 && props.modelValue) {
-    filterCountText.value = ci >= 0 ? `${ci + 1}/${mc}` : `${mc}/${props.totalCount}`;
+    filterCountText.value = ci >= 0 ? `${ci + 1}/${mc}` : `${mc}/${props.totalCount}`
   } else {
-    filterCountText.value = '';
+    filterCountText.value = ''
   }
-});
+})
 
-watch(() => props.visible, async (v) => {
-  if (v) {
-    await nextTick();
-    inputRef.value?.focus();
-    inputRef.value?.select();
+watch(
+  () => props.visible,
+  async (v) => {
+    if (v) {
+      await nextTick()
+      inputRef.value?.focus()
+      inputRef.value?.select()
+    }
   }
-});
+)
 
 function onInput(e: Event) {
-  debouncedEmit((e.target as HTMLInputElement).value);
+  debouncedEmit((e.target as HTMLInputElement).value)
 }
 
 function onClose() {
-  emit('update:modelValue', '');
-  emit('close');
+  emit('update:modelValue', '')
+  emit('close')
 }
 
 function onEnter(e: KeyboardEvent) {
   if (e.shiftKey) {
-    emit('prev');
+    emit('prev')
   } else {
-    emit('next');
+    emit('next')
   }
 }
 
 function onPrev() {
-  emit('prev');
+  emit('prev')
 }
 
 function onNext() {
-  emit('next');
+  emit('next')
 }
 </script>
 

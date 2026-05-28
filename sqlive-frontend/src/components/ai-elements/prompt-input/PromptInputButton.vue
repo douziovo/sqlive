@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { HTMLAttributes } from 'vue'
-import { InputGroupButton } from '@/components/ui/input-group'
-import { cn } from '@/lib/utils'
 import { reactiveOmit } from '@vueuse/core'
+import type { HTMLAttributes } from 'vue'
 import { Comment, computed, Text, toRef, useSlots } from 'vue'
+import type { InputGroupButton } from '@/components/ui/input-group'
+import { cn } from '@/lib/utils'
 
 type InputGroupButtonProps = InstanceType<typeof InputGroupButton>['$props']
 
@@ -14,22 +14,20 @@ interface Props extends /* @vue-ignore */ InputGroupButtonProps {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  variant: 'ghost',
+  variant: 'ghost'
 })
 
 const slots = useSlots()
 
 const computedSize = computed(() => {
-  if (props.size)
-    return props.size
+  if (props.size) return props.size
 
   const slotNodes = slots.default?.()
 
-  if (!slotNodes)
-    return 'icon-sm'
+  if (!slotNodes) return 'icon-sm'
 
-  const validChildren = slotNodes.filter((node) =>
-    !(node.type === Comment || (node.type === Text && !node.children?.toString().trim()))
+  const validChildren = slotNodes.filter(
+    (node) => !(node.type === Comment || (node.type === Text && !node.children?.toString().trim()))
   )
 
   return validChildren.length > 1 ? 'sm' : 'icon-sm'

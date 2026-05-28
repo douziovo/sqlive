@@ -1,83 +1,84 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
-import { toSqlLiteral } from '../utils/sql';
-import { Dialog, DialogContent } from './ui/dialog';
+import { computed, ref, watch } from 'vue'
+import { toSqlLiteral } from '../utils/sql'
+import { Dialog, DialogContent } from './ui/dialog'
 
-const props = defineProps<{ open: boolean }>();
-const emit = defineEmits(['update:open', 'submit']);
+const props = defineProps<{ open: boolean }>()
+const emit = defineEmits(['update:open', 'submit'])
 
-const tableName = ref('');
-const rows = ref([
-  { type: '', name: '', value: '' }
-]);
+const tableName = ref('')
+const rows = ref([{ type: '', name: '', value: '' }])
 
-watch(() => props.open, (newVal) => {
-  if (newVal) {
-    tableName.value = '';
-    rows.value = [{ type: '', name: '', value: '' }];
+watch(
+  () => props.open,
+  (newVal) => {
+    if (newVal) {
+      tableName.value = ''
+      rows.value = [{ type: '', name: '', value: '' }]
+    }
   }
-});
+)
 
 const addRow = () => {
-  rows.value.push({ type: '', name: '', value: '' });
-};
+  rows.value.push({ type: '', name: '', value: '' })
+}
 
 const removeRow = (index: number) => {
-  rows.value.splice(index, 1);
-};
+  rows.value.splice(index, 1)
+}
 
 const isValid = computed(() => {
-  if (tableName.value.trim() === '') return false;
-  return rows.value.length > 0 && rows.value.every(r => r.name.trim() && r.type.trim());
-});
+  if (tableName.value.trim() === '') return false
+  return rows.value.length > 0 && rows.value.every((r) => r.name.trim() && r.type.trim())
+})
 
 const previewSql = computed(() => {
-  if (!tableName.value) return '';
+  if (!tableName.value) return ''
 
-  let sql = `CREATE TABLE ${tableName.value}(\n`;
+  let sql = `CREATE TABLE ${tableName.value}(\n`
 
-  const validRows = rows.value.filter(r => r.name && r.type);
-  if (validRows.length === 0) return '';
+  const validRows = rows.value.filter((r) => r.name && r.type)
+  if (validRows.length === 0) return ''
 
-  const defs = validRows.map(r => `  ${r.name} ${r.type}`);
-  sql += defs.join(',\n');
-  sql += `\n);`;
+  const defs = validRows.map((r) => `  ${r.name} ${r.type}`)
+  sql += defs.join(',\n')
+  sql += `\n);`
 
-  const validValues = rows.value.filter(r => r.name && r.value);
+  const validValues = rows.value.filter((r) => r.name && r.value)
   if (validValues.length > 0) {
-    sql += `\n\nINSERT INTO ${tableName.value} VALUES (`;
-    const vals = rows.value.map(r => {
-      const v = r.value.trim();
-      if (!v) return 'NULL';
-      return toSqlLiteral(v, r.type);
-    });
-    sql += vals.join(', ');
-    sql += `);`;
+    sql += `\n\nINSERT INTO ${tableName.value} VALUES (`
+    const vals = rows.value.map((r) => {
+      const v = r.value.trim()
+      if (!v) return 'NULL'
+      return toSqlLiteral(v, r.type)
+    })
+    sql += vals.join(', ')
+    sql += `);`
   }
 
-  return sql;
-});
+  return sql
+})
 
 const close = () => {
-  emit('update:open', false);
-};
+  emit('update:open', false)
+}
 
 const submit = () => {
-  const columns = rows.value.map(r => `${r.name} ${r.type}`);
+  const columns = rows.value.map((r) => `${r.name} ${r.type}`)
 
-  const rowData: any = {};
+  const rowData: any = {}
   rows.value.forEach((r) => {
-    if (r.name) rowData[r.name] = r.value;
-  });
+    if (r.name) rowData[r.name] = r.value
+  })
 
   emit('submit', {
     name: tableName.value,
     columns: columns,
     data: [rowData]
-  });
+  })
 
-  close();
-};
+  close()
+}
 </script>
 
 <template>

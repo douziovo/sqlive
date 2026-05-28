@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from 'vue'
-import { DropdownMenuContent } from '@/components/ui/dropdown-menu'
+import type { DropdownMenuContent } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 
 type DropdownMenuContentProps = InstanceType<typeof DropdownMenuContent>['$props']

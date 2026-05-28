@@ -1,24 +1,24 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed } from 'vue'
 
 const props = defineProps<{
-  startTime: number;
-  firstTokenTime?: number;
-  endTime?: number;
-  usage?: { promptTokens: number; completionTokens: number; totalTokens: number };
-}>();
+  startTime: number
+  firstTokenTime?: number
+  endTime?: number
+  usage?: { promptTokens: number; completionTokens: number; totalTokens: number }
+}>()
 
 const totalTime = computed(() => {
-  if (!props.endTime) return null;
-  return ((props.endTime - props.startTime) / 1000).toFixed(1);
-});
+  if (!props.endTime) return null
+  return ((props.endTime - props.startTime) / 1000).toFixed(1)
+})
 
 const tps = computed(() => {
-  if (!props.usage || !props.firstTokenTime || !props.endTime) return null;
-  const genTime = (props.endTime - props.firstTokenTime) / 1000;
-  if (genTime <= 0) return null;
-  return (props.usage.completionTokens / genTime).toFixed(1);
-});
+  if (!props.usage || !props.firstTokenTime || !props.endTime) return null
+  const genTime = (props.endTime - props.firstTokenTime) / 1000
+  if (genTime <= 0) return null
+  return (props.usage.completionTokens / genTime).toFixed(1)
+})
 </script>
 
 <template>

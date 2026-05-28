@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type {HTMLAttributes} from 'vue'
-import {CollapsibleContent} from '@/components/ui/collapsible'
-import {cn} from '@/lib/utils'
-import {computed} from 'vue'
-import {Markdown} from 'vue-stream-markdown'
+import type { HTMLAttributes } from 'vue'
+import { computed } from 'vue'
+import { Markdown } from 'vue-stream-markdown'
+import { CollapsibleContent } from '@/components/ui/collapsible'
+import { cn } from '@/lib/utils'
 import 'vue-stream-markdown/index.css'
 
 interface Props {

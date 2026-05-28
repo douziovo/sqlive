@@ -39,17 +39,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, markRaw, nextTick, provide } from 'vue'
-import { VueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
+import { VueFlow } from '@vue-flow/core'
+import { computed, markRaw, nextTick, provide, ref, watch } from 'vue'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 
-import KnowledgeNode from './KnowledgeNode.vue'
-import KnowledgeDetail from './KnowledgeDetail.vue'
+import type { Edge, Node } from '@vue-flow/core'
 import { layoutNodes } from '@/composables/useDagreLayout'
-import type { Node, Edge } from '@vue-flow/core'
 import type { KnowledgeNodeData, KnowledgeTopic } from '@/composables/useKnowledgeGraph'
+import KnowledgeDetail from './KnowledgeDetail.vue'
+import KnowledgeNode from './KnowledgeNode.vue'
 
 const props = defineProps<{
   nodes: Node<KnowledgeNodeData>[]
@@ -74,24 +74,31 @@ const zoomLevel = ref(0.8)
 provide('zoomLevel', zoomLevel)
 
 // Sync displayNodes when props.nodes change, re-run layout
-watch(() => props.nodes, async (newNodes) => {
-  displayNodes.value = [...newNodes]
-  if (newNodes.length === 0) return
-  await nextTick()
-  const el = flowRef.value?.$el as HTMLElement | undefined
-  const layouted = layoutNodes(displayNodes.value as any, props.edges, el, { rankdir: 'LR', ranksep: 160, nodesep: 100 })
-  displayNodes.value = layouted as Node<KnowledgeNodeData>[]
-}, { deep: true })
+watch(
+  () => props.nodes,
+  async (newNodes) => {
+    displayNodes.value = [...newNodes]
+    if (newNodes.length === 0) return
+    await nextTick()
+    const el = flowRef.value?.$el as HTMLElement | undefined
+    const layouted = layoutNodes(displayNodes.value as any, props.edges, el, {
+      rankdir: 'LR',
+      ranksep: 160,
+      nodesep: 100
+    })
+    displayNodes.value = layouted as Node<KnowledgeNodeData>[]
+  },
+  { deep: true }
+)
 
 const filteredNodes = computed(() => {
   if (!props.searchQuery) return displayNodes.value
   const q = props.searchQuery.toLowerCase()
-  return displayNodes.value.map(node => {
-    const matches = node.data.label.toLowerCase().includes(q)
-      || (node.data.description || '').toLowerCase().includes(q)
+  return displayNodes.value.map((node) => {
+    const matches = node.data.label.toLowerCase().includes(q) || (node.data.description || '').toLowerCase().includes(q)
     return {
       ...node,
-      style: { ...node.style, opacity: matches ? 1 : 0.2 },
+      style: { ...node.style, opacity: matches ? 1 : 0.2 }
     }
   })
 })
@@ -126,7 +133,11 @@ function onMove(_event: any, viewport: any): void {
 async function onPaneReady(): Promise<void> {
   await nextTick()
   const el = flowRef.value?.$el as HTMLElement | undefined
-  const layouted = layoutNodes(displayNodes.value as any, props.edges, el, { rankdir: 'LR', ranksep: 160, nodesep: 100 })
+  const layouted = layoutNodes(displayNodes.value as any, props.edges, el, {
+    rankdir: 'LR',
+    ranksep: 160,
+    nodesep: 100
+  })
   displayNodes.value = layouted as Node<KnowledgeNodeData>[]
 }
 
@@ -138,7 +149,7 @@ function fitView(): void {
 
 function focusNode(topicId: string): void {
   const nodeId = `topic-${topicId}`
-  const node = displayNodes.value.find(n => n.id === nodeId)
+  const node = displayNodes.value.find((n) => n.id === nodeId)
   if (flowRef.value && node) {
     flowRef.value.setCenter(node.position.x + 60, node.position.y + 30, { zoom: 1.2, duration: 400 })
   }

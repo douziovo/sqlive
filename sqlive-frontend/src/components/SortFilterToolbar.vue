@@ -26,23 +26,23 @@
 
 <script setup lang="ts">
 export interface SortFieldDef {
-  key: string;
-  label: string;
+  key: string
+  label: string
 }
 
 defineProps<{
-  filter: string;
-  placeholder: string;
-  fields: SortFieldDef[];
-  sortKey: string | null;
-  sortDir: 'asc' | 'desc' | null;
-  itemLabel: string;
-  totalCount: number;
-  filteredCount: number;
-}>();
+  filter: string
+  placeholder: string
+  fields: SortFieldDef[]
+  sortKey: string | null
+  sortDir: 'asc' | 'desc' | null
+  itemLabel: string
+  totalCount: number
+  filteredCount: number
+}>()
 
 defineEmits<{
-  'update:filter': [value: string];
-  'toggle-sort': [key: string];
-}>();
+  'update:filter': [value: string]
+  'toggle-sort': [key: string]
+}>()
 </script>

@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.0.0/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.16/schema.json",
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
@@ -15,7 +15,7 @@
         "noUnusedImports": "error"
       },
       "suspicious": {
-        "noConsoleLog": "warn"
+        "noConsole": { "level": "warn", "options": { "allow": ["log"] } }
       }
     }
   },
@@ -27,7 +27,6 @@
     }
   },
   "files": {
-    "include": ["src/**/*.ts", "src/**/*.vue", "src/**/*.json"],
-    "ignore": ["node_modules", "dist"]
+    "includes": ["**/src/**/*.ts", "**/src/**/*.vue", "**/src/**/*.json", "!**/node_modules", "!**/dist"]
   }
 }

@@ -9,39 +9,39 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
-import { useLocalStorage } from '@vueuse/core';
-import { KNOWLEDGE_API_BASE } from '@/config';
+import { useLocalStorage } from '@vueuse/core'
+import { computed, onMounted, ref } from 'vue'
+import { KNOWLEDGE_API_BASE } from '@/config'
 
-defineEmits<{
-  (e: 'open'): void;
-}>();
+defineEmits<(e: 'open') => void>()
 
-const total = ref(0);
-const masteredTopics = useLocalStorage<string[]>('ai-mastered-topics', []);
+const total = ref(0)
+const masteredTopics = useLocalStorage<string[]>('ai-mastered-topics', [])
 
-const count = computed(() => (masteredTopics.value || []).length);
+const count = computed(() => (masteredTopics.value || []).length)
 
-const percentage = computed(() => total.value > 0 ? (count.value / total.value) * 100 : 0);
+const percentage = computed(() => (total.value > 0 ? (count.value / total.value) * 100 : 0))
 
 const level = computed(() => {
-  if (percentage.value < 30) return '初级';
-  if (percentage.value < 70) return '进阶';
-  return '大师';
-});
+  if (percentage.value < 30) return '初级'
+  if (percentage.value < 70) return '进阶'
+  return '大师'
+})
 
 async function fetchTotal(): Promise<void> {
   try {
-    const resp = await fetch(`${KNOWLEDGE_API_BASE}/graph`);
-    if (!resp.ok) return;
-    const data = await resp.json();
-    total.value = (data.topics || []).length;
-  } catch { /* non-critical */ }
+    const resp = await fetch(`${KNOWLEDGE_API_BASE}/graph`)
+    if (!resp.ok) return
+    const data = await resp.json()
+    total.value = (data.topics || []).length
+  } catch {
+    /* non-critical */
+  }
 }
 
 onMounted(() => {
-  void fetchTotal();
-});
+  void fetchTotal()
+})
 </script>
 
 <style scoped>

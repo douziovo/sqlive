@@ -88,12 +88,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
-import { toRaw } from 'vue'
+import { computed, nextTick, ref, toRaw, watch } from 'vue'
 import type { TableSchema } from '../model/DatabaseTypes'
 import { isNumericType } from '../utils/sql'
-import { useECharts } from './chart/useECharts'
 import { buildEChartsOption } from './chart/chartOptionBuilder'
+import { useECharts } from './chart/useECharts'
 
 const props = defineProps<{
   result: TableSchema
@@ -106,31 +105,27 @@ const stacked = ref(false)
 
 const { containerRef, render, dispose, resize } = useECharts()
 
-const numColCandidates = computed(() =>
-  props.result.columns.filter(c => isNumericCol(c))
-)
+const numColCandidates = computed(() => props.result.columns.filter((c) => isNumericCol(c)))
 
 const hasNumericCol = computed(() => numColCandidates.value.length > 0)
 
 const effectiveType = computed(() => effectiveChartType())
 
-const showStackedToggle = computed(() =>
-  selectedNumCols.value.length > 1 && (effectiveType.value === 'bar' || effectiveType.value === 'area')
+const showStackedToggle = computed(
+  () => selectedNumCols.value.length > 1 && (effectiveType.value === 'bar' || effectiveType.value === 'area')
 )
 
-const isPieOrDoughnut = computed(() =>
-  effectiveType.value === 'pie' || effectiveType.value === 'doughnut'
-)
+const isPieOrDoughnut = computed(() => effectiveType.value === 'pie' || effectiveType.value === 'doughnut')
 
 function isNumericCol(col: string): boolean {
   const rawType = props.result.columnTypes[col] || ''
   if (isNumericType(rawType)) return true
-  const nonNull = props.result.data.filter(r => {
+  const nonNull = props.result.data.filter((r) => {
     const v = r[col]
     return v !== null && v !== undefined && v !== ''
   })
   if (nonNull.length === 0) return false
-  return nonNull.every(r => !isNaN(Number(r[col])))
+  return nonNull.every((r) => !Number.isNaN(Number(r[col])))
 }
 
 function toggleNumCol(col: string) {
@@ -163,23 +158,19 @@ function effectiveChartType(): string {
 function buildDatasets(): { name: string; data: (number | null)[] }[] {
   const rawData = toRaw(props.result.data) as Record<string, unknown>[]
 
-  const cols = isPieOrDoughnut.value
-    ? selectedNumCols.value.slice(0, 1)
-    : selectedNumCols.value
+  const cols = isPieOrDoughnut.value ? selectedNumCols.value.slice(0, 1) : selectedNumCols.value
 
-  return cols.map(col => ({
+  return cols.map((col) => ({
     name: col,
-    data: rawData.map(row => {
+    data: rawData.map((row) => {
       const v = row[col]
-      return (v == null || v === '' || isNaN(Number(v))) ? null : Number(v)
-    }),
+      return v == null || v === '' || Number.isNaN(Number(v)) ? null : Number(v)
+    })
   }))
 }
 
 function buildAndRender() {
-  const labels = toRaw(props.result.data).map((r: Record<string, unknown>) =>
-    String(r[labelCol.value] ?? '')
-  )
+  const labels = toRaw(props.result.data).map((r: Record<string, unknown>) => String(r[labelCol.value] ?? ''))
 
   const eType = effectiveChartType()
   const datasets = buildDatasets()
@@ -188,7 +179,7 @@ function buildAndRender() {
     chartType: eType,
     labels,
     datasets,
-    stacked: stacked.value,
+    stacked: stacked.value
   }
 
   const option = buildEChartsOption(config)
@@ -196,18 +187,13 @@ function buildAndRender() {
 }
 
 // Shallow data trigger to avoid deep-watching large datasets
-const dataTrigger = computed(() =>
-  `${props.result.columns.join(',')}|${props.result.data.length}`
-)
+const dataTrigger = computed(() => `${props.result.columns.join(',')}|${props.result.data.length}`)
 
 // Watch UI config + data trigger, re-render
-watch(
-  [chartType, labelCol, stacked, dataTrigger],
-  () => {
-    if (selectedNumCols.value.length === 0 || !labelCol.value) return
-    nextTick(buildAndRender)
-  }
-)
+watch([chartType, labelCol, stacked, dataTrigger], () => {
+  if (selectedNumCols.value.length === 0 || !labelCol.value) return
+  nextTick(buildAndRender)
+})
 
 // Watch selectedNumCols separately (array — needs deep)
 watch(
@@ -235,9 +221,7 @@ watch(
       if (!newVal.columns.includes(labelCol.value)) {
         labelCol.value = ''
       }
-      selectedNumCols.value = selectedNumCols.value.filter(c =>
-        newVal.columns.includes(c)
-      )
+      selectedNumCols.value = selectedNumCols.value.filter((c) => newVal.columns.includes(c))
 
       if (!labelCol.value || selectedNumCols.value.length === 0) {
         autoSelect()
