@@ -35,6 +35,17 @@ Zulu JDK 21 (`C:\Program Files\Zulu\zulu-21\bin\`), Node LTS, backend port 8080.
 - **Plan needs code evidence.** 每行行号/类型/import 都要读文件核实。不去建议文件里已有或无用的 import。
 - **Ask before touching `application.yml`.**
 
+## Gated pipeline
+
+Feature work 走四阶段门控，每阶段结束后调 `gated-pipeline` 审查，通过才能进入下一阶段：
+
+1. **design** — 设计文档写完 → 发 `phase=design` + 设计全文
+2. **spec** — 规格文档写完 → 发 `phase=spec` + 规格全文
+3. **plan** — 实现计划写完 → 发 `phase=plan` + 计划全文 + `<context>` 含 spec 摘要
+4. **implementation** — 代码写完、测试通过后 → 发 `phase=implementation` + `<context>` 含 task 描述、test 输出、git diff、plan 上下文
+
+审查返回 `ok: false` 时，修正后重新发同 phase 审查（带 `<diff>` 做增量审），直到 `ok: true` 才能推进。
+
 ## Gotchas
 
 - **Spring Boot:** `@Valid` on `@RequestBody` needs `GlobalExceptionHandler extends ResponseEntityExceptionHandler` + override `handleMethodArgumentNotValid()`. Else → 500.
@@ -43,3 +54,16 @@ Zulu JDK 21 (`C:\Program Files\Zulu\zulu-21\bin\`), Node LTS, backend port 8080.
 - **SQL parsing:** `parseStatementsPrecise()` tracks `BEGIN`/`END` and `CASE`/`END` depth. New `END` constructs may break statement boundaries.
 - **Vite:** `rollupOptions` → `rolldownOptions`, but `codeSplitting` doesn't accept `manualChunks` function. Keep `rollupOptions`.
 - **Vue `<script setup>`:** 模板中 `$emit` 和内联 ref 赋值在浏览器 silent fail（测试通过但不同代码路径）。始终用 handler 函数，不用内联写法。
+
+## Code Cleanup
+
+Use `/cleanup` for automated code quality improvement:
+
+| Command | Scope |
+|---|---|
+| `/cleanup` | Changed files in current branch |
+| `/cleanup --all` | Full repository |
+| `/cleanup --path <dir>` | Specific directory |
+| `/cleanup --dry` | Report only, no changes |
+
+**Pipeline:** Diagnose (static + LLM) -> User gate -> Execute fixes -> Verify with tests. Each phase auto-reviewed. Provider config in `.cleanuprc.json`.
