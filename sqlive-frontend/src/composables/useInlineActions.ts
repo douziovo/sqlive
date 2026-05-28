@@ -8,7 +8,7 @@ import {
   formatExplain,
   formatOptimize,
   formatGenerateSql,
-} from './aiFormatter';
+} from '../utils/aiFormatter';
 import { API_BASE } from '../config';
 
 let msgCounter = 0;

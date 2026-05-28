@@ -1,6 +1,5 @@
 // Pure Markdown formatting functions for AI inline results.
 // Zero dependencies — input: API response data, output: Markdown string.
-// Imported by useInlineActions.ts.
 
 interface ErrorAnalysisData {
   summary?: string;

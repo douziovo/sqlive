@@ -71,7 +71,7 @@ import KnowledgeGraph from './KnowledgeGraph.vue'
 import { useKnowledgeGraph } from '@/composables/useKnowledgeGraph'
 import type { KnowledgeNodeData } from '@/composables/useKnowledgeGraph'
 import type { Node, Edge } from '@vue-flow/core'
-import { SQL_CONTEXT_KEY } from '@/viewmodel/injectionKeys'
+import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
 
 const props = defineProps<{
   isOpen: boolean

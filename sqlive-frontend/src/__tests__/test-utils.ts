@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
-import type { useSqlEngine } from '../viewmodel/useSqlEngine';
-import type { useAiChat } from '../viewmodel/useAiChat';
+import type { useSqlEngine } from '../composables/useSqlEngine';
+import type { useAiChat } from '../composables/useAiChat';
 
 export function jsonOk(data: any) {
   return Promise.resolve({ status: 200, ok: true, json: () => Promise.resolve(data) });
@@ -34,7 +34,7 @@ export async function setupSqlEngine(): Promise<SqlEngineSetup> {
   const fetchSpy = vi.fn();
   globalThis.fetch = fetchSpy as any;
   vi.resetModules();
-  const mod = await import('../viewmodel/useSqlEngine');
+  const mod = await import('../composables/useSqlEngine');
   const useSqlEngine = mod.useSqlEngine;
   return { useSqlEngine, fetchSpy };
 }
@@ -60,7 +60,7 @@ export async function setupAiChat(): Promise<AiChatSetup> {
   });
 
   vi.resetModules();
-  const mod = await import('../viewmodel/useAiChat');
+  const mod = await import('../composables/useAiChat');
   const useAiChat = mod.useAiChat;
   return { useAiChat, fetchSpy };
 }

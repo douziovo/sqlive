@@ -6,7 +6,7 @@ import {
   formatOptimize,
   formatGenerateSql,
   extractSqlFromMarkdown,
-} from '../viewmodel/aiFormatter';
+} from '../utils/aiFormatter';
 
 describe('formatErrorAnalysis', () => {
   it('formats full error analysis with all fields', () => {

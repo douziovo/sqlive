@@ -203,17 +203,20 @@
 </template>
 
 <script setup lang="ts">
-import {ref, watch, nextTick, provide, inject, onUnmounted} from 'vue';
-import type {DatabaseModel, HighlightState, IndexInfo, ViewInfo, TriggerInfo, CellUpdateEvent, RowDeleteEvent, CreateTableEvent, RowInsertEvent} from '../model/DatabaseTypes';
-import { SQL_CONTEXT_KEY } from '../viewmodel/injectionKeys';
-import {useSortFilter, type SortField} from '../composables/useSortFilter';
+import { ref, watch, nextTick, provide, inject, onUnmounted } from 'vue';
+import type {
+  DatabaseModel, HighlightState, IndexInfo, ViewInfo, TriggerInfo,
+  CellUpdateEvent, RowDeleteEvent, CreateTableEvent, RowInsertEvent,
+} from '../model/DatabaseTypes';
+import { SQL_CONTEXT_KEY } from '../model/injectionKeys';
+import { useSortFilter, type SortField } from '../composables/useSortFilter';
 import TableSection from './TableSection.vue';
 import ResultTable from './ResultTable.vue';
 import CreateTableModal from './CreateTableModal.vue';
 import SortFilterToolbar from './SortFilterToolbar.vue';
 import ErDiagram from './er/ErDiagram.vue';
 import EmptyState from './EmptyState.vue';
-import type {SortFieldDef} from './SortFilterToolbar.vue';
+import type { SortFieldDef } from './SortFilterToolbar.vue';
 
   const { db, highlight } = inject(SQL_CONTEXT_KEY)!;
 

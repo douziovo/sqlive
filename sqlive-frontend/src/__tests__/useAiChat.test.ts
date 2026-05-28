@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { AiMessage } from '../viewmodel/useAiChat';
+import type { AiMessage } from '../composables/useAiChat';
 import { setupAiChat, type AiChatSetup } from './test-utils';
 
 describe('useAiChat', () => {

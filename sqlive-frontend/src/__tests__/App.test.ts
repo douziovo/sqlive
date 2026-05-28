@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { mount } from '@vue/test-utils';
 import App from '@/App.vue';
-import { SQL_CONTEXT_KEY, AI_ACTIONS_KEY } from '@/viewmodel/injectionKeys';
+import { SQL_CONTEXT_KEY, AI_ACTIONS_KEY } from '@/model/injectionKeys';
 
 describe('App', () => {
   it('renders without error', () => {

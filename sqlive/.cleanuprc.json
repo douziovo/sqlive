@@ -1,0 +1,79 @@
+{
+  "providers": {
+    "formatter": {
+      "typescript": "biome",
+      "vue": "biome",
+      "json": "biome",
+      "markdown": "biome",
+      "java": "spotless",
+      "groovy": "spotless",
+      "gradle": "spotless"
+    },
+    "linter": {
+      "typescript": "biome",
+      "vue": "biome",
+      "java": "llm",
+      "groovy": "llm",
+      "gradle": "llm"
+    }
+  },
+  "llm": {
+    "confidenceThreshold": 80,
+    "exclude": [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/.git/**",
+      "**/generated/**",
+      "**/*.d.ts"
+    ]
+  },
+  "presets": {
+    "minimal": {
+      "formatter": {
+        "typescript": "biome",
+        "vue": "biome",
+        "java": "spotless",
+        "groovy": "spotless",
+        "gradle": "spotless"
+      },
+      "linter": {}
+    },
+    "standard": {
+      "formatter": {
+        "typescript": "biome",
+        "vue": "biome",
+        "json": "biome",
+        "markdown": "biome",
+        "java": "spotless",
+        "groovy": "spotless",
+        "gradle": "spotless"
+      },
+      "linter": {
+        "typescript": "biome",
+        "vue": "biome",
+        "java": "llm",
+        "groovy": "llm",
+        "gradle": "llm"
+      }
+    },
+    "strict": {
+      "formatter": {
+        "typescript": "biome",
+        "vue": "biome",
+        "json": "biome",
+        "markdown": "biome",
+        "java": "spotless",
+        "groovy": "spotless",
+        "gradle": "spotless"
+      },
+      "linter": {
+        "typescript": "biome",
+        "vue": "biome",
+        "java": "checkstyle",
+        "groovy": "llm",
+        "gradle": "llm"
+      }
+    }
+  }
+}

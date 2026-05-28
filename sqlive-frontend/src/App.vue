@@ -41,12 +41,12 @@
     v-if="aiPanelVisible"
     :messages="aiMessages"
     :is-loading="aiLoading"
-    @send="handleAiSend"
+    @send="(text: string) => aiChat.sendMessage(text)"
     @close="aiPanelVisible = false"
-    @clear="handleAiClear"
-    @regenerate="handleAiRegenerate"
-    @edit="handleAiEdit"
-    @delete="handleAiDelete"
+    @clear="aiChat.clearMessages"
+    @regenerate="aiChat.regenerateMessage"
+    @edit="aiChat.editMessage"
+    @delete="aiChat.deleteMessage"
     @cancel-stream="aiChat.cancelStream"
   />
 
@@ -71,11 +71,11 @@ import DataVisualizer from './components/DataVisualizer.vue';
 import AiChatPanel from './components/AiChatPanel.vue';
 import KnowledgePanel from './components/knowledge/KnowledgePanel.vue';
 import LearningCompanion from './components/knowledge/LearningCompanion.vue';
-import { useSqlEngine } from './viewmodel/useSqlEngine';
-import { useAiChat } from './viewmodel/useAiChat';
-import { useInlineActions } from './viewmodel/useInlineActions';
+import { useSqlEngine } from './composables/useSqlEngine';
+import { useAiChat } from './composables/useAiChat';
+import { useInlineActions } from './composables/useInlineActions';
 
-import { SQL_CONTEXT_KEY, AI_ACTIONS_KEY } from './viewmodel/injectionKeys';
+import { SQL_CONTEXT_KEY, AI_ACTIONS_KEY } from './model/injectionKeys';
 import type { SchemaTableInfo } from './utils/aiQuickFix';
 import type { CellUpdateEvent, RowDeleteEvent, CreateTableEvent, RowInsertEvent } from './model/DatabaseTypes';
 
@@ -141,60 +141,6 @@ provide(AI_ACTIONS_KEY, {
   sendToAi: (text: string) => { void aiChat.sendMessage(text); },
   onTogglePanel: aiChat.togglePanel,
 });
-
-// ── AI event handlers ───────────────────────────────────────────
-function handleAiSend(text: string) {
-  aiChat.sendMessage(text);
-}
-
-function handleAiClear() {
-  aiChat.clearMessages();
-}
-
-function handleAiRegenerate(messageId: string) {
-  const idx = aiChat.messages.value.findIndex(m => m.id === messageId);
-  if (idx > 0) {
-    const userMsg = aiChat.messages.value[idx - 1];
-    if (userMsg?.role === 'user') {
-      aiChat.messages.value.splice(idx, 1);
-      aiChat.sendMessage(userMsg.content);
-    }
-  }
-}
-
-function handleAiEdit(messageId: string, newText: string) {
-  const idx = aiChat.messages.value.findIndex(m => m.id === messageId);
-  if (idx >= 0) {
-    const nextMsg = aiChat.messages.value[idx + 1];
-    if (nextMsg?.role === 'assistant') {
-      aiChat.messages.value.splice(idx, 2);
-    } else {
-      aiChat.messages.value.splice(idx, 1);
-    }
-    aiChat.sendMessage(newText);
-  }
-}
-
-function handleAiDelete(messageId: string) {
-  const idx = aiChat.messages.value.findIndex(m => m.id === messageId);
-  if (idx < 0) return;
-  const msg = aiChat.messages.value[idx];
-  if (msg.role === 'assistant') {
-    const prevMsg = aiChat.messages.value[idx - 1];
-    if (prevMsg?.role === 'user') {
-      aiChat.messages.value.splice(idx - 1, 2);
-    } else {
-      aiChat.messages.value.splice(idx, 1);
-    }
-  } else if (msg.role === 'user') {
-    const nextMsg = aiChat.messages.value[idx + 1];
-    if (nextMsg?.role === 'assistant') {
-      aiChat.messages.value.splice(idx, 2);
-    } else {
-      aiChat.messages.value.splice(idx, 1);
-    }
-  }
-}
 
 // ── SQL event handlers ──────────────────────────────────────────
 const handleUpdateCell = ({ tableName, oldRow, newRow }: CellUpdateEvent) => {

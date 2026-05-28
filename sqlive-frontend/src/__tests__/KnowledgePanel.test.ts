@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import KnowledgePanel from '@/components/knowledge/KnowledgePanel.vue';
-import { SQL_CONTEXT_KEY } from '@/viewmodel/injectionKeys';
+import { SQL_CONTEXT_KEY } from '@/model/injectionKeys';
 
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
