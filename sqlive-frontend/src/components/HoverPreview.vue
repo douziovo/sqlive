@@ -78,11 +78,11 @@
           查看全部{{ displayCategoryName }}
         </button>
         <button
-            v-if="currentHoveredItem"
-            @click="onItemClick(currentHoveredItem)"
+            v-if="selectedItem"
+            @click="onItemClick(selectedItem)"
             class="text-xs text-primary hover:text-primary hover:bg-primary/10 px-2 py-1 rounded transition-colors"
         >
-          查看 {{ currentHoveredItem.label }}
+          查看 {{ selectedItem.label }}
         </button>
       </div>
     </div>
@@ -92,16 +92,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue';
 import { highlightMatch } from '../utils/html';
-
-export interface PreviewItem {
-  id: string;
-  icon: string;
-  label: string;
-  meta: string[];
-  sqlPreview?: string;
-  tag?: string;
-  accent?: 'blue' | 'none';
-}
+import { useFilteredList, type PreviewItem } from '../composables/useFilteredList';
 
 const props = defineProps<{
   show: boolean;
@@ -118,40 +109,18 @@ const emit = defineEmits(['select', 'close', 'mouseenter', 'mouseleave', 'naviga
 const popupRef = ref<HTMLElement | null>(null);
 const filterInputRef = ref<HTMLInputElement | null>(null);
 const listRef = ref<HTMLElement | null>(null);
-const hoveredIndex = ref<number | null>(null);
-const keyboardIndex = ref<number | null>(null);
 const visible = ref(false);
 const popupStyle = ref<Record<string, string>>({});
 
 // Filter state — instant, no debounce (JetBrains style)
 const filterText = ref('');
 
-const filteredItems = computed(() => {
-  const f = filterText.value.trim().toLowerCase();
-  const source = displayItems.value;
-  if (!f) return source;
-  return source.filter(item =>
-    item.label.toLowerCase().includes(f)
-    || item.meta.some(m => m.toLowerCase().includes(f))
-    || (item.sqlPreview || '').toLowerCase().includes(f)
-    || (item.tag || '').toLowerCase().includes(f)
-  );
-});
+const { filteredItems, hoveredIndex, keyboardIndex, selectedItem, navigateUp, navigateDown, resetSelection } = useFilteredList(displayItems, filterText);
 
 // Highlight matching text in label
 function highlightLabel(label: string): string {
   return highlightMatch(label, filterText.value.trim(), 'bg-yellow-200 text-foreground rounded-sm px-1');
 }
-
-const currentHoveredItem = computed(() => {
-  if (hoveredIndex.value !== null && filteredItems.value[hoveredIndex.value]) {
-    return filteredItems.value[hoveredIndex.value];
-  }
-  if (keyboardIndex.value !== null && filteredItems.value[keyboardIndex.value]) {
-    return filteredItems.value[keyboardIndex.value];
-  }
-  return null;
-});
 
 let hideTimer: ReturnType<typeof setTimeout> | null = null;
 let showTimer: ReturnType<typeof setTimeout> | null = null;
@@ -181,8 +150,7 @@ watch([() => props.title, () => props.items], () => {
     cachedSubtitle.value = props.subtitle;
     cachedCategoryName.value = props.categoryName;
     filterText.value = '';
-    hoveredIndex.value = null;
-    keyboardIndex.value = null;
+    resetSelection();
     nextTick(() => {
       positionPopup();
       filterInputRef.value?.focus();
@@ -203,8 +171,7 @@ watch(() => props.show, (val) => {
       cachedCategoryName.value = props.categoryName;
       visible.value = true;
       filterText.value = '';
-      hoveredIndex.value = null;
-      keyboardIndex.value = null;
+      resetSelection();
       await nextTick();
       positionPopup();
       await nextTick();
@@ -266,7 +233,7 @@ function onKeydown(e: KeyboardEvent) {
     e.preventDefault();
     if (filterText.value) {
       filterText.value = '';
-      keyboardIndex.value = null;
+      resetSelection();
     } else {
       if (hideTimer) clearTimeout(hideTimer);
       visible.value = false;
@@ -276,27 +243,21 @@ function onKeydown(e: KeyboardEvent) {
 
   if (e.key === 'ArrowDown') {
     e.preventDefault();
-    keyboardIndex.value = keyboardIndex.value === null
-      ? 0
-      : Math.min(keyboardIndex.value + 1, filteredItems.value.length - 1);
-    hoveredIndex.value = keyboardIndex.value;
+    navigateDown();
     scrollToKeyboardItem();
     return;
   }
 
   if (e.key === 'ArrowUp') {
     e.preventDefault();
-    keyboardIndex.value = keyboardIndex.value === null
-      ? filteredItems.value.length - 1
-      : Math.max(keyboardIndex.value - 1, 0);
-    hoveredIndex.value = keyboardIndex.value;
+    navigateUp();
     scrollToKeyboardItem();
     return;
   }
 
   if (e.key === 'Enter') {
     e.preventDefault();
-    const item = currentHoveredItem.value;
+    const item = selectedItem.value;
     if (item) onItemClick(item);
     return;
   }

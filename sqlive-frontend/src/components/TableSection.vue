@@ -196,6 +196,7 @@ import { ref, reactive, watch, computed, inject, onUnmounted } from 'vue';
 import type { HighlightState, Row, TableSchema, IndexInfo, TriggerInfo, ViewInfo } from '../model/DatabaseTypes';
 import { SQL_CONTEXT_KEY } from '../model/injectionKeys';
 import { useTablePipeline } from '../composables/useTablePipeline';
+import { useInlineEdit } from '../composables/useInlineEdit';
 import { isNumericType, extractTriggerTiming } from '../utils/sql';
 import HoverPreview from './HoverPreview.vue';
 import type { PreviewItem } from './HoverPreview.vue';
@@ -396,11 +397,11 @@ watch(() => highlight.refreshSeed, () => {
 });
 
 // --- Ghost row ---
-const autoResizeGhost = (e: Event) => {
-  const target = e.target as HTMLTextAreaElement;
-  const ghost = target.previousElementSibling;
-  if (ghost) ghost.textContent = target.value + ' ';
-};
+const { autoResizeGhost, handleBlur } = useInlineEdit(
+  props.table.name,
+  props.table.columnTypes,
+  emit,
+);
 
 const getGhostValue = (col: string) => ghostRow[col] || '';
 const updateGhostState = (col: string, val: string) => {
@@ -414,28 +415,6 @@ const onGhostSubmit = () => {
     emit('insert-row', { tableName: props.table.name, newRow: { ...ghostRow } });
     Object.keys(ghostRow).forEach(k => delete ghostRow[k]);
   }
-};
-
-// --- Cell editing ---
-const handleBlur = (e: FocusEvent, row: Row, col: string) => {
-  const target = e.target as HTMLTextAreaElement;
-  const newVal = target.value;
-  const oldVal = row[col];
-
-  if (String(newVal) === String(oldVal)) return;
-
-  const typeInfo = props.table.columnTypes[col] || '';
-  const typeUpper = typeInfo.toUpperCase();
-
-  if (isNumericType(typeUpper) && newVal !== '') {
-    if (isNaN(Number(newVal))) return;
-  }
-
-  if (typeUpper.includes('NOT NULL')) {
-    if (newVal === '' || newVal.trim() === '') return;
-  }
-
-  emit('update-cell', { tableName: props.table.name, oldRow: row, newRow: { ...row, [col]: newVal } });
 };
 
 // --- Highlight helpers ---
