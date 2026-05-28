@@ -154,19 +154,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch, nextTick, computed, inject } from 'vue';
-import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
-import 'monaco-editor/esm/vs/basic-languages/sql/sql.contribution';
-import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
-import { format } from 'sql-formatter';
 import { highlightMatch } from '../utils/html';
 import { SQL_CONTEXT_KEY, AI_ACTIONS_KEY } from '../model/injectionKeys';
-
-self.MonacoEnvironment = {
-  getWorker() {
-    return new editorWorker();
-  },
-};
-
+import { useMonacoEditor } from '../composables/useMonacoEditor';
 
 const props = defineProps<{
   code: string;
@@ -196,231 +186,21 @@ const showTabSearch = ref(false);
 const tabSearchText = ref('');
 const tabSearchInput = ref<HTMLInputElement | null>(null);
 
-const state = {
-  editor: null as monaco.editor.IStandaloneCodeEditor | null,
-  ignoreChanges: false,
-  highlightDeco: null as monaco.editor.IEditorDecorationsCollection | null,
-};
-const disposables: monaco.IDisposable[] = [];
-
-function formatSql() {
-  if (!state.editor) return;
-  try {
-    const formatted = format(state.editor.getValue(), { language: 'sqlite', tabWidth: 4 });
-    state.editor.setValue(formatted);
-  } catch {
-    // Silently ignore format errors
-  }
-}
+const { create, formatSql, syncCode, dispose } = useMonacoEditor(
+  editorContainer,
+  emit,
+  { highlightChunk, error, ai },
+  () => fileInput.value?.click(),
+);
 
 onMounted(() => {
-  if (!editorContainer.value) return;
-
-  state.editor = monaco.editor.create(editorContainer.value, {
-
-    value: props.code,
-    language: 'sql',
-    theme: 'vs',
-    fontSize: 14,
-    fontFamily: '"Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-    lineNumbers: 'on',
-    minimap: { enabled: false },
-    scrollBeyondLastLine: false,
-    hover: { above: false },
-    automaticLayout: true,
-    tabSize: 4,
-    renderWhitespace: 'selection',
-    wordWrap: 'bounded',
-    wordWrapColumn: 160,
-    wrappingIndent: 'indent',
-    wrappingStrategy: 'advanced',
-    padding: { top: 16, bottom: 16 },
-    overviewRulerBorder: false,
-    hideCursorInOverviewRuler: true,
-    scrollbar: {
-      verticalScrollbarSize: 6,
-      horizontalScrollbarSize: 6,
-      verticalSliderSize: 6,
-      horizontalSliderSize: 6,
-      alwaysConsumeMouseWheel: false,
-    },
-  });
-
-  state.highlightDeco = state.editor.createDecorationsCollection();
-
-  state.editor.onDidChangeModelContent(() => {
-    if (state.ignoreChanges) return;
-    emit('update:code', state.editor!.getValue());
-  });
-
-  // --- Context menu & keyboard shortcuts ---
-  // Submit: Ctrl+Shift+T
-  state.editor.addAction({
-    id: 'submit-sql',
-    label: '提交到数据库',
-    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyT],
-    contextMenuGroupId: '9_sql',
-    contextMenuOrder: 0,
-    run: () => emit('submit'),
-  });
-
-  // Format: Ctrl+Shift+L
-  state.editor.addAction({
-    id: 'format-sql',
-    label: '格式化 SQL',
-    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KeyL],
-    contextMenuGroupId: '9_sql',
-    contextMenuOrder: 1,
-    run: () => formatSql(),
-  });
-
-  // Import
-  state.editor.addAction({
-    id: 'import-sql',
-    label: '导入 .sql 文件',
-    contextMenuGroupId: '9_sql',
-    contextMenuOrder: 2,
-    run: () => fileInput.value?.click(),
-  });
-
-  // Export current tab
-  state.editor.addAction({
-    id: 'export-tab',
-    label: '导出当前标签页',
-    contextMenuGroupId: '9_sql',
-    contextMenuOrder: 3,
-    run: () => emit('export-tab'),
-  });
-
-  // Export all tabs
-  state.editor.addAction({
-    id: 'export-all',
-    label: '导出全部标签页',
-    contextMenuGroupId: '9_sql',
-    contextMenuOrder: 4,
-    run: () => emit('export-all'),
-  });
-
-  // ── AI: right-click context menu ──
-  if (ai) {
-    state.editor.addAction({
-      id: 'ai-send-selection',
-      label: '💬 发送选中代码到 AI 对话',
-      contextMenuGroupId: '9_sql',
-      contextMenuOrder: 10,
-      run: () => {
-        const sel = state.editor?.getModel()?.getValueInRange(state.editor.getSelection()!);
-        if (sel?.trim()) {
-          ai.sendToAi(`请帮我看看这段 SQL：\n\n\`\`\`sql\n${sel.trim()}\n\`\`\``);
-        }
-      },
-    });
-
-    state.editor.addAction({
-      id: 'ai-generate-sql',
-      label: '✨ AI 帮我写 SQL',
-      contextMenuGroupId: '9_sql',
-      contextMenuOrder: 11,
-      run: () => ai.sendToAi('请帮我写一段 SQL 查询。'),
-    });
-
-    state.editor.addAction({
-      id: 'ai-open-chat',
-      label: '🤖 打开 AI 对话',
-      contextMenuGroupId: '9_sql',
-      contextMenuOrder: 12,
-      run: () => ai.onOpenChat(),
-    });
-  }
-
-  applyHighlight();
-  applyErrorMarkers();
+  create(props.code);
+  watch(() => props.code, (newVal) => syncCode(newVal));
 });
 
 onBeforeUnmount(() => {
-  disposables.forEach(d => d.dispose());
-  if (state.editor) {
-    state.highlightDeco?.clear();
-    state.editor.dispose();
-    state.editor = null;
-    state.highlightDeco = null;
-  }
+  dispose();
 });
-
-watch(() => props.code, (newVal) => {
-  if (state.editor) {
-    const currentVal = state.editor.getValue();
-    if (currentVal !== newVal) {
-      state.ignoreChanges = true;
-      const selections = state.editor.getSelections();
-      state.editor.setValue(newVal);
-      if (selections) {
-        const model = state.editor.getModel()!;
-        const lineCount = model.getLineCount();
-        const restored = selections.map(s => {
-          const line = Math.min(s.selectionStartLineNumber, lineCount);
-          const col = Math.min(s.selectionStartColumn, model.getLineMaxColumn(line));
-          return new monaco.Selection(line, col, line, col);
-        });
-        state.editor.setSelections(restored);
-      }
-      state.ignoreChanges = false;
-    }
-  }
-});
-
-let flashTimeout: ReturnType<typeof setTimeout> | null = null;
-watch(() => highlightChunk.value, (chunk) => {
-  if (flashTimeout) { clearTimeout(flashTimeout); flashTimeout = null; }
-  applyHighlight();
-  if (chunk) {
-    flashTimeout = setTimeout(() => {
-      state.highlightDeco?.clear();
-      flashTimeout = null;
-    }, 1000);
-  }
-});
-
-function applyHighlight() {
-  if (!state.editor) return;
-  const chunk = highlightChunk.value;
-  if (!chunk) {
-    state.highlightDeco?.clear();
-    return;
-  }
-  const model = state.editor.getModel();
-  if (!model) return;
-  const fullText = model.getValue();
-  const idx = fullText.indexOf(chunk);
-  if (idx === -1) return;
-  const startPos = model.getPositionAt(idx);
-  const endPos = model.getPositionAt(idx + chunk.length);
-  state.highlightDeco?.set([{
-    range: new monaco.Range(startPos.lineNumber, startPos.column, endPos.lineNumber, endPos.column),
-    options: { inlineClassName: 'flash-highlight' }
-  }]);
-}
-
-watch(() => error.value, () => { applyErrorMarkers(); });
-
-function applyErrorMarkers() {
-  if (!state.editor) return;
-  const model = state.editor.getModel();
-  if (!model) return;
-  if (error.value) {
-    monaco.editor.setModelMarkers(model, 'sql-error', [{
-      severity: monaco.MarkerSeverity.Error,
-      message: error.value.message,
-      startLineNumber: error.value.line,
-      startColumn: 1,
-      endLineNumber: error.value.line,
-      endColumn: Number.MAX_SAFE_INTEGER,
-    }]);
-    state.editor.revealLineInCenter(error.value.line);
-  } else {
-    monaco.editor.setModelMarkers(model, 'sql-error', []);
-  }
-}
 
 // --- File import ---
 function onFileInput(e: Event) {
