@@ -158,7 +158,7 @@ import AiMessageFooter from '@/components/AiMessageFooter.vue';
 import { Reasoning, ReasoningTrigger, ReasoningContent } from '@/components/ai-elements/reasoning';
 import { Suggestion } from '@/components/ai-elements/suggestion';
 import { Loader } from '@/components/ai-elements/loader';
-import type { AiMessage } from '../viewmodel/useAiChat';
+import type { AiMessage } from '../composables/useAiChat';
 
 const props = defineProps<{
   messages: AiMessage[];

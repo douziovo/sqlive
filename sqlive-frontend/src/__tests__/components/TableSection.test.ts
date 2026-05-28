@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import TableSection from '../../components/TableSection.vue';
-import { SQL_CONTEXT_KEY } from '../../viewmodel/injectionKeys';
+import { SQL_CONTEXT_KEY } from '../../model/injectionKeys';
 import type { TableSchema, HighlightState } from '@/model/DatabaseTypes';
 
 const mockTable: TableSchema = {

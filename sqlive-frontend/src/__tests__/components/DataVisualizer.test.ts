@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 import DataVisualizer from '../../components/DataVisualizer.vue';
-import { SQL_CONTEXT_KEY } from '../../viewmodel/injectionKeys';
+import { SQL_CONTEXT_KEY } from '../../model/injectionKeys';
 import type { DatabaseModel, HighlightState } from '@/model/DatabaseTypes';
 
 const mockDb: DatabaseModel = {

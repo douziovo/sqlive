@@ -64,7 +64,7 @@ import '@vue-flow/core/dist/theme-default.css';
 import '@vue-flow/minimap/dist/style.css';
 
 import type { TableSchema, ForeignKeyInfo } from '@/model/DatabaseTypes';
-import { useErDiagram } from '@/viewmodel/useErDiagram';
+import { useErDiagram } from '@/composables/useErDiagram';
 import ErTableNode from './ErTableNode.vue';
 import ErToolbar from './ErToolbar.vue';
 import ErSearchBar from './ErSearchBar.vue';
