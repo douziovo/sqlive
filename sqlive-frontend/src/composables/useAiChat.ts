@@ -194,10 +194,54 @@ export function useAiChat(ctx: {
     messages.value = [];
   }
 
+  function regenerateMessage(messageId: string): void {
+    const idx = messages.value.findIndex(m => m.id === messageId);
+    if (idx <= 0) return;
+    const msg = messages.value[idx];
+    if (msg.role !== 'assistant') return;
+    const userMsg = messages.value[idx - 1];
+    messages.value.splice(idx, 1);
+    sendMessage(userMsg.content);
+  }
+
+  function editMessage(messageId: string, newText: string): void {
+    const idx = messages.value.findIndex(m => m.id === messageId);
+    if (idx < 0) return;
+    const nextMsg = messages.value[idx + 1];
+    if (nextMsg?.role === 'assistant') {
+      messages.value.splice(idx, 2);
+    } else {
+      messages.value.splice(idx, 1);
+    }
+    sendMessage(newText);
+  }
+
+  function deleteMessage(messageId: string): void {
+    const idx = messages.value.findIndex(m => m.id === messageId);
+    if (idx < 0) return;
+    const msg = messages.value[idx];
+    if (msg.role === 'assistant') {
+      const prevMsg = messages.value[idx - 1];
+      if (prevMsg?.role === 'user') {
+        messages.value.splice(idx - 1, 2);
+      } else {
+        messages.value.splice(idx, 1);
+      }
+    } else if (msg.role === 'user') {
+      const nextMsg = messages.value[idx + 1];
+      if (nextMsg?.role === 'assistant') {
+        messages.value.splice(idx, 2);
+      } else {
+        messages.value.splice(idx, 1);
+      }
+    }
+  }
+
   return {
     messages, isLoading, showPanel,
     masteredTopics, autoAnalysisEnabled,
     sendMessage, cancelStream, clearMessages,
     togglePanel, openPanel,
+    regenerateMessage, editMessage, deleteMessage,
   };
 }

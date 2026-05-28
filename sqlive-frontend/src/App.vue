@@ -41,12 +41,12 @@
     v-if="aiPanelVisible"
     :messages="aiMessages"
     :is-loading="aiLoading"
-    @send="handleAiSend"
+    @send="(text: string) => aiChat.sendMessage(text)"
     @close="aiPanelVisible = false"
-    @clear="handleAiClear"
-    @regenerate="handleAiRegenerate"
-    @edit="handleAiEdit"
-    @delete="handleAiDelete"
+    @clear="aiChat.clearMessages"
+    @regenerate="aiChat.regenerateMessage"
+    @edit="aiChat.editMessage"
+    @delete="aiChat.deleteMessage"
     @cancel-stream="aiChat.cancelStream"
   />
 
@@ -141,60 +141,6 @@ provide(AI_ACTIONS_KEY, {
   sendToAi: (text: string) => { void aiChat.sendMessage(text); },
   onTogglePanel: aiChat.togglePanel,
 });
-
-// ── AI event handlers ───────────────────────────────────────────
-function handleAiSend(text: string) {
-  aiChat.sendMessage(text);
-}
-
-function handleAiClear() {
-  aiChat.clearMessages();
-}
-
-function handleAiRegenerate(messageId: string) {
-  const idx = aiChat.messages.value.findIndex(m => m.id === messageId);
-  if (idx > 0) {
-    const userMsg = aiChat.messages.value[idx - 1];
-    if (userMsg?.role === 'user') {
-      aiChat.messages.value.splice(idx, 1);
-      aiChat.sendMessage(userMsg.content);
-    }
-  }
-}
-
-function handleAiEdit(messageId: string, newText: string) {
-  const idx = aiChat.messages.value.findIndex(m => m.id === messageId);
-  if (idx >= 0) {
-    const nextMsg = aiChat.messages.value[idx + 1];
-    if (nextMsg?.role === 'assistant') {
-      aiChat.messages.value.splice(idx, 2);
-    } else {
-      aiChat.messages.value.splice(idx, 1);
-    }
-    aiChat.sendMessage(newText);
-  }
-}
-
-function handleAiDelete(messageId: string) {
-  const idx = aiChat.messages.value.findIndex(m => m.id === messageId);
-  if (idx < 0) return;
-  const msg = aiChat.messages.value[idx];
-  if (msg.role === 'assistant') {
-    const prevMsg = aiChat.messages.value[idx - 1];
-    if (prevMsg?.role === 'user') {
-      aiChat.messages.value.splice(idx - 1, 2);
-    } else {
-      aiChat.messages.value.splice(idx, 1);
-    }
-  } else if (msg.role === 'user') {
-    const nextMsg = aiChat.messages.value[idx + 1];
-    if (nextMsg?.role === 'assistant') {
-      aiChat.messages.value.splice(idx, 2);
-    } else {
-      aiChat.messages.value.splice(idx, 1);
-    }
-  }
-}
 
 // ── SQL event handlers ──────────────────────────────────────────
 const handleUpdateCell = ({ tableName, oldRow, newRow }: CellUpdateEvent) => {
