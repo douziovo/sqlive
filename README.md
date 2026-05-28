@@ -219,6 +219,8 @@ sqlive/
         └── config/
             └── RateLimitFilter.java     # 滑动窗口限流
 
+```
+
 ## 测试
 
 ```bash
@@ -229,7 +231,7 @@ npm run test:e2e         # Playwright E2E 测试
 
 # 后端测试
 cd sqlive-backend
-./gradlew test            # 运行全部 JUnit 5 用例
+./lew test            # 运行全部 JUnit 5 用例
 ```
 
 ## 许可证
