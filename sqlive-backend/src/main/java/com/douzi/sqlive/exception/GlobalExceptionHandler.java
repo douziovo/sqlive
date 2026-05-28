@@ -27,7 +27,6 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @Override
-    @SuppressWarnings("deprecation")
     protected ResponseEntity<Object> handleMethodArgumentNotValid(
             MethodArgumentNotValidException ex,
             @Nullable HttpHeaders headers,

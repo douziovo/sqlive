@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -76,15 +77,14 @@ public class AiService {
         var provider = getProvider();
         log.debug("AI stream request: provider={}, systemPromptLen={}", provider.getProviderName(), systemPrompt.length());
         long start = System.currentTimeMillis();
-        var fullResponse = new StringBuilder();
+        var responseLength = new AtomicInteger();
         return provider.streamChat(systemPrompt, history, userMessage)
                 .doOnNext(c -> {
-                    if (c.getContent() != null) fullResponse.append(c.getContent());
+                    if (c.getContent() != null) responseLength.addAndGet(c.getContent().length());
                 })
                 .doOnComplete(() -> {
                     long elapsed = System.currentTimeMillis() - start;
-                    String content = fullResponse.toString();
-                    log.info("AI stream complete: provider={}, elapsed={}ms, responseLen={}", provider.getProviderName(), elapsed, content.length());
+                    log.info("AI stream complete: provider={}, elapsed={}ms, responseLen={}", provider.getProviderName(), elapsed, responseLength.get());
                 })
                 .onErrorResume(e -> {
                     long elapsed = System.currentTimeMillis() - start;

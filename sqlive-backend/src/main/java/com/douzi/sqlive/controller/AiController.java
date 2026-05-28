@@ -17,7 +17,6 @@ import java.util.UUID;
 @RequestMapping("/api/ai")
 @RequiredArgsConstructor
 @Slf4j
-@SuppressWarnings("unused")
 public class AiController {
 
     private final AiService aiService;

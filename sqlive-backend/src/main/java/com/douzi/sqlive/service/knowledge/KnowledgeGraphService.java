@@ -25,28 +25,29 @@ public class KnowledgeGraphService {
     @PostConstruct
     public void load() {
         try {
-            InputStream is = getClass().getClassLoader().getResourceAsStream("knowledge-graph.json");
-            if (is == null) {
-                log.warn("knowledge-graph.json not found, knowledge graph disabled");
-                return;
-            }
-            JsonNode root = objectMapper.readTree(is);
-            for (var node : root.path("nodes")) {
-                var kn = new KnowledgeNode();
-                kn.setId(node.path("id").asText());
-                kn.setLabel(node.path("label").asText());
-                kn.setDescription(node.path("description").asText());
-                kn.setDifficulty(node.path("difficulty").asInt(1));
-                kn.setCategory(node.path("category").asText());
+            try (InputStream is = getClass().getClassLoader().getResourceAsStream("knowledge-graph.json")) {
+                if (is == null) {
+                    log.warn("knowledge-graph.json not found, knowledge graph disabled");
+                    return;
+                }
+                JsonNode root = objectMapper.readTree(is);
+                for (var node : root.path("nodes")) {
+                    var kn = new KnowledgeNode();
+                    kn.setId(node.path("id").asText());
+                    kn.setLabel(node.path("label").asText());
+                    kn.setDescription(node.path("description").asText());
+                    kn.setDifficulty(node.path("difficulty").asInt(1));
+                    kn.setCategory(node.path("category").asText());
 
-                kn.setKeywords(readStringList(node, "keywords"));
-                kn.setPatterns(readStringList(node, "patterns"));
-                kn.setPrerequisites(readStringList(node, "prerequisites"));
-                kn.setNextTopics(readStringList(node, "nextTopics"));
+                    kn.setKeywords(readStringList(node, "keywords"));
+                    kn.setPatterns(readStringList(node, "patterns"));
+                    kn.setPrerequisites(readStringList(node, "prerequisites"));
+                    kn.setNextTopics(readStringList(node, "nextTopics"));
 
-                nodes.put(kn.getId(), kn);
+                    nodes.put(kn.getId(), kn);
+                }
+                log.info("Knowledge graph loaded: {} nodes", nodes.size());
             }
-            log.info("Knowledge graph loaded: {} nodes", nodes.size());
         } catch (Exception e) {
             log.error("Failed to load knowledge graph", e);
         }

@@ -3,11 +3,13 @@ package com.douzi.sqlive.service.ai;
 import com.douzi.sqlive.dto.ai.StreamChunk;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 
 import java.util.*;
 import java.util.function.Function;
 
+@Slf4j
 public class LmStudioProtocol implements Protocol {
 
     private final ObjectMapper objectMapper;
@@ -104,6 +106,7 @@ public class LmStudioProtocol implements Protocol {
                 default -> Flux.empty();
             };
         } catch (Exception e) {
+            log.trace("Failed to parse stream chunk", e);
             return Flux.empty();
         }
     }
@@ -167,6 +170,7 @@ public class LmStudioProtocol implements Protocol {
                     String json = objectMapper.writeValueAsString(merged);
                     return parseChunk(json);
                 } catch (Exception e) {
+                    log.trace("Failed to parse stream chunk", e);
                     return Flux.empty();
                 }
             }

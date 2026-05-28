@@ -8,7 +8,6 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
-@SuppressWarnings("unused")
 public class WebConfig implements WebMvcConfigurer {
 
     @Override
