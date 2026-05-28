@@ -1,6 +1,6 @@
-import type { AttachmentFile, PromptInputContext, PromptInputMessage } from './types'
 import { nanoid } from 'nanoid'
 import { inject, onBeforeUnmount, provide, ref } from 'vue'
+import type { AttachmentFile, PromptInputContext, PromptInputMessage } from './types'
 import { PROMPT_INPUT_KEY } from './types'
 
 export function usePromptInputProvider(props: {
@@ -9,7 +9,7 @@ export function usePromptInputProvider(props: {
   maxFileSize?: number
   accept?: string
   onSubmit?: (message: PromptInputMessage) => void | Promise<void>
-  onError?: (err: { code: string, message: string }) => void
+  onError?: (err: { code: string; message: string }) => void
 }) {
   const textInput = ref(props.initialInput || '')
   const files = ref<AttachmentFile[]>([])
@@ -17,7 +17,7 @@ export function usePromptInputProvider(props: {
   const isLoading = ref(false)
 
   const revokeObjectUrl = (file: AttachmentFile) => {
-    if (file.url && file.url.startsWith('blob:')) {
+    if (file.url?.startsWith('blob:')) {
       URL.revokeObjectURL(file.url)
     }
   }
@@ -36,12 +36,11 @@ export function usePromptInputProvider(props: {
   }
 
   const matchesAccept = (file: File) => {
-    if (!props.accept || props.accept.trim() === '')
-      return true
+    if (!props.accept || props.accept.trim() === '') return true
 
     const patterns = props.accept
       .split(',')
-      .map(pattern => pattern.trim())
+      .map((pattern) => pattern.trim())
       .filter(Boolean)
 
     const fileName = file.name.toLowerCase()
@@ -89,23 +88,22 @@ export function usePromptInputProvider(props: {
       props.onError?.({ code: 'max_files', message: 'Too many files. Some were not added.' })
     }
 
-    const newAttachments: AttachmentFile[] = capped.map(file => ({
+    const newAttachments: AttachmentFile[] = capped.map((file) => ({
       id: nanoid(),
       type: 'file',
       url: URL.createObjectURL(file),
       mediaType: file.type,
       filename: file.name,
-      file,
+      file
     }))
 
     files.value = [...files.value, ...newAttachments]
   }
 
   const removeFile = (id: string) => {
-    const file = files.value.find(f => f.id === id)
-    if (file)
-      revokeObjectUrl(file)
-    files.value = files.value.filter(f => f.id !== id)
+    const file = files.value.find((f) => f.id === id)
+    if (file) revokeObjectUrl(file)
+    files.value = files.value.filter((f) => f.id !== id)
   }
 
   const clearFiles = () => {
@@ -114,16 +112,14 @@ export function usePromptInputProvider(props: {
   }
 
   const clearSubmittedFiles = (submittedIds: Set<string>) => {
-    if (submittedIds.size === 0)
-      return
+    if (submittedIds.size === 0) return
 
     const remainingFiles: AttachmentFile[] = []
 
     files.value.forEach((file) => {
       if (submittedIds.has(file.id)) {
         revokeObjectUrl(file)
-      }
-      else {
+      } else {
         remainingFiles.push(file)
       }
     })
@@ -149,19 +145,17 @@ export function usePromptInputProvider(props: {
         reader.onerror = () => resolve(null)
         reader.readAsDataURL(blob)
       })
-    }
-    catch {
+    } catch {
       return null
     }
   }
 
   const submitForm = async () => {
-    if (!props.onSubmit)
-      return
+    if (!props.onSubmit) return
 
     const submittedText = textInput.value
     const submittedFiles = [...files.value]
-    const submittedIds = new Set(submittedFiles.map(file => file.id))
+    const submittedIds = new Set(submittedFiles.map((file) => file.id))
     clearInput()
 
     try {
@@ -169,40 +163,37 @@ export function usePromptInputProvider(props: {
       // Process files (convert blobs to base64 if needed for AI SDK)
       const processedFiles = await Promise.all(
         submittedFiles.map(async (item) => {
-          if (item.url && item.url.startsWith('blob:')) {
+          if (item.url?.startsWith('blob:')) {
             const dataUrl = await convertBlobUrlToDataUrl(item.url)
             return { ...item, url: dataUrl ?? item.url }
           }
           return item
-        }),
+        })
       )
 
       const message = {
         text: submittedText,
-        files: processedFiles,
+        files: processedFiles
       }
 
       await props.onSubmit(message)
 
       clearSubmittedFiles(submittedIds)
-    }
-    catch (e) {
+    } catch (e) {
       if (textInput.value === '') {
         setTextInput(submittedText)
       }
 
       if (props.onError) {
-        const errorMessage = e instanceof Error
-          ? e.message
-          : String(e) || 'An unknown error occurred during submission.'
+        const errorMessage =
+          e instanceof Error ? e.message : String(e) || 'An unknown error occurred during submission.'
         props.onError({
           code: 'submit_error',
-          message: errorMessage,
+          message: errorMessage
         })
       }
       console.error('Submission failed:', e)
-    }
-    finally {
+    } finally {
       isLoading.value = false
     }
   }
@@ -218,7 +209,7 @@ export function usePromptInputProvider(props: {
     clearFiles,
     clearInput,
     openFileDialog,
-    submitForm,
+    submitForm
   }
 
   provide(PROMPT_INPUT_KEY, context)

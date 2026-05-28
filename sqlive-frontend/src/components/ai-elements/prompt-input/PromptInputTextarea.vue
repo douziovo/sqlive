@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from 'vue'
-import { InputGroupTextarea } from '@/components/ui/input-group'
-import { cn } from '@/lib/utils'
 import { computed, ref } from 'vue'
+import type { InputGroupTextarea } from '@/components/ui/input-group'
+import { cn } from '@/lib/utils'
 import { usePromptInput } from './context'
 
 type PromptInputTextareaProps = InstanceType<typeof InputGroupTextarea>['$props']
@@ -18,16 +18,14 @@ const isComposing = ref(false)
 
 function handleKeyDown(e: KeyboardEvent) {
   if (e.key === 'Enter') {
-    if (isComposing.value || e.isComposing || e.shiftKey)
-      return
+    if (isComposing.value || e.isComposing || e.shiftKey) return
 
     e.preventDefault()
 
     const textarea = e.currentTarget as HTMLTextAreaElement | null
     const submitButton = textarea?.form?.querySelector('button[type="submit"]') as HTMLButtonElement | null
 
-    if (submitButton?.disabled)
-      return
+    if (submitButton?.disabled) return
 
     textarea?.form?.requestSubmit()
   }
@@ -45,15 +43,13 @@ function handleKeyDown(e: KeyboardEvent) {
 
 function handlePaste(e: ClipboardEvent) {
   const items = e.clipboardData?.items
-  if (!items)
-    return
+  if (!items) return
 
   const pastedFiles: File[] = []
   for (const item of Array.from(items)) {
     if (item.kind === 'file') {
       const file = item.getAsFile()
-      if (file)
-        pastedFiles.push(file)
+      if (file) pastedFiles.push(file)
     }
   }
 
@@ -65,7 +61,7 @@ function handlePaste(e: ClipboardEvent) {
 
 const modelValue = computed({
   get: () => textInput.value,
-  set: val => setTextInput(val),
+  set: (val) => setTextInput(val)
 })
 </script>
 

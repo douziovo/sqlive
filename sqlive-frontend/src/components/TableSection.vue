@@ -192,265 +192,285 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, computed, inject, onUnmounted } from 'vue';
-import type { HighlightState, Row, TableSchema, IndexInfo, TriggerInfo, ViewInfo } from '../model/DatabaseTypes';
-import { SQL_CONTEXT_KEY } from '../model/injectionKeys';
-import { useTablePipeline } from '../composables/useTablePipeline';
-import { useInlineEdit } from '../composables/useInlineEdit';
-import { isNumericType, extractTriggerTiming } from '../utils/sql';
-import HoverPreview from './HoverPreview.vue';
-import type { PreviewItem } from './HoverPreview.vue';
+import { computed, inject, onUnmounted, reactive, ref, watch } from 'vue'
+import { useInlineEdit } from '../composables/useInlineEdit'
+import { useTablePipeline } from '../composables/useTablePipeline'
+import type { HighlightState, IndexInfo, Row, TableSchema, TriggerInfo, ViewInfo } from '../model/DatabaseTypes'
+import { SQL_CONTEXT_KEY } from '../model/injectionKeys'
+import { extractTriggerTiming, isNumericType } from '../utils/sql'
+import type { PreviewItem } from './HoverPreview.vue'
+import HoverPreview from './HoverPreview.vue'
 
 const props = defineProps<{
-  table: TableSchema;
-  indexes: IndexInfo[];
-  triggers: TriggerInfo[];
-  views: ViewInfo[];
-  flashTableName?: string | null;
-}>();
+  table: TableSchema
+  indexes: IndexInfo[]
+  triggers: TriggerInfo[]
+  views: ViewInfo[]
+  flashTableName?: string | null
+}>()
 
-const emit = defineEmits(['update-cell', 'delete-row', 'drop-table', 'insert-row', 'navigate-tab']);
-const { highlight } = inject(SQL_CONTEXT_KEY)!;
+const emit = defineEmits(['update-cell', 'delete-row', 'drop-table', 'insert-row', 'navigate-tab'])
+const { highlight } = inject(SQL_CONTEXT_KEY)!
 
-const isFlashTarget = computed(() => props.flashTableName === props.table.name);
+const isFlashTarget = computed(() => props.flashTableName === props.table.name)
 
 // --- Associated indexes / triggers / views ---
-const tableIndexes = computed(() => props.indexes.filter(i => i.tableName === props.table.name));
-const tableTriggers = computed(() => props.triggers.filter(t => t.tableName === props.table.name));
+const tableIndexes = computed(() => props.indexes.filter((i) => i.tableName === props.table.name))
+const tableTriggers = computed(() => props.triggers.filter((t) => t.tableName === props.table.name))
 const tableViews = computed(() =>
-  props.views.filter(v => {
-    const sql = v.sql || '';
-    return sql.includes(props.table.name) || sql.includes(`"${props.table.name}"`) || sql.includes(`\`${props.table.name}\``);
+  props.views.filter((v) => {
+    const sql = v.sql || ''
+    return (
+      sql.includes(props.table.name) || sql.includes(`"${props.table.name}"`) || sql.includes(`\`${props.table.name}\``)
+    )
   })
-);
+)
 const columnIndexes = computed(() => {
-  const map: Record<string, string[]> = {};
+  const map: Record<string, string[]> = {}
   for (const idx of tableIndexes.value) {
     for (const col of idx.columns) {
-      if (!map[col]) map[col] = [];
-      map[col].push(idx.name);
+      if (!map[col]) map[col] = []
+      map[col].push(idx.name)
     }
   }
-  return map;
-});
+  return map
+})
 
 function navigateTo(tab: string, targetId?: string) {
-  emit('navigate-tab', { tab, targetId });
+  emit('navigate-tab', { tab, targetId })
 }
 
 // --- Hover preview state ---
-type HoverType = 'index' | 'trigger' | 'view' | 'column-index';
-const hoverType = ref<HoverType | null>(null);
-const hoverTriggerEl = ref<HTMLElement | null>(null);
-const hoverColumn = ref<string>('');
-let hoverLeaveTimer: ReturnType<typeof setTimeout> | null = null;
-let animationTimer: ReturnType<typeof setTimeout> | null = null;
+type HoverType = 'index' | 'trigger' | 'view' | 'column-index'
+const hoverType = ref<HoverType | null>(null)
+const hoverTriggerEl = ref<HTMLElement | null>(null)
+const hoverColumn = ref<string>('')
+let hoverLeaveTimer: ReturnType<typeof setTimeout> | null = null
+let animationTimer: ReturnType<typeof setTimeout> | null = null
 
 function onBadgeEnter(e: MouseEvent, type: HoverType) {
-  if (hoverLeaveTimer) clearTimeout(hoverLeaveTimer);
-  hoverTriggerEl.value = e.currentTarget as HTMLElement;
-  hoverType.value = type;
-  hoverColumn.value = '';
+  if (hoverLeaveTimer) clearTimeout(hoverLeaveTimer)
+  hoverTriggerEl.value = e.currentTarget as HTMLElement
+  hoverType.value = type
+  hoverColumn.value = ''
 }
 
 function onColumnIdxEnter(e: MouseEvent, col: string) {
-  if (hoverLeaveTimer) clearTimeout(hoverLeaveTimer);
-  hoverTriggerEl.value = e.currentTarget as HTMLElement;
-  hoverType.value = 'column-index';
-  hoverColumn.value = col;
+  if (hoverLeaveTimer) clearTimeout(hoverLeaveTimer)
+  hoverTriggerEl.value = e.currentTarget as HTMLElement
+  hoverType.value = 'column-index'
+  hoverColumn.value = col
 }
 
 function onBadgeLeave() {
-  if (hoverLeaveTimer) clearTimeout(hoverLeaveTimer);
+  if (hoverLeaveTimer) clearTimeout(hoverLeaveTimer)
   hoverLeaveTimer = setTimeout(() => {
-    hoverType.value = null;
-    hoverTriggerEl.value = null;
-    hoverColumn.value = '';
-  }, 200);
+    hoverType.value = null
+    hoverTriggerEl.value = null
+    hoverColumn.value = ''
+  }, 200)
 }
 
 function onPreviewEnter() {
-  if (hoverLeaveTimer) clearTimeout(hoverLeaveTimer);
+  if (hoverLeaveTimer) clearTimeout(hoverLeaveTimer)
 }
 
 function onPreviewSelect(targetId: string) {
-  const tabMap: Record<string, string> = { index: 'indexes', trigger: 'triggers', view: 'views', 'column-index': 'indexes' };
-  const tab = tabMap[hoverType.value || 'index'] || 'indexes';
-  hoverType.value = null;
-  emit('navigate-tab', { tab, targetId });
+  const tabMap: Record<string, string> = {
+    index: 'indexes',
+    trigger: 'triggers',
+    view: 'views',
+    'column-index': 'indexes'
+  }
+  const tab = tabMap[hoverType.value || 'index'] || 'indexes'
+  hoverType.value = null
+  emit('navigate-tab', { tab, targetId })
 }
 
 function onPreviewNavigateAll() {
-  const currentType = hoverType.value;
-  hoverType.value = null;
-  if (!currentType) return;
-  const tabMap: Record<string, string> = { index: 'indexes', trigger: 'triggers', view: 'views', 'column-index': 'indexes' };
-  emit('navigate-tab', { tab: tabMap[currentType] || 'indexes' });
+  const currentType = hoverType.value
+  hoverType.value = null
+  if (!currentType) return
+  const tabMap: Record<string, string> = {
+    index: 'indexes',
+    trigger: 'triggers',
+    view: 'views',
+    'column-index': 'indexes'
+  }
+  emit('navigate-tab', { tab: tabMap[currentType] || 'indexes' })
 }
 
 // --- Hover preview content ---
 const previewIcon = computed(() => {
-  if (hoverType.value === 'index' || hoverType.value === 'column-index') return '\u{1F4C7}';
-  if (hoverType.value === 'trigger') return '\u{26A1}';
-  if (hoverType.value === 'view') return '\u{1F440}';
-  return '';
-});
+  if (hoverType.value === 'index' || hoverType.value === 'column-index') return '\u{1F4C7}'
+  if (hoverType.value === 'trigger') return '\u{26A1}'
+  if (hoverType.value === 'view') return '\u{1F440}'
+  return ''
+})
 
 const previewTitle = computed(() => {
-  if (hoverType.value === 'index') return `索引 · ${props.table.name} 表`;
-  if (hoverType.value === 'column-index') return `索引 · ${hoverColumn.value} 列`;
-  if (hoverType.value === 'trigger') return `触发器 · ${props.table.name} 表`;
-  if (hoverType.value === 'view') return `视图 · 引用 ${props.table.name} 表`;
-  return '';
-});
+  if (hoverType.value === 'index') return `索引 · ${props.table.name} 表`
+  if (hoverType.value === 'column-index') return `索引 · ${hoverColumn.value} 列`
+  if (hoverType.value === 'trigger') return `触发器 · ${props.table.name} 表`
+  if (hoverType.value === 'view') return `视图 · 引用 ${props.table.name} 表`
+  return ''
+})
 
 const previewSubtitle = computed(() => {
-  if (hoverType.value === 'index') return `共 ${tableIndexes.value.length} 个索引`;
-  if (hoverType.value === 'column-index') return `此列被 ${columnIndexes.value[hoverColumn.value]?.length || 0} 个索引使用`;
-  if (hoverType.value === 'trigger') return `共 ${tableTriggers.value.length} 个触发器`;
-  if (hoverType.value === 'view') return `共 ${tableViews.value.length} 个视图`;
-  return '';
-});
+  if (hoverType.value === 'index') return `共 ${tableIndexes.value.length} 个索引`
+  if (hoverType.value === 'column-index')
+    return `此列被 ${columnIndexes.value[hoverColumn.value]?.length || 0} 个索引使用`
+  if (hoverType.value === 'trigger') return `共 ${tableTriggers.value.length} 个触发器`
+  if (hoverType.value === 'view') return `共 ${tableViews.value.length} 个视图`
+  return ''
+})
 
 const previewCategoryName = computed(() => {
-  if (hoverType.value === 'index' || hoverType.value === 'column-index') return '索引';
-  if (hoverType.value === 'trigger') return '触发器';
-  if (hoverType.value === 'view') return '视图';
-  return '';
-});
+  if (hoverType.value === 'index' || hoverType.value === 'column-index') return '索引'
+  if (hoverType.value === 'trigger') return '触发器'
+  if (hoverType.value === 'view') return '视图'
+  return ''
+})
 
 const previewItems = computed((): PreviewItem[] => {
   if (hoverType.value === 'index') {
-    return tableIndexes.value.map(idx => ({
-      id: 'index-' + idx.name,
+    return tableIndexes.value.map((idx) => ({
+      id: `index-${idx.name}`,
       icon: idx.unique ? '\u{1F48E}' : '\u{1F4CB}',
       label: idx.name,
       meta: [`列: ${idx.columns.join(', ')}  ·  ${idx.unique ? 'UNIQUE' : '普通'}`],
       sqlPreview: idx.sql ? idx.sql.substring(0, 80) + (idx.sql.length > 80 ? '...' : '') : undefined,
-      accent: (idx.unique ? 'blue' : 'none') as 'blue' | 'none',
-    }));
+      accent: (idx.unique ? 'blue' : 'none') as 'blue' | 'none'
+    }))
   }
   if (hoverType.value === 'column-index') {
-    const col = hoverColumn.value;
-    const colIdxNames = columnIndexes.value[col] || [];
-    return colIdxNames.map(name => {
-      const idx = tableIndexes.value.find(i => i.name === name);
-      const colPos = idx ? idx.columns.indexOf(col) + 1 : 0;
-      const otherCols = idx ? idx.columns.filter(c => c !== col) : [];
-      const meta = [`第 ${colPos} 列 (共 ${idx?.columns.length || 0} 列)`];
-      if (otherCols.length > 0) meta.push(`其他列: ${otherCols.join(', ')}`);
+    const col = hoverColumn.value
+    const colIdxNames = columnIndexes.value[col] || []
+    return colIdxNames.map((name) => {
+      const idx = tableIndexes.value.find((i) => i.name === name)
+      const colPos = idx ? idx.columns.indexOf(col) + 1 : 0
+      const otherCols = idx ? idx.columns.filter((c) => c !== col) : []
+      const meta = [`第 ${colPos} 列 (共 ${idx?.columns.length || 0} 列)`]
+      if (otherCols.length > 0) meta.push(`其他列: ${otherCols.join(', ')}`)
       return {
-        id: 'index-' + name,
+        id: `index-${name}`,
         icon: idx?.unique ? '\u{1F48E}' : '\u{1F4CB}',
         label: name,
         meta,
-        accent: (idx?.unique ? 'blue' : 'none') as 'blue' | 'none',
-      };
-    });
+        accent: (idx?.unique ? 'blue' : 'none') as 'blue' | 'none'
+      }
+    })
   }
   if (hoverType.value === 'trigger') {
-    return tableTriggers.value.map(t => {
-      const timing = extractTriggerTiming(t.sql);
+    return tableTriggers.value.map((t) => {
+      const timing = extractTriggerTiming(t.sql)
       return {
-        id: 'trigger-' + t.name,
+        id: `trigger-${t.name}`,
         icon: '\u{26A1}',
         label: t.name,
         meta: timing ? [timing] : [],
         tag: timing || undefined,
-        sqlPreview: t.sql ? t.sql.substring(0, 80) + (t.sql.length > 80 ? '...' : '') : undefined,
-      };
-    });
+        sqlPreview: t.sql ? t.sql.substring(0, 80) + (t.sql.length > 80 ? '...' : '') : undefined
+      }
+    })
   }
   if (hoverType.value === 'view') {
-    return tableViews.value.map(v => ({
-      id: 'view-' + v.name,
+    return tableViews.value.map((v) => ({
+      id: `view-${v.name}`,
       icon: '\u{1F440}',
       label: v.name,
       meta: v.sql ? [v.sql.split('\n')[0]?.substring(0, 60) || ''] : [],
-      sqlPreview: v.sql ? v.sql.substring(0, 80) + (v.sql.length > 80 ? '...' : '') : undefined,
-    }));
+      sqlPreview: v.sql ? v.sql.substring(0, 80) + (v.sql.length > 80 ? '...' : '') : undefined
+    }))
   }
-  return [];
-});
+  return []
+})
 
-const isAnimating = ref(false);
-const ghostRow = reactive<Row>({});
+const isAnimating = ref(false)
+const ghostRow = reactive<Row>({})
 
 // Sort/filter/page pipeline — extracted into composable
 const {
-  sortColumn, sortDir, toggleSort,
-  filterText, filterColumns,
-  currentPage, pageSize,
-  paginatedData, totalRows, totalPages,
+  sortColumn,
+  sortDir,
+  toggleSort,
+  filterText,
+  filterColumns,
+  currentPage,
+  pageSize,
+  paginatedData,
+  totalRows,
+  totalPages
 } = useTablePipeline(
   () => props.table.data,
-  () => props.table.columnTypes,
-);
+  () => props.table.columnTypes
+)
 // Initialize filter columns to the table's columns
-filterColumns.value = props.table.columns;
+filterColumns.value = props.table.columns
 
 // --- Animation ---
-watch(() => highlight.refreshSeed, () => {
-  isAnimating.value = true;
-  if (animationTimer) clearTimeout(animationTimer);
-  animationTimer = setTimeout(() => { isAnimating.value = false; }, 1000);
-});
+watch(
+  () => highlight.refreshSeed,
+  () => {
+    isAnimating.value = true
+    if (animationTimer) clearTimeout(animationTimer)
+    animationTimer = setTimeout(() => {
+      isAnimating.value = false
+    }, 1000)
+  }
+)
 
 // --- Ghost row ---
-const { autoResizeGhost, handleBlur } = useInlineEdit(
-  props.table.name,
-  props.table.columnTypes,
-  emit,
-);
+const { autoResizeGhost, handleBlur } = useInlineEdit(props.table.name, props.table.columnTypes, emit)
 
-const getGhostValue = (col: string) => ghostRow[col] || '';
+const getGhostValue = (col: string) => ghostRow[col] || ''
 const updateGhostState = (col: string, val: string) => {
-  ghostRow[col] = val;
-};
+  ghostRow[col] = val
+}
 const hasGhostInput = () => {
-  return Object.values(ghostRow).some(v => v && String(v).trim() !== '');
-};
+  return Object.values(ghostRow).some((v) => v && String(v).trim() !== '')
+}
 const onGhostSubmit = () => {
   if (hasGhostInput()) {
-    emit('insert-row', { tableName: props.table.name, newRow: { ...ghostRow } });
-    Object.keys(ghostRow).forEach(k => delete ghostRow[k]);
+    emit('insert-row', { tableName: props.table.name, newRow: { ...ghostRow } })
+    Object.keys(ghostRow).forEach((k) => delete ghostRow[k])
   }
-};
+}
 
 // --- Highlight helpers ---
-const getRowId = (row: any) => row.id !== undefined ? row.id : row._highlightId;
-const rowKey = (row: any) => `${props.table.name}:${getRowId(row)}`;
+const getRowId = (row: any) => (row.id !== undefined ? row.id : row._highlightId)
+const rowKey = (row: any) => `${props.table.name}:${getRowId(row)}`
 
-const activeRowSet = computed(() => new Set(highlight.activeRows));
-const activeColumnSet = computed(() => new Set(highlight.activeColumns));
+const activeRowSet = computed(() => new Set(highlight.activeRows))
+const activeColumnSet = computed(() => new Set(highlight.activeColumns))
 
-const isRowHighlighted = (row: any) => activeRowSet.value.has(rowKey(row));
-const isColumnActive = (colName: string) => activeColumnSet.value.has(colName);
-const flashingRowSet = computed(() => new Set(highlight.flashingRows));
+const isRowHighlighted = (row: any) => activeRowSet.value.has(rowKey(row))
+const isColumnActive = (colName: string) => activeColumnSet.value.has(colName)
+const flashingRowSet = computed(() => new Set(highlight.flashingRows))
 
 const getCellClasses = (row: any, col: string) => {
-  const classes: string[] = [];
+  const classes: string[] = []
   if (isAnimating.value && flashingRowSet.value.has(rowKey(row))) {
-    classes.push('flash-overlay');
+    classes.push('flash-overlay')
   }
-  const typeStr = props.table.columnTypes[col] || '';
-  const isVirtual = typeStr.includes('VIRTUAL');
-  const isHighlighted = isRowHighlighted(row) && isColumnActive(col);
+  const typeStr = props.table.columnTypes[col] || ''
+  const isVirtual = typeStr.includes('VIRTUAL')
+  const isHighlighted = isRowHighlighted(row) && isColumnActive(col)
 
   if (isVirtual) {
-    classes.push('bg-primary/10 text-primary font-bold border-l-2 border-primary/20');
+    classes.push('bg-primary/10 text-primary font-bold border-l-2 border-primary/20')
   } else if (isHighlighted) {
-    classes.push('bg-yellow-100 text-gray-900 font-bold');
+    classes.push('bg-yellow-100 text-gray-900 font-bold')
   } else {
-    classes.push('text-muted-foreground');
+    classes.push('text-muted-foreground')
   }
-  return classes.join(' ');
-};
+  return classes.join(' ')
+}
 
 onUnmounted(() => {
-  if (hoverLeaveTimer) clearTimeout(hoverLeaveTimer);
-  if (animationTimer) clearTimeout(animationTimer);
-});
+  if (hoverLeaveTimer) clearTimeout(hoverLeaveTimer)
+  if (animationTimer) clearTimeout(animationTimer)
+})
 </script>
 
 <style scoped>

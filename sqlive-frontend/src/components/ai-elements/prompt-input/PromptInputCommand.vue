@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from 'vue'
-import { Command } from '@/components/ui/command'
+import type { Command } from '@/components/ui/command'
 import { cn } from '@/lib/utils'
 
 type PromptInputCommandProps = InstanceType<typeof Command>['$props']

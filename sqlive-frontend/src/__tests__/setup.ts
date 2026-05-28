@@ -6,6 +6,6 @@ if (!('queryCommandSupported' in document)) {
   Object.defineProperty(document, 'queryCommandSupported', {
     value: (_cmd: string) => false,
     writable: false,
-    configurable: true,
-  });
+    configurable: true
+  })
 }

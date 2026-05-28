@@ -1,8 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
-
-import { mount } from '@vue/test-utils';
-import App from '@/App.vue';
-import { SQL_CONTEXT_KEY, AI_ACTIONS_KEY } from '@/model/injectionKeys';
+import { mount } from '@vue/test-utils'
+import { describe, expect, it, vi } from 'vitest'
+import App from '@/App.vue'
+import { AI_ACTIONS_KEY, SQL_CONTEXT_KEY } from '@/model/injectionKeys'
 
 describe('App', () => {
   it('renders without error', () => {
@@ -15,7 +14,7 @@ describe('App', () => {
           DataVisualizer: true,
           AiChatPanel: true,
           KnowledgePanel: true,
-          LearningCompanion: true,
+          LearningCompanion: true
         },
         provide: {
           [SQL_CONTEXT_KEY as symbol]: {
@@ -26,7 +25,7 @@ describe('App', () => {
               views: [],
               triggers: [],
               foreignKeys: [],
-              metadata: null,
+              metadata: null
             },
             highlight: {
               actionType: 'none',
@@ -34,16 +33,16 @@ describe('App', () => {
               activeRows: [],
               activeColumns: [],
               flashingRows: [],
-              refreshSeed: 0,
-            },
+              refreshSeed: 0
+            }
           },
           [AI_ACTIONS_KEY as symbol]: {
             isLoading: { value: false },
-            analyzeError: vi.fn(),
-          },
-        },
-      },
-    });
-    expect(w.exists()).toBe(true);
-  });
-});
+            analyzeError: vi.fn()
+          }
+        }
+      }
+    })
+    expect(w.exists()).toBe(true)
+  })
+})
