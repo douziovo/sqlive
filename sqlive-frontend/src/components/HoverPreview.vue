@@ -115,8 +115,6 @@ const popupStyle = ref<Record<string, string>>({});
 // Filter state — instant, no debounce (JetBrains style)
 const filterText = ref('');
 
-const { filteredItems, hoveredIndex, keyboardIndex, selectedItem, navigateUp, navigateDown, resetSelection } = useFilteredList(displayItems, filterText);
-
 // Highlight matching text in label
 function highlightLabel(label: string): string {
   return highlightMatch(label, filterText.value.trim(), 'bg-yellow-200 text-foreground rounded-sm px-1');
@@ -139,6 +137,8 @@ const displayTitle = computed(() => cachedTitle.value || props.title);
 const displaySubtitle = computed(() => cachedSubtitle.value || props.subtitle);
 const displayCategoryName = computed(() => cachedCategoryName.value || props.categoryName);
 const displayItems = computed(() => props.items.length > 0 ? props.items : cachedItems.value);
+
+const { filteredItems, hoveredIndex, keyboardIndex, selectedItem, navigateUp, navigateDown, resetSelection } = useFilteredList(displayItems, filterText);
 
 // When popup is already visible and the user slides to a different badge,
 // show stays true so the watcher below doesn't re-fire. Update cache immediately.
