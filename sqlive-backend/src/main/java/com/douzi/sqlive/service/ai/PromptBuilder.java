@@ -1,7 +1,6 @@
 package com.douzi.sqlive.service.ai;
 
-import com.douzi.sqlive.dto.ai
-        .AiChatRequest;
+import com.douzi.sqlive.dto.ai.AiChatRequest;
 
 /**
  * Builds system prompts for each AI mode.

@@ -16,10 +16,13 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import lombok.extern.slf4j.Slf4j;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@Slf4j
 class RateLimitFilterConcurrencyTest {
 
     @Value("${local.server.port}")
@@ -114,7 +117,7 @@ class RateLimitFilterConcurrencyTest {
                 }
                 assertTrue(latch.await(30, TimeUnit.SECONDS));
                 if (!errors.isEmpty()) {
-                    System.err.println("[WARN] " + errors.size() + " network errors during rate-limit test: " + errors.get(0).getMessage());
+                    log.warn("{} network errors during rate-limit test: {}", errors.size(), errors.get(0).getMessage());
                 }
                 assertTrue(successCount.get() <= sqlLimit,
                     "At most " + sqlLimit + " should pass, got: " + successCount.get());

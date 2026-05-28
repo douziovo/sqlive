@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api")
 @Slf4j
-@SuppressWarnings("unused")
 public class SqlController {
 
     private final SqlExecutionService sqlService;

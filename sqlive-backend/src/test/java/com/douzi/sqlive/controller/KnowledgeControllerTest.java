@@ -47,7 +47,7 @@ class KnowledgeControllerTest {
         node.setDifficulty(1);
         when(knowledgeGraphService.getAllNodes()).thenReturn(List.of(node));
 
-        ResponseEntity<Map> resp = restTemplate.getForEntity(
+        ResponseEntity<Map<String, Object>> resp = (ResponseEntity<Map<String, Object>>) (ResponseEntity<?>) restTemplate.getForEntity(
                 "http://localhost:" + port + "/api/knowledge/graph", Map.class);
 
         assertEquals(HttpStatus.OK, resp.getStatusCode());
@@ -64,7 +64,7 @@ class KnowledgeControllerTest {
     void shouldReturnEmptyTopicsWhenNoNodes() {
         when(knowledgeGraphService.getAllNodes()).thenReturn(List.of());
 
-        ResponseEntity<Map> resp = restTemplate.getForEntity(
+        ResponseEntity<Map<String, Object>> resp = (ResponseEntity<Map<String, Object>>) (ResponseEntity<?>) restTemplate.getForEntity(
                 "http://localhost:" + port + "/api/knowledge/graph", Map.class);
 
         assertEquals(HttpStatus.OK, resp.getStatusCode());

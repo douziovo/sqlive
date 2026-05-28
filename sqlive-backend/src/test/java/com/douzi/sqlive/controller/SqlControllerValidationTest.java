@@ -5,7 +5,7 @@ import com.douzi.sqlive.dto.SqlResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.*;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -19,19 +19,11 @@ class SqlControllerValidationTest {
     private final RestTemplate restTemplate = new RestTemplate();
 
     private String url() {
-        return "http://localhost:" + port + "/api/execute";
+        return SqlControllerTestSupport.url(port);
     }
 
     private ResponseEntity<SqlResponse> post(SqlRequest req) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<SqlRequest> entity = new HttpEntity<>(req, headers);
-        try {
-            return restTemplate.exchange(url(), HttpMethod.POST, entity, SqlResponse.class);
-        } catch (org.springframework.web.client.HttpClientErrorException e) {
-            SqlResponse body = e.getResponseBodyAs(SqlResponse.class);
-            return new ResponseEntity<>(body, e.getResponseHeaders(), e.getStatusCode());
-        }
+        return SqlControllerTestSupport.postForEntity(restTemplate, port, req);
     }
 
     @Test

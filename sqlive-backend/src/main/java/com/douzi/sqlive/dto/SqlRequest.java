@@ -6,7 +6,6 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
-@SuppressWarnings("unused")
 public class SqlRequest {
     @NotBlank(message = "SQL cannot be empty")
     @Size(max = 100000, message = "SQL script too large")

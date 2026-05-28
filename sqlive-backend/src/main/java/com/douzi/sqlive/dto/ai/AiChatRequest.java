@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 
 @Data
-@SuppressWarnings("unused")
 public class AiChatRequest {
     private String mode;          // chat | analyze-error | fix-code | explain | optimize
     @Size(max = 50000, message = "Message too large")

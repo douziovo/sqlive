@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@SuppressWarnings("unused")
 public class ErrorPayload {
     private String message;
     private int line;

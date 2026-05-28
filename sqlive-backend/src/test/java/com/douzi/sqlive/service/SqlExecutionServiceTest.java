@@ -356,14 +356,13 @@ class SqlExecutionServiceTest {
     // ============================================================
 
     @Test
-    void shouldExecuteAllWindowFunctions() {
+    void shouldExecuteRankingFunctions() {
         String setup = """
             CREATE TABLE t (name TEXT, dept_id INTEGER, salary REAL);
             INSERT INTO t VALUES ('Alice', 1, 100), ('Bob', 1, 200), ('Charlie', 2, 150), ('David', 2, 300);
             """;
         service.execute(setup, "window_test", true);
 
-        // ROW_NUMBER, RANK, DENSE_RANK, NTILE
         SqlResponse r = service.execute("""
             SELECT name, salary,
                 ROW_NUMBER() OVER (ORDER BY salary DESC) AS rn,
@@ -373,18 +372,34 @@ class SqlExecutionServiceTest {
             FROM t;
             """, "window_test", false);
         assertTrue(r.isSuccess());
+    }
 
-        // LAG / LEAD
-        r = service.execute("""
+    @Test
+    void shouldExecuteLagLead() {
+        String setup = """
+            CREATE TABLE t (name TEXT, salary REAL);
+            INSERT INTO t VALUES ('Alice', 100), ('Bob', 200), ('Charlie', 150), ('David', 300);
+            """;
+        service.execute(setup, "window_test", true);
+
+        SqlResponse r = service.execute("""
             SELECT name, salary,
                 LAG(salary, 1, 0)  OVER (ORDER BY salary) AS prev,
                 LEAD(salary, 1, 0) OVER (ORDER BY salary) AS next
             FROM t;
             """, "window_test", false);
         assertTrue(r.isSuccess());
+    }
 
-        // FIRST_VALUE / LAST_VALUE
-        r = service.execute("""
+    @Test
+    void shouldExecuteFirstLastValue() {
+        String setup = """
+            CREATE TABLE t (name TEXT, salary REAL);
+            INSERT INTO t VALUES ('Alice', 100), ('Bob', 200), ('Charlie', 150), ('David', 300);
+            """;
+        service.execute(setup, "window_test", true);
+
+        SqlResponse r = service.execute("""
             SELECT name, salary,
                 FIRST_VALUE(name) OVER (ORDER BY salary DESC) AS highest,
                 LAST_VALUE(name) OVER (ORDER BY salary DESC
@@ -392,9 +407,17 @@ class SqlExecutionServiceTest {
             FROM t;
             """, "window_test", false);
         assertTrue(r.isSuccess());
+    }
 
-        // CUME_DIST / PERCENT_RANK
-        r = service.execute("""
+    @Test
+    void shouldExecuteCumeDistPercentRank() {
+        String setup = """
+            CREATE TABLE t (name TEXT, salary REAL);
+            INSERT INTO t VALUES ('Alice', 100), ('Bob', 200), ('Charlie', 150), ('David', 300);
+            """;
+        service.execute(setup, "window_test", true);
+
+        SqlResponse r = service.execute("""
             SELECT name, ROUND(CUME_DIST() OVER (ORDER BY salary), 3) AS cd,
                 ROUND(PERCENT_RANK() OVER (ORDER BY salary), 3) AS pr
             FROM t;
@@ -407,20 +430,27 @@ class SqlExecutionServiceTest {
     // ============================================================
 
     @Test
-    void shouldExecuteAllJoinTypes() {
+    void shouldExecuteCrossJoin() {
         String setup = """
             CREATE TABLE a (id INTEGER, name TEXT); INSERT INTO a VALUES (1, 'X'), (2, 'Y');
             CREATE TABLE b (id INTEGER, val TEXT); INSERT INTO b VALUES (1, 'foo'), (3, 'bar');
             """;
         service.execute(setup, "join_test", true);
 
-        // CROSS JOIN
         SqlResponse r = service.execute("SELECT * FROM a CROSS JOIN b;", "join_test", false);
         assertTrue(r.isSuccess());
         assertEquals(4, r.getData().getQueryResults().getFirst().getData().size());
+    }
 
-        // LEFT JOIN
-        r = service.execute("SELECT a.name, b.val FROM a LEFT JOIN b ON a.id = b.id;", "join_test", false);
+    @Test
+    void shouldExecuteLeftJoin() {
+        String setup = """
+            CREATE TABLE a (id INTEGER, name TEXT); INSERT INTO a VALUES (1, 'X'), (2, 'Y');
+            CREATE TABLE b (id INTEGER, val TEXT); INSERT INTO b VALUES (1, 'foo'), (3, 'bar');
+            """;
+        service.execute(setup, "join_test", true);
+
+        SqlResponse r = service.execute("SELECT a.name, b.val FROM a LEFT JOIN b ON a.id = b.id;", "join_test", false);
         assertTrue(r.isSuccess());
     }
 

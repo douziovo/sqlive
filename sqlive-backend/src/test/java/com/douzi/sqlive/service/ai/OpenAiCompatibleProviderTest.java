@@ -150,56 +150,46 @@ class OpenAiCompatibleProviderTest {
         return config;
     }
 
+    private record MockWebClientCore(
+            WebClient webClient,
+            WebClient.RequestBodyUriSpec uriSpec,
+            WebClient.RequestBodySpec bodySpec,
+            WebClient.RequestHeadersSpec<?> headersSpec,
+            WebClient.ResponseSpec responseSpec) {}
+
     @SuppressWarnings("unchecked")
+    private MockWebClientCore mockWebClientCore() {
+        WebClient webClient = mock(WebClient.class);
+        WebClient.RequestBodyUriSpec uriSpec = mock(WebClient.RequestBodyUriSpec.class);
+        WebClient.RequestBodySpec bodySpec = mock(WebClient.RequestBodySpec.class);
+        WebClient.RequestHeadersSpec<?> headersSpec = mock(WebClient.RequestHeadersSpec.class);
+        WebClient.ResponseSpec responseSpec = mock(WebClient.ResponseSpec.class);
+
+        when(webClient.post()).thenReturn(uriSpec);
+        when(uriSpec.uri(anyString())).thenReturn(bodySpec);
+        when(bodySpec.bodyValue(any())).thenReturn((WebClient.RequestHeadersSpec) headersSpec);
+        when(headersSpec.retrieve()).thenReturn(responseSpec);
+
+        return new MockWebClientCore(webClient, uriSpec, bodySpec, headersSpec, responseSpec);
+    }
+
     private WebClient mockWebClientForComplete(String responseBody) {
-        WebClient webClient = mock(WebClient.class);
-        WebClient.RequestBodyUriSpec uriSpec = mock(WebClient.RequestBodyUriSpec.class);
-        WebClient.RequestBodySpec bodySpec = mock(WebClient.RequestBodySpec.class);
-        WebClient.RequestHeadersSpec<?> headersSpec = mock(WebClient.RequestHeadersSpec.class);
-        WebClient.ResponseSpec responseSpec = mock(WebClient.ResponseSpec.class);
-
-        when(webClient.post()).thenReturn(uriSpec);
-        when(uriSpec.uri(anyString())).thenReturn(bodySpec);
-        when(bodySpec.bodyValue(any())).thenReturn((WebClient.RequestHeadersSpec) headersSpec);
-        when(headersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(String.class)).thenReturn(Mono.just(responseBody));
-
-        return webClient;
+        MockWebClientCore core = mockWebClientCore();
+        when(core.responseSpec().bodyToMono(String.class)).thenReturn(Mono.just(responseBody));
+        return core.webClient();
     }
 
-    @SuppressWarnings("unchecked")
     private WebClient mockWebClientThatThrows(RuntimeException ex) {
-        WebClient webClient = mock(WebClient.class);
-        WebClient.RequestBodyUriSpec uriSpec = mock(WebClient.RequestBodyUriSpec.class);
-        WebClient.RequestBodySpec bodySpec = mock(WebClient.RequestBodySpec.class);
-        WebClient.RequestHeadersSpec<?> headersSpec = mock(WebClient.RequestHeadersSpec.class);
-        WebClient.ResponseSpec responseSpec = mock(WebClient.ResponseSpec.class);
-
-        when(webClient.post()).thenReturn(uriSpec);
-        when(uriSpec.uri(anyString())).thenReturn(bodySpec);
-        when(bodySpec.bodyValue(any())).thenReturn((WebClient.RequestHeadersSpec) headersSpec);
-        when(headersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(String.class)).thenThrow(ex);
-
-        return webClient;
+        MockWebClientCore core = mockWebClientCore();
+        when(core.responseSpec().bodyToMono(String.class)).thenThrow(ex);
+        return core.webClient();
     }
 
-    @SuppressWarnings("unchecked")
     private WebClient mockWebClientForStream(Flux<String> responseFlux) {
-        WebClient webClient = mock(WebClient.class);
-        WebClient.RequestBodyUriSpec uriSpec = mock(WebClient.RequestBodyUriSpec.class);
-        WebClient.RequestBodySpec bodySpec = mock(WebClient.RequestBodySpec.class);
-        WebClient.RequestHeadersSpec<?> headersSpec = mock(WebClient.RequestHeadersSpec.class);
-        WebClient.ResponseSpec responseSpec = mock(WebClient.ResponseSpec.class);
-
-        when(webClient.post()).thenReturn(uriSpec);
-        when(uriSpec.uri(anyString())).thenReturn(bodySpec);
-        when(bodySpec.contentType(any())).thenReturn(bodySpec);
-        when(bodySpec.accept(any())).thenReturn(bodySpec);
-        when(bodySpec.bodyValue(any())).thenReturn((WebClient.RequestHeadersSpec) headersSpec);
-        when(headersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToFlux(String.class)).thenReturn(responseFlux);
-
-        return webClient;
+        MockWebClientCore core = mockWebClientCore();
+        when(core.bodySpec().contentType(any())).thenReturn(core.bodySpec());
+        when(core.bodySpec().accept(any())).thenReturn(core.bodySpec());
+        when(core.responseSpec().bodyToFlux(String.class)).thenReturn(responseFlux);
+        return core.webClient();
     }
 }
