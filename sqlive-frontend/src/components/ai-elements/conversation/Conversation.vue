@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import type { HTMLAttributes } from 'vue'
-import { cn } from '@/lib/utils'
 import { reactiveOmit } from '@vueuse/core'
+import type { HTMLAttributes } from 'vue'
 import { StickToBottom } from 'vue-stick-to-bottom'
+import { cn } from '@/lib/utils'
 
 interface Props {
   ariaLabel?: string
   class?: HTMLAttributes['class']
-  initial?: boolean | 'instant' | { damping?: number, stiffness?: number, mass?: number }
-  resize?: 'instant' | { damping?: number, stiffness?: number, mass?: number }
+  initial?: boolean | 'instant' | { damping?: number; stiffness?: number; mass?: number }
+  resize?: 'instant' | { damping?: number; stiffness?: number; mass?: number }
   damping?: number
   stiffness?: number
   mass?: number
@@ -21,7 +21,7 @@ const props = withDefaults(defineProps<Props>(), {
   damping: 0.7,
   stiffness: 0.05,
   mass: 1.25,
-  anchor: 'none',
+  anchor: 'none'
 })
 const delegatedProps = reactiveOmit(props, 'class')
 </script>

@@ -9,7 +9,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  size: 16,
+  size: 16
 })
 </script>
 

@@ -65,23 +65,21 @@
 </template>
 
 <script setup lang="ts">
-import { Handle, Position } from '@vue-flow/core';
-import type { ErTableNodeData } from '@/model/DatabaseTypes';
+import { Handle, Position } from '@vue-flow/core'
+import type { ErTableNodeData } from '@/model/DatabaseTypes'
 
 const props = defineProps({
   id: { type: String, required: true },
   data: { type: Object as () => ErTableNodeData, required: true },
   selected: { type: Boolean, default: false },
   sourcePosition: { type: String as () => Position, default: Position.Right },
-  targetPosition: { type: String as () => Position, default: Position.Left },
-});
+  targetPosition: { type: String as () => Position, default: Position.Left }
+})
 
-const emit = defineEmits<{
-  (e: 'navigate', tableName: string): void;
-}>();
+const emit = defineEmits<(e: 'navigate', tableName: string) => void>()
 
 function handleDoubleClick() {
-  emit('navigate', props.data.tableName);
+  emit('navigate', props.data.tableName)
 }
 </script>
 

@@ -106,30 +106,36 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import type { TableSchema } from '../model/DatabaseTypes';
-import { useTablePipeline } from '../composables/useTablePipeline';
-import ChartView from './ChartView.vue';
+import { computed, ref } from 'vue'
+import { useTablePipeline } from '../composables/useTablePipeline'
+import type { TableSchema } from '../model/DatabaseTypes'
+import ChartView from './ChartView.vue'
 
-const showChart = ref(false);
+const showChart = ref(false)
 
 const props = defineProps<{
-  result: TableSchema;
-  index: number;
-}>();
+  result: TableSchema
+  index: number
+}>()
 
-const resultName = computed(() => props.index === 0 ? '查询结果' : `查询结果 ${props.index + 1}`);
+const resultName = computed(() => (props.index === 0 ? '查询结果' : `查询结果 ${props.index + 1}`))
 
 const {
-  sortColumn, sortDir, toggleSort,
-  filterText, filterColumns,
-  currentPage, pageSize,
-  paginatedData, totalRows, totalPages,
+  sortColumn,
+  sortDir,
+  toggleSort,
+  filterText,
+  filterColumns,
+  currentPage,
+  pageSize,
+  paginatedData,
+  totalRows,
+  totalPages
 } = useTablePipeline(
   () => props.result.data,
-  () => props.result.columnTypes,
-);
-filterColumns.value = props.result.columns;
+  () => props.result.columnTypes
+)
+filterColumns.value = props.result.columns
 </script>
 
 <style scoped>

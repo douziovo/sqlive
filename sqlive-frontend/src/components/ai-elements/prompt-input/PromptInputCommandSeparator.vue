@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from 'vue'
-import { CommandSeparator } from '@/components/ui/command'
+import type { CommandSeparator } from '@/components/ui/command'
 import { cn } from '@/lib/utils'
 
 type PromptInputCommandSeparatorProps = InstanceType<typeof CommandSeparator>['$props']

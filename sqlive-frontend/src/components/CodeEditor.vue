@@ -153,126 +153,128 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch, nextTick, computed, inject } from 'vue';
-import { highlightMatch } from '../utils/html';
-import { SQL_CONTEXT_KEY, AI_ACTIONS_KEY } from '../model/injectionKeys';
-import { useMonacoEditor } from '../composables/useMonacoEditor';
+import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useMonacoEditor } from '../composables/useMonacoEditor'
+import { AI_ACTIONS_KEY, SQL_CONTEXT_KEY } from '../model/injectionKeys'
+import { highlightMatch } from '../utils/html'
 
 const props = defineProps<{
-  code: string;
-}>();
+  code: string
+}>()
 
 const emit = defineEmits<{
-  'update:code': [value: string];
-  'switch-tab': [id: string];
-  'add-tab': [];
-  'close-tab': [id: string];
-  'set-db-name': [id: string, dbName: string];
-  'delete-db': [dbName: string];
-  'submit': [];
-  'import-file': [file: File];
-  'export-tab': [];
-  'export-all': [];
-}>();
+  'update:code': [value: string]
+  'switch-tab': [id: string]
+  'add-tab': []
+  'close-tab': [id: string]
+  'set-db-name': [id: string, dbName: string]
+  'delete-db': [dbName: string]
+  submit: []
+  'import-file': [file: File]
+  'export-tab': []
+  'export-all': []
+}>()
 
-const ctx = inject(SQL_CONTEXT_KEY)!;
-const { tabs, activeTabId, activeDbName, dbList, highlightChunk, error } = ctx;
-const ai = inject(AI_ACTIONS_KEY)!;
+const ctx = inject(SQL_CONTEXT_KEY)!
+const { tabs, activeTabId, activeDbName, dbList, highlightChunk, error } = ctx
+const ai = inject(AI_ACTIONS_KEY)!
 
-const editorContainer = ref<HTMLElement | null>(null);
-const fileInput = ref<HTMLInputElement | null>(null);
-const dragOver = ref(false);
-const showTabSearch = ref(false);
-const tabSearchText = ref('');
-const tabSearchInput = ref<HTMLInputElement | null>(null);
+const editorContainer = ref<HTMLElement | null>(null)
+const fileInput = ref<HTMLInputElement | null>(null)
+const dragOver = ref(false)
+const showTabSearch = ref(false)
+const tabSearchText = ref('')
+const tabSearchInput = ref<HTMLInputElement | null>(null)
 
 const { create, formatSql, syncCode, dispose } = useMonacoEditor(
   editorContainer,
   emit,
   { highlightChunk, error, ai },
-  () => fileInput.value?.click(),
-);
+  () => fileInput.value?.click()
+)
 
 onMounted(() => {
-  create(props.code);
-  watch(() => props.code, (newVal) => syncCode(newVal));
-});
+  create(props.code)
+  watch(
+    () => props.code,
+    (newVal) => syncCode(newVal)
+  )
+})
 
 onBeforeUnmount(() => {
-  dispose();
-});
+  dispose()
+})
 
 // --- File import ---
 function onFileInput(e: Event) {
-  const input = e.target as HTMLInputElement;
-  const file = input.files?.[0];
-  if (file) emit('import-file', file);
-  input.value = '';
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (file) emit('import-file', file)
+  input.value = ''
 }
 
 function onDrop(e: DragEvent) {
-  dragOver.value = false;
-  const file = e.dataTransfer?.files?.[0];
+  dragOver.value = false
+  const file = e.dataTransfer?.files?.[0]
   if (file && (file.name.endsWith('.sql') || file.name.endsWith('.txt'))) {
-    emit('import-file', file);
+    emit('import-file', file)
   }
 }
 
 // --- Tab search ---
 const filteredTabs = computed(() => {
-  const q = tabSearchText.value.trim().toLowerCase();
-  if (!q) return tabs.value;
-  return tabs.value.filter(t => t.name.toLowerCase().includes(q));
-});
+  const q = tabSearchText.value.trim().toLowerCase()
+  if (!q) return tabs.value
+  return tabs.value.filter((t) => t.name.toLowerCase().includes(q))
+})
 
 function switchToTab(id: string) {
-  emit('switch-tab', id);
-  showTabSearch.value = false;
-  tabSearchText.value = '';
+  emit('switch-tab', id)
+  showTabSearch.value = false
+  tabSearchText.value = ''
 }
 
 function switchToFirstMatch() {
   if (filteredTabs.value.length > 0) {
-    switchToTab(filteredTabs.value[0].id);
+    switchToTab(filteredTabs.value[0].id)
   }
 }
 
 function highlightTabName(name: string): string {
-  return highlightMatch(name, tabSearchText.value.trim());
+  return highlightMatch(name, tabSearchText.value.trim())
 }
 
 watch(showTabSearch, (val) => {
   if (val) {
-    tabSearchText.value = '';
-    nextTick(() => tabSearchInput.value?.focus());
+    tabSearchText.value = ''
+    nextTick(() => tabSearchInput.value?.focus())
   }
-});
+})
 
 // --- Rename ---
 
 function handleSubmit() {
-  let dbName: string | null = activeDbName.value;
+  let dbName: string | null = activeDbName.value
   if (!dbName) {
-    dbName = prompt('输入数据库名称以保存当前状态:');
-    if (!dbName || !dbName.trim()) return;
-    dbName = dbName.trim();
+    dbName = prompt('输入数据库名称以保存当前状态:')
+    if (!dbName?.trim()) return
+    dbName = dbName.trim()
     if (!/^[^?&=#;/\\:]{1,64}$/.test(dbName)) {
-      alert('数据库名称不能包含特殊字符 (? & = # ; / \\ :)，且长度不能超过 64 个字符');
-      return;
+      alert('数据库名称不能包含特殊字符 (? & = # ; / \\ :)，且长度不能超过 64 个字符')
+      return
     }
-    emit('set-db-name', activeTabId.value, dbName);
+    emit('set-db-name', activeTabId.value, dbName)
   }
-  emit('submit');
+  emit('submit')
 }
 
 function confirmDeleteDb() {
-  const name = activeDbName.value;
-  if (!name) return;
+  const name = activeDbName.value
+  if (!name) return
   if (confirm(`确定删除数据库 "${name}"？\n所有关联标签页将切换回实时模式。`)) {
-    emit('delete-db', name);
+    emit('delete-db', name)
   }
 }
-
 </script>
 
 <style scoped>

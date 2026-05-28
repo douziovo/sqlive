@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { HoverCard } from '@/components/ui/hover-card'
+import type { HoverCard } from '@/components/ui/hover-card'
 
 type PromptInputHoverCardProps = InstanceType<typeof HoverCard>['$props']
 
@@ -10,7 +10,7 @@ interface Props extends /* @vue-ignore */ PromptInputHoverCardProps {
 
 const props = withDefaults(defineProps<Props>(), {
   openDelay: 0,
-  closeDelay: 0,
+  closeDelay: 0
 })
 
 const { openDelay, closeDelay, ...restProps } = props

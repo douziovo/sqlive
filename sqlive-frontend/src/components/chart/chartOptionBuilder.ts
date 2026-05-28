@@ -27,15 +27,13 @@ function getMedian(vals: number[]): number {
   return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
 }
 
-export function decideDualAxis(
-  datasets: { name: string; data: (number | null)[] }[],
-): DualAxisDecision {
+export function decideDualAxis(datasets: { name: string; data: (number | null)[] }[]): DualAxisDecision {
   if (datasets.length < 2) {
     return { enabled: false, leftIndices: [], rightIndices: [], leftAxisName: '', rightAxisName: '' }
   }
 
   const mags = datasets.map((ds, i) => {
-    const nums = ds.data.filter(v => v != null && !isNaN(v)) as number[]
+    const nums = ds.data.filter((v) => v != null && !Number.isNaN(v)) as number[]
     return { index: i, name: ds.name, mag: getMagnitude(getMedian(nums)) }
   })
   mags.sort((a, b) => a.mag - b.mag)
@@ -51,7 +49,7 @@ export function decideDualAxis(
   }
 
   // Tie-breaker: first occurrence of max gap
-  const cutIdx = gaps.findIndex(g => g === maxGap) + 1
+  const cutIdx = gaps.indexOf(maxGap) + 1
   const leftMags = mags.slice(0, cutIdx)
   const rightMags = mags.slice(cutIdx)
 
@@ -66,23 +64,26 @@ export function decideDualAxis(
 
   return {
     enabled: true,
-    leftIndices: leftMags.map(m => m.index),
-    rightIndices: rightMags.map(m => m.index),
+    leftIndices: leftMags.map((m) => m.index),
+    rightIndices: rightMags.map((m) => m.index),
     leftAxisName: axisName(leftMags),
-    rightAxisName: axisName(rightMags),
+    rightAxisName: axisName(rightMags)
   }
 }
 
 function echartType(type: string): string {
   switch (type) {
-    case 'area': return 'line'
-    case 'doughnut': return 'pie'
-    default: return type
+    case 'area':
+      return 'line'
+    case 'doughnut':
+      return 'pie'
+    default:
+      return type
   }
 }
 
 function toEChartsData(data: (number | null)[]): (number | string)[] {
-  return data.map(v => (v == null || isNaN(v)) ? '-' : v)
+  return data.map((v) => (v == null || Number.isNaN(v) ? '-' : v))
 }
 
 const IS_CARTESIAN = new Set(['bar', 'line', 'area'])
@@ -90,13 +91,13 @@ const IS_CARTESIAN = new Set(['bar', 'line', 'area'])
 export function buildEChartsOption(config: ChartConfig): EChartsOption {
   const { chartType, labels, datasets, stacked } = config
   const eType = echartType(chartType)
-  const dualAxis = IS_CARTESIAN.has(chartType) ? decideDualAxis(datasets) : { enabled: false } as DualAxisDecision
+  const dualAxis = IS_CARTESIAN.has(chartType) ? decideDualAxis(datasets) : ({ enabled: false } as DualAxisDecision)
 
   if (chartType === 'radar') {
     const allVals: number[] = []
     for (const ds of datasets) {
       for (const v of ds.data) {
-        if (v != null && !isNaN(v)) allVals.push(v)
+        if (v != null && !Number.isNaN(v)) allVals.push(v)
       }
     }
     const globalMax = allVals.length > 0 ? Math.max(...allVals) * 1.1 : 100
@@ -116,14 +117,14 @@ export function buildEChartsOption(config: ChartConfig): EChartsOption {
       radar: {
         indicator: indicators,
         center: ['50%', '50%'],
-        radius: '70%',
+        radius: '70%'
       },
       tooltip: {},
-      series: datasets.map(ds => ({
+      series: datasets.map((ds) => ({
         type: 'radar',
         name: ds.name,
-        data: [{ value: ds.data.map(v => (v == null || isNaN(v)) ? 0 : v) }],
-      })),
+        data: [{ value: ds.data.map((v) => (v == null || Number.isNaN(v) ? 0 : v)) }]
+      }))
     }
   }
 
@@ -131,20 +132,22 @@ export function buildEChartsOption(config: ChartConfig): EChartsOption {
     const ds = datasets[0]
     return {
       tooltip: { trigger: 'item' },
-      series: [{
-        type: 'pie',
-        radius: chartType === 'doughnut' ? ['40%', '70%'] : '70%',
-        data: ds.data.map((v, i) => ({
-          name: labels[i],
-          value: v == null || isNaN(v) ? 0 : v,
-        })),
-        label: {
-          show: true,
-          position: 'outside',
-          formatter: '{b}  {d}%',
-        },
-        labelLine: { show: true, length: 15, length2: 25 },
-      }],
+      series: [
+        {
+          type: 'pie',
+          radius: chartType === 'doughnut' ? ['40%', '70%'] : '70%',
+          data: ds.data.map((v, i) => ({
+            name: labels[i],
+            value: v == null || Number.isNaN(v) ? 0 : v
+          })),
+          label: {
+            show: true,
+            position: 'outside',
+            formatter: '{b}  {d}%'
+          },
+          labelLine: { show: true, length: 15, length2: 25 }
+        }
+      ]
     }
   }
 
@@ -152,22 +155,20 @@ export function buildEChartsOption(config: ChartConfig): EChartsOption {
   const yAxis: EChartsOption['yAxis'] = dualAxis.enabled
     ? [
         { type: 'value', name: dualAxis.leftAxisName, alignTicks: true },
-        { type: 'value', name: dualAxis.rightAxisName, alignTicks: true },
+        { type: 'value', name: dualAxis.rightAxisName, alignTicks: true }
       ]
     : { type: 'value' }
 
   const series = datasets.map((ds, i) => {
     const isLeft = !dualAxis.enabled || dualAxis.leftIndices.includes(i)
     const isRight = dualAxis.enabled && dualAxis.rightIndices.includes(i)
-    const stackName = stacked
-      ? (dualAxis.enabled ? (isLeft ? 'stack-left' : 'stack-right') : 'stack-all')
-      : undefined
+    const stackName = stacked ? (dualAxis.enabled ? (isLeft ? 'stack-left' : 'stack-right') : 'stack-all') : undefined
 
     const s: Record<string, unknown> = {
       type: eType,
       name: isRight ? `${ds.name} (右轴)` : ds.name,
       data: toEChartsData(ds.data),
-      yAxisIndex: isRight ? 1 : 0,
+      yAxisIndex: isRight ? 1 : 0
     }
     if (stackName) s.stack = stackName
     if (chartType === 'area') s.areaStyle = {}
@@ -179,6 +180,6 @@ export function buildEChartsOption(config: ChartConfig): EChartsOption {
     yAxis,
     series: series as EChartsOption['series'],
     tooltip: { trigger: 'axis' },
-    grid: { left: '3%', right: dualAxis.enabled ? '8%' : '4%', containLabel: true },
+    grid: { left: '3%', right: dualAxis.enabled ? '8%' : '4%', containLabel: true }
   }
 }
