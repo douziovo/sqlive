@@ -63,58 +63,55 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, provide, ref } from 'vue';
-import { Splitpanes, Pane } from 'splitpanes';
-import 'splitpanes/dist/splitpanes.css';
-import CodeEditor from './components/CodeEditor.vue';
-import DataVisualizer from './components/DataVisualizer.vue';
-import AiChatPanel from './components/AiChatPanel.vue';
-import KnowledgePanel from './components/knowledge/KnowledgePanel.vue';
-import LearningCompanion from './components/knowledge/LearningCompanion.vue';
-import { useSqlEngine } from './composables/useSqlEngine';
-import { useAiChat } from './composables/useAiChat';
-import { useInlineActions } from './composables/useInlineActions';
+import { Pane, Splitpanes } from 'splitpanes'
+import { computed, onMounted, provide, ref } from 'vue'
+import 'splitpanes/dist/splitpanes.css'
+import AiChatPanel from './components/AiChatPanel.vue'
+import CodeEditor from './components/CodeEditor.vue'
+import DataVisualizer from './components/DataVisualizer.vue'
+import KnowledgePanel from './components/knowledge/KnowledgePanel.vue'
+import LearningCompanion from './components/knowledge/LearningCompanion.vue'
+import { useAiChat } from './composables/useAiChat'
+import { useInlineActions } from './composables/useInlineActions'
+import { useSqlEngine } from './composables/useSqlEngine'
+import type { CellUpdateEvent, CreateTableEvent, RowDeleteEvent, RowInsertEvent } from './model/DatabaseTypes'
+import { AI_ACTIONS_KEY, SQL_CONTEXT_KEY } from './model/injectionKeys'
+import type { SchemaTableInfo } from './utils/aiQuickFix'
 
-import { SQL_CONTEXT_KEY, AI_ACTIONS_KEY } from './model/injectionKeys';
-import type { SchemaTableInfo } from './utils/aiQuickFix';
-import type { CellUpdateEvent, RowDeleteEvent, CreateTableEvent, RowInsertEvent } from './model/DatabaseTypes';
-
-const engine = useSqlEngine();
-const { code } = engine;
+const engine = useSqlEngine()
+const { code } = engine
 
 // ── AI composables (split) ─────────────────────────────────────
 const aiChat = useAiChat({
   executionError: engine.executionError,
   code: engine.code,
-  db: engine.db,
-});
+  db: engine.db
+})
 
 const { analyzeError, fixCode, explain, optimize, generateSql } = useInlineActions({
   isLoading: aiChat.isLoading,
   messages: aiChat.messages,
   code: engine.code,
   db: engine.db,
-  error: engine.executionError,
-});
+  error: engine.executionError
+})
 
 // ── Derived ─────────────────────────────────────────────────────
 const schemaTables = computed<SchemaTableInfo[]>(() => {
-  return (engine.db?.tables ?? []).map(t => ({
+  return (engine.db?.tables ?? []).map((t) => ({
     name: t.name,
     type: 'table' as const,
-    columns: t.columns || [],
-  }));
-});
+    columns: t.columns || []
+  }))
+})
 
-const activeDbName = computed(() =>
-  engine.tabs.value.find(t => t.id === engine.activeTabId.value)?.dbName || '',
-);
+const activeDbName = computed(() => engine.tabs.value.find((t) => t.id === engine.activeTabId.value)?.dbName || '')
 
 // Template aliases — used by v-if="isLoading" and AiChatPanel props
-const isLoading = engine.isLoading;
-const aiMessages = aiChat.messages;
-const aiLoading = aiChat.isLoading;
-const aiPanelVisible = aiChat.showPanel;
+const isLoading = engine.isLoading
+const aiMessages = aiChat.messages
+const aiLoading = aiChat.isLoading
+const aiPanelVisible = aiChat.showPanel
 
 // ── Provide SQL context (replaces 9 props across 3 components) ──
 provide(SQL_CONTEXT_KEY, {
@@ -126,8 +123,8 @@ provide(SQL_CONTEXT_KEY, {
   error: engine.executionError,
   schemaTables,
   db: engine.db,
-  highlight: engine.highlight,
-});
+  highlight: engine.highlight
+})
 
 // ── Provide AI actions ─────
 provide(AI_ACTIONS_KEY, {
@@ -137,53 +134,58 @@ provide(AI_ACTIONS_KEY, {
   explain,
   optimize,
   generateSql,
-  onOpenChat: (context?: string) => { aiChat.openPanel(); if (context) void aiChat.sendMessage(context); },
-  sendToAi: (text: string) => { void aiChat.sendMessage(text); },
-  onTogglePanel: aiChat.togglePanel,
-});
+  onOpenChat: (context?: string) => {
+    aiChat.openPanel()
+    if (context) void aiChat.sendMessage(context)
+  },
+  sendToAi: (text: string) => {
+    void aiChat.sendMessage(text)
+  },
+  onTogglePanel: aiChat.togglePanel
+})
 
 // ── SQL event handlers ──────────────────────────────────────────
 const handleUpdateCell = ({ tableName, oldRow, newRow }: CellUpdateEvent) => {
-  engine.updateRow(tableName, oldRow, newRow);
-};
+  engine.updateRow(tableName, oldRow, newRow)
+}
 
 const handleDeleteRow = (payload: RowDeleteEvent) => {
   if (payload.tableName) {
-    engine.deleteRow(payload.row, payload.tableName);
+    engine.deleteRow(payload.row, payload.tableName)
   } else {
-    engine.deleteRow(payload.row);
+    engine.deleteRow(payload.row)
   }
-};
+}
 
 const handleCreateTable = ({ name, columns, data }: CreateTableEvent) => {
-  engine.addNewTable(name, columns, data);
-};
+  engine.addNewTable(name, columns, data)
+}
 
 const handleDropTable = (tableName: string) => {
   if (confirm(`确定要删除表格 "${tableName}" 吗？`)) {
-    engine.dropTableUI(tableName);
+    engine.dropTableUI(tableName)
   }
-};
+}
 
 const handleInsertRow = ({ tableName, newRow }: RowInsertEvent) => {
-  engine.insertRowUI(tableName, newRow);
-};
+  engine.insertRowUI(tableName, newRow)
+}
 
-const noAnimate = ref(true);
+const noAnimate = ref(true)
 
 // ── Knowledge graph ───────────────────────────────────────────────
-const isKnowledgePanelOpen = ref(false);
+const isKnowledgePanelOpen = ref(false)
 
 function handleKnowledgeAskAi(label: string) {
-  isKnowledgePanelOpen.value = false;
-  aiChat.openPanel();
-  void aiChat.sendMessage('教我学习：' + label);
+  isKnowledgePanelOpen.value = false
+  aiChat.openPanel()
+  void aiChat.sendMessage(`教我学习：${label}`)
 }
 
 // Enable splitpanes transitions after initial layout (prevents slide-in animation on load)
 onMounted(() => {
   requestAnimationFrame(() => {
-    noAnimate.value = false;
-  });
-});
+    noAnimate.value = false
+  })
+})
 </script>

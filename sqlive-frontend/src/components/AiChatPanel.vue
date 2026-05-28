@@ -150,114 +150,215 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
-import { useEventListener } from '@vueuse/core';
-import { marked } from 'marked';
-import { Conversation, ConversationContent, ConversationEmptyState } from '@/components/ai-elements/conversation';
-import AiMessageFooter from '@/components/AiMessageFooter.vue';
-import { Reasoning, ReasoningTrigger, ReasoningContent } from '@/components/ai-elements/reasoning';
-import { Suggestion } from '@/components/ai-elements/suggestion';
-import { Loader } from '@/components/ai-elements/loader';
-import type { AiMessage } from '../composables/useAiChat';
+import { useEventListener } from '@vueuse/core'
+import { marked } from 'marked'
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import AiMessageFooter from '@/components/AiMessageFooter.vue'
+import { Conversation, ConversationContent, ConversationEmptyState } from '@/components/ai-elements/conversation'
+import { Loader } from '@/components/ai-elements/loader'
+import { Reasoning, ReasoningContent, ReasoningTrigger } from '@/components/ai-elements/reasoning'
+import { Suggestion } from '@/components/ai-elements/suggestion'
+import type { AiMessage } from '../composables/useAiChat'
 
 const props = defineProps<{
-  messages: AiMessage[];
-  isLoading: boolean;
-}>();
+  messages: AiMessage[]
+  isLoading: boolean
+}>()
 
 const emit = defineEmits<{
-  send: [text: string]; close: []; clear: []; cancelStream: [];
-  regenerate: [messageId: string]; edit: [messageId: string, newText: string]; delete: [messageId: string];
-}>();
+  send: [text: string]
+  close: []
+  clear: []
+  cancelStream: []
+  regenerate: [messageId: string]
+  edit: [messageId: string, newText: string]
+  delete: [messageId: string]
+}>()
 
-const inputText = ref('');
-const inputRef = ref<HTMLTextAreaElement | null>(null);
-const copiedId = ref<string | null>(null);
-const copyTimeout = ref<ReturnType<typeof setTimeout> | null>(null);
-const editingMsg = ref<AiMessage | null>(null);
-const editText = ref('');
+const inputText = ref('')
+const inputRef = ref<HTMLTextAreaElement | null>(null)
+const copiedId = ref<string | null>(null)
+const copyTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
+const editingMsg = ref<AiMessage | null>(null)
+const editText = ref('')
 
 function getEditTextarea(): HTMLTextAreaElement | null {
-  return document.querySelector('.fixed.z-50 textarea:not([placeholder="输入消息..."])') as HTMLTextAreaElement | null;
+  return document.querySelector('.fixed.z-50 textarea:not([placeholder="输入消息..."])') as HTMLTextAreaElement | null
 }
-const prompts = ['解释当前代码', '如何优化我的查询？', 'LEFT JOIN 和 INNER JOIN 的区别', '什么是子查询？'];
+const prompts = ['解释当前代码', '如何优化我的查询？', 'LEFT JOIN 和 INNER JOIN 的区别', '什么是子查询？']
 
 async function copyMessage(text: string) {
-  try { await navigator.clipboard.writeText(text); } catch { /* fallback */ }
-  const msg = props.messages.find(m => m.content === text);
+  try {
+    await navigator.clipboard.writeText(text)
+  } catch {
+    /* fallback */
+  }
+  const msg = props.messages.find((m) => m.content === text)
   if (msg) {
-    copiedId.value = msg.id;
-    copyTimeout.value = setTimeout(() => { copiedId.value = null; }, 2000);
+    copiedId.value = msg.id
+    copyTimeout.value = setTimeout(() => {
+      copiedId.value = null
+    }, 2000)
   }
 }
-function startEdit(msg: AiMessage) { editingMsg.value = msg; editText.value = msg.content; }
+function startEdit(msg: AiMessage) {
+  editingMsg.value = msg
+  editText.value = msg.content
+}
 
 watch(editingMsg, (val) => {
-  if (!val) return;
+  if (!val) return
   nextTick(() => {
-    const el = getEditTextarea();
-    if (!el) return;
-    autoResizeEdit();
-    el.focus();
-    el.setSelectionRange(0, 0);
-    const container = el.closest('[style*="overflow"]') as HTMLElement;
+    const el = getEditTextarea()
+    if (!el) return
+    autoResizeEdit()
+    el.focus()
+    el.setSelectionRange(0, 0)
+    const container = el.closest('[style*="overflow"]') as HTMLElement
     if (container) {
-      let offsetTop = 0;
-      let cur: HTMLElement | null = el;
-      while (cur && cur !== container) { offsetTop += cur.offsetTop; cur = cur.offsetParent as HTMLElement | null; }
+      let offsetTop = 0
+      let cur: HTMLElement | null = el
+      while (cur && cur !== container) {
+        offsetTop += cur.offsetTop
+        cur = cur.offsetParent as HTMLElement | null
+      }
       // Simulate a wheel-up to unstick StickToBottom BEFORE setting scrollTop
-      container.dispatchEvent(new WheelEvent('wheel', { deltaY: -1, bubbles: true }));
-      container.scrollTop = Math.max(0, offsetTop - 60);
+      container.dispatchEvent(new WheelEvent('wheel', { deltaY: -1, bubbles: true }))
+      container.scrollTop = Math.max(0, offsetTop - 60)
     }
-  });
-});
+  })
+})
 
 // Auto-scroll to bottom when messages change (except when editing)
-watch(() => props.messages.length, () => {
-  if (editingMsg.value) return;
-  nextTick(() => {
-    const container = document.querySelector('.fixed.z-50 [style*="overflow"]') as HTMLElement;
-    if (container) container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
-  });
-});
+watch(
+  () => props.messages.length,
+  () => {
+    if (editingMsg.value) return
+    nextTick(() => {
+      const container = document.querySelector('.fixed.z-50 [style*="overflow"]') as HTMLElement
+      if (container) container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
+    })
+  }
+)
 
-function submitEdit() { if (editingMsg.value && editText.value.trim()) { emit('edit', editingMsg.value.id, editText.value.trim()); editingMsg.value = null; editText.value = ''; } }
-function cancelEdit() { editingMsg.value = null; editText.value = ''; }
+function submitEdit() {
+  if (editingMsg.value && editText.value.trim()) {
+    emit('edit', editingMsg.value.id, editText.value.trim())
+    editingMsg.value = null
+    editText.value = ''
+  }
+}
+function cancelEdit() {
+  editingMsg.value = null
+  editText.value = ''
+}
 
 function renderMd(text: string): string {
-  if (!text) return '';
-  return marked.parse(text, { breaks: true, gfm: true }) as string;
+  if (!text) return ''
+  return marked.parse(text, { breaks: true, gfm: true }) as string
 }
 
 // ── Panel position & size ──────────────────────────────────────
-const panelState = reactive({ x: 0, y: 0, width: 500, height: 580, initialized: false });
-function initPosition() { if (panelState.initialized) return; panelState.x = Math.round(window.innerWidth * 0.38); panelState.y = 40; panelState.initialized = true; }
-const panelStyle = computed(() => ({ left: panelState.x + 'px', top: panelState.y + 'px', width: panelState.width + 'px', height: panelState.height + 'px' }));
+const panelState = reactive({ x: 0, y: 0, width: 500, height: 580, initialized: false })
+function initPosition() {
+  if (panelState.initialized) return
+  panelState.x = Math.round(window.innerWidth * 0.38)
+  panelState.y = 40
+  panelState.initialized = true
+}
+const panelStyle = computed(() => ({
+  left: `${panelState.x}px`,
+  top: `${panelState.y}px`,
+  width: `${panelState.width}px`,
+  height: `${panelState.height}px`
+}))
 
 // ── Drag ───────────────────────────────────────────────────────
-const isDragging = ref(false);
-const dragStartPos = reactive({ x: 0, y: 0, panelX: 0, panelY: 0 });
-function onDragStart(e: MouseEvent) { e.preventDefault(); isDragging.value = true; dragStartPos.x = e.clientX; dragStartPos.y = e.clientY; dragStartPos.panelX = panelState.x; dragStartPos.panelY = panelState.y; document.body.style.cursor = 'move'; document.body.style.userSelect = 'none'; }
-function onDragMove(e: MouseEvent) { if (!isDragging.value) return; const dx = e.clientX - dragStartPos.x, dy = e.clientY - dragStartPos.y; panelState.x = Math.max(0, Math.min(window.innerWidth - panelState.width, dragStartPos.panelX + dx)); panelState.y = Math.max(0, Math.min(window.innerHeight - 40, dragStartPos.panelY + dy)); }
-function onDragEnd() { isDragging.value = false; document.body.style.cursor = ''; document.body.style.userSelect = ''; }
-useEventListener(document, 'mousemove', onDragMove);
-useEventListener(document, 'mouseup', onDragEnd);
+const isDragging = ref(false)
+const dragStartPos = reactive({ x: 0, y: 0, panelX: 0, panelY: 0 })
+function onDragStart(e: MouseEvent) {
+  e.preventDefault()
+  isDragging.value = true
+  dragStartPos.x = e.clientX
+  dragStartPos.y = e.clientY
+  dragStartPos.panelX = panelState.x
+  dragStartPos.panelY = panelState.y
+  document.body.style.cursor = 'move'
+  document.body.style.userSelect = 'none'
+}
+function onDragMove(e: MouseEvent) {
+  if (!isDragging.value) return
+  const dx = e.clientX - dragStartPos.x,
+    dy = e.clientY - dragStartPos.y
+  panelState.x = Math.max(0, Math.min(window.innerWidth - panelState.width, dragStartPos.panelX + dx))
+  panelState.y = Math.max(0, Math.min(window.innerHeight - 40, dragStartPos.panelY + dy))
+}
+function onDragEnd() {
+  isDragging.value = false
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
+useEventListener(document, 'mousemove', onDragMove)
+useEventListener(document, 'mouseup', onDragEnd)
 
 // ── Resize ─────────────────────────────────────────────────────
-const MIN_W = 340, MIN_H = 320;
-const isResizing = ref(false);
-const resizeStartPos = reactive({ x: 0, y: 0, w: 0, h: 0 });
-function onResizeStart(e: MouseEvent) { e.preventDefault(); isResizing.value = true; resizeStartPos.x = e.clientX; resizeStartPos.y = e.clientY; resizeStartPos.w = panelState.width; resizeStartPos.h = panelState.height; document.body.style.cursor = 'nwse-resize'; document.body.style.userSelect = 'none'; }
-function onResizeMove(e: MouseEvent) { if (!isResizing.value) return; const dx = e.clientX - resizeStartPos.x, dy = e.clientY - resizeStartPos.y; panelState.width = Math.max(MIN_W, Math.min(window.innerWidth - panelState.x, resizeStartPos.w + dx)); panelState.height = Math.max(MIN_H, Math.min(window.innerHeight - panelState.y, resizeStartPos.h + dy)); }
-function onResizeEnd() { isResizing.value = false; document.body.style.cursor = ''; document.body.style.userSelect = ''; }
-useEventListener(document, 'mousemove', onResizeMove);
-useEventListener(document, 'mouseup', onResizeEnd);
+const MIN_W = 340,
+  MIN_H = 320
+const isResizing = ref(false)
+const resizeStartPos = reactive({ x: 0, y: 0, w: 0, h: 0 })
+function onResizeStart(e: MouseEvent) {
+  e.preventDefault()
+  isResizing.value = true
+  resizeStartPos.x = e.clientX
+  resizeStartPos.y = e.clientY
+  resizeStartPos.w = panelState.width
+  resizeStartPos.h = panelState.height
+  document.body.style.cursor = 'nwse-resize'
+  document.body.style.userSelect = 'none'
+}
+function onResizeMove(e: MouseEvent) {
+  if (!isResizing.value) return
+  const dx = e.clientX - resizeStartPos.x,
+    dy = e.clientY - resizeStartPos.y
+  panelState.width = Math.max(MIN_W, Math.min(window.innerWidth - panelState.x, resizeStartPos.w + dx))
+  panelState.height = Math.max(MIN_H, Math.min(window.innerHeight - panelState.y, resizeStartPos.h + dy))
+}
+function onResizeEnd() {
+  isResizing.value = false
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
+useEventListener(document, 'mousemove', onResizeMove)
+useEventListener(document, 'mouseup', onResizeEnd)
 
-onMounted(() => { initPosition(); });
-onUnmounted(() => { if (copyTimeout.value) clearTimeout(copyTimeout.value); });
-function send(e?: KeyboardEvent) { if (e?.isComposing) return; const t = inputText.value.trim(); if (!t || props.isLoading) return; emit('send', t); inputText.value = ''; nextTick(() => { if (inputRef.value) inputRef.value.style.height = 'auto'; }); }
-function autoResize() { const el = inputRef.value; if (!el) return; el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
-function autoResizeEdit() { const el = getEditTextarea(); if (!el) return; el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 300) + 'px'; }
+onMounted(() => {
+  initPosition()
+})
+onUnmounted(() => {
+  if (copyTimeout.value) clearTimeout(copyTimeout.value)
+})
+function send(e?: KeyboardEvent) {
+  if (e?.isComposing) return
+  const t = inputText.value.trim()
+  if (!t || props.isLoading) return
+  emit('send', t)
+  inputText.value = ''
+  nextTick(() => {
+    if (inputRef.value) inputRef.value.style.height = 'auto'
+  })
+}
+function autoResize() {
+  const el = inputRef.value
+  if (!el) return
+  el.style.height = 'auto'
+  el.style.height = `${Math.min(el.scrollHeight, 120)}px`
+}
+function autoResizeEdit() {
+  const el = getEditTextarea()
+  if (!el) return
+  el.style.height = 'auto'
+  el.style.height = `${Math.min(el.scrollHeight, 300)}px`
+}
 </script>
 
 <style>

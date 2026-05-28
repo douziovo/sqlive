@@ -36,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import { inject, computed } from 'vue'
+import { computed, inject } from 'vue'
 import type { KnowledgeNodeData } from '@/composables/useKnowledgeGraph'
 
 const DIFF_LABELS: Record<number, string> = { 1: '入门', 2: '进阶', 3: '高级' }
@@ -51,7 +51,7 @@ const zoomLevel = inject<number>('zoomLevel', 1)
 
 const truncatedDesc = computed(() => {
   const d = props.data.description || ''
-  return d.length > 30 ? d.slice(0, 30) + '...' : d
+  return d.length > 30 ? `${d.slice(0, 30)}...` : d
 })
 
 const difficultyLabel = computed(() => DIFF_LABELS[props.data.difficulty] || '')

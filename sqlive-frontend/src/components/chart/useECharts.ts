@@ -1,6 +1,6 @@
-import { ref, onMounted, onBeforeUnmount } from 'vue'
-import * as echarts from 'echarts'
 import type { EChartsOption } from 'echarts'
+import * as echarts from 'echarts'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { registerChartTheme, THEME_NAME } from './chartTheme'
 
 registerChartTheme()
@@ -41,7 +41,7 @@ export function useECharts() {
     }
     if (mounted && containerRef.value) {
       initChart(containerRef.value)
-      chartInstance!.setOption(option, { notMerge: true })
+      chartInstance?.setOption(option, { notMerge: true })
       return
     }
     pendingOption = option
@@ -62,7 +62,7 @@ export function useECharts() {
     mounted = true
     if (pendingOption && containerRef.value) {
       initChart(containerRef.value)
-      chartInstance!.setOption(pendingOption, { notMerge: true })
+      chartInstance?.setOption(pendingOption, { notMerge: true })
       pendingOption = null
     }
   })
