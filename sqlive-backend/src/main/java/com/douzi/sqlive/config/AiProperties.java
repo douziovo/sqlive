@@ -10,7 +10,6 @@ import java.util.Map;
 @Data
 @Component
 @ConfigurationProperties(prefix = "ai")
-@SuppressWarnings("unused")
 public class AiProperties {
     private String provider = "deepseek";
     private Map<String, AiProviderConfig> providers = Map.of();

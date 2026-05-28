@@ -3,10 +3,12 @@ package com.douzi.sqlive.service.ai;
 import com.douzi.sqlive.dto.ai.StreamChunk;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 
 import java.util.*;
 
+@Slf4j
 public class OpenAiProtocol implements Protocol {
 
     private final ObjectMapper objectMapper;
@@ -43,6 +45,7 @@ public class OpenAiProtocol implements Protocol {
 
             return Flux.fromIterable(chunks);
         } catch (Exception e) {
+            log.trace("Failed to parse stream chunk", e);
             return Flux.empty();
         }
     }

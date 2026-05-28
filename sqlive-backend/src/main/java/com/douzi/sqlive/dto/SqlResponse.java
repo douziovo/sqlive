@@ -4,7 +4,6 @@ import lombok.Data;
 import java.util.List;
 
 @Data
-@SuppressWarnings("unused")
 public class SqlResponse {
     private boolean success;
     private DataPayload data;
