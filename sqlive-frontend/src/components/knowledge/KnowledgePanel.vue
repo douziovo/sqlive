@@ -66,12 +66,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, inject, watch, onMounted, onUnmounted } from 'vue'
-import KnowledgeGraph from './KnowledgeGraph.vue'
-import { useKnowledgeGraph } from '@/composables/useKnowledgeGraph'
+import type { Edge, Node } from '@vue-flow/core'
+import { computed, inject, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { KnowledgeNodeData } from '@/composables/useKnowledgeGraph'
-import type { Node, Edge } from '@vue-flow/core'
+import { useKnowledgeGraph } from '@/composables/useKnowledgeGraph'
 import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
+import type KnowledgeGraph from './KnowledgeGraph.vue'
 
 const props = defineProps<{
   isOpen: boolean
@@ -95,20 +95,20 @@ interface FilterOption {
 const difficultyOptions: FilterOption[] = [
   { key: '1', label: '入门' },
   { key: '2', label: '进阶' },
-  { key: '3', label: '高级' },
+  { key: '3', label: '高级' }
 ]
 
 const statusOptions: FilterOption[] = [
   { key: 'mastered', label: '已掌握' },
   { key: 'in-progress', label: '学习中' },
-  { key: 'unlearned', label: '未学习' },
+  { key: 'unlearned', label: '未学习' }
 ]
 
 const kg = useKnowledgeGraph({
   sqlSource: () => {
-    const tab = sqlContext.tabs.value.find(t => t.id === sqlContext.activeTabId.value)
+    const tab = sqlContext.tabs.value.find((t) => t.id === sqlContext.activeTabId.value)
     return tab?.code ?? ''
-  },
+  }
 })
 
 const graphRef = ref<InstanceType<typeof KnowledgeGraph> | null>(null)
@@ -124,11 +124,11 @@ const filteredNodes = computed(() => {
   let nodes: Node<KnowledgeNodeData>[] = kgNodes.value
 
   if (activeDifficulty.value) {
-    const d = parseInt(activeDifficulty.value)
-    nodes = nodes.filter(n => n.data.difficulty === d)
+    const d = parseInt(activeDifficulty.value, 10)
+    nodes = nodes.filter((n) => n.data.difficulty === d)
   }
   if (activeStatus.value) {
-    nodes = nodes.filter(n => n.data.status === activeStatus.value)
+    nodes = nodes.filter((n) => n.data.status === activeStatus.value)
   }
 
   return nodes
@@ -136,8 +136,8 @@ const filteredNodes = computed(() => {
 
 const filteredEdges = computed(() => {
   if (!activeDifficulty.value && !activeStatus.value) return kgEdges.value
-  const visibleIds = new Set(filteredNodes.value.map(n => n.id))
-  return kgEdges.value.filter(e => visibleIds.has(e.source) && visibleIds.has(e.target))
+  const visibleIds = new Set(filteredNodes.value.map((n) => n.id))
+  return kgEdges.value.filter((e) => visibleIds.has(e.source) && visibleIds.has(e.target))
 })
 
 function close(): void {
@@ -156,15 +156,18 @@ function onDeselectNode(): void {
   kg.selectedNode.value = null
 }
 
-watch(() => props.isOpen, async (open) => {
-  if (open) {
-    searchQuery.value = ''
-    activeDifficulty.value = null
-    activeStatus.value = null
-    kg.selectedNode.value = null
-    await kg.fetchGraph()
+watch(
+  () => props.isOpen,
+  async (open) => {
+    if (open) {
+      searchQuery.value = ''
+      activeDifficulty.value = null
+      activeStatus.value = null
+      kg.selectedNode.value = null
+      await kg.fetchGraph()
+    }
   }
-})
+)
 
 function onKeydown(e: KeyboardEvent): void {
   if (e.key === 'Escape') close()

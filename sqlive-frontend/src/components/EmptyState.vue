@@ -8,8 +8,8 @@
 
 <script setup lang="ts">
 defineProps<{
-  icon: string;
-  title: string;
-  subtitle?: string;
-}>();
+  icon: string
+  title: string
+  subtitle?: string
+}>()
 </script>

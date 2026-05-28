@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from 'vue'
-import type { PromptInputMessage } from './types'
+import { getCurrentInstance, inject, onMounted, onUnmounted, ref } from 'vue'
 import { InputGroup } from '@/components/ui/input-group'
 import { cn } from '@/lib/utils'
-import { getCurrentInstance, inject, onMounted, onUnmounted, ref } from 'vue'
 import { usePromptInputProvider } from './context'
+import type { PromptInputMessage } from './types'
 import { PROMPT_INPUT_KEY } from './types'
 
 const props = defineProps<{
@@ -19,11 +19,12 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'submit', payload: PromptInputMessage): void
-  (e: 'error', payload: { code: string, message: string }): void
+  (e: 'error', payload: { code: string; message: string }): void
 }>()
 
 const instance = getCurrentInstance()
-const formRef = ref<HTMLFormElement | null>(null); void formRef // template ref
+const formRef = ref<HTMLFormElement | null>(null)
+void formRef // template ref
 
 function getListener(name: 'onSubmit' | 'onError') {
   return instance?.vnode.props?.[name]
@@ -31,7 +32,7 @@ function getListener(name: 'onSubmit' | 'onError') {
 
 function callListener<T>(listener: unknown, payload: T) {
   if (Array.isArray(listener)) {
-    return Promise.all(listener.map(fn => typeof fn === 'function' ? fn(payload) : undefined))
+    return Promise.all(listener.map((fn) => (typeof fn === 'function' ? fn(payload) : undefined)))
   }
 
   if (typeof listener === 'function') {
@@ -50,8 +51,7 @@ const localContext = inheritedContext
       accept: props.accept,
       onSubmit: (msg) => {
         const listener = getListener('onSubmit')
-        if (listener)
-          return callListener(listener, msg)
+        if (listener) return callListener(listener, msg)
 
         emit('submit', msg)
       },
@@ -65,7 +65,7 @@ const localContext = inheritedContext
         }
 
         emit('error', err)
-      },
+      }
     })
 
 const context = inheritedContext || localContext
@@ -74,7 +74,8 @@ if (!context) {
   throw new Error('PromptInput context is missing.')
 }
 
-const { fileInputRef, addFiles, submitForm } = context; void fileInputRef // template ref
+const { fileInputRef, addFiles, submitForm } = context
+void fileInputRef // template ref
 
 function handleDragOver(e: DragEvent) {
   if (e.dataTransfer?.types?.includes('Files')) {

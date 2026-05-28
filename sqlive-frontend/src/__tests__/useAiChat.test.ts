@@ -1,189 +1,188 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { AiMessage } from '../composables/useAiChat';
-import { setupAiChat, type AiChatSetup } from './test-utils';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { AiMessage } from '../composables/useAiChat'
+import { type AiChatSetup, setupAiChat } from './test-utils'
 
 describe('useAiChat', () => {
-    let useAiChat: AiChatSetup['useAiChat'];
-    let fetchSpy: ReturnType<typeof vi.fn>;
+  let useAiChat: AiChatSetup['useAiChat']
+  let fetchSpy: ReturnType<typeof vi.fn>
 
-    const mockSqlEngine = () => ({
-        executionError: { value: null as { line: number; message: string } | null },
-        code: { value: 'SELECT 1;' },
-        db: { tables: [] },
-    });
+  const mockSqlEngine = () => ({
+    executionError: { value: null as { line: number; message: string } | null },
+    code: { value: 'SELECT 1;' },
+    db: { tables: [] }
+  })
 
-    beforeEach(async () => {
-        const setup = await setupAiChat();
-        useAiChat = setup.useAiChat;
-        fetchSpy = setup.fetchSpy;
-    });
+  beforeEach(async () => {
+    const setup = await setupAiChat()
+    useAiChat = setup.useAiChat
+    fetchSpy = setup.fetchSpy
+  })
 
-    afterEach(() => {
-        vi.useRealTimers();
-        vi.restoreAllMocks();
-    });
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
 
-    function mockJsonResponse(data: any, ok = true, status = 200) {
-        fetchSpy.mockResolvedValue({
-            ok,
-            status,
-            json: () => Promise.resolve(data),
-        });
-    }
+  function mockJsonResponse(data: any, ok = true, status = 200) {
+    fetchSpy.mockResolvedValue({
+      ok,
+      status,
+      json: () => Promise.resolve(data)
+    })
+  }
 
-    function mockStreamResponse(chunks: string[]) {
-        const encoder = new TextEncoder();
-        let chunkIndex = 0;
+  function mockStreamResponse(chunks: string[]) {
+    const encoder = new TextEncoder()
+    let chunkIndex = 0
 
-        fetchSpy.mockResolvedValue({
-            ok: true,
-            status: 200,
-            body: {
-                getReader: () => {
-                    let done = false;
-                    return {
-                        read: () => {
-                            if (done) return Promise.resolve({ done: true, value: undefined });
-                            if (chunkIndex >= chunks.length) {
-                                done = true;
-                                return Promise.resolve({ done: true, value: undefined });
-                            }
-                            const data = chunks[chunkIndex++];
-                            return Promise.resolve({ done: false, value: encoder.encode(data) });
-                        },
-                    };
-                },
-            },
-        });
-    }
+    fetchSpy.mockResolvedValue({
+      ok: true,
+      status: 200,
+      body: {
+        getReader: () => {
+          let done = false
+          return {
+            read: () => {
+              if (done) return Promise.resolve({ done: true, value: undefined })
+              if (chunkIndex >= chunks.length) {
+                done = true
+                return Promise.resolve({ done: true, value: undefined })
+              }
+              const data = chunks[chunkIndex++]
+              return Promise.resolve({ done: false, value: encoder.encode(data) })
+            }
+          }
+        }
+      }
+    })
+  }
 
-    it('initializes with default state', () => {
-        const engine = useAiChat(mockSqlEngine());
+  it('initializes with default state', () => {
+    const engine = useAiChat(mockSqlEngine())
 
-        expect(engine.messages.value).toEqual([]);
-        expect(engine.isLoading.value).toBe(false);
-        expect(engine.showPanel.value).toBe(false); // panel starts closed
-        expect(engine.autoAnalysisEnabled.value).toBe(true);
-    });
+    expect(engine.messages.value).toEqual([])
+    expect(engine.isLoading.value).toBe(false)
+    expect(engine.showPanel.value).toBe(false) // panel starts closed
+    expect(engine.autoAnalysisEnabled.value).toBe(true)
+  })
 
-    it('togglePanel switches panel visibility', () => {
-        const engine = useAiChat(mockSqlEngine());
+  it('togglePanel switches panel visibility', () => {
+    const engine = useAiChat(mockSqlEngine())
 
-        engine.togglePanel();
-        expect(engine.showPanel.value).toBe(true);
+    engine.togglePanel()
+    expect(engine.showPanel.value).toBe(true)
 
-        engine.togglePanel();
-        expect(engine.showPanel.value).toBe(false);
-    });
+    engine.togglePanel()
+    expect(engine.showPanel.value).toBe(false)
+  })
 
-    it('openPanel sets panel to visible', () => {
-        const engine = useAiChat(mockSqlEngine());
-        engine.openPanel();
-        expect(engine.showPanel.value).toBe(true);
-    });
+  it('openPanel sets panel to visible', () => {
+    const engine = useAiChat(mockSqlEngine())
+    engine.openPanel()
+    expect(engine.showPanel.value).toBe(true)
+  })
 
-    it('clearMessages empties message list', () => {
-        const engine = useAiChat(mockSqlEngine());
-        engine.messages.value = [{ id: '1', role: 'user', content: 'hi', timestamp: 0 }] as AiMessage[];
-        engine.clearMessages();
-        expect(engine.messages.value).toEqual([]);
-    });
+  it('clearMessages empties message list', () => {
+    const engine = useAiChat(mockSqlEngine())
+    engine.messages.value = [{ id: '1', role: 'user', content: 'hi', timestamp: 0 }] as AiMessage[]
+    engine.clearMessages()
+    expect(engine.messages.value).toEqual([])
+  })
 
-    it('sendMessage adds user and assistant messages', async () => {
-        const engine = useAiChat(mockSqlEngine());
+  it('sendMessage adds user and assistant messages', async () => {
+    const engine = useAiChat(mockSqlEngine())
 
-        mockStreamResponse(['data: Hello', 'data:  World\n', 'data: [DONE]\n']);
+    mockStreamResponse(['data: Hello', 'data:  World\n', 'data: [DONE]\n'])
 
-        const promise = engine.sendMessage('Hello AI');
-        await vi.advanceTimersByTimeAsync(50);
+    const promise = engine.sendMessage('Hello AI')
+    await vi.advanceTimersByTimeAsync(50)
 
-        expect(engine.messages.value.length).toBe(2);
-        expect(engine.messages.value[0].role).toBe('user');
-        expect(engine.messages.value[0].content).toBe('Hello AI');
-        expect(engine.messages.value[1].role).toBe('assistant');
-        await promise;
-        // After completion, streaming stops
-        expect(engine.isLoading.value).toBe(false);
-        expect(engine.messages.value[1].isStreaming).toBe(false);
-    });
+    expect(engine.messages.value.length).toBe(2)
+    expect(engine.messages.value[0].role).toBe('user')
+    expect(engine.messages.value[0].content).toBe('Hello AI')
+    expect(engine.messages.value[1].role).toBe('assistant')
+    await promise
+    // After completion, streaming stops
+    expect(engine.isLoading.value).toBe(false)
+    expect(engine.messages.value[1].isStreaming).toBe(false)
+  })
 
-    it('sendMessage does nothing with empty text', async () => {
-        const engine = useAiChat(mockSqlEngine());
+  it('sendMessage does nothing with empty text', async () => {
+    const engine = useAiChat(mockSqlEngine())
 
-        await engine.sendMessage('   ');
-        expect(engine.messages.value.length).toBe(0);
-    });
+    await engine.sendMessage('   ')
+    expect(engine.messages.value.length).toBe(0)
+  })
 
-    it('cancelStream resets loading state', () => {
-        const engine = useAiChat(mockSqlEngine());
-        engine.isLoading.value = true;
+  it('cancelStream resets loading state', () => {
+    const engine = useAiChat(mockSqlEngine())
+    engine.isLoading.value = true
 
-        engine.cancelStream();
-        expect(engine.isLoading.value).toBe(false);
-    });
+    engine.cancelStream()
+    expect(engine.isLoading.value).toBe(false)
+  })
 
-    it('handles streaming error mid-response', async () => {
-        const engine = useAiChat(mockSqlEngine());
+  it('handles streaming error mid-response', async () => {
+    const engine = useAiChat(mockSqlEngine())
 
-        // Mock a stream that throws mid-way
-        const encoder = new TextEncoder();
-        let readCount = 0;
-        fetchSpy.mockResolvedValue({
-            ok: true,
-            status: 200,
-            body: {
-                getReader: () => ({
-                    read: () => {
-                        readCount++;
-                        if (readCount === 1) {
-                            return Promise.resolve({ done: false, value: encoder.encode('data: partial\n\n') });
-                        }
-                        return Promise.reject(new Error('Stream connection lost'));
-                    },
-                }),
-            },
-        });
+    // Mock a stream that throws mid-way
+    const encoder = new TextEncoder()
+    let readCount = 0
+    fetchSpy.mockResolvedValue({
+      ok: true,
+      status: 200,
+      body: {
+        getReader: () => ({
+          read: () => {
+            readCount++
+            if (readCount === 1) {
+              return Promise.resolve({ done: false, value: encoder.encode('data: partial\n\n') })
+            }
+            return Promise.reject(new Error('Stream connection lost'))
+          }
+        })
+      }
+    })
 
-        const promise = engine.sendMessage('test');
-        await vi.advanceTimersByTimeAsync(50);
-        await promise;
+    const promise = engine.sendMessage('test')
+    await vi.advanceTimersByTimeAsync(50)
+    await promise
 
-        // Should have recorded the error without crashing
-        expect(engine.messages.value.length).toBeGreaterThanOrEqual(1);
-        expect(engine.isLoading.value).toBe(false);
-    });
+    // Should have recorded the error without crashing
+    expect(engine.messages.value.length).toBeGreaterThanOrEqual(1)
+    expect(engine.isLoading.value).toBe(false)
+  })
 
-    it('handles SSE parse failure gracefully', async () => {
-        const engine = useAiChat(mockSqlEngine());
+  it('handles SSE parse failure gracefully', async () => {
+    const engine = useAiChat(mockSqlEngine())
 
-        // Mock malformed SSE data
-        const encoder = new TextEncoder();
-        fetchSpy.mockResolvedValue({
-            ok: true,
-            status: 200,
-            body: {
-                getReader: () => {
-                    let sent = false;
-                    return {
-                        read: () => {
-                            if (!sent) {
-                                sent = true;
-                                return Promise.resolve({ done: false, value: encoder.encode('garbage-data-without-proper-format\n\n') });
-                            }
-                            return Promise.resolve({ done: true, value: undefined });
-                        },
-                    };
-                },
-            },
-        });
+    // Mock malformed SSE data
+    const encoder = new TextEncoder()
+    fetchSpy.mockResolvedValue({
+      ok: true,
+      status: 200,
+      body: {
+        getReader: () => {
+          let sent = false
+          return {
+            read: () => {
+              if (!sent) {
+                sent = true
+                return Promise.resolve({ done: false, value: encoder.encode('garbage-data-without-proper-format\n\n') })
+              }
+              return Promise.resolve({ done: true, value: undefined })
+            }
+          }
+        }
+      }
+    })
 
-        const promise = engine.sendMessage('test');
-        await vi.advanceTimersByTimeAsync(50);
-        await promise;
+    const promise = engine.sendMessage('test')
+    await vi.advanceTimersByTimeAsync(50)
+    await promise
 
-        // Should not crash on malformed data
-        expect(engine.isLoading.value).toBe(false);
-        expect(engine.messages.value.length).toBeGreaterThanOrEqual(1);
-    });
-
-});
+    // Should not crash on malformed data
+    expect(engine.isLoading.value).toBe(false)
+    expect(engine.messages.value.length).toBeGreaterThanOrEqual(1)
+  })
+})

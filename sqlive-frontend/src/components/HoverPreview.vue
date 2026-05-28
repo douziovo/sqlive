@@ -90,184 +90,188 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue';
-import { highlightMatch } from '../utils/html';
-import { useFilteredList, type PreviewItem } from '../composables/useFilteredList';
+import { computed, nextTick, ref, watch } from 'vue'
+import { type PreviewItem, useFilteredList } from '../composables/useFilteredList'
+import { highlightMatch } from '../utils/html'
 
 const props = defineProps<{
-  show: boolean;
-  triggerEl: HTMLElement | null;
-  icon: string;
-  title: string;
-  subtitle: string;
-  categoryName: string;
-  items: PreviewItem[];
-}>();
+  show: boolean
+  triggerEl: HTMLElement | null
+  icon: string
+  title: string
+  subtitle: string
+  categoryName: string
+  items: PreviewItem[]
+}>()
 
-const emit = defineEmits(['select', 'close', 'mouseenter', 'mouseleave', 'navigate-all']);
+const emit = defineEmits(['select', 'close', 'mouseenter', 'mouseleave', 'navigate-all'])
 
-const popupRef = ref<HTMLElement | null>(null);
-const filterInputRef = ref<HTMLInputElement | null>(null);
-const listRef = ref<HTMLElement | null>(null);
-const visible = ref(false);
-const popupStyle = ref<Record<string, string>>({});
+const popupRef = ref<HTMLElement | null>(null)
+const filterInputRef = ref<HTMLInputElement | null>(null)
+const listRef = ref<HTMLElement | null>(null)
+const visible = ref(false)
+const popupStyle = ref<Record<string, string>>({})
 
 // Filter state — instant, no debounce (JetBrains style)
-const filterText = ref('');
+const filterText = ref('')
 
 // Highlight matching text in label
 function highlightLabel(label: string): string {
-  return highlightMatch(label, filterText.value.trim(), 'bg-yellow-200 text-foreground rounded-sm px-1');
+  return highlightMatch(label, filterText.value.trim(), 'bg-yellow-200 text-foreground rounded-sm px-1')
 }
 
-let hideTimer: ReturnType<typeof setTimeout> | null = null;
-let showTimer: ReturnType<typeof setTimeout> | null = null;
+let hideTimer: ReturnType<typeof setTimeout> | null = null
+let showTimer: ReturnType<typeof setTimeout> | null = null
 
 // Cache last non-empty display data to prevent empty-list flicker during hide delay.
 // When show becomes false, props.items/title/subtitle reset to empty immediately,
 // but visible stays true for 200ms (hide delay). Cache preserves the last good state.
-const cachedIcon = ref('');
-const cachedTitle = ref('');
-const cachedSubtitle = ref('');
-const cachedCategoryName = ref('');
-const cachedItems = ref<PreviewItem[]>([]);
+const cachedIcon = ref('')
+const cachedTitle = ref('')
+const cachedSubtitle = ref('')
+const cachedCategoryName = ref('')
+const cachedItems = ref<PreviewItem[]>([])
 
-const displayIcon = computed(() => cachedIcon.value || props.icon);
-const displayTitle = computed(() => cachedTitle.value || props.title);
-const displaySubtitle = computed(() => cachedSubtitle.value || props.subtitle);
-const displayCategoryName = computed(() => cachedCategoryName.value || props.categoryName);
-const displayItems = computed(() => props.items.length > 0 ? props.items : cachedItems.value);
+const displayIcon = computed(() => cachedIcon.value || props.icon)
+const displayTitle = computed(() => cachedTitle.value || props.title)
+const displaySubtitle = computed(() => cachedSubtitle.value || props.subtitle)
+const displayCategoryName = computed(() => cachedCategoryName.value || props.categoryName)
+const displayItems = computed(() => (props.items.length > 0 ? props.items : cachedItems.value))
 
-const { filteredItems, hoveredIndex, keyboardIndex, selectedItem, navigateUp, navigateDown, resetSelection } = useFilteredList(displayItems, filterText);
+const { filteredItems, hoveredIndex, keyboardIndex, selectedItem, navigateUp, navigateDown, resetSelection } =
+  useFilteredList(displayItems, filterText)
 
 // When popup is already visible and the user slides to a different badge,
 // show stays true so the watcher below doesn't re-fire. Update cache immediately.
 watch([() => props.title, () => props.items], () => {
   if (visible.value && props.items.length > 0) {
-    cachedItems.value = [...props.items];
-    cachedIcon.value = props.icon;
-    cachedTitle.value = props.title;
-    cachedSubtitle.value = props.subtitle;
-    cachedCategoryName.value = props.categoryName;
-    filterText.value = '';
-    resetSelection();
+    cachedItems.value = [...props.items]
+    cachedIcon.value = props.icon
+    cachedTitle.value = props.title
+    cachedSubtitle.value = props.subtitle
+    cachedCategoryName.value = props.categoryName
+    filterText.value = ''
+    resetSelection()
     nextTick(() => {
-      positionPopup();
-      filterInputRef.value?.focus();
-    });
+      positionPopup()
+      filterInputRef.value?.focus()
+    })
   }
-});
+})
 
-watch(() => props.show, (val) => {
-  if (showTimer) clearTimeout(showTimer);
-  if (hideTimer) clearTimeout(hideTimer);
-  if (val) {
-    showTimer = setTimeout(async () => {
-      // Snapshot current props before they reset on hide
-      if (props.items.length > 0) cachedItems.value = [...props.items];
-      cachedIcon.value = props.icon;
-      cachedTitle.value = props.title;
-      cachedSubtitle.value = props.subtitle;
-      cachedCategoryName.value = props.categoryName;
-      visible.value = true;
-      filterText.value = '';
-      resetSelection();
-      await nextTick();
-      positionPopup();
-      await nextTick();
-      filterInputRef.value?.focus();
-    }, 300);
-  } else {
-    hideTimer = setTimeout(() => {
-      visible.value = false;
-      // Clear cache after popup is fully hidden
-      cachedItems.value = [];
-      cachedIcon.value = '';
-      cachedTitle.value = '';
-      cachedSubtitle.value = '';
-      cachedCategoryName.value = '';
-    }, 200);
+watch(
+  () => props.show,
+  (val) => {
+    if (showTimer) clearTimeout(showTimer)
+    if (hideTimer) clearTimeout(hideTimer)
+    if (val) {
+      showTimer = setTimeout(async () => {
+        // Snapshot current props before they reset on hide
+        if (props.items.length > 0) cachedItems.value = [...props.items]
+        cachedIcon.value = props.icon
+        cachedTitle.value = props.title
+        cachedSubtitle.value = props.subtitle
+        cachedCategoryName.value = props.categoryName
+        visible.value = true
+        filterText.value = ''
+        resetSelection()
+        await nextTick()
+        positionPopup()
+        await nextTick()
+        filterInputRef.value?.focus()
+      }, 300)
+    } else {
+      hideTimer = setTimeout(() => {
+        visible.value = false
+        // Clear cache after popup is fully hidden
+        cachedItems.value = []
+        cachedIcon.value = ''
+        cachedTitle.value = ''
+        cachedSubtitle.value = ''
+        cachedCategoryName.value = ''
+      }, 200)
+    }
   }
-});
+)
 
 function positionPopup() {
-  if (!props.triggerEl || !popupRef.value) return;
-  const rect = props.triggerEl.getBoundingClientRect();
-  const popupEl = popupRef.value;
-  const popupHeight = popupEl.offsetHeight || 200;
-  const popupWidth = Math.min(340, popupEl.offsetWidth || 260);
-  const viewportH = window.innerHeight;
-  const viewportW = window.innerWidth;
-  const gap = 4;
+  if (!props.triggerEl || !popupRef.value) return
+  const rect = props.triggerEl.getBoundingClientRect()
+  const popupEl = popupRef.value
+  const popupHeight = popupEl.offsetHeight || 200
+  const popupWidth = Math.min(340, popupEl.offsetWidth || 260)
+  const viewportH = window.innerHeight
+  const viewportW = window.innerWidth
+  const gap = 4
 
-  let top: number;
-  const below = rect.bottom + gap;
-  const above = rect.top - popupHeight - gap;
+  let top: number
+  const below = rect.bottom + gap
+  const above = rect.top - popupHeight - gap
 
   if (below + popupHeight <= viewportH - 16 || above < 0) {
-    top = below;
+    top = below
   } else {
-    top = above;
+    top = above
   }
 
-  let left = rect.left + rect.width / 2 - popupWidth / 2;
-  left = Math.max(8, Math.min(left, viewportW - popupWidth - 8));
+  let left = rect.left + rect.width / 2 - popupWidth / 2
+  left = Math.max(8, Math.min(left, viewportW - popupWidth - 8))
 
   popupStyle.value = {
     top: `${top}px`,
     left: `${left}px`,
     minWidth: '280px',
-    maxWidth: '340px',
-  };
+    maxWidth: '340px'
+  }
 }
 
 function onItemClick(item: PreviewItem) {
-  if (hideTimer) clearTimeout(hideTimer);
-  visible.value = false;
-  emit('select', item.id);
+  if (hideTimer) clearTimeout(hideTimer)
+  visible.value = false
+  emit('select', item.id)
 }
 
 // Keyboard navigation (JetBrains style)
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
-    e.preventDefault();
+    e.preventDefault()
     if (filterText.value) {
-      filterText.value = '';
-      resetSelection();
+      filterText.value = ''
+      resetSelection()
     } else {
-      if (hideTimer) clearTimeout(hideTimer);
-      visible.value = false;
+      if (hideTimer) clearTimeout(hideTimer)
+      visible.value = false
     }
-    return;
+    return
   }
 
   if (e.key === 'ArrowDown') {
-    e.preventDefault();
-    navigateDown();
-    scrollToKeyboardItem();
-    return;
+    e.preventDefault()
+    navigateDown()
+    scrollToKeyboardItem()
+    return
   }
 
   if (e.key === 'ArrowUp') {
-    e.preventDefault();
-    navigateUp();
-    scrollToKeyboardItem();
-    return;
+    e.preventDefault()
+    navigateUp()
+    scrollToKeyboardItem()
+    return
   }
 
   if (e.key === 'Enter') {
-    e.preventDefault();
-    const item = selectedItem.value;
-    if (item) onItemClick(item);
-    return;
+    e.preventDefault()
+    const item = selectedItem.value
+    if (item) onItemClick(item)
+    return
   }
 }
 
 function scrollToKeyboardItem() {
-  if (!listRef.value || keyboardIndex.value === null) return;
-  const items = listRef.value.children;
+  if (!listRef.value || keyboardIndex.value === null) return
+  const items = listRef.value.children
   if (items[keyboardIndex.value]) {
-    (items[keyboardIndex.value] as HTMLElement).scrollIntoView({ block: 'nearest' });
+    ;(items[keyboardIndex.value] as HTMLElement).scrollIntoView({ block: 'nearest' })
   }
 }
 </script>

@@ -1,9 +1,9 @@
 <script setup lang="ts">
+import { useVModel } from '@vueuse/core'
 import type { HTMLAttributes } from 'vue'
+import { computed, provide, ref, watch } from 'vue'
 import { Collapsible } from '@/components/ui/collapsible'
 import { cn } from '@/lib/utils'
-import { useVModel } from '@vueuse/core'
-import { computed, provide, ref, watch } from 'vue'
 import { ReasoningKey } from './context'
 
 interface Props {
@@ -17,7 +17,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   isStreaming: false,
   defaultOpen: true,
-  duration: undefined,
+  duration: undefined
 })
 
 const emit = defineEmits<{
@@ -27,14 +27,17 @@ const emit = defineEmits<{
 
 const isOpen = useVModel(props, 'open', emit, {
   defaultValue: props.defaultOpen,
-  passive: true,
+  passive: true
 })
 
 const internalDuration = ref<number | undefined>(props.duration)
 
-watch(() => props.duration, (newVal) => {
-  internalDuration.value = newVal
-})
+watch(
+  () => props.duration,
+  (newVal) => {
+    internalDuration.value = newVal
+  }
+)
 
 function updateDuration(val: number) {
   internalDuration.value = val
@@ -48,38 +51,47 @@ const MS_IN_S = 1000
 const AUTO_CLOSE_DELAY = 1000
 
 // Track duration when streaming starts and ends
-watch(() => props.isStreaming, (streaming) => {
-  if (streaming) {
-    // Keep current open state (auto-open disabled for manual control)
+watch(
+  () => props.isStreaming,
+  (streaming) => {
+    if (streaming) {
+      // Keep current open state (auto-open disabled for manual control)
 
-    if (startTime.value === null && props.duration === undefined) {
-      startTime.value = Date.now()
+      if (startTime.value === null && props.duration === undefined) {
+        startTime.value = Date.now()
+      }
+    } else if (startTime.value !== null) {
+      const calculatedDuration = Math.round(((Date.now() - startTime.value) / MS_IN_S) * 10) / 10
+      updateDuration(calculatedDuration)
+      startTime.value = null
     }
-  }
-  else if (startTime.value !== null) {
-    const calculatedDuration = Math.round((Date.now() - startTime.value) / MS_IN_S * 10) / 10
-    updateDuration(calculatedDuration)
-    startTime.value = null
-  }
-}, { immediate: true })
+  },
+  { immediate: true }
+)
 
 // Auto-close logic
-watch([() => props.isStreaming, isOpen, () => props.defaultOpen, hasAutoClosed], (_, __, onCleanup) => {
-  if (props.defaultOpen && !props.isStreaming && isOpen.value && !hasAutoClosed.value) {
-    const timer = setTimeout(() => {
-      isOpen.value = false
-      hasAutoClosed.value = true
-    }, AUTO_CLOSE_DELAY)
+watch(
+  [() => props.isStreaming, isOpen, () => props.defaultOpen, hasAutoClosed],
+  (_, __, onCleanup) => {
+    if (props.defaultOpen && !props.isStreaming && isOpen.value && !hasAutoClosed.value) {
+      const timer = setTimeout(() => {
+        isOpen.value = false
+        hasAutoClosed.value = true
+      }, AUTO_CLOSE_DELAY)
 
-    onCleanup(() => clearTimeout(timer))
-  }
-}, { immediate: true })
+      onCleanup(() => clearTimeout(timer))
+    }
+  },
+  { immediate: true }
+)
 
 provide(ReasoningKey, {
   isStreaming: computed(() => props.isStreaming),
   isOpen,
-  setIsOpen: (val: boolean) => { isOpen.value = val },
-  duration: computed(() => internalDuration.value),
+  setIsOpen: (val: boolean) => {
+    isOpen.value = val
+  },
+  duration: computed(() => internalDuration.value)
 })
 </script>
 
