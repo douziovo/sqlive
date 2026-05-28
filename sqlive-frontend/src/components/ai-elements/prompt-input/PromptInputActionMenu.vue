@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { DropdownMenu } from '@/components/ui/dropdown-menu'
+import type { DropdownMenu } from '@/components/ui/dropdown-menu'
 
 type DropdownMenuProps = InstanceType<typeof DropdownMenu>['$props']
 

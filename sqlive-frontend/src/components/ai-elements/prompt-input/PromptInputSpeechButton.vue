@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type { HTMLAttributes } from 'vue'
-import { cn } from '@/lib/utils'
 import { MicIcon } from 'lucide-vue-next'
+import type { HTMLAttributes } from 'vue'
 import { onMounted, onUnmounted, ref } from 'vue'
+import { cn } from '@/lib/utils'
 import { usePromptInput } from './context'
-import PromptInputButton from './PromptInputButton.vue'
+import type PromptInputButton from './PromptInputButton.vue'
 
 interface SpeechRecognition extends EventTarget {
   continuous: boolean
@@ -78,8 +78,8 @@ onMounted(() => {
     sr.interimResults = true
     sr.lang = 'en-US'
 
-    sr.onstart = () => isListening.value = true
-    sr.onend = () => isListening.value = false
+    sr.onstart = () => (isListening.value = true)
+    sr.onend = () => (isListening.value = false)
 
     sr.onresult = (event: SpeechRecognitionEvent) => {
       let finalTranscript = ''
@@ -110,12 +110,10 @@ onUnmounted(() => {
 })
 
 function toggleListening() {
-  if (!recognition.value)
-    return
+  if (!recognition.value) return
   if (isListening.value) {
     recognition.value.stop()
-  }
-  else {
+  } else {
     recognition.value.start()
   }
 }

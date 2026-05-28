@@ -1,9 +1,9 @@
 <script setup lang="ts">
+import { ChevronDownIcon, LoaderIcon } from 'lucide-vue-next'
 import type { HTMLAttributes } from 'vue'
+import { computed } from 'vue'
 import { CollapsibleTrigger } from '@/components/ui/collapsible'
 import { cn } from '@/lib/utils'
-import { ChevronDownIcon, LoaderIcon } from 'lucide-vue-next'
-import { computed } from 'vue'
 import { Shimmer } from '../shimmer'
 import { useReasoningContext } from './context'
 
@@ -31,10 +31,16 @@ const thinkingTitle = computed(() => {
   if (!props.reasoning) return ''
   // const clean = stripMarkdown(props.reasoning)
   const clean = props.reasoning
-  const lines = clean.split('\n').filter(l => l.trim())
+  const lines = clean.split('\n').filter((l) => l.trim())
   if (lines.length === 0) return ''
-  const meaningful = lines.filter(l => l.replace(/^[\d*.•\- ]+/, '').trim().length > 3)
-  return meaningful.pop()?.replace(/^[\d*.•\- ]+/, '').trim().substring(0, 80) || ''
+  const meaningful = lines.filter((l) => l.replace(/^[\d*.•\- ]+/, '').trim().length > 3)
+  return (
+    meaningful
+      .pop()
+      ?.replace(/^[\d*.•\- ]+/, '')
+      .trim()
+      .substring(0, 80) || ''
+  )
 })
 </script>
 

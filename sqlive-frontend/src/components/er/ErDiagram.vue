@@ -55,195 +55,181 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, markRaw, nextTick, watch, onMounted, onUnmounted } from 'vue';
-import { VueFlow } from '@vue-flow/core';
-import { Background } from '@vue-flow/background';
-import { MiniMap } from '@vue-flow/minimap';
-import '@vue-flow/core/dist/style.css';
-import '@vue-flow/core/dist/theme-default.css';
-import '@vue-flow/minimap/dist/style.css';
+import { Background } from '@vue-flow/background'
+import { VueFlow } from '@vue-flow/core'
+import { MiniMap } from '@vue-flow/minimap'
+import { computed, markRaw, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import '@vue-flow/core/dist/style.css'
+import '@vue-flow/core/dist/theme-default.css'
+import '@vue-flow/minimap/dist/style.css'
 
-import type { TableSchema, ForeignKeyInfo } from '@/model/DatabaseTypes';
-import { useErDiagram } from '@/composables/useErDiagram';
-import ErTableNode from './ErTableNode.vue';
-import ErToolbar from './ErToolbar.vue';
-import ErSearchBar from './ErSearchBar.vue';
+import { useErDiagram } from '@/composables/useErDiagram'
+import type { ForeignKeyInfo, TableSchema } from '@/model/DatabaseTypes'
+import ErSearchBar from './ErSearchBar.vue'
+import ErTableNode from './ErTableNode.vue'
+import ErToolbar from './ErToolbar.vue'
 
 const props = defineProps<{
-  tables: TableSchema[];
-  foreignKeys: ForeignKeyInfo[];
-}>();
+  tables: TableSchema[]
+  foreignKeys: ForeignKeyInfo[]
+}>()
 
-const emit = defineEmits<{
-  (e: 'navigate-tab', payload: { tab: string; targetId?: string }): void;
-}>();
+const emit = defineEmits<(e: 'navigate-tab', payload: { tab: string; targetId?: string }) => void>()
 
-const nodeTypes = markRaw({ table: ErTableNode }) as any;
+const nodeTypes = markRaw({ table: ErTableNode }) as any
 
-const {
-  filteredNodes,
-  edges,
-  searchQuery,
-  showMinimap,
-  autoLayout,
-  setContainerRef,
-} = useErDiagram(
+const { filteredNodes, edges, searchQuery, showMinimap, autoLayout, setContainerRef } = useErDiagram(
   () => props.tables,
-  () => props.foreignKeys,
-);
+  () => props.foreignKeys
+)
 
-const wrapperRef = ref<HTMLElement | null>(null);
-const flowRef = ref<any>(null);
+const wrapperRef = ref<HTMLElement | null>(null)
+const flowRef = ref<any>(null)
 
-const showSearch = ref(false);
-const matchIndex = ref(0);
+const showSearch = ref(false)
+const matchIndex = ref(0)
 
-const totalTableCount = computed(() => props.tables.length);
+const totalTableCount = computed(() => props.tables.length)
 
 const matchCount = computed(() => {
-  if (!searchQuery.value) return 0;
-  return (filteredNodes.value as any[]).filter((n: any) => !n.data?.isFiltered).length;
-});
+  if (!searchQuery.value) return 0
+  return (filteredNodes.value as any[]).filter((n: any) => !n.data?.isFiltered).length
+})
 
 const currentIndex = computed(() => {
-  if (!searchQuery.value || matchCount.value === 0) return -1;
-  return matchIndex.value;
-});
+  if (!searchQuery.value || matchCount.value === 0) return -1
+  return matchIndex.value
+})
 
 const activeMatchNodeId = computed(() => {
-  if (currentIndex.value < 0) return null;
-  const matches = getMatchNodes();
-  return matches[currentIndex.value]?.id ?? null;
-});
+  if (currentIndex.value < 0) return null
+  const matches = getMatchNodes()
+  return matches[currentIndex.value]?.id ?? null
+})
 
 const matchNodeIds = computed(() => {
-  if (!searchQuery.value) return new Set<string>();
-  return new Set(
-    (filteredNodes.value as any[])
-      .filter((n: any) => !n.data?.isFiltered)
-      .map((n: any) => n.id)
-  );
-});
+  if (!searchQuery.value) return new Set<string>()
+  return new Set((filteredNodes.value as any[]).filter((n: any) => !n.data?.isFiltered).map((n: any) => n.id))
+})
 
 const displayNodes = computed(() => {
-  if (!searchQuery.value) return filteredNodes.value;
+  if (!searchQuery.value) return filteredNodes.value
   return (filteredNodes.value as any[]).map((n: any) => ({
     ...n,
     data: {
       ...n.data,
       isMatchHighlight: matchNodeIds.value.has(n.id),
-      isActiveMatch: n.id === activeMatchNodeId.value,
-    },
-  }));
-});
+      isActiveMatch: n.id === activeMatchNodeId.value
+    }
+  }))
+})
 
 function miniMapNodeColor(_node: any) {
-  return '#3b82f6';
+  return '#3b82f6'
 }
 
 function onNodeDoubleClick(event: any) {
-  const tableName = event.node?.data?.tableName;
+  const tableName = event.node?.data?.tableName
   if (tableName) {
-    emit('navigate-tab', { tab: 'tables', targetId: 'table-' + tableName });
+    emit('navigate-tab', { tab: 'tables', targetId: `table-${tableName}` })
   }
 }
 
 async function handleAutoLayout() {
-  await autoLayout();
-  fitToView();
+  await autoLayout()
+  fitToView()
 }
 
 function handleFitView() {
-  fitToView();
+  fitToView()
 }
 
 function fitToView() {
   if (flowRef.value) {
-    flowRef.value.fitView({ duration: 300 });
+    flowRef.value.fitView({ duration: 300 })
   }
 }
 
 function isWrapperVisible(): boolean {
-  const el = wrapperRef.value;
-  if (!el) return false;
-  return el.offsetParent !== null;
+  const el = wrapperRef.value
+  if (!el) return false
+  return el.offsetParent !== null
 }
 
 function onGlobalKeydown(e: KeyboardEvent) {
-  if (!isWrapperVisible()) return;
+  if (!isWrapperVisible()) return
 
   if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-    e.preventDefault();
-    e.stopPropagation();
-    showSearch.value = true;
+    e.preventDefault()
+    e.stopPropagation()
+    showSearch.value = true
   }
   if (e.key === 'Escape' && showSearch.value) {
-    e.preventDefault();
-    closeSearch();
+    e.preventDefault()
+    closeSearch()
   }
 }
 
 function closeSearch() {
-  showSearch.value = false;
-  searchQuery.value = '';
-  matchIndex.value = 0;
+  showSearch.value = false
+  searchQuery.value = ''
+  matchIndex.value = 0
 }
 
 function getMatchNodes(): any[] {
-  return (filteredNodes.value as any[]).filter((n: any) => !n.data?.isFiltered);
+  return (filteredNodes.value as any[]).filter((n: any) => !n.data?.isFiltered)
 }
 
 function centerOnMatch(index: number) {
-  const matches = getMatchNodes();
-  if (matches.length === 0 || index < 0 || index >= matches.length) return;
-  const node = matches[index];
+  const matches = getMatchNodes()
+  if (matches.length === 0 || index < 0 || index >= matches.length) return
+  const node = matches[index]
   if (flowRef.value && node) {
-    flowRef.value.setCenter(
-      node.position.x + 100,
-      node.position.y + 60,
-      { zoom: 1, duration: 300 }
-    );
+    flowRef.value.setCenter(node.position.x + 100, node.position.y + 60, { zoom: 1, duration: 300 })
   }
 }
 
 function navigateMatch(dir: 1 | -1) {
-  const matches = getMatchNodes();
-  if (matches.length === 0) return;
-  matchIndex.value = (matchIndex.value + dir + matches.length) % matches.length;
-  centerOnMatch(matchIndex.value);
+  const matches = getMatchNodes()
+  if (matches.length === 0) return
+  matchIndex.value = (matchIndex.value + dir + matches.length) % matches.length
+  centerOnMatch(matchIndex.value)
 }
 
 async function onPaneReady() {
   // Set container now that VueFlow DOM is fully rendered
-  if (wrapperRef.value) setContainerRef(wrapperRef.value);
-  await nextTick();
+  if (wrapperRef.value) setContainerRef(wrapperRef.value)
+  await nextTick()
   if (props.tables.length > 0) {
-    await autoLayout();
-    fitToView();
+    await autoLayout()
+    fitToView()
   }
 }
 
 watch(searchQuery, async () => {
-  matchIndex.value = 0;
-  await nextTick();
-  centerOnMatch(0);
-});
+  matchIndex.value = 0
+  await nextTick()
+  centerOnMatch(0)
+})
 
-watch(() => props.tables.length, (len) => {
-  if (len > 0) {
-    nextTick(() => {
-      autoLayout().then(() => fitToView());
-    });
+watch(
+  () => props.tables.length,
+  (len) => {
+    if (len > 0) {
+      nextTick(() => {
+        autoLayout().then(() => fitToView())
+      })
+    }
   }
-});
+)
 
 onMounted(() => {
-  document.addEventListener('keydown', onGlobalKeydown, true);
-});
+  document.addEventListener('keydown', onGlobalKeydown, true)
+})
 
 onUnmounted(() => {
-  document.removeEventListener('keydown', onGlobalKeydown, true);
-});
+  document.removeEventListener('keydown', onGlobalKeydown, true)
+})
 </script>
 
 <style scoped>

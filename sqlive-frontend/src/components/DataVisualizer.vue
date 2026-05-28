@@ -203,177 +203,188 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick, provide, inject, onUnmounted } from 'vue';
+import { inject, nextTick, onUnmounted, provide, ref, watch } from 'vue'
+import { type SortField, useSortFilter } from '../composables/useSortFilter'
 import type {
-  DatabaseModel, HighlightState, IndexInfo, ViewInfo, TriggerInfo,
-  CellUpdateEvent, RowDeleteEvent, CreateTableEvent, RowInsertEvent,
-} from '../model/DatabaseTypes';
-import { SQL_CONTEXT_KEY } from '../model/injectionKeys';
-import { useSortFilter, type SortField } from '../composables/useSortFilter';
-import TableSection from './TableSection.vue';
-import ResultTable from './ResultTable.vue';
-import CreateTableModal from './CreateTableModal.vue';
-import SortFilterToolbar from './SortFilterToolbar.vue';
-import ErDiagram from './er/ErDiagram.vue';
-import EmptyState from './EmptyState.vue';
-import type { SortFieldDef } from './SortFilterToolbar.vue';
+  CellUpdateEvent,
+  CreateTableEvent,
+  DatabaseModel,
+  HighlightState,
+  IndexInfo,
+  RowDeleteEvent,
+  RowInsertEvent,
+  TriggerInfo,
+  ViewInfo
+} from '../model/DatabaseTypes'
+import { SQL_CONTEXT_KEY } from '../model/injectionKeys'
+import CreateTableModal from './CreateTableModal.vue'
+import EmptyState from './EmptyState.vue'
+import ErDiagram from './er/ErDiagram.vue'
+import ResultTable from './ResultTable.vue'
+import type { SortFieldDef } from './SortFilterToolbar.vue'
+import SortFilterToolbar from './SortFilterToolbar.vue'
+import TableSection from './TableSection.vue'
 
-  const { db, highlight } = inject(SQL_CONTEXT_KEY)!;
+const { db, highlight } = inject(SQL_CONTEXT_KEY)!
 
 const emit = defineEmits<{
-  'update-cell': [event: CellUpdateEvent];
-  'delete-row': [event: RowDeleteEvent];
-  'create-table': [event: CreateTableEvent];
-  'drop-table': [name: string];
-  'insert-row': [event: RowInsertEvent];
-}>();
+  'update-cell': [event: CellUpdateEvent]
+  'delete-row': [event: RowDeleteEvent]
+  'create-table': [event: CreateTableEvent]
+  'drop-table': [name: string]
+  'insert-row': [event: RowInsertEvent]
+}>()
 
-const showCreateModal = ref(false);
-const activeTab = ref('tables');
+const showCreateModal = ref(false)
+const activeTab = ref('tables')
 
 const tabs = [
-  {key: 'tables', label: '表数据'},
-  {key: 'er', label: 'ER 图'},
-  {key: 'indexes', label: '索引'},
-  {key: 'views', label: '视图'},
-  {key: 'triggers', label: '触发器'},
-  {key: 'results', label: '查询结果'},
-];
+  { key: 'tables', label: '表数据' },
+  { key: 'er', label: 'ER 图' },
+  { key: 'indexes', label: '索引' },
+  { key: 'views', label: '视图' },
+  { key: 'triggers', label: '触发器' },
+  { key: 'results', label: '查询结果' }
+]
 
-const handleCreateTable = (payload: CreateTableEvent) => emit('create-table', payload);
+const handleCreateTable = (payload: CreateTableEvent) => emit('create-table', payload)
 
 // --- Bidirectional navigation ---
-const navigateTarget = ref<string | null>(null);
-const flashTarget = ref<string | null>(null);
+const navigateTarget = ref<string | null>(null)
+const flashTarget = ref<string | null>(null)
 
 // Store timeout IDs for cleanup on unmount
-let flashTableTimeout: ReturnType<typeof setTimeout> | null = null;
-let flashTargetTimeout: ReturnType<typeof setTimeout> | null = null;
-const flashTableName = ref<string | null>(null);
+let flashTableTimeout: ReturnType<typeof setTimeout> | null = null
+let flashTargetTimeout: ReturnType<typeof setTimeout> | null = null
+const flashTableName = ref<string | null>(null)
 
 function handleNavigate(payload: { tab: string; targetId?: string }) {
-  activeTab.value = payload.tab;
+  activeTab.value = payload.tab
   if (payload.targetId) {
-    navigateTarget.value = payload.targetId;
+    navigateTarget.value = payload.targetId
   }
 }
 
-provide('navigate', handleNavigate);
+provide('navigate', handleNavigate)
 
 watch(activeTab, () => {
   if (navigateTarget.value) {
-    const targetId = navigateTarget.value;
-    navigateTarget.value = null;
+    const targetId = navigateTarget.value
+    navigateTarget.value = null
     nextTick().then(() => {
-      const el = document.getElementById(targetId);
+      const el = document.getElementById(targetId)
       if (el) {
-        el.scrollIntoView({behavior: 'smooth', block: 'center'});
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
         if (targetId.startsWith('table-')) {
-          flashTableName.value = targetId.replace('table-', '');
-          if (flashTableTimeout) clearTimeout(flashTableTimeout);
+          flashTableName.value = targetId.replace('table-', '')
+          if (flashTableTimeout) clearTimeout(flashTableTimeout)
           flashTableTimeout = setTimeout(() => {
-            flashTableName.value = null;
-          }, 1000);
+            flashTableName.value = null
+          }, 1000)
         } else {
-          flashTarget.value = targetId;
-          if (flashTargetTimeout) clearTimeout(flashTargetTimeout);
+          flashTarget.value = targetId
+          if (flashTargetTimeout) clearTimeout(flashTargetTimeout)
           flashTargetTimeout = setTimeout(() => {
-            flashTarget.value = null;
-          }, 1000);
+            flashTarget.value = null
+          }, 1000)
         }
       }
-    });
+    })
   }
-});
+})
 
 // --- Index sort/filter ---
-const strCmp = (a: string, b: string) => a.localeCompare(b);
-const numCmp = (a: number, b: number) => a - b;
+const strCmp = (a: string, b: string) => a.localeCompare(b)
+const numCmp = (a: number, b: number) => a - b
 
 const idxFieldDefs: SortFieldDef[] = [
-  {key: 'name', label: '名称'},
-  {key: 'table', label: '表名'},
-  {key: 'cols', label: '列数'},
-  {key: 'unique', label: '唯一'},
-];
+  { key: 'name', label: '名称' },
+  { key: 'table', label: '表名' },
+  { key: 'cols', label: '列数' },
+  { key: 'unique', label: '唯一' }
+]
 
 const idxSortFields: SortField<IndexInfo>[] = [
-  {key: 'name', label: '名称', compare: (a, b) => strCmp(a.name, b.name)},
-  {key: 'table', label: '表名', compare: (a, b) => strCmp(a.tableName, b.tableName)},
-  {key: 'cols', label: '列数', compare: (a, b) => numCmp(a.columns.length, b.columns.length)},
-  {key: 'unique', label: '唯一', compare: (a, b) => (a.unique === b.unique ? 0 : a.unique ? -1 : 1)},
-];
+  { key: 'name', label: '名称', compare: (a, b) => strCmp(a.name, b.name) },
+  { key: 'table', label: '表名', compare: (a, b) => strCmp(a.tableName, b.tableName) },
+  { key: 'cols', label: '列数', compare: (a, b) => numCmp(a.columns.length, b.columns.length) },
+  { key: 'unique', label: '唯一', compare: (a, b) => (a.unique === b.unique ? 0 : a.unique ? -1 : 1) }
+]
 
 const {
-  sortKey: idxSortKey, sortDir: idxSortDir,
-  filterText: idxFilter, toggleSort: idxToggleSort,
-  result: idxFiltered,
+  sortKey: idxSortKey,
+  sortDir: idxSortDir,
+  filterText: idxFilter,
+  toggleSort: idxToggleSort,
+  result: idxFiltered
 } = useSortFilter(
-    () => db.indexes,
-    idxSortFields,
-    (idx, f) => idx.name.toLowerCase().includes(f)
-        || idx.tableName.toLowerCase().includes(f)
-        || idx.columns.some(c => c.toLowerCase().includes(f)),
-);
+  () => db.indexes,
+  idxSortFields,
+  (idx, f) =>
+    idx.name.toLowerCase().includes(f) ||
+    idx.tableName.toLowerCase().includes(f) ||
+    idx.columns.some((c) => c.toLowerCase().includes(f))
+)
 
 // --- View sort/filter ---
-const viewFieldDefs: SortFieldDef[] = [
-  {key: 'name', label: '名称'},
-];
+const viewFieldDefs: SortFieldDef[] = [{ key: 'name', label: '名称' }]
 
 const viewSortFields: SortField<ViewInfo>[] = [
-  {key: 'name', label: '名称', compare: (a, b) => strCmp(a.name, b.name)},
-];
+  { key: 'name', label: '名称', compare: (a, b) => strCmp(a.name, b.name) }
+]
 
 const {
-  sortKey: viewSortKey, sortDir: viewSortDir,
-  filterText: viewFilter, toggleSort: viewToggleSort,
-  result: viewFiltered,
+  sortKey: viewSortKey,
+  sortDir: viewSortDir,
+  filterText: viewFilter,
+  toggleSort: viewToggleSort,
+  result: viewFiltered
 } = useSortFilter(
-    () => db.views,
-    viewSortFields,
-    (v, f) => v.name.toLowerCase().includes(f) || (v.sql || '').toLowerCase().includes(f),
-);
+  () => db.views,
+  viewSortFields,
+  (v, f) => v.name.toLowerCase().includes(f) || (v.sql || '').toLowerCase().includes(f)
+)
 
 // Navigate from view to table (best effort: match table name in SQL)
 function navigateToViewTable(v: ViewInfo) {
-  const sql = v.sql || '';
+  const sql = v.sql || ''
   for (const t of db.tables) {
     if (sql.includes(t.name) || sql.includes(`"${t.name}"`) || sql.includes(`\`${t.name}\``)) {
-      handleNavigate({tab: 'tables', targetId: 'table-' + t.name});
-      return;
+      handleNavigate({ tab: 'tables', targetId: `table-${t.name}` })
+      return
     }
   }
-  handleNavigate({tab: 'tables'});
+  handleNavigate({ tab: 'tables' })
 }
 
 // --- Trigger sort/filter ---
 const trgFieldDefs: SortFieldDef[] = [
-  {key: 'name', label: '名称'},
-  {key: 'table', label: '表名'},
-];
+  { key: 'name', label: '名称' },
+  { key: 'table', label: '表名' }
+]
 
 const trgSortFields: SortField<TriggerInfo>[] = [
-  {key: 'name', label: '名称', compare: (a, b) => strCmp(a.name, b.name)},
-  {key: 'table', label: '表名', compare: (a, b) => strCmp(a.tableName, b.tableName)},
-];
+  { key: 'name', label: '名称', compare: (a, b) => strCmp(a.name, b.name) },
+  { key: 'table', label: '表名', compare: (a, b) => strCmp(a.tableName, b.tableName) }
+]
 
 const {
-  sortKey: trgSortKey, sortDir: trgSortDir,
-  filterText: trgFilter, toggleSort: trgToggleSort,
-  result: trgFiltered,
+  sortKey: trgSortKey,
+  sortDir: trgSortDir,
+  filterText: trgFilter,
+  toggleSort: trgToggleSort,
+  result: trgFiltered
 } = useSortFilter(
-    () => db.triggers,
-    trgSortFields,
-    (t, f) => t.name.toLowerCase().includes(f)
-        || t.tableName.toLowerCase().includes(f)
-        || (t.sql || '').toLowerCase().includes(f),
-);
+  () => db.triggers,
+  trgSortFields,
+  (t, f) =>
+    t.name.toLowerCase().includes(f) || t.tableName.toLowerCase().includes(f) || (t.sql || '').toLowerCase().includes(f)
+)
 
 onUnmounted(() => {
-  if (flashTableTimeout) clearTimeout(flashTableTimeout);
-  if (flashTargetTimeout) clearTimeout(flashTargetTimeout);
-});
+  if (flashTableTimeout) clearTimeout(flashTableTimeout)
+  if (flashTargetTimeout) clearTimeout(flashTargetTimeout)
+})
 </script>
 
 <style scoped>

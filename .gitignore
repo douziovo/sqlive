@@ -1,5 +1,6 @@
 sqlive-backend/gradle
 misc
+.gated-pipeline-checkpoint
 
 # IDE
 .idea/
