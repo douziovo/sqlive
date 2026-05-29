@@ -67,6 +67,15 @@ public class SqlExecutionService {
                 }
             }
 
+            List<SqlResponse.CanonicalStatement> canonicalList = new ArrayList<>();
+            for (SqlParser.SqlStatement s : statements) {
+                if (s.sql().trim().isEmpty()) continue;
+                SqlResponse.CanonicalStatement cs = new SqlResponse.CanonicalStatement();
+                cs.setStart(s.startPos());
+                cs.setEnd(s.startPos() + s.sql().length());
+                canonicalList.add(cs);
+            }
+
             long durationMs = (System.nanoTime() - startTime) / 1_000_000;
 
             SqlResponse.DataPayload payload = new SqlResponse.DataPayload();
@@ -76,6 +85,7 @@ public class SqlExecutionService {
             payload.setViews(metadataExtractor.extractViews(jdbc));
             payload.setTriggers(metadataExtractor.extractTriggers(jdbc));
             payload.setForeignKeys(metadataExtractor.extractForeignKeys(jdbc));
+            payload.setCanonicalStatements(canonicalList);
 
             ExecutionMetadata meta = new ExecutionMetadata();
             meta.setDurationMs(durationMs);

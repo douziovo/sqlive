@@ -11,7 +11,7 @@ public class SqlParser {
     private static final String[] TOKEN_PREFIXES =
             {"near \"", "near '", "token: \"", "token: '", "unrecognized token: \""};
 
-    public record SqlStatement(String sql, int startLine) {}
+    public record SqlStatement(String sql, int startLine, int startPos) {}
 
     public List<SqlStatement> parseStatementsPrecise(String script) {
         List<SqlStatement> list = new ArrayList<>();
@@ -148,7 +148,7 @@ public class SqlParser {
 
             String sql = script.substring(start, i);
             if (!sql.trim().isEmpty()) {
-                list.add(new SqlStatement(sql, startLine));
+                list.add(new SqlStatement(sql, startLine, start));
             }
         }
         return list;
