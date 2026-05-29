@@ -44,6 +44,11 @@ export interface ForeignKeyInfo {
   toColumn: string
 }
 
+export interface CanonicalStatement {
+  start: number
+  end: number
+}
+
 export interface DatabaseModel {
   tables: TableSchema[]
   queryResults: TableSchema[]

@@ -7,7 +7,7 @@ import { useHighlight } from '../composables/useHighlight'
 import { useMultiTabs } from '../composables/useMultiTabs'
 import { API_URL } from '../config'
 import type { ExecuteRequest, ExecuteResponse } from '../model/ApiTypes'
-import type { DatabaseModel, Row } from '../model/DatabaseTypes'
+import type { CanonicalStatement, DatabaseModel, Row } from '../model/DatabaseTypes'
 
 function hashString(s: string): number {
   let hash = 5381
@@ -47,6 +47,7 @@ export function useSqlEngine() {
   const isLoading = ref(false)
   const executionError = ref<{ line: number; message: string } | null>(null)
   const mode = ref<EngineMode>('user')
+  const canonicalStatements = ref<CanonicalStatement[] | null>(null)
 
   // Multi-tab system
   const {
@@ -78,7 +79,8 @@ export function useSqlEngine() {
     db,
     mode,
     flashCode,
-    transition
+    transition,
+    canonicalStatements
   )
 
   let abortController: AbortController | null = null
@@ -157,6 +159,7 @@ export function useSqlEngine() {
       db.views = data.views || []
       db.triggers = data.triggers || []
       db.foreignKeys = data.foreignKeys || []
+      canonicalStatements.value = data.canonicalStatements || null
       db.metadata = data.metadata || null
       highlight.flashingRows = newFlashingRows
       previousDataState = nextDataState

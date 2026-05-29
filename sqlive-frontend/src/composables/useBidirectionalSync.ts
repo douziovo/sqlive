@@ -1,5 +1,5 @@
 import type { Ref, WritableComputedRef } from 'vue'
-import type { DatabaseModel, Row } from '../model/DatabaseTypes'
+import type { CanonicalStatement, DatabaseModel, Row } from '../model/DatabaseTypes'
 import { parsePrimaryType, toSqlLiteral } from '../utils/sql'
 import {
   enforceTypeConstraints,
@@ -16,9 +16,21 @@ export function useBidirectionalSync(
   db: DatabaseModel,
   mode: Ref<EngineMode>,
   flashCode: (sql: string) => void,
-  transitionFn: (from: EngineMode, to: EngineMode, ctx: string) => EngineMode
+  transitionFn: (from: EngineMode, to: EngineMode, ctx: string) => EngineMode,
+  canonicalStatements?: Ref<CanonicalStatement[] | null>
 ) {
   let lastValidCode = code.value
+
+  const getCanonicalStatements = () => {
+    if (canonicalStatements?.value && canonicalStatements.value.length > 0) {
+      return canonicalStatements.value.map(cs => ({
+        text: code.value.substring(cs.start, cs.end),
+        start: cs.start,
+        end: cs.end
+      }))
+    }
+    return null
+  }
 
   const beginReconcile = () => {
     lastValidCode = code.value
@@ -79,7 +91,7 @@ export function useBidirectionalSync(
   const updateRow = (tableName: string, oldRow: Row, newRowData: Row) => {
     beginReconcile()
 
-    const statements = extractSqlStatements(code.value)
+    const statements = getCanonicalStatements() ?? extractSqlStatements(code.value)
     for (const stmt of statements) {
       const match = findTupleInBatch(stmt.text, tableName, oldRow)
       if (match) {
@@ -107,7 +119,7 @@ export function useBidirectionalSync(
     }
     if (!targetTableName) return
 
-    const statements = extractSqlStatements(code.value)
+    const statements = getCanonicalStatements() ?? extractSqlStatements(code.value)
     for (const stmt of statements) {
       const match = findTupleInBatch(stmt.text, targetTableName, row)
       if (match) {
@@ -172,7 +184,7 @@ export function useBidirectionalSync(
     const escaped = tableName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     const tableRefRe = new RegExp(`\\b${escaped}\\b`, 'i')
 
-    const statements = extractSqlStatements(code.value)
+    const statements = getCanonicalStatements() ?? extractSqlStatements(code.value)
     let newCode = code.value
     for (let i = statements.length - 1; i >= 0; i--) {
       if (tableRefRe.test(statements[i].text)) {
