@@ -11,8 +11,7 @@ import org.springframework.stereotype.Service;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @Service
 @Slf4j
@@ -98,24 +97,88 @@ public class SqlExecutionService {
         var allObjects = jdbc.queryForList(
             "SELECT name, type FROM sqlite_master WHERE type IN ('view','trigger','table') AND name NOT LIKE 'sqlite_%'");
 
+        // Separate objects by type
+        List<String> viewNames = new ArrayList<>();
+        List<String> triggerNames = new ArrayList<>();
+        List<String> tableNames = new ArrayList<>();
+        for (var obj : allObjects) {
+            String type = (String) obj.get("type");
+            if (type == null) continue;
+            switch (type) {
+                case "view" -> viewNames.add((String) obj.get("name"));
+                case "trigger" -> triggerNames.add((String) obj.get("name"));
+                case "table" -> tableNames.add((String) obj.get("name"));
+            }
+        }
+
+        // Topological sort of tables by FK dependency (leaf-first = referencing before referenced)
+        List<String> tableDropOrder = topologicalSortTables(jdbc, tableNames);
+
+        // Execute drops: views first, triggers second, tables in topological order
         jdbc.execute((Connection con) -> {
             try (Statement stmt = con.createStatement()) {
-                stmt.execute("PRAGMA foreign_keys = OFF");
-
-                for (var obj : allObjects) {
-                    String type = (String) obj.get("type");
-                    if (type == null) continue;
-                    String name = stmt.enquoteIdentifier((String) obj.get("name"), false);
-                    switch (type) {
-                        case "view" -> stmt.execute("DROP VIEW IF EXISTS " + name);
-                        case "trigger" -> stmt.execute("DROP TRIGGER IF EXISTS " + name);
-                        case "table" -> stmt.execute("DROP TABLE IF EXISTS " + name);
-                    }
+                for (String name : viewNames) {
+                    stmt.execute("DROP VIEW IF EXISTS " + stmt.enquoteIdentifier(name, false));
                 }
-
-                stmt.execute("PRAGMA foreign_keys = ON");
+                for (String name : triggerNames) {
+                    stmt.execute("DROP TRIGGER IF EXISTS " + stmt.enquoteIdentifier(name, false));
+                }
+                for (String name : tableDropOrder) {
+                    stmt.execute("DROP TABLE IF EXISTS " + stmt.enquoteIdentifier(name, false));
+                }
             }
             return null;
         });
+    }
+
+    private List<String> topologicalSortTables(JdbcTemplate jdbc, List<String> tableNames) {
+        if (tableNames.isEmpty()) return List.of();
+
+        List<ForeignKeyInfo> foreignKeys = metadataExtractor.extractForeignKeys(jdbc);
+
+        // Build adjacency list: table -> tables it references (FK toTable)
+        Map<String, List<String>> adjacency = new HashMap<>();
+        Map<String, Integer> inDegree = new HashMap<>();
+        for (String tn : tableNames) {
+            adjacency.put(tn, new ArrayList<>());
+            inDegree.put(tn, 0);
+        }
+
+        for (ForeignKeyInfo fk : foreignKeys) {
+            String from = fk.getFromTable();
+            String to = fk.getToTable();
+            if (adjacency.containsKey(from) && adjacency.containsKey(to)) {
+                adjacency.get(from).add(to);
+                inDegree.merge(to, 1, Integer::sum);
+            }
+        }
+
+        // Kahn's algorithm for topological sort
+        Queue<String> queue = new LinkedList<>();
+        for (String tn : tableNames) {
+            if (inDegree.get(tn) == 0) {
+                queue.add(tn);
+            }
+        }
+
+        List<String> sorted = new ArrayList<>();
+        while (!queue.isEmpty()) {
+            String node = queue.poll();
+            sorted.add(node);
+            for (String dep : adjacency.get(node)) {
+                inDegree.merge(dep, -1, Integer::sum);
+                if (inDegree.get(dep) == 0) {
+                    queue.add(dep);
+                }
+            }
+        }
+
+        if (sorted.size() < tableNames.size()) {
+            List<String> remaining = new ArrayList<>(tableNames);
+            remaining.removeAll(sorted);
+            log.warn("FK cycle detected among tables: {}. Dropping tables in arbitrary order.", remaining);
+            sorted.addAll(remaining);
+        }
+        return sorted;
     }
 }
