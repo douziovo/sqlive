@@ -30,7 +30,13 @@ public class SqlExecutionService {
 
     public SqlResponse execute(String sqlScript, String dbName, boolean reset) {
         SqlResponse response = new SqlResponse();
-        JdbcTemplate jdbc = poolManager.getOrCreateJdbcTemplate(dbName);
+        JdbcTemplate jdbc;
+        try {
+            jdbc = poolManager.getOrCreateJdbcTemplate(dbName);
+        } catch (IllegalStateException e) {
+            log.warn("Database pool full: db={}", dbName);
+            return SqlResponse.error("Database pool at capacity. Please close unused databases and retry.", 0);
+        }
 
         try {
             if (reset) {

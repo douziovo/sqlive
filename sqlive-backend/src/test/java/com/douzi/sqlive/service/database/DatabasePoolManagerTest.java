@@ -70,12 +70,34 @@ class DatabasePoolManagerTest {
     @Test
     void shouldEvictWhenPoolExceedsMaxDatabases() {
         var mgr = createManager();
-        // MAX_DATABASES = 20, create 21 to trigger eviction
-        for (int i = 0; i < 21; i++) {
+        // MAX_DATABASES = 20, create 20 successfully
+        for (int i = 0; i < 20; i++) {
             assertNotNull(mgr.getOrCreateJdbcTemplate("evict_db_" + i));
         }
-        // After eviction, pool should be at most 20
-        assertTrue(mgr.getPoolSize() <= 20, "Pool size should not exceed MAX_DATABASES");
+        // 21st create triggers pool-full check; all entries are recently created
+        // (none idle >20min), so IllegalStateException is thrown
+        assertThrows(IllegalStateException.class,
+            () -> mgr.getOrCreateJdbcTemplate("evict_db_20"),
+            "Pool full with all active entries should throw");
+        // Pool remains at max capacity
+        assertEquals(20, mgr.getPoolSize(), "Pool size should not exceed MAX_DATABASES");
+    }
+
+    @Test
+    void shouldThrowWhenAllDatabasesActive() {
+        var mgr = createManager();
+        // Fill pool to max (20 databases)
+        for (int i = 0; i < 20; i++) {
+            assertNotNull(mgr.getOrCreateJdbcTemplate("active_db_" + i));
+        }
+        // Touch each database to update lastAccessTime (simulate recent activity)
+        for (int i = 0; i < 20; i++) {
+            assertNotNull(mgr.getOrCreateJdbcTemplate("active_db_" + i));
+        }
+        // Attempt to create 21st database should throw
+        assertThrows(IllegalStateException.class,
+            () -> mgr.getOrCreateJdbcTemplate("overflow_db"),
+            "Should throw when all databases are active and pool is full");
     }
 
     @Test
