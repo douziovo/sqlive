@@ -28,7 +28,6 @@ public class SqlExecutionService {
         this.metadataExtractor = metadataExtractor;
     }
 
-    @SuppressWarnings("SqlSourceToSinkFlow")
     public SqlResponse execute(String sqlScript, String dbName, boolean reset) {
         SqlResponse response = new SqlResponse();
         JdbcTemplate jdbc = poolManager.getOrCreateJdbcTemplate(dbName);
@@ -46,6 +45,7 @@ public class SqlExecutionService {
                 if (s.sql().trim().isEmpty()) continue;
                 try {
                     jdbc.execute((Statement stmt) -> {
+                        @SuppressWarnings("SqlSourceToSinkFlow")
                         boolean hasResultSet = stmt.execute(s.sql());
                         if (hasResultSet) {
                             try (ResultSet rs = stmt.getResultSet()) {
