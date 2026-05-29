@@ -40,7 +40,10 @@ public class AiService {
         Map<String, AiProvider> map = new LinkedHashMap<>();
         for (var entry : configs.entrySet()) {
             var cfg = entry.getValue();
-            var provider = OpenAiCompatibleProvider.create(entry.getKey(), cfg, objectMapper);
+            var provider = OpenAiCompatibleProvider.create(entry.getKey(), cfg, objectMapper,
+                    aiProperties.getTimeout().getConnect(),
+                    aiProperties.getTimeout().getRead(),
+                    aiProperties.getTimeout().getWrite());
             map.put(entry.getKey(), provider);
         }
         this.providers = map;

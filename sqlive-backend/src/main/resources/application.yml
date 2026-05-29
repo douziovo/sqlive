@@ -55,6 +55,11 @@ ai:
       temperature: 1
       reasoning-effort: "true"
 
+  timeout:
+    connect: 5s
+    read: 60s
+    write: 30s
+
 management:
   endpoints:
     web:

@@ -9,6 +9,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -27,7 +28,7 @@ class OpenAiCompatibleProviderTest {
         var config = new AiProviderConfig();
         config.setBaseUrl("http://localhost:8080");
         var proto = new OpenAiProtocol(mapper);
-        var p = new OpenAiCompatibleProvider(config, proto, "test", "/test");
+        var p = new OpenAiCompatibleProvider(config, proto, "test", "/test", Duration.ofSeconds(5), Duration.ofSeconds(60), Duration.ofSeconds(30));
         assertTrue(p.isAvailable());
     }
 
@@ -35,7 +36,7 @@ class OpenAiCompatibleProviderTest {
     void isAvailableWhenBaseUrlNull() {
         var config = new AiProviderConfig();
         var proto = new OpenAiProtocol(mapper);
-        var p = new OpenAiCompatibleProvider(config, proto, "test", "/test");
+        var p = new OpenAiCompatibleProvider(config, proto, "test", "/test", Duration.ofSeconds(5), Duration.ofSeconds(60), Duration.ofSeconds(30));
         assertFalse(p.isAvailable());
     }
 
@@ -45,7 +46,7 @@ class OpenAiCompatibleProviderTest {
         config.setBaseUrl("http://localhost:8080");
         config.setApiKey("sk-test");
         var proto = new DeepSeekProtocol(mapper);
-        var p = new OpenAiCompatibleProvider(config, proto, "deepseek", "/chat/completions");
+        var p = new OpenAiCompatibleProvider(config, proto, "deepseek", "/chat/completions", Duration.ofSeconds(5), Duration.ofSeconds(60), Duration.ofSeconds(30));
         assertTrue(p.isAvailable());
     }
 
@@ -54,7 +55,7 @@ class OpenAiCompatibleProviderTest {
         var config = new AiProviderConfig();
         config.setBaseUrl("http://localhost:8080");
         var proto = new DeepSeekProtocol(mapper);
-        var p = new OpenAiCompatibleProvider(config, proto, "deepseek", "/chat/completions");
+        var p = new OpenAiCompatibleProvider(config, proto, "deepseek", "/chat/completions", Duration.ofSeconds(5), Duration.ofSeconds(60), Duration.ofSeconds(30));
         assertFalse(p.isAvailable());
     }
 
@@ -65,7 +66,7 @@ class OpenAiCompatibleProviderTest {
         var config = new AiProviderConfig();
         config.setBaseUrl("http://localhost:8080");
         var proto = new OpenAiProtocol(mapper);
-        var p = new OpenAiCompatibleProvider(config, proto, "test-provider", "/test");
+        var p = new OpenAiCompatibleProvider(config, proto, "test-provider", "/test", Duration.ofSeconds(5), Duration.ofSeconds(60), Duration.ofSeconds(30));
         assertEquals("test-provider", p.getProviderName());
     }
 
@@ -79,7 +80,7 @@ class OpenAiCompatibleProviderTest {
         when(proto.buildRequest(any())).thenReturn(Map.of("model", "test"));
         when(proto.extractContent(anyString())).thenReturn("extracted content");
 
-        var provider = new OpenAiCompatibleProvider(config, webClient, proto, "test", "/chat/completions");
+        var provider = new OpenAiCompatibleProvider(config, webClient, proto, "test", "/chat/completions", Duration.ofSeconds(5), Duration.ofSeconds(60), Duration.ofSeconds(30));
         String result = provider.complete("system prompt", "user message");
 
         assertEquals("extracted content", result);
@@ -94,7 +95,7 @@ class OpenAiCompatibleProviderTest {
         var webClient = mockWebClientThatThrows(new RuntimeException("Connection refused"));
         when(proto.buildRequest(any())).thenReturn(Map.of("model", "test"));
 
-        var provider = new OpenAiCompatibleProvider(config, webClient, proto, "test", "/chat/completions");
+        var provider = new OpenAiCompatibleProvider(config, webClient, proto, "test", "/chat/completions", Duration.ofSeconds(5), Duration.ofSeconds(60), Duration.ofSeconds(30));
         var ex = assertThrows(AiProviderException.class,
                 () -> provider.complete("system", "user"));
         assertTrue(ex.getMessage().contains("Connection refused"));
@@ -112,7 +113,7 @@ class OpenAiCompatibleProviderTest {
 
         var webClient = mockWebClientForStream(Flux.just("chunk1", "chunk2"));
 
-        var provider = new OpenAiCompatibleProvider(config, webClient, proto, "test", "/chat/completions");
+        var provider = new OpenAiCompatibleProvider(config, webClient, proto, "test", "/chat/completions", Duration.ofSeconds(5), Duration.ofSeconds(60), Duration.ofSeconds(30));
         var chunks = provider.streamChat("system", null, "user").collectList().block();
 
         assertNotNull(chunks);
@@ -130,7 +131,7 @@ class OpenAiCompatibleProviderTest {
         var webClient = mockWebClientForStream(
                 Flux.error(new RuntimeException("Stream broken")));
 
-        var provider = new OpenAiCompatibleProvider(config, webClient, proto, "test", "/chat/completions");
+        var provider = new OpenAiCompatibleProvider(config, webClient, proto, "test", "/chat/completions", Duration.ofSeconds(5), Duration.ofSeconds(60), Duration.ofSeconds(30));
         var chunks = provider.streamChat("system", null, "user")
                 .onErrorResume(e -> Flux.just(StreamChunk.error(e.getMessage())))
                 .collectList().block();
