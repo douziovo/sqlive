@@ -129,8 +129,13 @@ public class OpenAiCompatibleProvider implements AiProvider {
             return result;
         } catch (Exception e) {
             long elapsed = System.currentTimeMillis() - start;
-            log.error("{} API call failed: model={}, elapsed={}ms", providerName, config.getModel(), elapsed, e);
-            throw new AiProviderException("AI service call failed: " + e.getMessage());
+            String msg = e.getMessage();
+            String sanitized = sanitizeErrorMessage(msg);
+            if (msg != null) {
+                sanitized = sanitized.replace(config.getApiKey(), "[REDACTED]");
+            }
+            log.error("{} API call failed: model={}, elapsed={}ms, error={}", providerName, config.getModel(), elapsed, sanitized);
+            throw new AiProviderException("AI service call failed: " + sanitized);
         }
     }
 
@@ -152,6 +157,11 @@ public class OpenAiCompatibleProvider implements AiProvider {
                 .retrieve()
                 .bodyToFlux(String.class)
                 .transform(protocol::processStream);
+    }
+
+    private static String sanitizeErrorMessage(String message) {
+        if (message == null) return null;
+        return message.replaceAll("(?i)Authorization:\\s*Bearer\\s+\\S+", "Authorization: Bearer [REDACTED]");
     }
 
     private List<Map<String, String>> buildMessages(String systemPrompt,
