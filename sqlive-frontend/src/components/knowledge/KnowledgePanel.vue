@@ -71,7 +71,7 @@ import { computed, inject, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { KnowledgeNodeData } from '@/composables/useKnowledgeGraph'
 import { useKnowledgeGraph } from '@/composables/useKnowledgeGraph'
 import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
-import type KnowledgeGraph from './KnowledgeGraph.vue'
+import KnowledgeGraph from './KnowledgeGraph.vue'
 
 const props = defineProps<{
   isOpen: boolean

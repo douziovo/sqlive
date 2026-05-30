@@ -107,7 +107,7 @@ export function useSqlEngine() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sql: code.value,
-          dbName: activeTab.value.dbName || '',
+          ...(activeTab.value.dbName ? { dbName: activeTab.value.dbName } : {}),
           reset: forceReset || shouldReset(code.value, activeTab.value.dbName)
         } satisfies ExecuteRequest),
         signal: abortController.signal

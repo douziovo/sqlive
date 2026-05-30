@@ -259,8 +259,8 @@ function handleSubmit() {
     dbName = prompt('输入数据库名称以保存当前状态:')
     if (!dbName?.trim()) return
     dbName = dbName.trim()
-    if (!/^[^?&=#;/\\:]{1,64}$/.test(dbName)) {
-      alert('数据库名称不能包含特殊字符 (? & = # ; / \\ :)，且长度不能超过 64 个字符')
+    if (!/^[a-zA-Z0-9_-]{1,64}$/.test(dbName)) {
+      alert('数据库名称只能包含字母、数字、下划线和连字符，长度 1-64 个字符')
       return
     }
     emit('set-db-name', activeTabId.value, dbName)
