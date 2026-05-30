@@ -1065,4 +1065,80 @@ class SqlExecutionServiceTest {
         SqlResponse r4 = service.execute("  SELECT 3;", "reg_test_ws", true);
         assertTrue(r4.isSuccess());
     }
+
+    // ============================================================
+    //  Security: Mixed case PRAGMA (boundary)
+    // ============================================================
+
+    @Test
+    void shouldRejectPragmaMixedCase() {
+        SqlResponse r1 = service.execute("Pragma database_list;", "pragma_mixed1", true);
+        assertFalse(r1.isSuccess());
+        assertTrue(r1.getError().getMessage().contains("PRAGMA"));
+
+        SqlResponse r2 = service.execute("pragMA cache_size;", "pragma_mixed2", true);
+        assertFalse(r2.isSuccess());
+        assertTrue(r2.getError().getMessage().contains("PRAGMA"));
+    }
+
+    // ============================================================
+    //  Security: Keywords as identifiers — should NOT be blocked
+    // ============================================================
+
+    @Test
+    void shouldAllowAttachAsTableName() {
+        SqlResponse r = service.execute("CREATE TABLE attach (x INTEGER); INSERT INTO attach VALUES (1); SELECT * FROM attach;", "attach_as_table", true);
+        assertTrue(r.isSuccess(), "ATTACH as table name should not be blocked");
+        assertEquals(1, r.getData().getQueryResults().getFirst().getData().size());
+    }
+
+    @Test
+    void shouldAllowPragmaAsColumnName() {
+        SqlResponse r = service.execute("CREATE TABLE t (pragma TEXT); INSERT INTO t VALUES ('val'); SELECT pragma FROM t;", "pragma_as_col", true);
+        assertTrue(r.isSuccess(), "PRAGMA as column name should not be blocked");
+        assertEquals("val", r.getData().getQueryResults().getFirst().getData().getFirst().get("pragma"));
+    }
+
+    // ============================================================
+    //  Security: Whitespace boundary (tabs, Windows newlines)
+    // ============================================================
+
+    @Test
+    void shouldRejectAttachWithTabWhitespace() {
+        SqlResponse r = service.execute("\tATTACH ':memory:' AS x;", "attach_tab", true);
+        assertFalse(r.isSuccess());
+        assertEquals("ATTACH DATABASE is not allowed for security reasons", r.getError().getMessage());
+    }
+
+    @Test
+    void shouldRejectPragmaWithWindowsNewline() {
+        SqlResponse r = service.execute("\r\nPRAGMA cache_size;", "pragma_crlf", true);
+        assertFalse(r.isSuccess());
+        assertTrue(r.getError().getMessage().contains("PRAGMA"));
+    }
+
+    // ============================================================
+    //  Security: Early return — statements after blocked one don't execute
+    // ============================================================
+
+    @Test
+    void shouldNotExecuteStatementsAfterBlockedOne() {
+        // ATTACH blocked → immediate return, SELECT 1 never executes
+        SqlResponse r = service.execute("ATTACH ':memory:' AS aux;\nSELECT 1;", "early_return", true);
+        assertFalse(r.isSuccess());
+        assertEquals("ATTACH DATABASE is not allowed for security reasons", r.getError().getMessage());
+        // Verify no query results (SELECT didn't execute)
+        assertNull(r.getData());
+    }
+
+    // ============================================================
+    //  Security: Line number accuracy with blank lines
+    // ============================================================
+
+    @Test
+    void shouldReportCorrectLineForAttachAfterBlankLines() {
+        SqlResponse r = service.execute("\n\nATTACH ':memory:' AS aux;", "attach_blank_lines", true);
+        assertFalse(r.isSuccess());
+        assertEquals(3, r.getError().getLine(), "ATTACH on line 3 after two blank lines");
+    }
 }
