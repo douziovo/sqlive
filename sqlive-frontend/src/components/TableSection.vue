@@ -135,7 +135,12 @@
           </td>
         </tr>
         <!-- Ghost row -->
-        <tr data-testid="ghost-row" class="bg-muted/50 opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200 border-t border-dashed border-border group/ghost">
+        <tr data-testid="ghost-row"
+            class="bg-muted/50 transition-all duration-200 border-t border-dashed border-border group/ghost"
+            :class="{
+              'opacity-0 hover:opacity-100 focus-within:opacity-100': !ghostFailed,
+              'opacity-100 bg-destructive/5 border-destructive/30': ghostFailed
+            }">
           <td v-for="col in table.columns" :key="'ghost-' + col" class="px-4 py-2 border-r border-border/50 align-top">
             <div class="grid place-items-start w-full relative">
               <div class="invisible whitespace-pre-wrap break-all border border-transparent px-1 py-1 min-h-[1.5em]" style="grid-area: 1/1/2/2;">{{ getGhostValue(col) || ' ' }}</div>
@@ -154,6 +159,11 @@
             <button v-if="hasGhostInput()" @click="onGhostSubmit()" class="text-primary hover:bg-primary/10 p-1 rounded-full transition-colors transition-transform hover:scale-110" title="确认添加">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
             </button>
+          </td>
+        </tr>
+        <tr v-if="ghostFailed" class="border-0">
+          <td :colspan="table.columns.length + 1" class="px-4 py-1 text-xs text-destructive">
+            插入失败，检查数据后重试
           </td>
         </tr>
         </tbody>
@@ -222,7 +232,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits(['update-cell', 'delete-row', 'drop-table', 'insert-row', 'navigate-tab'])
-const { highlight } = inject(SQL_CONTEXT_KEY)!
+const { highlight, error } = inject(SQL_CONTEXT_KEY)!
 
 const isFlashTarget = computed(() => props.flashTableName === props.table.name)
 
@@ -400,6 +410,9 @@ const previewItems = computed((): PreviewItem[] => {
 
 const isAnimating = ref(false)
 const ghostRow = reactive<Row>({})
+const ghostPending = ref(false)
+const ghostFailed = ref(false)
+let previousRowCount = props.table.data.length
 
 // Sort/filter/page pipeline — extracted into composable
 const {
@@ -465,9 +478,31 @@ const hasGhostInput = () => {
 const onGhostSubmit = () => {
   if (hasGhostInput()) {
     emit('insert-row', { tableName: props.table.name, newRow: { ...ghostRow } })
-    Object.keys(ghostRow).forEach((k) => delete ghostRow[k])
+    ghostPending.value = true
+    ghostFailed.value = false
+    previousRowCount = props.table.data.length
   }
 }
+
+// FRONT-03: Detect successful insert by row count increase (D-07)
+watch(
+  () => props.table.data.length,
+  (newLen) => {
+    if (ghostPending.value && newLen > previousRowCount) {
+      Object.keys(ghostRow).forEach((k) => delete ghostRow[k])
+      ghostPending.value = false
+      ghostFailed.value = false
+    }
+  }
+)
+
+// FRONT-03: On executionError after ghost submit, keep ghostRow for retry (D-08)
+watch(error, (err) => {
+  if (ghostPending.value && err !== null) {
+    ghostPending.value = false
+    ghostFailed.value = true
+  }
+})
 
 // --- Highlight helpers ---
 const activeRowSet = computed(() => new Set(highlight.activeRows))
