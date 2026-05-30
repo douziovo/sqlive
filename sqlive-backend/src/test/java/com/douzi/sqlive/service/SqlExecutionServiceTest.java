@@ -1046,4 +1046,23 @@ class SqlExecutionServiceTest {
         SqlResponse r2 = service.execute("PRAGMA cache_size;", "pragma_test_names2", true);
         assertFalse(r2.isSuccess());
     }
+
+    // ============================================================
+    //  Security: Regression — normal SQL unaffected (SEC-01)
+    // ============================================================
+
+    @Test
+    void shouldAllowNormalStatementsDespiteBlockingCheck() {
+        SqlResponse r1 = service.execute("SELECT 1;", "reg_test_normal", true);
+        assertTrue(r1.isSuccess());
+
+        SqlResponse r2 = service.execute("CREATE TABLE demo (id INTEGER); INSERT INTO demo VALUES (1); SELECT * FROM demo;", "reg_test_ddl", true);
+        assertTrue(r2.isSuccess());
+
+        SqlResponse r3 = service.execute("SELECT 2;", "reg_test_dml", true);
+        assertTrue(r3.isSuccess());
+
+        SqlResponse r4 = service.execute("  SELECT 3;", "reg_test_ws", true);
+        assertTrue(r4.isSuccess());
+    }
 }
