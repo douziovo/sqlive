@@ -53,6 +53,10 @@ public class SqlExecutionService {
 
             for (SqlParser.SqlStatement s : statements) {
                 if (s.sql().trim().isEmpty()) continue;
+                String blockReason = isBlockedStatement(s.sql().trim());
+                if (blockReason != null) {
+                    return SqlResponse.error(blockReason, s.startLine());
+                }
                 try {
                     jdbc.execute((Statement stmt) -> {
                         @SuppressWarnings("SqlSourceToSinkFlow")
