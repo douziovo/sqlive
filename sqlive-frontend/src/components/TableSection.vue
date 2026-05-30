@@ -112,6 +112,16 @@
                   style="grid-area: 1/1/2/2;"
                   spellcheck="false"
               ></textarea>
+              <Tooltip v-if="truncatedCells[rowKey(row) + '-' + col]">
+                <TooltipTrigger as-child>
+                  <span class="absolute top-0 right-0 z-20 cursor-help">
+                    <AlertTriangle class="h-3 w-3 text-destructive" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>值已截断：{{ truncatedCells[rowKey(row) + '-' + col].originalLength }} 字符 → {{ truncatedCells[rowKey(row) + '-' + col].maxLength }} 字符</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
           </td>
           <td class="px-2 text-center align-middle">
@@ -198,6 +208,8 @@ import { useTablePipeline } from '../composables/useTablePipeline'
 import type { HighlightState, IndexInfo, Row, TableSchema, TriggerInfo, ViewInfo } from '../model/DatabaseTypes'
 import { SQL_CONTEXT_KEY } from '../model/injectionKeys'
 import { extractTriggerTiming, isNumericType } from '../utils/sql'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
+import { AlertTriangle } from 'lucide-vue-next'
 import type { PreviewItem } from './HoverPreview.vue'
 import HoverPreview from './HoverPreview.vue'
 
@@ -421,7 +433,27 @@ watch(
 )
 
 // --- Ghost row ---
-const { autoResizeGhost, handleBlur } = useInlineEdit(props.table.name, props.table.columnTypes, emit)
+const getRowId = (row: any) => (row.id !== undefined ? row.id : row._highlightId)
+const rowKey = (row: any) => `${props.table.name}:${getRowId(row)}`
+
+const truncatedCells = ref<Record<string, { originalLength: number; maxLength: number }>>({})
+
+const { autoResizeGhost, handleBlur } = useInlineEdit(
+  props.table.name,
+  props.table.columnTypes,
+  emit,
+  (row, col, originalLength, maxLength) => {
+    const key = `${rowKey(row)}-${col}`
+    truncatedCells.value = { ...truncatedCells.value, [key]: { originalLength, maxLength } }
+    setTimeout(() => {
+      if (truncatedCells.value[key]) {
+        const next = { ...truncatedCells.value }
+        delete next[key]
+        truncatedCells.value = next
+      }
+    }, 5000)
+  }
+)
 
 const getGhostValue = (col: string) => ghostRow[col] || ''
 const updateGhostState = (col: string, val: string) => {
@@ -438,9 +470,6 @@ const onGhostSubmit = () => {
 }
 
 // --- Highlight helpers ---
-const getRowId = (row: any) => (row.id !== undefined ? row.id : row._highlightId)
-const rowKey = (row: any) => `${props.table.name}:${getRowId(row)}`
-
 const activeRowSet = computed(() => new Set(highlight.activeRows))
 const activeColumnSet = computed(() => new Set(highlight.activeColumns))
 

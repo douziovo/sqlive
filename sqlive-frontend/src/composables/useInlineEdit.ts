@@ -1,10 +1,12 @@
 import type { Row } from '../model/DatabaseTypes'
 import { isNumericType } from '../utils/sql'
+import { enforceTypeConstraints } from '../utils/sqlStatements'
 
-export function useInlineEdit<EmitFn extends (e: string, ...args: any[]) => void>(
+export function useInlineEdit(
   tableName: string,
   columnTypes: Record<string, string>,
-  emit: EmitFn
+  emit: (e: 'update-cell', payload: { tableName: string; oldRow: Row; newRow: Row }) => void,
+  onTruncation?: (row: Row, col: string, originalLength: number, maxLength: number) => void
 ) {
   function autoResizeGhost(e: Event) {
     const target = e.target as HTMLTextAreaElement
@@ -30,7 +32,11 @@ export function useInlineEdit<EmitFn extends (e: string, ...args: any[]) => void
       if (newVal === '' || newVal.trim() === '') return
     }
 
-    emit('update-cell', { tableName, oldRow: row, newRow: { ...row, [col]: newVal } })
+    const { value: constrainedVal, truncated } = enforceTypeConstraints(newVal, typeInfo)
+    if (truncated) {
+      onTruncation?.(row, col, truncated.originalLength, truncated.maxLength)
+    }
+    emit('update-cell', { tableName, oldRow: row, newRow: { ...row, [col]: constrainedVal } })
   }
 
   return { autoResizeGhost, handleBlur }

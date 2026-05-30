@@ -113,32 +113,40 @@ describe('extractSqlStatements', () => {
 
 describe('enforceTypeConstraints', () => {
   it('returns null as-is', () => {
-    expect(enforceTypeConstraints(null, 'VARCHAR(10)')).toBeNull()
+    expect(enforceTypeConstraints(null, 'VARCHAR(10)').value).toBeNull()
   })
 
   it('returns undefined as-is', () => {
-    expect(enforceTypeConstraints(undefined, 'VARCHAR(10)')).toBeUndefined()
+    expect(enforceTypeConstraints(undefined, 'VARCHAR(10)').value).toBeUndefined()
   })
 
   it('truncates string exceeding VARCHAR limit', () => {
-    expect(enforceTypeConstraints('hello world', 'VARCHAR(5)')).toBe('hello')
+    const result = enforceTypeConstraints('hello world', 'VARCHAR(5)')
+    expect(result.value).toBe('hello')
+    expect(result.truncated).toEqual({ originalLength: 11, maxLength: 5 })
   })
 
   it('truncates string exceeding CHAR limit', () => {
-    expect(enforceTypeConstraints('abcdefghij', 'CHAR(3)')).toBe('abc')
+    const result = enforceTypeConstraints('abcdefghij', 'CHAR(3)')
+    expect(result.value).toBe('abc')
+    expect(result.truncated).toEqual({ originalLength: 10, maxLength: 3 })
   })
 
   it('returns full string within VARCHAR limit', () => {
-    expect(enforceTypeConstraints('hi', 'VARCHAR(10)')).toBe('hi')
+    const result = enforceTypeConstraints('hi', 'VARCHAR(10)')
+    expect(result.value).toBe('hi')
+    expect(result.truncated).toBeUndefined()
   })
 
   it('returns value unchanged for non-VARCHAR types', () => {
-    expect(enforceTypeConstraints('hello', 'INTEGER')).toBe('hello')
-    expect(enforceTypeConstraints('text', 'TEXT')).toBe('text')
+    expect(enforceTypeConstraints('hello', 'INTEGER').value).toBe('hello')
+    expect(enforceTypeConstraints('text', 'TEXT').value).toBe('text')
   })
 
   it('truncates numbers (stringified) exceeding VARCHAR limit', () => {
-    expect(enforceTypeConstraints('1234567890', 'VARCHAR(3)')).toBe('123')
+    const result = enforceTypeConstraints('1234567890', 'VARCHAR(3)')
+    expect(result.value).toBe('123')
+    expect(result.truncated).toEqual({ originalLength: 10, maxLength: 3 })
   })
 })
 

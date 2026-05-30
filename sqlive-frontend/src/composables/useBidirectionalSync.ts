@@ -42,7 +42,7 @@ export function useBidirectionalSync(
     const values = columns.map((colName) => {
       let val = row[colName]
       const rawType = tableInfo?.columnTypes[colName] || ''
-      val = enforceTypeConstraints(val, rawType)
+      val = enforceTypeConstraints(val, rawType).value
       const type = parsePrimaryType(rawType)
       return toSqlLiteral(val, type)
     })
