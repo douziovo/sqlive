@@ -156,10 +156,10 @@ public class SqlExecutionService {
     }
 
     private String isBlockedStatement(String sql) {
-        if (ATTACH_PATTERN.matcher(sql).matches()) {
+        if (ATTACH_PATTERN.matcher(sql).find()) {
             return "ATTACH DATABASE is not allowed for security reasons";
         }
-        if (PRAGMA_PATTERN.matcher(sql).matches()) {
+        if (PRAGMA_PATTERN.matcher(sql).find()) {
             return "PRAGMA statements are not allowed";
         }
         return null;
