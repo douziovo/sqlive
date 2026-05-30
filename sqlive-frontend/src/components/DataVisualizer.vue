@@ -56,7 +56,7 @@
     </div>
 
     <!-- Tab: ER 图 -->
-    <div v-else-if="activeTab === 'er'" class="flex-1 min-h-0">
+    <div v-show="activeTab === 'er'" class="flex-1 min-h-0">
       <ErDiagram
           :tables="db.tables"
           :foreign-keys="db.foreignKeys"
@@ -65,7 +65,7 @@
     </div>
 
     <!-- Tab: 索引 -->
-    <div v-else-if="activeTab === 'indexes'">
+    <div v-if="activeTab === 'indexes'">
       <EmptyState v-if="db.indexes.length === 0" icon="&#x1F4ED;" title="暂无索引" subtitle="在 SQL 中使用 CREATE INDEX 语句创建索引" />
 
       <template v-else>
@@ -115,7 +115,7 @@
     </div>
 
     <!-- Tab: 视图 -->
-    <div v-else-if="activeTab === 'views'">
+    <div v-if="activeTab === 'views'">
       <EmptyState v-if="db.views.length === 0" icon="&#x1F4ED;" title="暂无视图" subtitle="在 SQL 中使用 CREATE VIEW 语句创建视图" />
 
       <template v-else>
@@ -150,7 +150,7 @@
     </div>
 
     <!-- Tab: 触发器 -->
-    <div v-else-if="activeTab === 'triggers'">
+    <div v-if="activeTab === 'triggers'">
       <EmptyState v-if="db.triggers.length === 0" icon="&#x1F4ED;" title="暂无触发器" subtitle="在 SQL 中使用 CREATE TRIGGER 语句创建触发器" />
 
       <template v-else>
@@ -188,7 +188,7 @@
     </div>
 
     <!-- Tab: 查询结果 -->
-    <div v-else>
+    <div v-if="activeTab === 'results'">
       <EmptyState v-if="db.queryResults.length === 0" icon="&#x1F4CA;" title="暂无查询结果" subtitle="执行 SELECT 语句后结果会显示在这里" />
 
       <ResultTable

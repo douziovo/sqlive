@@ -1,10 +1,10 @@
 import type { Row } from '../model/DatabaseTypes'
 import { isNumericType } from '../utils/sql'
 
-export function useInlineEdit(
+export function useInlineEdit<EmitFn extends (e: string, ...args: any[]) => void>(
   tableName: string,
   columnTypes: Record<string, string>,
-  emit: (e: string, ...args: any[]) => void
+  emit: EmitFn
 ) {
   function autoResizeGhost(e: Event) {
     const target = e.target as HTMLTextAreaElement
