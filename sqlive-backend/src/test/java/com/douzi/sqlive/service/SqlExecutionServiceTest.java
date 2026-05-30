@@ -979,4 +979,37 @@ class SqlExecutionServiceTest {
             assertTrue(errors.isEmpty(), "No errors during stress test: " + errors);
         }
     }
+
+    // ============================================================
+    //  Security: ATTACH DATABASE blocking (SEC-01)
+    // ============================================================
+
+    @Test
+    void shouldRejectAttachDatabase() {
+        SqlResponse r = service.execute("ATTACH DATABASE '/etc/passwd' AS aux;", "attach_test_attachdb", true);
+        assertFalse(r.isSuccess());
+        assertEquals("ATTACH DATABASE is not allowed for security reasons", r.getError().getMessage());
+        assertEquals(1, r.getError().getLine());
+    }
+
+    @Test
+    void shouldRejectAttachShorthand() {
+        SqlResponse r = service.execute("ATTACH ':memory:' AS mem;", "attach_test_shorthand", true);
+        assertFalse(r.isSuccess());
+        assertEquals("ATTACH DATABASE is not allowed for security reasons", r.getError().getMessage());
+    }
+
+    @Test
+    void shouldRejectAttachLowercase() {
+        SqlResponse r = service.execute("attach ':memory:' AS mem;", "attach_test_lowercase", true);
+        assertFalse(r.isSuccess());
+        assertTrue(r.getError().getMessage().contains("ATTACH"));
+    }
+
+    @Test
+    void shouldRejectAttachInScript() {
+        SqlResponse r = service.execute("CREATE TABLE t (x INTEGER);\nATTACH ':memory:' AS aux;\nSELECT 1;", "attach_test_script", true);
+        assertFalse(r.isSuccess());
+        assertEquals(2, r.getError().getLine());
+    }
 }
