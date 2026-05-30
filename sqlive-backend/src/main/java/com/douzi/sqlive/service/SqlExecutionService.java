@@ -12,6 +12,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.*;
+import java.util.regex.Pattern;
 
 @Service
 @Slf4j
@@ -20,6 +21,9 @@ public class SqlExecutionService {
     private final DatabasePoolManager poolManager;
     private final SqlParser sqlParser;
     private final MetadataExtractor metadataExtractor;
+
+    private static final Pattern ATTACH_PATTERN = Pattern.compile("(?i)^\\s*ATTACH\\s");
+    private static final Pattern PRAGMA_PATTERN = Pattern.compile("(?i)^\\s*PRAGMA\\b");
 
     public SqlExecutionService(DatabasePoolManager poolManager, SqlParser sqlParser,
                                 MetadataExtractor metadataExtractor) {
@@ -145,6 +149,16 @@ public class SqlExecutionService {
             }
             return null;
         });
+    }
+
+    private String isBlockedStatement(String sql) {
+        if (ATTACH_PATTERN.matcher(sql).matches()) {
+            return "ATTACH DATABASE is not allowed for security reasons";
+        }
+        if (PRAGMA_PATTERN.matcher(sql).matches()) {
+            return "PRAGMA statements are not allowed";
+        }
+        return null;
     }
 
     private List<String> topologicalSortTables(JdbcTemplate jdbc, List<String> tableNames) {
