@@ -188,7 +188,7 @@ sqlive/
         ├── SqliveApplication.java      # 启动入口
         ├── controller/
         │   ├── SqlController.java      # POST /api/execute
-        │   └── ai/AiController.java    # POST /api/ai/chat, /api/ai/suggest
+        │   └── ai/AiController.java    # POST /api/ai/chat, /analyze-error, /fix-code, /explain, /optimize
         ├── service/
         │   ├── SqlExecutionService.java     # SQL 执行核心逻辑
         │   ├── database/DatabasePoolManager.java  # 多数据库隔离管理
@@ -231,8 +231,54 @@ npm run test:e2e         # Playwright E2E 测试
 
 # 后端测试
 cd sqlive-backend
-./lew test            # 运行全部 JUnit 5 用例
+./gradlew test        # 运行全部 JUnit 5 用例
 ```
+
+## Usage Examples
+
+Try these SQL scripts directly in the editor.
+
+### Create tables and insert data
+
+```sql
+CREATE TABLE departments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    location TEXT,
+    budget REAL DEFAULT 0
+);
+
+CREATE TABLE employees (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    age INTEGER,
+    salary REAL NOT NULL,
+    dept_id INTEGER NOT NULL
+);
+
+INSERT INTO departments VALUES (1, 'Engineering', 'Beijing', 500000);
+INSERT INTO departments VALUES (2, 'Marketing', 'Shanghai', 300000);
+INSERT INTO employees VALUES (1, 'Alice', 28, 15000, 1);
+INSERT INTO employees VALUES (2, 'Bob', 32, 18000, 1);
+INSERT INTO employees VALUES (3, 'Charlie', 26, 12000, 2);
+```
+
+After execution, the right panel renders both tables with their data. The ER diagram automatically detects the `dept_id` foreign key and draws the relationship between `employees` and `departments`.
+
+### Run a JOIN query
+
+```sql
+SELECT e.name AS employee, d.name AS department, e.salary
+FROM employees e
+INNER JOIN departments d ON e.dept_id = d.id
+ORDER BY e.salary DESC;
+```
+
+The result table shows the joined output with sortable columns. Switch to **Chart View** for a bar chart visualization of salaries by department.
+
+### Edit data inline
+
+Double-click a cell in any result table, modify the value, and press Enter. The system locates the corresponding `VALUES` tuple in the SQL editor and rewrites it, then re-executes the full script to reflect the change. No manual SQL editing required.
 
 ## 许可证
 
