@@ -1012,4 +1012,38 @@ class SqlExecutionServiceTest {
         assertFalse(r.isSuccess());
         assertEquals(2, r.getError().getLine());
     }
+
+    // ============================================================
+    //  Security: PRAGMA blocking (SEC-01)
+    // ============================================================
+
+    @Test
+    void shouldRejectPragmaStatement() {
+        SqlResponse r = service.execute("PRAGMA database_list;", "pragma_test_std", true);
+        assertFalse(r.isSuccess());
+        assertEquals("PRAGMA statements are not allowed", r.getError().getMessage());
+        assertEquals(1, r.getError().getLine());
+    }
+
+    @Test
+    void shouldRejectPragmaWithLeadingWhitespace() {
+        SqlResponse r = service.execute("  PRAGMA page_count;", "pragma_test_ws", true);
+        assertFalse(r.isSuccess());
+        assertTrue(r.getError().getMessage().contains("PRAGMA"));
+    }
+
+    @Test
+    void shouldRejectPragmaInScript() {
+        SqlResponse r = service.execute("CREATE TABLE t (x INTEGER);\nINSERT INTO t VALUES (1);\nPRAGMA table_info('t');\nSELECT * FROM t;", "pragma_test_script", true);
+        assertFalse(r.isSuccess());
+        assertEquals(3, r.getError().getLine());
+    }
+
+    @Test
+    void shouldRejectVariousPragmaNames() {
+        SqlResponse r1 = service.execute("PRAGMA journal_mode;", "pragma_test_names1", true);
+        assertFalse(r1.isSuccess());
+        SqlResponse r2 = service.execute("PRAGMA cache_size;", "pragma_test_names2", true);
+        assertFalse(r2.isSuccess());
+    }
 }
