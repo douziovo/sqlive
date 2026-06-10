@@ -66,9 +66,10 @@ test.describe('AI Chat', () => {
     await input.press('Enter');
     await page.waitForTimeout(1000);
 
-    // Use visible filter to avoid matching invisible table cells like "Hello SQLite"
-    await expect(page.locator('text=/Hello/').locator('visible=true').first()).toBeVisible({ timeout: 5_000 });
-    await expect(page.locator('text=/departments/').locator('visible=true').first()).toBeVisible();
+    // Streaming response should render markdown — use exact text to avoid
+    // matching table cell content (e.g. "Hello SQLite" in type_demo table)
+    await expect(page.locator('text=/Hello! I can help/').first()).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('text=/departments/').first()).toBeVisible();
   });
 
   test('closes AI panel', async ({ page }) => {
