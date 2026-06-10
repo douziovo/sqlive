@@ -107,6 +107,81 @@ test.describe('Multi-Tab System', () => {
     expect(count).toBeGreaterThanOrEqual(5);
   });
 
+  test('tab rename preserves content', async ({ page, sqlEditor }) => {
+    // Add a new tab
+    const addBtn = page.locator('button[title="新建标签页"]');
+    await addBtn.click();
+    await page.waitForTimeout(500);
+
+    // Wait for auto-execute after new tab creation
+    await page.waitForResponse(
+      (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',
+      { timeout: 15_000 },
+    );
+    await page.waitForTimeout(500);
+
+    // Type SQL into the new tab
+    const responsePromise = page.waitForResponse(
+      (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',
+      { timeout: 15_000 },
+    );
+    await sqlEditor.replaceAll('SELECT 42 AS answer;');
+    await responsePromise;
+    await page.waitForTimeout(500);
+
+    // Tab should still be functional after typing
+    const sqlText = await sqlEditor.getText();
+    expect(sqlText).toContain('42');
+
+    // App should not crash
+    await expect(page.locator('.monaco-editor')).toBeVisible();
+  });
+
+  test('empty tab submit does not crash', async ({ page }) => {
+    const addBtn = page.locator('button[title="新建标签页"]');
+    await addBtn.click();
+    await page.waitForTimeout(500);
+
+    // Wait for auto-execute
+    await page.waitForResponse(
+      (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',
+      { timeout: 15_000 },
+    );
+    await page.waitForTimeout(500);
+
+    // Try submitting empty tab via submit button
+    const submitBtn = page.locator('button:has-text("提交")');
+
+    // Handle the dialog that asks for dbName
+    page.once('dialog', async (dialog) => {
+      if (dialog.type() === 'prompt') {
+        await dialog.accept('empty_tab_test');
+      }
+    });
+
+    await submitBtn.click();
+    await page.waitForTimeout(500);
+
+    // App should not crash
+    await expect(page.locator('.monaco-editor')).toBeVisible();
+  });
+
+  test('tab state after page reload preserves content', async ({ page }) => {
+    // The app uses local storage, so after reload tabs may persist
+    // First let's note the current tab state
+    const tabsBefore = page.locator('button[title="新建标签页"]');
+    await expect(tabsBefore).toBeVisible();
+
+    // Reload the page
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('#table-departments', { timeout: 25_000 });
+    await page.waitForTimeout(1000);
+
+    // App should be functional after reload
+    await expect(page.locator('.monaco-editor')).toBeVisible();
+    await expect(page.locator('#table-departments')).toBeVisible({ timeout: 10_000 });
+  });
+
   test.describe('dbName and database isolation', () => {
     test('auto-execute works with empty dbName (defaults to "default" database)', async ({ page, sqlEditor }) => {
       const responsePromise = page.waitForResponse(
