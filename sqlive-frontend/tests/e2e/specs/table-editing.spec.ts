@@ -111,4 +111,93 @@ test.describe('Table Editing & Bidirectional Sync', () => {
     const newSql = await sqlEditor.getText();
     expect(newSql).not.toContain('type_demo');
   });
+
+  test('edits multiple rows in sequence', async ({ page, sqlEditor }) => {
+    await gotoApp(page);
+    await expect(page.locator('#table-departments')).toBeVisible({ timeout: 15_000 });
+
+    // Edit first row
+    const rows = page.locator('#table-departments tbody tr');
+    const rowCount = await rows.count();
+
+    if (rowCount >= 2) {
+      // Edit first row
+      const firstCell = rows.first().locator('td:nth-child(2) textarea');
+      if (await firstCell.isVisible().catch(() => false)) {
+        let responsePromise = page.waitForResponse(
+          r => r.url().includes('/api/execute') && r.request().method() === 'POST',
+          { timeout: 15_000 },
+        );
+        await firstCell.click();
+        await firstCell.fill('FirstEdit');
+        await page.keyboard.press('Tab');
+        await responsePromise;
+      }
+
+      // Edit second row
+      const secondCell = rows.nth(1).locator('td:nth-child(2) textarea');
+      if (await secondCell.isVisible().catch(() => false)) {
+        const responsePromise = page.waitForResponse(
+          r => r.url().includes('/api/execute') && r.request().method() === 'POST',
+          { timeout: 15_000 },
+        );
+        await secondCell.click();
+        await secondCell.fill('SecondEdit');
+        await page.keyboard.press('Tab');
+        await responsePromise;
+      }
+    }
+
+    // App should not crash after sequential edits
+    await expect(page.locator('.monaco-editor')).toBeVisible();
+  });
+
+  test('Ctrl+Z undo does not crash the editor', async ({ page, sqlEditor }) => {
+    await gotoApp(page);
+    await expect(page.locator('#table-departments')).toBeVisible({ timeout: 15_000 });
+
+    // Type some text in the editor
+    await sqlEditor.click();
+    await page.keyboard.type('SELECT * FROM test;', { delay: 5 });
+    await page.waitForTimeout(500);
+
+    // Press Ctrl+Z to undo
+    await page.keyboard.press('Control+z');
+    await page.waitForTimeout(300);
+
+    // Press Ctrl+Z again
+    await page.keyboard.press('Control+z');
+    await page.waitForTimeout(300);
+
+    // App should not crash
+    await expect(page.locator('.monaco-editor')).toBeVisible();
+  });
+
+  test('handles BLOB and DATE column types in table display', async ({ page, sqlEditor }) => {
+    await gotoApp(page);
+    await expect(page.locator('#table-departments')).toBeVisible({ timeout: 15_000 });
+
+    // Create table with BLOB and DATE types
+    const responsePromise = page.waitForResponse(
+      r => r.url().includes('/api/execute') && r.request().method() === 'POST',
+      { timeout: 15_000 },
+    );
+    await sqlEditor.replaceAll(
+      'CREATE TABLE type_test (\n' +
+      '  id INTEGER PRIMARY KEY,\n' +
+      '  created DATE,\n' +
+      "  data BLOB\n" +
+      ');\n' +
+      "INSERT INTO type_test VALUES (1, '2024-01-15', X'DEADBEEF');\n" +
+      "INSERT INTO type_test VALUES (2, '2024-06-01', X'CAFEBABE');\n" +
+      'SELECT * FROM type_test;'
+    );
+    await responsePromise;
+
+    // Table should be visible
+    await expect(page.locator('#table-type_test')).toBeVisible({ timeout: 10_000 });
+
+    // Display should not crash on BLOB/DATE types
+    await expect(page.locator('.monaco-editor')).toBeVisible();
+  });
 });
