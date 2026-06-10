@@ -123,7 +123,7 @@ test.describe('Cross-Feature User Journeys', () => {
     }
 
     // Step 5: Drop table
-    page.on('dialog', (dialog) => dialog.accept());
+    page.once('dialog', (dialog) => dialog.accept());
 
     const tableHeader = page.locator('#table-journey_test').locator('.group').first();
     await tableHeader.hover();
@@ -164,6 +164,7 @@ test.describe('Cross-Feature User Journeys', () => {
     await page.waitForTimeout(500);
 
     // Wait for auto-execute after new tab creation
+    await page.waitForTimeout(500);
     responsePromise = page.waitForResponse(
       (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',
       { timeout: 15_000 },
@@ -337,7 +338,7 @@ test.describe('Cross-Feature User Journeys', () => {
 
       // ER nodes should render
       const erNodes = page.locator('.vue-flow__node');
-      const erNodeCount = await erNodes.count().catch(() => 0);
+      const erNodeCount = await erNodes.count();
       expect(erNodeCount).toBeGreaterThan(0);
     }
 
