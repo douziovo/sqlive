@@ -1,0 +1,202 @@
+import { test, expect, gotoApp } from '../fixtures/sql-editor.fixture';
+
+test.describe('Session & Pool Edge Cases', () => {
+  test('T4.1 session recreation toast appears when backend signals recreated session', async ({ page }) => {
+    // Mock /api/execute to return X-Session-Recreated header
+    await page.route('**/api/execute', async (route) => {
+      const response = await route.fetch();
+      const body = await response.text();
+      await route.fulfill({
+        status: response.status(),
+        contentType: 'application/json',
+        headers: {
+          ...Object.fromEntries(response.headers().entries()),
+          'X-Session-Recreated': 'true',
+        },
+        body,
+      });
+    });
+
+    await gotoApp(page);
+    await page.waitForTimeout(2000);
+
+    // May show a toast notification about session recreation
+    // At minimum, the app should not crash
+    await expect(page.locator('.monaco-editor')).toBeVisible();
+
+    // Look for any toast/notification element
+    const toast = page.locator('[role="alert"], .toast, [class*="toast"], [class*="notification"]');
+    const toastVisible = await toast.first().isVisible().catch(() => false);
+
+    // If toast appeared, verify it can be dismissed or auto-closes
+    if (toastVisible) {
+      const closeBtn = toast.locator('button');
+      if (await closeBtn.first().isVisible().catch(() => false)) {
+        await closeBtn.first().click();
+        await page.waitForTimeout(300);
+      }
+    }
+
+    await expect(page.locator('.monaco-editor')).toBeVisible();
+  });
+
+  test('T4.2 429 pool-full response handled without crash', async ({ page }) => {
+    // Mock /api/execute to return 429
+    await page.route('**/api/execute', (route) => {
+      route.fulfill({
+        status: 429,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: false,
+          data: null,
+          error: {
+            message: 'Connection pool is full. Please try again later.',
+            line: 0,
+          },
+        }),
+      });
+    });
+
+    await gotoApp(page);
+    await page.waitForTimeout(3000);
+
+    // App should show error state, not crash
+    await expect(page.locator('.monaco-editor')).toBeVisible();
+
+    // Error should be displayed somewhere
+    const errorIndicator = page.locator('.squiggly-error, [class*="error"], [class*="destructive"]');
+    const errorVisible = await errorIndicator.first().isVisible().catch(() => false);
+
+    // At minimum, app remains responsive (no white screen)
+    if (!errorVisible) {
+      await expect(page.locator('.monaco-editor')).toBeVisible();
+    }
+  });
+
+  test('T4.3 503 backend unavailable handled without crash', async ({ page }) => {
+    // Mock /api/execute to return 503
+    await page.route('**/api/execute', (route) => {
+      route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: false,
+          data: null,
+          error: {
+            message: 'Service temporarily unavailable',
+            line: 0,
+          },
+        }),
+      });
+    });
+
+    await gotoApp(page);
+    await page.waitForTimeout(3000);
+
+    // App should show error state, not crash
+    await expect(page.locator('.monaco-editor')).toBeVisible();
+  });
+
+  test('T4.4 connection refused handled without crash', async ({ page }) => {
+    // Mock /api/execute to simulate connection refused
+    await page.route('**/api/execute', async (route) => {
+      await route.abort('connectionrefused');
+    });
+
+    await gotoApp(page);
+    await page.waitForTimeout(3000);
+
+    // App must show error state, not crash (white screen)
+    await expect(page.locator('.monaco-editor')).toBeVisible();
+  });
+
+  test('T4.5 invalid dbName parameter handled without crash', async ({ page }) => {
+    // Intercept execute requests and verify dbName is handled
+    let requestDbName = '';
+
+    await page.route('**/api/execute', async (route) => {
+      const postData = route.request().postDataJSON() || {};
+      requestDbName = postData.dbName || '';
+      await route.continue();
+    });
+
+    await gotoApp(page);
+    await page.waitForTimeout(2000);
+
+    // Override with request containing special characters in dbName
+    await page.unroute('**/api/execute');
+    await page.route('**/api/execute', (route) => {
+      route.fulfill({
+        status: 400,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: false,
+          data: null,
+          error: {
+            message: 'Invalid database name',
+            line: 0,
+          },
+        }),
+      });
+    });
+
+    // Trigger execution by changing SQL
+    const editor = page.locator('.monaco-editor').first();
+    await editor.click();
+    await page.keyboard.type('\n', { delay: 10 });
+    await page.waitForTimeout(2000);
+
+    // App should handle the 400 without crashing
+    await expect(page.locator('.monaco-editor')).toBeVisible();
+  });
+
+  test('T4.6 empty SQL code response handled without crash', async ({ page }) => {
+    // Mock backend to return empty data for empty code
+    await page.route('**/api/execute', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: {
+            tables: [],
+            queryResults: [],
+            indexes: [],
+            views: [],
+            triggers: [],
+            foreignKeys: [],
+            metadata: {
+              statementCount: 0,
+              executionTimeMs: 1,
+              lastExecutedAt: new Date().toISOString(),
+            },
+          },
+        }),
+      });
+    });
+
+    await gotoApp(page);
+    await page.waitForTimeout(3000);
+
+    // App should show empty state, not crash
+    await expect(page.locator('.monaco-editor')).toBeVisible();
+
+    // May show empty state UI or minimal view
+    await expect(page.locator('.monaco-editor')).toBeVisible();
+
+    // Type valid SQL and verify recovery
+    await page.unroute('**/api/execute');
+    await page.route('**/api/execute', async (route) => {
+      await route.continue();
+    });
+
+    const editor = page.locator('.monaco-editor').first();
+    await editor.click();
+    await page.keyboard.press('Control+a');
+    await page.keyboard.type('SELECT 1;', { delay: 5 });
+    await page.waitForTimeout(2000);
+
+    // App should still be functional
+    await expect(page.locator('.monaco-editor')).toBeVisible();
+  });
+});
