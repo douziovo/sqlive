@@ -46,27 +46,21 @@ test.describe('AI Chat', () => {
 
   test('opens AI chat panel', async ({ page }) => {
     // Click AI button to open panel
-    const aiBtn = page.locator('button:has-text("AI")').first();
+    const aiBtn = page.locator('[data-testid="ai-toggle-btn"]');
     await aiBtn.click();
     await page.waitForTimeout(500);
 
     // Panel should be visible
-    const chatPanel = page.locator('[class*="chat"], [class*="ai-chat"], [class*="AiChat"]');
-    // Panel might be floating, check for common chat elements
-    const chatInput = page.locator('textarea[placeholder*="消息"], textarea[placeholder*="提问"], input[placeholder*="消息"]');
-    const chatVisible = await chatInput.isVisible().catch(() => false);
-
-    // If no chat-specific selector, at least the panel should show something
-    expect(chatVisible || (await page.locator('button:has-text("AI")').isVisible())).toBeTruthy();
+    await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({ timeout: 5_000 });
   });
 
   test('sends a message and receives streaming response (mocked)', async ({ page }) => {
     // Open AI panel
-    await page.locator('button:has-text("AI")').first().click();
+    await page.locator('[data-testid="ai-toggle-btn"]').first().click();
     await page.waitForTimeout(500);
 
     // Find input and send message
-    const input = page.locator('textarea[placeholder*="消息"], textarea[placeholder*="提问"]');
+    const input = page.locator('textarea[placeholder="输入消息..."]').last();
     await expect(input).toBeVisible({ timeout: 10_000 });
     await input.fill('Explain this query');
     await input.press('Enter');
@@ -79,15 +73,16 @@ test.describe('AI Chat', () => {
 
   test('closes AI panel', async ({ page }) => {
     // Open panel
-    await page.locator('button:has-text("AI")').first().click();
+    await page.locator('[data-testid="ai-toggle-btn"]').first().click();
     await page.waitForTimeout(500);
 
     // Click close button or press Escape
     const closeBtn = page.locator('[data-testid="ai-chat-close"]');
     await expect(closeBtn).toBeVisible({ timeout: 10_000 });
     await closeBtn.click();
-    await page.waitForTimeout(300);
-    // Panel should close or at minimum not crash
+    // Wait for panel to close
+    await expect(page.locator('[data-testid="ai-chat-close"]')).not.toBeVisible({ timeout: 3_000 });
+    // App should not crash
     await expect(page.locator('.monaco-editor')).toBeVisible();
   });
 
@@ -107,10 +102,10 @@ test.describe('AI Chat', () => {
     });
 
     // Open AI panel and send message
-    await page.locator('button:has-text("AI")').first().click();
+    await page.locator('[data-testid="ai-toggle-btn"]').first().click();
     await page.waitForTimeout(500);
 
-    const input = page.locator('textarea[placeholder*="消息"], textarea[placeholder*="提问"]');
+    const input = page.locator('textarea[placeholder="输入消息..."]').last();
     await expect(input).toBeVisible({ timeout: 10_000 });
     await input.fill('Help me');
     await input.press('Enter');
@@ -138,10 +133,10 @@ test.describe('AI Chat', () => {
       });
     });
 
-    await page.locator('button:has-text("AI")').first().click();
+    await page.locator('[data-testid="ai-toggle-btn"]').first().click();
     await page.waitForTimeout(500);
 
-    const input = page.locator('textarea[placeholder*="消息"], textarea[placeholder*="提问"]');
+    const input = page.locator('textarea[placeholder="输入消息..."]').last();
     await expect(input).toBeVisible({ timeout: 10_000 });
     await input.fill('Explain');
     await input.press('Enter');
@@ -152,10 +147,10 @@ test.describe('AI Chat', () => {
   });
 
   test('prevents sending empty messages', async ({ page }) => {
-    await page.locator('button:has-text("AI")').first().click();
+    await page.locator('[data-testid="ai-toggle-btn"]').first().click();
     await page.waitForTimeout(500);
 
-    const input = page.locator('textarea, input[type="text"]').last();
+    const input = page.locator('textarea[placeholder="输入消息..."]').last();
     await expect(input).toBeVisible({ timeout: 10_000 });
 
     // Try to send empty message
@@ -170,10 +165,10 @@ test.describe('AI Chat', () => {
   });
 
   test('handles very long messages without crashing', async ({ page }) => {
-    await page.locator('button:has-text("AI")').first().click();
+    await page.locator('[data-testid="ai-toggle-btn"]').first().click();
     await page.waitForTimeout(500);
 
-    const input = page.locator('textarea, input[type="text"]').last();
+    const input = page.locator('textarea[placeholder="输入消息..."]').last();
     await expect(input).toBeVisible({ timeout: 10_000 });
 
     // Send a very long message (500+ chars)
