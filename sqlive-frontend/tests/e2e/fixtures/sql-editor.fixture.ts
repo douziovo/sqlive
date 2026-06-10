@@ -15,7 +15,7 @@ export class SqlEditor {
   async replaceAll(sql: string) {
     await this.click();
     await this.page.keyboard.press('Control+a');
-    await this.page.keyboard.type(sql, { delay: 5 });
+    await this.page.keyboard.insertText(sql);
   }
 
   async setText(sql: string) {
@@ -82,10 +82,6 @@ export async function gotoApp(page: Page, path = '/?e2e=1') {
   await page.goto(path, { waitUntil: 'domcontentloaded' })
   // Wait for the initial SQL auto-execute.  Under heavy concurrency the
   // in-memory SQLite backend may queue requests; retry once if needed.
-  // Wait for the initial SQL auto-execute.  Under heavy concurrency the
-  // in-memory SQLite backend serialises requests — just keep waiting.
-  // Reloading is counterproductive: it discards the in-flight request
-  // and queues a fresh one at the back.
   await page.waitForSelector('#table-departments', { timeout: 25_000 })
 }
 
