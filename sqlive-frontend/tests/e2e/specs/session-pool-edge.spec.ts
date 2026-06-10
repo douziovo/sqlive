@@ -1,4 +1,15 @@
 import { test, expect, gotoApp } from '../fixtures/sql-editor.fixture';
+import { Page } from '@playwright/test';
+
+/**
+ * Navigate to app and wait for editor, but do NOT wait for #table-departments.
+ * Use for error-scenario tests where the backend mock returns error/empty data
+ * and #table-departments will never render.
+ */
+async function gotoAppNoWait(page: Page) {
+  await page.goto('/?e2e=1', { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('.monaco-editor', { timeout: 10_000 });
+}
 
 test.describe('Session & Pool Edge Cases', () => {
   test('T4.1 session recreation toast appears when backend signals recreated session', async ({ page }) => {
@@ -57,8 +68,7 @@ test.describe('Session & Pool Edge Cases', () => {
       });
     });
 
-    await gotoApp(page);
-    await page.waitForTimeout(3000);
+    await gotoAppNoWait(page);
 
     // App should show error state, not crash
     await expect(page.locator('.monaco-editor')).toBeVisible();
@@ -90,8 +100,7 @@ test.describe('Session & Pool Edge Cases', () => {
       });
     });
 
-    await gotoApp(page);
-    await page.waitForTimeout(3000);
+    await gotoAppNoWait(page);
 
     // App should show error state, not crash
     await expect(page.locator('.monaco-editor')).toBeVisible();
@@ -103,8 +112,7 @@ test.describe('Session & Pool Edge Cases', () => {
       await route.abort('connectionrefused');
     });
 
-    await gotoApp(page);
-    await page.waitForTimeout(3000);
+    await gotoAppNoWait(page);
 
     // App must show error state, not crash (white screen)
     await expect(page.locator('.monaco-editor')).toBeVisible();
@@ -175,8 +183,7 @@ test.describe('Session & Pool Edge Cases', () => {
       });
     });
 
-    await gotoApp(page);
-    await page.waitForTimeout(3000);
+    await gotoAppNoWait(page);
 
     // App should show empty state, not crash
     await expect(page.locator('.monaco-editor')).toBeVisible();
