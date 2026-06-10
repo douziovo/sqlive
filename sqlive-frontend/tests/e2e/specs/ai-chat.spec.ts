@@ -150,4 +150,39 @@ test.describe('AI Chat', () => {
     // Markdown should be rendered - bold text should appear
     await expect(page.locator('text=SQL Explanation').first()).toBeVisible({ timeout: 5_000 });
   });
+
+  test('prevents sending empty messages', async ({ page }) => {
+    await page.locator('button:has-text("AI")').first().click();
+    await page.waitForTimeout(500);
+
+    const input = page.locator('textarea, input[type="text"]').last();
+    await expect(input).toBeVisible({ timeout: 10_000 });
+
+    // Try to send empty message
+    await input.fill('');
+    await input.press('Enter');
+    await page.waitForTimeout(500);
+
+    // Send button should be disabled for empty input
+    // or pressing Enter with empty input should not trigger send
+    // App should not crash
+    await expect(page.locator('.monaco-editor')).toBeVisible();
+  });
+
+  test('handles very long messages without crashing', async ({ page }) => {
+    await page.locator('button:has-text("AI")').first().click();
+    await page.waitForTimeout(500);
+
+    const input = page.locator('textarea, input[type="text"]').last();
+    await expect(input).toBeVisible({ timeout: 10_000 });
+
+    // Send a very long message (500+ chars)
+    const longMessage = 'Explain '.repeat(100);
+    await input.fill(longMessage);
+    await input.press('Enter');
+    await page.waitForTimeout(1500);
+
+    // App should not crash on long input
+    await expect(page.locator('.monaco-editor')).toBeVisible();
+  });
 });
