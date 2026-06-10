@@ -120,7 +120,7 @@ test.describe('Create Table Modal', () => {
     await expect(rows.first()).toBeVisible({ timeout: 5_000 });
   });
 
-  test('modal supports PRIMARY KEY and NOT NULL constraints', async ({ page }) => {
+  test('modal supports PRIMARY KEY and NOT NULL constraints', async ({ page, sqlEditor }) => {
     await page.locator('button:has-text("添加新表格")').scrollIntoViewIfNeeded();
     await page.locator('button:has-text("添加新表格")').click();
     await page.waitForTimeout(300);
@@ -141,12 +141,15 @@ test.describe('Create Table Modal', () => {
       await colTypeInputs.first().fill('INTEGER');
     }
 
-    // The modal should handle constraint inputs without crashing
-    // Look for constraint toggle buttons or checkboxes
-    const pkCheckbox = page.locator('text=/主键|PRIMARY|PK/i');
-    const notNullCheckbox = page.locator('text=/非空|NOT NULL|NN/i');
-
-    // At minimum, the modal should function correctly
+    // Submit the form and verify the generated SQL contains the table name
+    const submitBtn = page.locator('button:has-text("立即创建")');
+    const isDisabled = await submitBtn.isDisabled();
+    if (!isDisabled) {
+      await submitBtn.click();
+      await page.waitForTimeout(1000);
+      const sql = await sqlEditor.getText();
+      expect(sql).toContain('constrained_table');
+    }
     await expect(page.locator('.monaco-editor')).toBeVisible();
   });
 

@@ -28,8 +28,11 @@ test.describe('Import / Export', () => {
 
     const exportAllOption = page.locator('text=导出全部标签页');
     await expect(exportAllOption).toBeVisible({ timeout: 5_000 });
-    await exportAllOption.click();
-    await page.waitForTimeout(500);
+    const [download] = await Promise.all([
+      page.waitForEvent('download', { timeout: 5_000 }),
+      exportAllOption.click(),
+    ]);
+    expect(download.suggestedFilename()).toBeTruthy();
   });
 
   test('resize handle is present and draggable', async ({ page }) => {
