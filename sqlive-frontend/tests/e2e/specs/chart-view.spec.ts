@@ -24,10 +24,9 @@ test.describe('Chart View', () => {
     await page.waitForTimeout(500);
 
     // Chart area should exist - chart component renders when columns >= 2
-    const chartTitle = page.locator('text=/图表：/');
-    const chartVisible = await chartTitle.isVisible().catch(() => false);
+    await expect(page.locator('text=/图表：/').first()).toBeVisible({ timeout: 5_000 });
 
-    // At minimum, the tab switching works without crashing
+    // Editor should still be visible after tab switch
     await expect(page.locator('.monaco-editor')).toBeVisible();
   });
 
@@ -38,24 +37,20 @@ test.describe('Chart View', () => {
     await queryTab.click();
     await page.waitForTimeout(500);
 
-    // Check if chart select is present
-    const chartSelect = page.locator('.chart-container').first();
-    const chartExists = await chartSelect.isVisible().catch(() => false);
+    // Chart container must be visible
+    await expect(page.locator('.chart-container').first()).toBeVisible({ timeout: 5_000 });
 
-    if (chartExists) {
-      const chartTypeSelect = page.locator('select').filter({ has: page.locator('option[value="bar"]') }).first();
-      if (await chartTypeSelect.isVisible().catch(() => false)) {
-        // Try switching through each chart type
-        const chartTypes = ['line', 'pie', 'doughnut', 'area', 'radar', 'bar'];
+    const chartTypeSelect = page.locator('select').filter({ has: page.locator('option[value="bar"]') }).first();
+    await expect(chartTypeSelect).toBeVisible({ timeout: 5_000 });
 
-        for (const type of chartTypes) {
-          await chartTypeSelect.selectOption(type);
-          await page.waitForTimeout(300);
+    // Try switching through each chart type
+    const chartTypes = ['line', 'pie', 'doughnut', 'area', 'radar', 'bar'];
+    for (const type of chartTypes) {
+      await chartTypeSelect.selectOption(type);
+      await page.waitForTimeout(300);
 
-          // Chart should not crash (no error overlays)
-          await expect(page.locator('.monaco-editor')).toBeVisible();
-        }
-      }
+      // Chart should not crash (no error overlays)
+      await expect(page.locator('.monaco-editor')).toBeVisible();
     }
 
     // App should remain stable after all switches
@@ -68,26 +63,24 @@ test.describe('Chart View', () => {
     await queryTab.click();
     await page.waitForTimeout(500);
 
-    // Check if label column select is present
-    const labelSelect = page.locator('select').first();
-    if (await labelSelect.isVisible().catch(() => false)) {
-      // Try selecting a different label column
-      const options = labelSelect.locator('option');
-      const optionCount = await options.count();
+    // Label column select must be present
+    const labelSelect = page.locator('select:visible').first();
+    await expect(labelSelect).toBeVisible({ timeout: 5_000 });
 
-      if (optionCount > 1) {
-        await labelSelect.selectOption({ index: 0 });
-        await page.waitForTimeout(300);
+    // Try selecting a different label column
+    const options = labelSelect.locator('option');
+    const optionCount = await options.count();
+    if (optionCount > 1) {
+      await labelSelect.selectOption({ index: 0 });
+      await page.waitForTimeout(300);
+    }
 
-        // Toggle a numeric column checkbox
-        const checkboxes = page.locator('input[type="checkbox"]');
-        const cbCount = await checkboxes.count();
-        if (cbCount > 1) {
-          // Toggle the second checkbox
-          await checkboxes.nth(1).click();
-          await page.waitForTimeout(300);
-        }
-      }
+    // Toggle a numeric column checkbox if available
+    const checkboxes = page.locator('input[type="checkbox"]');
+    const cbCount = await checkboxes.count();
+    if (cbCount > 1) {
+      await checkboxes.nth(1).click();
+      await page.waitForTimeout(300);
     }
 
     // App should not crash
@@ -108,10 +101,9 @@ test.describe('Chart View', () => {
     const need2Cols = page.locator('text=/至少 2 列/');
     const noNumeric = page.locator('text=/数值列/');
 
-    const hasEmptyState = await need2Cols.isVisible().catch(() => false) ||
-      await noNumeric.isVisible().catch(() => false);
+    await expect(need2Cols.or(noNumeric).first()).toBeVisible({ timeout: 5_000 });
 
-    // At minimum, the app should not crash on single-column data
+    // App should remain stable on single-column data
     await expect(page.locator('.monaco-editor')).toBeVisible();
   });
 
