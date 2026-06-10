@@ -107,7 +107,11 @@ test.describe('SQL Execution', () => {
     await responsePromise;
     await page.waitForTimeout(1000);
 
-    // Query result should appear
+    // Switch to results tab and verify query result content
+    await page.locator('[data-testid="tab-results"]').click();
+    await page.waitForTimeout(500);
+    await expect(page.locator('text=/dept_name|emp_name|salary/').first()).toBeVisible({ timeout: 5_000 });
+
     await expect(page.locator('.monaco-editor')).toBeVisible();
   });
 
@@ -131,6 +135,11 @@ test.describe('SQL Execution', () => {
     );
     await responsePromise;
     await page.waitForTimeout(1000);
+
+    // Switch to results tab and verify CTE query result content
+    await page.locator('[data-testid="tab-results"]').click();
+    await page.waitForTimeout(500);
+    await expect(page.locator('text=/dept_name|emp_count|avg_salary/').first()).toBeVisible({ timeout: 5_000 });
 
     // Query should execute without error
     await expect(page.locator('.monaco-editor')).toBeVisible();

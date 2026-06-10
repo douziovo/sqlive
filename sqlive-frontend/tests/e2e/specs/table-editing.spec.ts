@@ -26,10 +26,10 @@ test.describe('Table Editing & Bidirectional Sync', () => {
   test('rejects non-numeric value for numeric column', async ({ page }) => {
     await page.locator('#table-employee_projects').scrollIntoViewIfNeeded();
 
-    const hoursCell = page.locator('#table-employee_projects tbody tr').first().locator('td').filter({ hasText: /\d+/ }).first();
+    const hoursCell = page.locator('#table-employee_projects tbody tr').first().locator('td:nth-child(4) textarea');
     await hoursCell.click();
 
-    const textarea = hoursCell.locator('textarea');
+    const textarea = hoursCell;
     await expect(textarea).toBeVisible({ timeout: 5_000 });
     await textarea.fill('not-a-number');
     await textarea.blur();
@@ -95,7 +95,7 @@ test.describe('Table Editing & Bidirectional Sync', () => {
 
     const originalSql = await sqlEditor.getText();
 
-    page.on('dialog', dialog => dialog.accept());
+    page.once('dialog', dialog => dialog.accept());
 
     const tableHeader = page.locator('#table-type_demo').locator('.group').first();
     await tableHeader.hover();
@@ -132,6 +132,7 @@ test.describe('Table Editing & Bidirectional Sync', () => {
         await firstCell.fill('FirstEdit');
         await page.keyboard.press('Tab');
         await responsePromise;
+        await page.waitForTimeout(500);
       }
 
       // Edit second row
@@ -196,6 +197,9 @@ test.describe('Table Editing & Bidirectional Sync', () => {
 
     // Table should be visible
     await expect(page.locator('#table-type_test')).toBeVisible({ timeout: 10_000 });
+
+    // Verify DATE column type displays correctly
+    await expect(page.locator('#table-type_test').locator('text=DATE').first()).toBeVisible({ timeout: 3_000 });
 
     // Display should not crash on BLOB/DATE types
     await expect(page.locator('.monaco-editor')).toBeVisible();
