@@ -7,11 +7,10 @@ test.describe('Table Editing & Bidirectional Sync', () => {
   });
 
   test('edits a cell value and syncs back to SQL', async ({ page }) => {
-    // App uses custom grid layout (no HTML tbody/tr/td). Data cells are textboxes.
-    const nameCell = page.locator('#table-departments').locator('textbox[value="技术部"]').first();
-    await nameCell.scrollIntoViewIfNeeded();
+    const nameCell = page.locator('#table-departments tbody tr').first().locator('td:nth-child(2) textarea');
     await expect(nameCell).toBeVisible({ timeout: 5_000 });
 
+    // Wait for the API response triggered by blur (Tab)
     const responsePromise = page.waitForResponse(
       r => r.url().includes('/api/execute') && r.request().method() === 'POST',
       { timeout: 15_000 },
@@ -21,42 +20,40 @@ test.describe('Table Editing & Bidirectional Sync', () => {
     await page.keyboard.press('Tab');
     await responsePromise;
 
-    await expect(page.locator('#table-departments').locator('textbox[value="ChangedDept"]').first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('#table-departments tbody tr').first().locator('td:nth-child(2) textarea')).toHaveValue('ChangedDept', { timeout: 10_000 });
   });
 
   test('rejects non-numeric value for numeric column', async ({ page }) => {
     await page.locator('#table-employee_projects').scrollIntoViewIfNeeded();
 
-    // HOURS column — first data cell in column 4 (0-indexed) is a textbox
-    const hoursCell = page.locator('#table-employee_projects').locator('textbox[value="120"]').first();
-    await hoursCell.scrollIntoViewIfNeeded();
-    await expect(hoursCell).toBeVisible({ timeout: 5_000 });
+    const hoursCell = page.locator('#table-employee_projects tbody tr').first().locator('td:nth-child(4) textarea');
     await hoursCell.click();
-    await hoursCell.fill('not-a-number');
-    await hoursCell.blur();
 
-    await page.waitForTimeout(800);
-    const currentValue = await hoursCell.inputValue();
+    const textarea = hoursCell;
+    await expect(textarea).toBeVisible({ timeout: 5_000 });
+    await textarea.fill('not-a-number');
+    await textarea.blur();
+
+    await page.waitForTimeout(500);
+    const currentValue = await textarea.inputValue();
     expect(currentValue).not.toBe('not-a-number');
   });
 
   test('deletes a row and removes VALUES tuple from SQL', async ({ page, sqlEditor }) => {
-    // Hover over the first department row's NAME cell to reveal the delete button
-    const deptCell = page.locator('#table-departments').locator('textbox[value="技术部"]').first();
-    await deptCell.scrollIntoViewIfNeeded();
-    await deptCell.hover();
-    await page.waitForTimeout(500);
+    const firstRow = page.locator('#table-departments tbody tr').first();
+    await firstRow.hover();
+    await page.waitForTimeout(300);
 
-    // Delete button is "🗑️" with title "删除此行"
-    const rowDelBtn = page.locator('#table-departments').locator('button[title="删除此行"]').first();
-    await expect(rowDelBtn).toBeVisible({ timeout: 5_000 });
+    const rowDelBtns = page.locator('#table-departments tbody tr').first().locator('td button, td [role="button"]');
+    const btnCount = await rowDelBtns.count();
+    expect(btnCount).toBeGreaterThan(0);
     const originalSql = await sqlEditor.getText();
 
     const responsePromise = page.waitForResponse(
       r => r.url().includes('/api/execute') && r.request().method() === 'POST',
       { timeout: 15_000 },
     );
-    await rowDelBtn.click();
+    await rowDelBtns.last().click();
     await responsePromise;
 
     // After delete, the first visible department should no longer be "技术部"
@@ -67,27 +64,26 @@ test.describe('Table Editing & Bidirectional Sync', () => {
   test('inserts a row via ghost row and generates INSERT statement', async ({ page, sqlEditor }) => {
     const originalSql = await sqlEditor.getText();
 
-    // Ghost row inputs use value="+" (placeholder indicator in the grid layout)
-    const ghostInputs = page.locator('#table-departments').locator('textbox[value="+"]');
+    const ghostRow = page.locator('#table-departments [data-testid="ghost-row"]');
+    await ghostRow.scrollIntoViewIfNeeded();
+
+    const ghostInputs = ghostRow.locator('input, textarea');
     const count = await ghostInputs.count();
     expect(count).toBeGreaterThan(1);
-    await ghostInputs.first().scrollIntoViewIfNeeded();
-    if (count > 1) await ghostInputs.nth(1).fill('NewDept');
+    await ghostInputs.nth(1).fill('NewDept');
     if (count > 2) await ghostInputs.nth(2).fill('NewLocation');
     if (count > 3) await ghostInputs.nth(3).fill('50000');
     // Wait for focus-within opacity transition (200ms)
     await page.waitForTimeout(300);
 
-    // Confirm button is the 🗑️ sibling checkmark. In the grid layout, the ghost row uses a confirm button with title "确认添加"
-    const checkBtn = page.locator('button[title="确认添加"]').first();
-    if (await checkBtn.isVisible({ timeout: 1_000 }).catch(() => false)) {
-      const responsePromise = page.waitForResponse(
-        r => r.url().includes('/api/execute') && r.request().method() === 'POST',
-        { timeout: 15_000 },
-      );
-      await checkBtn.click();
-      await responsePromise;
-    }
+    const checkBtn = page.locator('#table-departments button').filter({ hasText: '✓' }).last();
+    await expect(checkBtn).toBeVisible({ timeout: 5_000 });
+    const responsePromise = page.waitForResponse(
+      r => r.url().includes('/api/execute') && r.request().method() === 'POST',
+      { timeout: 15_000 },
+    );
+    await checkBtn.click();
+    await responsePromise;
 
     // Verify page is still functional after insert attempt
     await expect(page.locator('#table-departments')).toBeVisible({ timeout: 10_000 });
@@ -117,31 +113,40 @@ test.describe('Table Editing & Bidirectional Sync', () => {
   });
 
   test('edits multiple rows in sequence', async ({ page, sqlEditor }) => {
-    // Grid layout — find first two NAME cells (textboxes with current values)
-    const nameCells = page.locator('#table-departments').locator('textbox[value="技术部"], textbox[value="市场部"]');
-    const cellCount = await nameCells.count();
+    await gotoApp(page);
+    await expect(page.locator('#table-departments')).toBeVisible({ timeout: 15_000 });
 
-    if (cellCount >= 2) {
-      // Edit first cell
-      let responsePromise = page.waitForResponse(
-        r => r.url().includes('/api/execute') && r.request().method() === 'POST',
-        { timeout: 15_000 },
-      );
-      await nameCells.first().click();
-      await nameCells.first().fill('FirstEdit');
-      await page.keyboard.press('Tab');
-      await responsePromise;
-      await page.waitForTimeout(500);
+    // Edit first row
+    const rows = page.locator('#table-departments tbody tr');
+    const rowCount = await rows.count();
 
-      // Edit second cell
-      const responsePromise2 = page.waitForResponse(
-        r => r.url().includes('/api/execute') && r.request().method() === 'POST',
-        { timeout: 15_000 },
-      );
-      await nameCells.nth(1).click();
-      await nameCells.nth(1).fill('SecondEdit');
-      await page.keyboard.press('Tab');
-      await responsePromise2;
+    if (rowCount >= 2) {
+      // Edit first row
+      const firstCell = rows.first().locator('td:nth-child(2) textarea');
+      if (await firstCell.isVisible().catch(() => false)) {
+        let responsePromise = page.waitForResponse(
+          r => r.url().includes('/api/execute') && r.request().method() === 'POST',
+          { timeout: 15_000 },
+        );
+        await firstCell.click();
+        await firstCell.fill('FirstEdit');
+        await page.keyboard.press('Tab');
+        await responsePromise;
+        await page.waitForTimeout(500);
+      }
+
+      // Edit second row
+      const secondCell = rows.nth(1).locator('td:nth-child(2) textarea');
+      if (await secondCell.isVisible().catch(() => false)) {
+        const responsePromise = page.waitForResponse(
+          r => r.url().includes('/api/execute') && r.request().method() === 'POST',
+          { timeout: 15_000 },
+        );
+        await secondCell.click();
+        await secondCell.fill('SecondEdit');
+        await page.keyboard.press('Tab');
+        await responsePromise;
+      }
     }
 
     // App should not crash after sequential edits
@@ -193,8 +198,8 @@ test.describe('Table Editing & Bidirectional Sync', () => {
     // Table should be visible
     await expect(page.locator('#table-type_test')).toBeVisible({ timeout: 10_000 });
 
-    // Column type headers display correctly — DATE column exists
-    await expect(page.locator('#table-type_test').getByText('DATE').first()).toBeVisible({ timeout: 3_000 });
+    // Verify DATE column type displays correctly
+    await expect(page.locator('#table-type_test').locator('text=DATE').first()).toBeVisible({ timeout: 3_000 });
 
     // Display should not crash on BLOB/DATE types
     await expect(page.locator('.monaco-editor')).toBeVisible();
