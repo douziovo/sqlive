@@ -136,8 +136,8 @@ test.describe('Split Pane & Viewport Edge Cases', () => {
       // Headers should still be visible (sticky)
       // Look for a column header in the table
       const thElements = table.locator('th, [class*="sticky"]');
-      const thVisible = await thElements.first().isVisible().catch(() => false);
-      expect(thVisible || true).toBeTruthy();
+      const thVisible = await thElements.first().isVisible({ timeout: 3000 }).catch(() => false);
+      expect(thVisible).toBeTruthy();
     }
 
     await expect(page.locator('.monaco-editor')).toBeVisible();
@@ -241,10 +241,8 @@ test.describe('Split Pane & Viewport Edge Cases', () => {
   });
 
   test('T6.11 ghost row insert failure retains edit content', async ({ page, sqlEditor }) => {
-    await gotoApp(page);
-    await expect(page.locator('#table-departments')).toBeVisible({ timeout: 15_000 });
-
-    // Mock insert to fail
+    // Mock insert to fail — beforeEach already loaded the page via gotoApp,
+    // so we set up the route mock before interacting with the ghost row
     await page.route('**/api/execute', async (route) => {
       const postData = route.request().postDataJSON() || {};
       const sql = postData.sql || '';
@@ -279,7 +277,7 @@ test.describe('Split Pane & Viewport Edge Cases', () => {
       if (count > 3) await ghostInputs.nth(3).fill('99999');
 
       // Click check button to submit
-      const checkBtn = page.locator('#table-departments button').filter({ hasText: '✓' }).last();
+      const checkBtn = ghostRow.locator('button[title="确认添加"]');
       await expect(checkBtn).toBeVisible({ timeout: 5_000 });
       await checkBtn.click();
       await page.waitForTimeout(1500);
@@ -287,7 +285,7 @@ test.describe('Split Pane & Viewport Edge Cases', () => {
       // Ghost row should retain the edit content (not cleared on failure)
       const textAfterFail = await ghostInputs.nth(1).inputValue().catch(() => '');
       // Content should still be there (persisted through failure)
-      expect(textAfterFail || 'content may be retained').toBeTruthy();
+      expect(textAfterFail).toBeTruthy();
     }
 
     // Clean up route
