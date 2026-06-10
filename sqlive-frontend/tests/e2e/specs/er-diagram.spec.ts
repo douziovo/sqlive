@@ -133,11 +133,9 @@ test.describe('ER Diagram', () => {
     const erContainer = page.locator('.vue-flow');
     await expect(erContainer).toBeVisible({ timeout: 5_000 });
 
-    // VueFlow controls (zoom in/out/fit) should be present
-    const controls = page.locator('.vue-flow__controls, .vue-flow__minimap, [class*="controls"]');
-    const controlsVisible = await controls.first().isVisible().catch(() => false);
-
-    // Controls may or may not be visible depending on config, but er should render
+    // VueFlow controls (zoom in/out/fit) or minimap should be present
+    const controlsEl = page.locator('.vue-flow__controls, .vue-flow__minimap');
+    await expect(controlsEl.first()).toBeVisible({ timeout: 5_000 });
     await expect(page.locator('text=departments').first()).toBeVisible();
   });
 });

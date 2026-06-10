@@ -105,7 +105,6 @@ test.describe('Error Handling', () => {
   });
 
   test('handles multi-statement with partial error', async ({ page, sqlEditor }) => {
-    await gotoApp(page);
     await expect(page.locator('#table-departments')).toBeVisible({ timeout: 15_000 });
 
     // First statement is valid, second has an error
@@ -126,7 +125,6 @@ test.describe('Error Handling', () => {
   });
 
   test('detects and handles recursive CTE or infinite loop gracefully', async ({ page, sqlEditor }) => {
-    await gotoApp(page);
     await expect(page.locator('#table-departments')).toBeVisible({ timeout: 15_000 });
 
     // Create recursive CTE that could be infinite without LIMIT
