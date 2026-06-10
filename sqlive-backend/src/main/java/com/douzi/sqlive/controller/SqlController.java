@@ -3,7 +3,7 @@ package com.douzi.sqlive.controller;
 import com.douzi.sqlive.dto.SqlRequest;
 import com.douzi.sqlive.dto.SqlResponse;
 import com.douzi.sqlive.service.SqlExecutionService;
-import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -20,7 +20,7 @@ public class SqlController {
     }
 
     @PostMapping("/execute")
-    public SqlResponse executeSql(@Valid @RequestBody SqlRequest request, HttpServletResponse httpResponse) {
+    public SqlResponse executeSql(@Valid @RequestBody SqlRequest request, HttpServletRequest httpRequest) {
         if (request.getSql() == null || request.getSql().trim().isEmpty()) {
             return SqlResponse.error("SQL cannot be empty", 0);
         }
@@ -31,12 +31,8 @@ public class SqlController {
         log.info("Execute request: db={}, reset={}, sqlLength={}", dbName, request.isReset(), request.getSql().length());
         long start = System.currentTimeMillis();
 
-        SqlResponse response = sqlService.execute(request.getSql(), dbName, request.isReset());
-
-        // D-07: Session resilience — notify frontend when evicted database is recreated
-        if (sqlService.consumeSessionRecreated(dbName)) {
-            httpResponse.setHeader("X-Session-Recreated", "true");
-        }
+        String clientIp = httpRequest.getRemoteAddr();
+        SqlResponse response = sqlService.execute(request.getSql(), dbName, request.isReset(), clientIp);
 
         long elapsed = System.currentTimeMillis() - start;
         if (response.isSuccess()) {
