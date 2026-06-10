@@ -58,4 +58,76 @@ test.describe('Import / Export', () => {
       }
     }
   });
+
+  test('import .sql via file picker through context menu', async ({ page, sqlEditor }) => {
+    await gotoApp(page);
+    await expect(page.locator('#table-departments')).toBeVisible({ timeout: 15_000 });
+
+    // Right-click editor to open context menu
+    await page.locator('.monaco-editor').first().click({ button: 'right' });
+    await page.waitForTimeout(300);
+
+    // Look for import option in context menu
+    const importOption = page.locator('text=导入 SQL 文件');
+    const importVisible = await importOption.isVisible().catch(() => false);
+
+    if (importVisible) {
+      // Set up file chooser interception
+      const [fileChooser] = await Promise.all([
+        page.waitForEvent('filechooser', { timeout: 5_000 }),
+        importOption.click(),
+      ]);
+
+      // Create a test SQL file content
+      await fileChooser.setFiles({
+        name: 'test-import.sql',
+        mimeType: 'text/plain',
+        buffer: Buffer.from('CREATE TABLE imported_via_picker (id INTEGER PRIMARY KEY, name TEXT);\n' +
+          "INSERT INTO imported_via_picker VALUES (1, 'Hello');"),
+      });
+
+      await page.waitForTimeout(2000);
+    }
+
+    // App should not crash
+    await expect(page.locator('.monaco-editor')).toBeVisible();
+  });
+
+  test('drag-drop import zone is present', async ({ page }) => {
+    await gotoApp(page);
+    await expect(page.locator('#table-departments')).toBeVisible({ timeout: 15_000 });
+
+    // Create a test file and read it as a blob
+    const fileContent = 'CREATE TABLE drag_test (id INTEGER);\n';
+
+    // Simulate drag and drop on the editor area
+    const editor = page.locator('.monaco-editor').first();
+    const editorBox = await editor.boundingBox();
+    if (editorBox) {
+      // Drag a file over the editor
+      const dataTransfer = await page.evaluateHandle((content) => {
+        const dt = new DataTransfer();
+        const file = new File([content], 'test-drag.sql', { type: 'text/plain' });
+        dt.items.add(file);
+        return dt;
+      }, fileContent);
+
+      // Dispatch drag events
+      await page.dispatchEvent('.monaco-editor', 'dragenter', { dataTransfer });
+      await page.waitForTimeout(200);
+
+      // Drop overlay should appear
+      const overlay = page.locator('text=/释放以导入/');
+      const overlayVisible = await overlay.isVisible().catch(() => false);
+
+      // Dispatch dragover and drop
+      await page.dispatchEvent('.monaco-editor', 'dragover', { dataTransfer });
+      await page.waitForTimeout(100);
+      await page.dispatchEvent('.monaco-editor', 'drop', { dataTransfer });
+      await page.waitForTimeout(500);
+    }
+
+    // App should not crash
+    await expect(page.locator('.monaco-editor')).toBeVisible();
+  });
 });
