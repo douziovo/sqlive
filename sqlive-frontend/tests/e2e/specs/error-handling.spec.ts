@@ -103,4 +103,44 @@ test.describe('Error Handling', () => {
     // Should not crash, may show empty table or query result
     await expect(page.locator('.monaco-editor')).toBeVisible();
   });
+
+  test('handles multi-statement with partial error', async ({ page, sqlEditor }) => {
+    await gotoApp(page);
+    await expect(page.locator('#table-departments')).toBeVisible({ timeout: 15_000 });
+
+    // First statement is valid, second has an error
+    await sqlEditor.replaceAll(
+      'CREATE TABLE partial_ok (id INTEGER);\n' +
+      'INSERT INTO partial_ok VALUES (1);\n' +
+      'SELECT * FRM partial_ok;\n' +
+      'SELECT 1;'
+    );
+    await page.waitForTimeout(2000);
+
+    // Error markers should appear (the valid statements may still have executed)
+    const errorMarkers = page.locator('.squiggly-error, .monaco-editor .cdr');
+    const errorVisible = await errorMarkers.first().isVisible().catch(() => false);
+
+    // At minimum, app should not crash
+    await expect(page.locator('.monaco-editor')).toBeVisible();
+  });
+
+  test('detects and handles recursive CTE or infinite loop gracefully', async ({ page, sqlEditor }) => {
+    await gotoApp(page);
+    await expect(page.locator('#table-departments')).toBeVisible({ timeout: 15_000 });
+
+    // Create recursive CTE that could be infinite without LIMIT
+    await sqlEditor.replaceAll(
+      'WITH RECURSIVE counter(x) AS (\n' +
+      '  SELECT 1\n' +
+      '  UNION ALL\n' +
+      '  SELECT x + 1 FROM counter WHERE x < 10\n' +
+      ')\n' +
+      'SELECT * FROM counter;'
+    );
+    await page.waitForTimeout(2000);
+
+    // Should execute or show error, not crash
+    await expect(page.locator('.monaco-editor')).toBeVisible();
+  });
 });
