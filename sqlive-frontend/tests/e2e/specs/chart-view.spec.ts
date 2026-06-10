@@ -23,6 +23,10 @@ test.describe('Chart View', () => {
     await queryTab.click();
     await page.waitForTimeout(500);
 
+    // Activate chart view (ChartView is hidden by default until toggled)
+    await page.locator('button:has-text("查看图表")').first().click();
+    await page.waitForTimeout(500);
+
     // Chart area should exist - chart component renders when columns >= 2
     await expect(page.locator('text=/图表：/').first()).toBeVisible({ timeout: 5_000 });
 
@@ -35,6 +39,10 @@ test.describe('Chart View', () => {
     const queryTab = page.locator('button:has-text("查询结果")');
     await expect(queryTab).toBeVisible({ timeout: 5_000 });
     await queryTab.click();
+    await page.waitForTimeout(500);
+
+    // Activate chart view
+    await page.locator('button:has-text("查看图表")').first().click();
     await page.waitForTimeout(500);
 
     // Chart container must be visible
@@ -61,6 +69,10 @@ test.describe('Chart View', () => {
     const queryTab = page.locator('button:has-text("查询结果")');
     await expect(queryTab).toBeVisible({ timeout: 5_000 });
     await queryTab.click();
+    await page.waitForTimeout(500);
+
+    // Activate chart view
+    await page.locator('button:has-text("查看图表")').first().click();
     await page.waitForTimeout(500);
 
     // Label column select must be present
@@ -97,6 +109,15 @@ test.describe('Chart View', () => {
     );
     await page.waitForTimeout(2000);
 
+    // Navigate to result tab and activate chart view
+    const queryTab = page.locator('button:has-text("查询结果")');
+    await expect(queryTab).toBeVisible({ timeout: 5_000 });
+    await queryTab.click();
+    await page.waitForTimeout(500);
+
+    await page.locator('button:has-text("查看图表")').first().click();
+    await page.waitForTimeout(500);
+
     // Should show "need at least 2 columns" message or equivalent empty state
     const need2Cols = page.locator('text=/至少 2 列/');
     const noNumeric = page.locator('text=/数值列/');
@@ -117,10 +138,9 @@ test.describe('Chart View', () => {
 
     // Navigate through to verify no crashes
     const queryTab = page.locator('button:has-text("查询结果")');
-    if (await queryTab.isVisible().catch(() => false)) {
-      await queryTab.click();
-      await page.waitForTimeout(500);
-    }
+    await expect(queryTab).toBeVisible({ timeout: 5_000 });
+    await queryTab.click();
+    await page.waitForTimeout(500);
 
     // App should be stable with default data
     await expect(page.locator('.monaco-editor')).toBeVisible();
