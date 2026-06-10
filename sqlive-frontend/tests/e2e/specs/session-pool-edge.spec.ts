@@ -21,7 +21,7 @@ test.describe('Session & Pool Edge Cases', () => {
         status: response.status(),
         contentType: 'application/json',
         headers: {
-          ...Object.fromEntries(response.headers().entries()),
+          ...response.headers(),
           'X-Session-Recreated': 'true',
         },
         body,
