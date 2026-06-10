@@ -57,6 +57,25 @@ export class SqlEditor {
       { timeout },
     );
   }
+
+  async rightClickEditor() {
+    await this.page.locator('.monaco-editor').first().click({ button: 'right' });
+    await this.page.waitForTimeout(300);
+  }
+
+  async importSql(filepath: string) {
+    // Opens file picker via context menu and imports a .sql file
+    await this.rightClickEditor();
+    const importOption = this.page.locator('text=导入 SQL 文件');
+    if (await importOption.isVisible().catch(() => false)) {
+      const [fileChooser] = await Promise.all([
+        this.page.waitForEvent('filechooser', { timeout: 5_000 }),
+        importOption.click(),
+      ]);
+      await fileChooser.setFiles(filepath);
+      await this.page.waitForTimeout(1000);
+    }
+  }
 }
 
 export async function gotoApp(page: Page, path = '/?e2e=1') {
