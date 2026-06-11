@@ -25,7 +25,7 @@
 - **多模式交互**：聊天问答 / 错误分析 / 代码修复 / SQL 解释 / 性能优化
 - **流式响应**：SSE 流式传输，实时显示 AI 回复与推理过程
 - **学习建议**：基于知识图谱的 SQL 主题分类与学习路径推荐
-- **知识图谱**：全屏知识图谱面板，语义缩放（3 级细节），难度/状态双组筛选，浮层详情卡片，圆形扩展动画从悬浮伴侣按钮入口
+- **知识图谱**：24 个 SQL 知识点的有向关系图，语义缩放（3 级细节），难度/状态双组筛选，浮层详情卡片展示先决条件与后续路径，圆形扩展动画从悬浮伴侣按钮入口
 
 ![AI 对话](docs/screenshots/07-ai-chat.png)
 
@@ -176,8 +176,8 @@ sqlive/
 │   │       ├── sql.ts                  # SQL 字面量生成
 │   │       ├── file.ts                 # 文件下载工具
 │   │       └── html.ts                 # HTML 处理工具
-│   ├── tests/e2e/                      # Playwright E2E 测试（8 个 spec）
-│   └── src/__tests__/                  # Vitest 单元测试（33 个文件，476 用例）
+│   ├── tests/e2e/                      # Playwright E2E 测试（14 个 spec，118 条用例）
+│   └── src/__tests__/                  # Vitest 单元测试（32 个文件，511 条用例）
 │
 └── sqlive-backend/             # Spring Boot 4 后端
     └── src/main/java/com/douzi/sqlive/
@@ -220,12 +220,12 @@ sqlive/
 ```bash
 # 前端单元测试
 cd sqlive-frontend
-npm test                 # 运行全部 476 个 Vitest 用例
+npm test                 # 运行全部 511 个 Vitest 用例（78 个测试套件）
 npm run test:e2e         # Playwright E2E 测试
 
 # 后端测试
 cd sqlive-backend
-./gradlew test         # 运行全部 JUnit 5 用例
+./gradlew test           # 运行全部 186 个 JUnit 5 用例（17 个测试类）
 ```
 
 ## 许可证
