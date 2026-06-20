@@ -136,7 +136,9 @@ export function useErDiagram(tablesSource: () => TableSchema[], foreignKeysSourc
     [tablesSource, foreignKeysSource],
     () => {
       rebuild()
-      void autoLayout()
+      if (nodes.value.length > 0) {
+        void autoLayout()
+      }
     },
     { deep: true }
   )

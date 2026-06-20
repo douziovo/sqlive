@@ -41,6 +41,7 @@
     v-if="aiPanelVisible"
     :messages="aiMessages"
     :is-loading="aiLoading"
+    :minimized="false"
     @send="(text: string) => aiChat.sendMessage(text)"
     @close="aiPanelVisible = false"
     @clear="aiChat.clearMessages"
@@ -60,26 +61,50 @@
     v-if="!isKnowledgePanelOpen"
     @open="isKnowledgePanelOpen = true"
   />
+
+  <SessionRecoveryToast
+    :visible="showRecoveryToast"
+    @close="showRecoveryToast = false"
+  />
 </template>
 
 <script setup lang="ts">
 import { Pane, Splitpanes } from 'splitpanes'
-import { computed, onMounted, provide, ref } from 'vue'
+import { computed, nextTick, onMounted, provide, ref, watch } from 'vue'
 import 'splitpanes/dist/splitpanes.css'
 import AiChatPanel from './components/AiChatPanel.vue'
 import CodeEditor from './components/CodeEditor.vue'
 import DataVisualizer from './components/DataVisualizer.vue'
 import KnowledgePanel from './components/knowledge/KnowledgePanel.vue'
 import LearningCompanion from './components/knowledge/LearningCompanion.vue'
+import SessionRecoveryToast from './components/SessionRecoveryToast.vue'
 import { useAiChat } from './composables/useAiChat'
 import { useInlineActions } from './composables/useInlineActions'
 import { useSqlEngine } from './composables/useSqlEngine'
 import type { CellUpdateEvent, CreateTableEvent, RowDeleteEvent, RowInsertEvent } from './model/DatabaseTypes'
 import { AI_ACTIONS_KEY, SQL_CONTEXT_KEY } from './model/injectionKeys'
-import type { SchemaTableInfo } from './utils/aiQuickFix'
+import type { SchemaTableInfo } from './model/SchemaTypes'
 
 const engine = useSqlEngine()
 const { code } = engine
+
+// D-07: Show recovery toast when backend signals session recreation
+watch(
+  () => engine.sessionRecreated.value,
+  async (recreated) => {
+    if (recreated) {
+      // Force re-mount to handle rapid re-creations within 3 seconds.
+      // Vue's watch won't re-fire for the same ref value. If a second recreation
+      // occurs while the toast is still visible, force-unmount then re-mount via
+      // nextTick so the Transition re-enters and the 3s setTimeout resets.
+      showRecoveryToast.value = false
+      await nextTick()
+      showRecoveryToast.value = true
+      // Reset the engine signal so it can fire again on next recreation
+      engine.sessionRecreated.value = false
+    }
+  }
+)
 
 // ── AI composables (split) ─────────────────────────────────────
 const aiChat = useAiChat({
@@ -123,7 +148,9 @@ provide(SQL_CONTEXT_KEY, {
   error: engine.executionError,
   schemaTables,
   db: engine.db,
-  highlight: engine.highlight
+  highlight: engine.highlight,
+  lastTruncations: engine.lastTruncations,
+  insertResult: engine.insertResult
 })
 
 // ── Provide AI actions ─────
@@ -172,6 +199,7 @@ const handleInsertRow = ({ tableName, newRow }: RowInsertEvent) => {
 }
 
 const noAnimate = ref(true)
+const showRecoveryToast = ref(false)
 
 // ── Knowledge graph ───────────────────────────────────────────────
 const isKnowledgePanelOpen = ref(false)

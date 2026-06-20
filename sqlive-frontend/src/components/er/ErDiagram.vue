@@ -12,7 +12,7 @@
       <VueFlow
         ref="flowRef"
         :nodes="displayNodes"
-        :edges="edges"
+        :edges="displayEdges"
         :node-types="nodeTypes"
         :default-viewport="{ x: 0, y: 0, zoom: 1 }"
         :fit-view-on-init="true"
@@ -85,6 +85,7 @@ const { filteredNodes, edges, searchQuery, showMinimap, autoLayout, setContainer
 
 const wrapperRef = ref<HTMLElement | null>(null)
 const flowRef = ref<any>(null)
+const paneReady = ref(false)
 
 const showSearch = ref(false)
 const matchIndex = ref(0)
@@ -112,7 +113,10 @@ const matchNodeIds = computed(() => {
   return new Set((filteredNodes.value as any[]).filter((n: any) => !n.data?.isFiltered).map((n: any) => n.id))
 })
 
+const displayEdges = computed(() => (paneReady.value ? edges.value : []))
+
 const displayNodes = computed(() => {
+  if (!paneReady.value) return []
   if (!searchQuery.value) return filteredNodes.value
   return (filteredNodes.value as any[]).map((n: any) => ({
     ...n,
@@ -145,7 +149,7 @@ function handleFitView() {
 }
 
 function fitToView() {
-  if (flowRef.value) {
+  if (flowRef.value && paneReady.value) {
     flowRef.value.fitView({ duration: 300 })
   }
 }
@@ -197,6 +201,7 @@ function navigateMatch(dir: 1 | -1) {
 }
 
 async function onPaneReady() {
+  paneReady.value = true
   // Set container now that VueFlow DOM is fully rendered
   if (wrapperRef.value) setContainerRef(wrapperRef.value)
   await nextTick()
