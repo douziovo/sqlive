@@ -40,11 +40,39 @@ public class AiService {
         Map<String, AiProvider> map = new LinkedHashMap<>();
         for (var entry : configs.entrySet()) {
             var cfg = entry.getValue();
-            var provider = OpenAiCompatibleProvider.create(entry.getKey(), cfg, objectMapper);
+            var provider = OpenAiCompatibleProvider.create(entry.getKey(), cfg, objectMapper,
+                    aiProperties.getTimeout().getConnect(),
+                    aiProperties.getTimeout().getRead(),
+                    aiProperties.getTimeout().getWrite());
             map.put(entry.getKey(), provider);
         }
         this.providers = map;
         log.info("AI providers initialized: {}", map.keySet());
+    }
+
+    /**
+     * Atomically rebuilds the provider map from the current aiProperties configuration.
+     * Safe to call at runtime — the volatile providers field ensures visibility across threads.
+     */
+    public synchronized void refreshProviders() {
+        var configs = aiProperties.getProviders();
+        if (configs == null || configs.isEmpty()) {
+            this.providers = Map.of();
+            log.warn("AI providers refreshed — no providers configured");
+            return;
+        }
+
+        Map<String, AiProvider> map = new LinkedHashMap<>();
+        for (var entry : configs.entrySet()) {
+            var cfg = entry.getValue();
+            var provider = OpenAiCompatibleProvider.create(entry.getKey(), cfg, objectMapper,
+                    aiProperties.getTimeout().getConnect(),
+                    aiProperties.getTimeout().getRead(),
+                    aiProperties.getTimeout().getWrite());
+            map.put(entry.getKey(), provider);
+        }
+        this.providers = map;
+        log.info("AI providers refreshed: {}", map.keySet());
     }
 
     public AiChatResponse executeNonStreaming(AiChatRequest request) {
