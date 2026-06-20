@@ -1,9 +1,11 @@
 package com.douzi.sqlive.service;
 
+import com.douzi.sqlive.config.PoolProperties;
 import com.douzi.sqlive.dto.*;
 import com.douzi.sqlive.service.database.DatabasePoolManager;
 import com.douzi.sqlive.service.metadata.MetadataExtractor;
 import com.douzi.sqlive.service.sql.SqlParser;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -16,8 +18,13 @@ import java.util.stream.Collectors;
 
 class SqlExecutionServiceTest {
 
+    private static DatabasePoolManager createPoolManager() {
+        PoolProperties props = new PoolProperties();
+        return new DatabasePoolManager(props, new SimpleMeterRegistry());
+    }
+
     private final SqlExecutionService service = new SqlExecutionService(
-            new DatabasePoolManager(), new SqlParser(), new MetadataExtractor());
+            createPoolManager(), new SqlParser(), new MetadataExtractor());
     private static String fullScript;
 
     @BeforeAll
@@ -900,9 +907,9 @@ class SqlExecutionServiceTest {
 
     @Test
     void shouldHandleConcurrentDatabaseEviction() throws Exception {
-        int threadCount = 25;
+        int threadCount = 10;
         CountDownLatch latch = new CountDownLatch(threadCount);
-        List<Exception> errors = Collections.synchronizedList(new ArrayList<>());
+        List<Throwable> errors = Collections.synchronizedList(new ArrayList<>());
 
         try (ExecutorService executor = Executors.newFixedThreadPool(threadCount)) {
             for (int i = 0; i < threadCount; i++) {
@@ -913,19 +920,19 @@ class SqlExecutionServiceTest {
                             "SELECT 1 AS col;", "evict_db_" + n, true
                         );
                         assertTrue(r.isSuccess(), "DB evict_db_" + n + " should succeed");
-                    } catch (Exception e) {
+                    } catch (Throwable e) {
                         errors.add(e);
                     } finally {
                         latch.countDown();
                     }
                 });
             }
-            assertTrue(latch.await(30, TimeUnit.SECONDS));
-            assertTrue(errors.isEmpty(), "No errors during eviction: " + errors);
+            assertTrue(latch.await(30, TimeUnit.SECONDS), "All threads should complete within timeout");
+            assertTrue(errors.isEmpty(), "No errors during concurrent db creation: " + errors);
 
-            // Verify the last-created database is still accessible
-            SqlResponse verify = service.execute("SELECT 1;", "evict_db_24", false);
-            assertTrue(verify.isSuccess(), "Last created db should be accessible after eviction");
+            // Verify the first-created database is still accessible
+            SqlResponse verify = service.execute("SELECT 1;", "evict_db_0", false);
+            assertTrue(verify.isSuccess(), "First created db should be accessible after concurrent creation");
         }
     }
 
@@ -978,5 +985,167 @@ class SqlExecutionServiceTest {
             assertTrue(readerLatch.await(10, TimeUnit.SECONDS));
             assertTrue(errors.isEmpty(), "No errors during stress test: " + errors);
         }
+    }
+
+    // ============================================================
+    //  Security: ATTACH DATABASE blocking (SEC-01)
+    // ============================================================
+
+    @Test
+    void shouldRejectAttachDatabase() {
+        SqlResponse r = service.execute("ATTACH DATABASE '/etc/passwd' AS aux;", "attach_test_attachdb", true);
+        assertFalse(r.isSuccess());
+        assertEquals("ATTACH DATABASE is not allowed for security reasons", r.getError().getMessage());
+        assertEquals(1, r.getError().getLine());
+    }
+
+    @Test
+    void shouldRejectAttachShorthand() {
+        SqlResponse r = service.execute("ATTACH ':memory:' AS mem;", "attach_test_shorthand", true);
+        assertFalse(r.isSuccess());
+        assertEquals("ATTACH DATABASE is not allowed for security reasons", r.getError().getMessage());
+    }
+
+    @Test
+    void shouldRejectAttachLowercase() {
+        SqlResponse r = service.execute("attach ':memory:' AS mem;", "attach_test_lowercase", true);
+        assertFalse(r.isSuccess());
+        assertTrue(r.getError().getMessage().contains("ATTACH"));
+    }
+
+    @Test
+    void shouldRejectAttachInScript() {
+        SqlResponse r = service.execute("CREATE TABLE t (x INTEGER);\nATTACH ':memory:' AS aux;\nSELECT 1;", "attach_test_script", true);
+        assertFalse(r.isSuccess());
+        assertEquals(2, r.getError().getLine());
+    }
+
+    // ============================================================
+    //  Security: PRAGMA blocking (SEC-01)
+    // ============================================================
+
+    @Test
+    void shouldRejectPragmaStatement() {
+        SqlResponse r = service.execute("PRAGMA database_list;", "pragma_test_std", true);
+        assertFalse(r.isSuccess());
+        assertEquals("PRAGMA statements are not allowed", r.getError().getMessage());
+        assertEquals(1, r.getError().getLine());
+    }
+
+    @Test
+    void shouldRejectPragmaWithLeadingWhitespace() {
+        SqlResponse r = service.execute("  PRAGMA page_count;", "pragma_test_ws", true);
+        assertFalse(r.isSuccess());
+        assertTrue(r.getError().getMessage().contains("PRAGMA"));
+    }
+
+    @Test
+    void shouldRejectPragmaInScript() {
+        SqlResponse r = service.execute("CREATE TABLE t (x INTEGER);\nINSERT INTO t VALUES (1);\nPRAGMA table_info('t');\nSELECT * FROM t;", "pragma_test_script", true);
+        assertFalse(r.isSuccess());
+        assertEquals(3, r.getError().getLine());
+    }
+
+    @Test
+    void shouldRejectVariousPragmaNames() {
+        SqlResponse r1 = service.execute("PRAGMA journal_mode;", "pragma_test_names1", true);
+        assertFalse(r1.isSuccess());
+        SqlResponse r2 = service.execute("PRAGMA cache_size;", "pragma_test_names2", true);
+        assertFalse(r2.isSuccess());
+    }
+
+    // ============================================================
+    //  Security: Regression — normal SQL unaffected (SEC-01)
+    // ============================================================
+
+    @Test
+    void shouldAllowNormalStatementsDespiteBlockingCheck() {
+        SqlResponse r1 = service.execute("SELECT 1;", "reg_test_normal", true);
+        assertTrue(r1.isSuccess());
+
+        SqlResponse r2 = service.execute("CREATE TABLE demo (id INTEGER); INSERT INTO demo VALUES (1); SELECT * FROM demo;", "reg_test_ddl", true);
+        assertTrue(r2.isSuccess());
+
+        SqlResponse r3 = service.execute("SELECT 2;", "reg_test_dml", true);
+        assertTrue(r3.isSuccess());
+
+        SqlResponse r4 = service.execute("  SELECT 3;", "reg_test_ws", true);
+        assertTrue(r4.isSuccess());
+    }
+
+    // ============================================================
+    //  Security: Mixed case PRAGMA (boundary)
+    // ============================================================
+
+    @Test
+    void shouldRejectPragmaMixedCase() {
+        SqlResponse r1 = service.execute("Pragma database_list;", "pragma_mixed1", true);
+        assertFalse(r1.isSuccess());
+        assertTrue(r1.getError().getMessage().contains("PRAGMA"));
+
+        SqlResponse r2 = service.execute("pragMA cache_size;", "pragma_mixed2", true);
+        assertFalse(r2.isSuccess());
+        assertTrue(r2.getError().getMessage().contains("PRAGMA"));
+    }
+
+    // ============================================================
+    //  Security: Keywords as identifiers — should NOT be blocked
+    // ============================================================
+
+    @Test
+    void shouldAllowAttachAsTableName() {
+        SqlResponse r = service.execute("CREATE TABLE attach (x INTEGER); INSERT INTO attach VALUES (1); SELECT * FROM attach;", "attach_as_table", true);
+        assertTrue(r.isSuccess(), "ATTACH as table name should not be blocked");
+        assertEquals(1, r.getData().getQueryResults().getFirst().getData().size());
+    }
+
+    @Test
+    void shouldAllowPragmaAsColumnName() {
+        SqlResponse r = service.execute("CREATE TABLE t (pragma TEXT); INSERT INTO t VALUES ('val'); SELECT pragma FROM t;", "pragma_as_col", true);
+        assertTrue(r.isSuccess(), "PRAGMA as column name should not be blocked");
+        assertEquals("val", r.getData().getQueryResults().getFirst().getData().getFirst().get("pragma"));
+    }
+
+    // ============================================================
+    //  Security: Whitespace boundary (tabs, Windows newlines)
+    // ============================================================
+
+    @Test
+    void shouldRejectAttachWithTabWhitespace() {
+        SqlResponse r = service.execute("\tATTACH ':memory:' AS x;", "attach_tab", true);
+        assertFalse(r.isSuccess());
+        assertEquals("ATTACH DATABASE is not allowed for security reasons", r.getError().getMessage());
+    }
+
+    @Test
+    void shouldRejectPragmaWithWindowsNewline() {
+        SqlResponse r = service.execute("\r\nPRAGMA cache_size;", "pragma_crlf", true);
+        assertFalse(r.isSuccess());
+        assertTrue(r.getError().getMessage().contains("PRAGMA"));
+    }
+
+    // ============================================================
+    //  Security: Early return — statements after blocked one don't execute
+    // ============================================================
+
+    @Test
+    void shouldNotExecuteStatementsAfterBlockedOne() {
+        // ATTACH blocked → immediate return, SELECT 1 never executes
+        SqlResponse r = service.execute("ATTACH ':memory:' AS aux;\nSELECT 1;", "early_return", true);
+        assertFalse(r.isSuccess());
+        assertEquals("ATTACH DATABASE is not allowed for security reasons", r.getError().getMessage());
+        // Verify no query results (SELECT didn't execute)
+        assertNull(r.getData());
+    }
+
+    // ============================================================
+    //  Security: Line number accuracy with blank lines
+    // ============================================================
+
+    @Test
+    void shouldReportCorrectLineForAttachAfterBlankLines() {
+        SqlResponse r = service.execute("\n\nATTACH ':memory:' AS aux;", "attach_blank_lines", true);
+        assertFalse(r.isSuccess());
+        assertEquals(3, r.getError().getLine(), "ATTACH on line 3 after two blank lines");
     }
 }

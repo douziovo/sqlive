@@ -1,12 +1,11 @@
 package com.douzi.sqlive.config;
 
 import com.douzi.sqlive.dto.SqlRequest;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.*;
-import org.springframework.lang.Nullable;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.web.client.DefaultResponseErrorHandler;
 import org.springframework.web.client.RestTemplate;
 
@@ -21,7 +20,6 @@ import lombok.extern.slf4j.Slf4j;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @Slf4j
 class RateLimitFilterConcurrencyTest {
 
@@ -32,7 +30,7 @@ class RateLimitFilterConcurrencyTest {
     {
         restTemplate.setErrorHandler(new DefaultResponseErrorHandler() {
             @Override
-            protected boolean hasError(@Nullable HttpStatusCode statusCode) {
+            protected boolean hasError(@NonNull HttpStatusCode statusCode) {
                 return false;
             }
         });
@@ -117,7 +115,7 @@ class RateLimitFilterConcurrencyTest {
                 }
                 assertTrue(latch.await(30, TimeUnit.SECONDS));
                 if (!errors.isEmpty()) {
-                    log.warn("{} network errors during rate-limit test: {}", errors.size(), errors.get(0).getMessage());
+                    log.warn("{} network errors during rate-limit test: {}", errors.size(), errors.getFirst().getMessage());
                 }
                 assertTrue(successCount.get() <= sqlLimit,
                     "At most " + sqlLimit + " should pass, got: " + successCount.get());

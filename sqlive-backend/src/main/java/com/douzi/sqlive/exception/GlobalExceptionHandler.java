@@ -2,6 +2,7 @@ package com.douzi.sqlive.exception;
 
 import com.douzi.sqlive.dto.SqlResponse;
 import com.douzi.sqlive.dto.ai.AiChatResponse;
+import com.douzi.sqlive.exception.PoolFullException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -24,6 +25,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public AiChatResponse handleAiProvider(AiProviderException e) {
         log.warn("AI provider failed: {}", e.getMessage());
         return AiChatResponse.error(e.getMessage());
+    }
+
+    @ExceptionHandler(PoolFullException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public ResponseEntity<SqlResponse> handlePoolFull(PoolFullException e) {
+        log.warn("Pool full (max={}), rejecting request", e.getMaxDatabases());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .header("Retry-After", "30")
+                .body(SqlResponse.error("All database slots are in use (max: " + e.getMaxDatabases() + "). Please retry shortly.", 0));
     }
 
     @Override
