@@ -18,10 +18,10 @@ export function layoutNodes<TNodeData extends Record<string, unknown>>(
   const g = new dagre.graphlib.Graph()
   g.setGraph({
     rankdir: options?.rankdir ?? 'LR',
-    ranksep: options?.ranksep ?? 140,
-    nodesep: options?.nodesep ?? 80,
-    marginx: options?.marginx ?? 40,
-    marginy: options?.marginy ?? 40
+    ranksep: options?.ranksep ?? 200,
+    nodesep: options?.nodesep ?? 140,
+    marginx: options?.marginx ?? 60,
+    marginy: options?.marginy ?? 60
   })
   g.setDefaultEdgeLabel(() => ({}))
 

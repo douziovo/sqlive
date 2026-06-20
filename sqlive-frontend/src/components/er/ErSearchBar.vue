@@ -9,7 +9,7 @@
           ref="inputRef"
           :value="modelValue"
           type="text"
-          placeholder="搜索表名或列名..."
+          :placeholder="placeholder"
           class="er-findbar-input"
           @input="onInput"
           @keydown.escape="onClose"
@@ -54,13 +54,16 @@
 import { useDebounceFn } from '@vueuse/core'
 import { nextTick, ref, watch } from 'vue'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   modelValue: string
   visible: boolean
   totalCount: number
   matchCount: number
   currentIndex: number
-}>()
+  placeholder?: string
+}>(), {
+  placeholder: '搜索表名或列名...'
+})
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
