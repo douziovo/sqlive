@@ -1,45 +1,46 @@
 <template>
-  <!-- dot-only: zoom < 0.5 -->
-  <div
-    v-if="zoomLevel < 0.5"
-    class="knowledge-node-dot"
-    :class="`knowledge-node-dot--difficulty-${data.difficulty}`"
-  />
-  <!-- compact: 0.5 <= zoom < 1.2 -->
-  <div
-    v-else-if="zoomLevel < 1.2"
-    class="knowledge-node"
-    :class="[
-      `knowledge-node--difficulty-${data.difficulty}`,
-      `knowledge-node--status-${data.status}`,
-    ]"
-  >
-    <span class="knowledge-node__label">{{ data.label }}</span>
-    <span class="knowledge-node__dot" :class="`knowledge-node__dot--${data.status}`"></span>
-  </div>
-  <!-- expanded: zoom >= 1.2 -->
-  <div
-    v-else
-    class="knowledge-node knowledge-node--expanded"
-    :class="[
-      `knowledge-node--difficulty-${data.difficulty}`,
-      `knowledge-node--status-${data.status}`,
-    ]"
-  >
-    <div class="knowledge-node__header">
-      <span class="knowledge-node__label">{{ data.label }}</span>
-      <span class="knowledge-node__dot" :class="`knowledge-node__dot--${data.status}`"></span>
+  <template v-if="z >= 0.3">
+    <div
+      class="kg-node"
+      :style="{ opacity: labelOpacity, pointerEvents: labelOpacity < 0.3 ? 'none' : 'auto' }"
+      :class="[
+        `kg-node--d${data.difficulty}`,
+        `kg-node--${data.status}`,
+        {
+          'kg-node--focused': data.isFocused,
+          'kg-node--highlighted': data.isHighlighted,
+          'kg-node--search-match': data.isSearchMatch,
+          'kg-node--active-match': data.isActiveMatch,
+          'kg-node--unlock-glow': showUnlockGlow,
+          'kg-node--dimmed': data.isDimmed
+        }
+      ]"
+    >
+      <span class="kg-node__label">{{ data.label }}</span>
+      <div v-if="showSparkBurst" class="kg-spark-layer">
+        <span
+          v-for="(p, i) in particles"
+          :key="i"
+          class="kg-spark"
+          :style="{ '--sx': p.tx + 'px', '--sy': p.ty + 'px', background: p.color }"
+        />
+      </div>
     </div>
-    <span v-if="data.description" class="knowledge-node__desc">{{ truncatedDesc }}</span>
-    <span class="knowledge-node__diff-tag">{{ difficultyLabel }}</span>
-  </div>
+  </template>
 </template>
 
 <script setup lang="ts">
-import { computed, inject } from 'vue'
+import { computed, inject, ref, unref, watch } from 'vue'
 import type { KnowledgeNodeData } from '@/composables/useKnowledgeGraph'
 
-const DIFF_LABELS: Record<number, string> = { 1: '入门', 2: '进阶', 3: '高级' }
+const SPARK_COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#f59e0b', '#22c55e', '#3b82f6', '#ec4899']
+const SPARK_COUNT = 18
+
+interface Particle {
+  tx: number
+  ty: number
+  color: string
+}
 
 const props = defineProps<{
   id: string
@@ -48,111 +49,142 @@ const props = defineProps<{
 }>()
 
 const zoomLevel = inject<number>('zoomLevel', 1)
+const z = computed(() => unref(zoomLevel))
 
-const truncatedDesc = computed(() => {
-  const d = props.data.description || ''
-  return d.length > 30 ? `${d.slice(0, 30)}...` : d
+const labelOpacity = computed(() => {
+  const zz = z.value
+  if (zz < 0.3) return 0
+  if (zz < 0.5) return (zz - 0.3) / 0.2
+  return 1
 })
 
-const difficultyLabel = computed(() => DIFF_LABELS[props.data.difficulty] || '')
+const showSparkBurst = ref(false)
+const showUnlockGlow = ref(false)
+const particles = ref<Particle[]>([])
+
+watch(() => props.data.triggerSparkBurst, (val) => {
+  if (val) {
+    const items: Particle[] = []
+    for (let i = 0; i < SPARK_COUNT; i++) {
+      const angle = (Math.PI * 2 * i) / SPARK_COUNT
+      const dist = 40 + Math.random() * 60
+      items.push({
+        tx: Math.cos(angle) * dist,
+        ty: Math.sin(angle) * dist,
+        color: SPARK_COLORS[i % SPARK_COLORS.length]
+      })
+    }
+    particles.value = items
+    showSparkBurst.value = true
+    setTimeout(() => { showSparkBurst.value = false }, 750)
+  }
+})
+
+watch(() => props.data.triggerUnlockGlow, (val) => {
+  if (val) {
+    showUnlockGlow.value = true
+    setTimeout(() => { showUnlockGlow.value = false }, 1200)
+  }
+})
 </script>
 
 <style scoped>
-.knowledge-node {
-  background: white;
-  border: 2px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 14px;
-  min-width: 110px;
+.kg-node {
   position: relative;
-  cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s;
-  font-size: 13px;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
   font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.knowledge-node:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-/* Difficulty backgrounds */
-.knowledge-node--difficulty-1 { background: #ecfdf5; }
-.knowledge-node--difficulty-2 { background: #eef2ff; }
-.knowledge-node--difficulty-3 { background: #fff1f2; }
-
-/* Status borders — mastered (solid green family) */
-.knowledge-node--status-mastered.knowledge-node--difficulty-1 { border-color: #6ee7b7; border-style: solid; }
-.knowledge-node--status-mastered.knowledge-node--difficulty-2 { border-color: #a5b4fc; border-style: solid; }
-.knowledge-node--status-mastered.knowledge-node--difficulty-3 { border-color: #fda4af; border-style: solid; }
-
-/* Status borders — in-progress (solid, same family as mastered) */
-.knowledge-node--status-in-progress.knowledge-node--difficulty-1 { border-color: #6ee7b7; border-style: solid; }
-.knowledge-node--status-in-progress.knowledge-node--difficulty-2 { border-color: #a5b4fc; border-style: solid; }
-.knowledge-node--status-in-progress.knowledge-node--difficulty-3 { border-color: #fda4af; border-style: solid; }
-
-/* Status borders — unlearned (dashed, lighter family + 0.7 opacity) */
-.knowledge-node--status-unlearned { opacity: 0.7; border-style: dashed; }
-.knowledge-node--status-unlearned.knowledge-node--difficulty-1 { border-color: #a7f3d0; }
-.knowledge-node--status-unlearned.knowledge-node--difficulty-2 { border-color: #c7d2fe; }
-.knowledge-node--status-unlearned.knowledge-node--difficulty-3 { border-color: #fecdd3; }
-
-/* Status dot */
-.knowledge-node__dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  margin-left: auto;
-}
-.knowledge-node__dot--mastered { background: #10b981; }
-.knowledge-node__dot--in-progress { background: #fbbf24; }
-.knowledge-node__dot--unlearned { background: transparent; border: 2px solid #94a3b8; }
-
-/* Dot-only mode (zoom < 0.5) */
-.knowledge-node-dot {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
   cursor: pointer;
-  transition: transform 0.15s;
-}
-.knowledge-node-dot:hover {
-  transform: scale(1.15);
-}
-.knowledge-node-dot--difficulty-1 { background: #a7f3d0; }
-.knowledge-node-dot--difficulty-2 { background: #c7d2fe; }
-.knowledge-node-dot--difficulty-3 { background: #fecdd3; }
-
-/* Expanded mode header row */
-.knowledge-node--expanded {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  min-width: 140px;
-  padding: 10px 14px;
-}
-.knowledge-node__header {
+  transition: opacity 0.12s linear;
+  border: 2px solid transparent;
+  white-space: nowrap;
+  user-select: none;
   display: flex;
   align-items: center;
-  gap: 8px;
-  width: 100%;
 }
-.knowledge-node__desc {
-  font-size: 11px;
-  font-weight: 400;
-  color: #64748b;
-  line-height: 1.4;
+
+.kg-node:hover {
+  z-index: 30;
+  filter: brightness(1.05);
 }
-.knowledge-node__diff-tag {
-  font-size: 10px;
-  font-weight: 500;
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.06);
-  color: #475569;
+
+/* Status colours */
+.kg-node--mastered.kg-node--d1 { background: #dcfce7; border-color: #6ee7b7; color: #166534; }
+.kg-node--mastered.kg-node--d2 { background: #dbeafe; border-color: #93c5fd; color: #1e40af; }
+.kg-node--mastered.kg-node--d3 { background: #fce7f3; border-color: #f9a8d4; color: #9d174d; }
+
+.kg-node--in-progress.kg-node--d1 { background: #fef3c7; border-color: #fcd34d; color: #92400e; }
+.kg-node--in-progress.kg-node--d2 { background: #e0e7ff; border-color: #a5b4fc; color: #3730a3; }
+.kg-node--in-progress.kg-node--d3 { background: #fce7f3; border-color: #f9a8d4; color: #831843; }
+
+.kg-node--unlearned.kg-node--d1 { background: #f8fafc; border-color: #cbd5e1; color: #94a3b8; }
+.kg-node--unlearned.kg-node--d2 { background: #f8fafc; border-color: #cbd5e1; color: #94a3b8; }
+.kg-node--unlearned.kg-node--d3 { background: #f8fafc; border-color: #cbd5e1; color: #94a3b8; }
+
+.kg-node--locked {
+  opacity: 0.45;
+  filter: grayscale(0.5);
+}
+
+/* Focused */
+.kg-node--focused {
+  transform: scale(1.15) !important;
+  z-index: 30 !important;
+  border-color: #6366f1 !important;
+  outline: 4px solid rgba(99, 102, 241, 0.25);
+  outline-offset: 2px;
+}
+
+/* Highlighted */
+.kg-node--highlighted {
+  outline: 2px solid rgba(99, 102, 241, 0.15);
+  outline-offset: 1px;
+}
+
+/* Dimmed */
+.kg-node--dimmed {
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+/* Search pulse */
+.kg-node--search-match { animation: kg-pulse 1.5s ease-in-out infinite; }
+.kg-node--active-match { animation: kg-pulse 0.8s ease-in-out infinite; }
+@keyframes kg-pulse {
+  0% { outline: 2px solid rgba(59, 130, 246, 0.7); outline-offset: 2px; }
+  50% { outline: 4px solid rgba(59, 130, 246, 0); outline-offset: 6px; }
+  100% { outline: 2px solid rgba(59, 130, 246, 0.7); outline-offset: 2px; }
+}
+
+/* Spark burst */
+.kg-spark-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+  overflow: visible;
+}
+.kg-spark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  animation: sparkBurst 0.7s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes sparkBurst {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--sx), var(--sy)) scale(0); opacity: 0; }
+}
+
+/* Unlock glow */
+.kg-node--unlock-glow { animation: unlockGlow 1s ease-out 3; }
+@keyframes unlockGlow {
+  0% { outline: 3px solid rgba(99, 102, 241, 0.5); outline-offset: 0px; }
+  50% { outline: 3px solid rgba(99, 102, 241, 0); outline-offset: 12px; }
+  100% { outline: 3px solid rgba(99, 102, 241, 0); outline-offset: 0px; }
 }
 </style>
