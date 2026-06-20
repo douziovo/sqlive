@@ -1,12 +1,15 @@
 <template>
   <div
-    class="fixed z-50 flex flex-col bg-card border border-border rounded-2xl shadow-xl overflow-hidden"
+    class="ai-chat-panel fixed z-50 flex flex-col bg-card border border-border rounded-2xl shadow-xl overflow-hidden"
+    :class="{ 'ai-chat-panel--minimized': isMinimized }"
     :style="panelStyle"
   >
     <!-- Header -->
     <div
-      class="flex items-center justify-between px-4 py-2 border-b border-border cursor-move select-none flex-shrink-0"
+      class="flex items-center justify-between px-4 py-2 border-b border-border select-none flex-shrink-0"
+      :class="isMinimized ? 'cursor-pointer' : 'cursor-move'"
       @mousedown="onDragStart"
+      @dblclick="onHeaderDblClick"
     >
       <span class="text-sm font-medium text-muted-foreground flex items-center gap-2">
         <span class="w-5 h-5 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-[10px] text-white">AI</span>
@@ -23,7 +26,7 @@
     </div>
 
     <!-- Messages -->
-    <Conversation class="flex-1 min-h-0 bg-muted/50" :anchor="'none'">
+    <Conversation v-show="!isMinimized" class="flex-1 min-h-0 bg-muted/50" :anchor="'none'">
       <ConversationContent>
         <ConversationEmptyState
           v-if="messages.length === 0"
@@ -56,6 +59,7 @@
               <div v-if="editingMsg?.id === msg.id" class="flex flex-col gap-2">
                 <textarea
                   v-model="editText"
+                  ref="editTextareaRef"
                   class="text-sm bg-card border border-border rounded-lg px-3 py-2 outline-none focus:border-border focus:ring-2 focus:ring-ring w-full min-h-[40px]"
                   rows="1"
                   @input="autoResizeEdit"
@@ -129,7 +133,7 @@
     </Conversation>
 
     <!-- Input -->
-    <div class="px-4 py-2 border-t border-border flex-shrink-0 bg-card">
+    <div v-show="!isMinimized" class="px-4 py-2 border-t border-border flex-shrink-0 bg-card">
       <div class="relative flex items-end bg-muted rounded-2xl border border-border focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/20 pl-4 pr-12 py-2 transition-colors transition-shadow">
         <textarea v-model="inputText" ref="inputRef" class="flex-1 resize-none bg-transparent text-sm text-foreground placeholder-muted-foreground/70 outline-none min-h-[20px] max-h-[120px] py-0" placeholder="输入消息..." rows="1" :disabled="isLoading" @keydown.enter.exact.prevent="send" @keydown.escape="emit('close')" @input="autoResize"></textarea>
         <!-- Stop button -->
@@ -151,6 +155,7 @@
 
 <script setup lang="ts">
 import { useEventListener } from '@vueuse/core'
+import DOMPurify from 'dompurify'
 import { marked } from 'marked'
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import AiMessageFooter from '@/components/AiMessageFooter.vue'
@@ -163,6 +168,7 @@ import type { AiMessage } from '../composables/useAiChat'
 const props = defineProps<{
   messages: AiMessage[]
   isLoading: boolean
+  minimized: boolean
 }>()
 
 const emit = defineEmits<{
@@ -181,10 +187,7 @@ const copiedId = ref<string | null>(null)
 const copyTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
 const editingMsg = ref<AiMessage | null>(null)
 const editText = ref('')
-
-function getEditTextarea(): HTMLTextAreaElement | null {
-  return document.querySelector('.fixed.z-50 textarea:not([placeholder="输入消息..."])') as HTMLTextAreaElement | null
-}
+const editTextareaRef = ref<HTMLTextAreaElement | null>(null)
 const prompts = ['解释当前代码', '如何优化我的查询？', 'LEFT JOIN 和 INNER JOIN 的区别', '什么是子查询？']
 
 async function copyMessage(text: string) {
@@ -209,7 +212,7 @@ function startEdit(msg: AiMessage) {
 watch(editingMsg, (val) => {
   if (!val) return
   nextTick(() => {
-    const el = getEditTextarea()
+    const el = editTextareaRef.value
     if (!el) return
     autoResizeEdit()
     el.focus()
@@ -255,28 +258,78 @@ function cancelEdit() {
 
 function renderMd(text: string): string {
   if (!text) return ''
-  return marked.parse(text, { breaks: true, gfm: true }) as string
+  const raw = marked.parse(text, { breaks: true, gfm: true }) as string
+  return DOMPurify.sanitize(raw, {
+    ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'p', 'ul', 'ol', 'li', 'pre', 'code', 'table', 'thead', 'tbody',
+                    'tr', 'th', 'td', 'blockquote', 'hr', 'img', 'a', 'strong', 'em', 'br', 'span', 'div'],
+    ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'target', 'rel']
+  })
 }
 
 // ── Panel position & size ──────────────────────────────────────
 const panelState = reactive({ x: 0, y: 0, width: 500, height: 580, initialized: false })
+const savedPosition = reactive({ x: 0, y: 0 })
+const isDragging = ref(false)
+const isResizing = ref(false)
 function initPosition() {
   if (panelState.initialized) return
   panelState.x = Math.round(window.innerWidth * 0.38)
   panelState.y = 40
   panelState.initialized = true
 }
-const panelStyle = computed(() => ({
-  left: `${panelState.x}px`,
-  top: `${panelState.y}px`,
-  width: `${panelState.width}px`,
-  height: `${panelState.height}px`
-}))
+
+const isMinimized = ref(false)
+
+function toggleMinimize() {
+  if (!isMinimized.value) {
+    savedPosition.x = panelState.x
+    savedPosition.y = panelState.y
+  } else {
+    savedPosition.x = 0; savedPosition.y = 0
+  }
+  isMinimized.value = !isMinimized.value
+}
+function onHeaderDblClick() {
+  toggleMinimize()
+}
+
+const panelStyle = computed(() => {
+  const t = isDragging.value || isResizing.value
+    ? 'none'
+    : 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)'
+  if (isMinimized.value) {
+    return {
+      left: `${Math.round((window.innerWidth - panelState.width) / 2)}px`,
+      bottom: '0px',
+      top: 'auto',
+      width: `${panelState.width}px`,
+      height: '44px',
+      borderRadius: '16px 16px 0 0',
+      transition: t
+    }
+  }
+  if (savedPosition.x || savedPosition.y) {
+    return {
+      left: `${savedPosition.x}px`,
+      top: `${savedPosition.y}px`,
+      width: `${panelState.width}px`,
+      height: `${panelState.height}px`,
+      transition: t
+    }
+  }
+  return {
+    left: `${panelState.x}px`,
+    top: `${panelState.y}px`,
+    width: `${panelState.width}px`,
+    height: `${panelState.height}px`,
+    transition: t
+  }
+})
 
 // ── Drag ───────────────────────────────────────────────────────
-const isDragging = ref(false)
 const dragStartPos = reactive({ x: 0, y: 0, panelX: 0, panelY: 0 })
 function onDragStart(e: MouseEvent) {
+  if (isMinimized.value) return
   e.preventDefault()
   isDragging.value = true
   dragStartPos.x = e.clientX
@@ -302,9 +355,7 @@ useEventListener(document, 'mousemove', onDragMove)
 useEventListener(document, 'mouseup', onDragEnd)
 
 // ── Resize ─────────────────────────────────────────────────────
-const MIN_W = 340,
-  MIN_H = 320
-const isResizing = ref(false)
+const MIN_W = 340, MIN_H = 320
 const resizeStartPos = reactive({ x: 0, y: 0, w: 0, h: 0 })
 function onResizeStart(e: MouseEvent) {
   e.preventDefault()
@@ -354,7 +405,7 @@ function autoResize() {
   el.style.height = `${Math.min(el.scrollHeight, 120)}px`
 }
 function autoResizeEdit() {
-  const el = getEditTextarea()
+  const el = editTextareaRef.value
   if (!el) return
   el.style.height = 'auto'
   el.style.height = `${Math.min(el.scrollHeight, 300)}px`

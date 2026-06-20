@@ -17,6 +17,11 @@ export default defineConfig({
   worker: {
     format: 'es',
   },
+  server: {
+    proxy: {
+      '/api': 'http://localhost:8080',
+    },
+  },
   build: {
     rollupOptions: {
       output: {
@@ -31,5 +36,12 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/__tests__/setup.ts'],
     exclude: ['tests/e2e/**', 'node_modules/**'],
+    env: {
+      VITE_API_URL: 'http://localhost:8080/api/execute',
+    },
+    onConsoleLog(log) {
+      if (log.includes('[Vue Flow]')) return false
+      if (log.includes('Extraneous non-props attributes')) return false
+    },
   },
 })

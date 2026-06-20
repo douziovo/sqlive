@@ -98,7 +98,7 @@
               :class="getCellClasses(row, col)"
           >
             <div class="grid place-items-start w-full relative">
-              <div class="invisible whitespace-pre-wrap break-all border border-transparent px-1 py-1 min-h-[1.5em]" style="grid-area: 1/1/2/2;">{{ row[col] || ' ' }}</div>
+              <div data-ghost class="invisible whitespace-pre-wrap break-all border border-transparent px-1 py-1 min-h-[1.5em]" style="grid-area: 1/1/2/2;">{{ row[col] || ' ' }}</div>
               <textarea
                   :value="row[col]"
                   @input="(e) => autoResizeGhost(e)"
@@ -125,10 +125,10 @@
           </td>
         </tr>
         <!-- Ghost row -->
-        <tr data-testid="ghost-row" class="bg-muted/50 opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200 border-t border-dashed border-border group/ghost">
+        <tr data-testid="ghost-row" class="bg-muted/50 opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200 border-t border-dashed border-border group/ghost" :class="{ 'ghost-failure': ghostFailureVisible }">
           <td v-for="col in table.columns" :key="'ghost-' + col" class="px-4 py-2 border-r border-border/50 align-top">
             <div class="grid place-items-start w-full relative">
-              <div class="invisible whitespace-pre-wrap break-all border border-transparent px-1 py-1 min-h-[1.5em]" style="grid-area: 1/1/2/2;">{{ getGhostValue(col) || ' ' }}</div>
+              <div data-ghost class="invisible whitespace-pre-wrap break-all border border-transparent px-1 py-1 min-h-[1.5em]" style="grid-area: 1/1/2/2;">{{ getGhostValue(col) || ' ' }}</div>
               <textarea
                   :value="getGhostValue(col)"
                   @input="(e) => { autoResizeGhost(e); updateGhostState(col, (e.target as HTMLTextAreaElement).value); }"
@@ -144,6 +144,12 @@
             <button v-if="hasGhostInput()" @click="onGhostSubmit()" class="text-primary hover:bg-primary/10 p-1 rounded-full transition-colors transition-transform hover:scale-110" title="确认添加">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
             </button>
+          </td>
+        </tr>
+        <!-- Ghost row error -->
+        <tr v-if="ghostFailureVisible" class="ghost-error-row">
+          <td :colspan="table.columns.length + 1" class="px-4 py-2">
+            <p class="text-xs text-destructive mt-1">{{ ghostErrorText }}</p>
           </td>
         </tr>
         </tbody>
@@ -189,13 +195,30 @@
       @mouseleave="onBadgeLeave"
       @navigate-all="onPreviewNavigateAll"
   />
+
+  <!-- Truncation tooltip -->
+  <Teleport to="body">
+    <div
+      v-show="truncTooltip.visible"
+      ref="tooltipRef"
+      class="fixed z-50 bg-amber-50 border border-amber-200 rounded-lg shadow-lg text-sm overflow-hidden"
+      :style="tooltipStyle"
+    >
+      <div class="px-3 py-2">
+        <div class="text-sm font-semibold text-amber-900">值已截断</div>
+        <div class="text-xs text-amber-800 mt-1">
+          原始长度 {{ truncTooltip.originalLen }} 字符，已截断为 {{ truncTooltip.truncatedLen }} 字符（列最大长度: {{ truncTooltip.maxLen }}）
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onUnmounted, reactive, ref, watch } from 'vue'
+import { computed, inject, nextTick, onUnmounted, reactive, ref, watch } from 'vue'
 import { useInlineEdit } from '../composables/useInlineEdit'
 import { useTablePipeline } from '../composables/useTablePipeline'
-import type { HighlightState, IndexInfo, Row, TableSchema, TriggerInfo, ViewInfo } from '../model/DatabaseTypes'
+import type { HighlightState, IndexInfo, InsertResult, Row, TableSchema, TriggerInfo, TruncationInfo, ViewInfo } from '../model/DatabaseTypes'
 import { SQL_CONTEXT_KEY } from '../model/injectionKeys'
 import { extractTriggerTiming, isNumericType } from '../utils/sql'
 import type { PreviewItem } from './HoverPreview.vue'
@@ -210,7 +233,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits(['update-cell', 'delete-row', 'drop-table', 'insert-row', 'navigate-tab'])
-const { highlight } = inject(SQL_CONTEXT_KEY)!
+const { highlight, lastTruncations, insertResult } = inject(SQL_CONTEXT_KEY)!
 
 const isFlashTarget = computed(() => props.flashTableName === props.table.name)
 
@@ -387,6 +410,111 @@ const previewItems = computed((): PreviewItem[] => {
 })
 
 const isAnimating = ref(false)
+
+// --- Truncation tooltip ---
+const truncTooltip = ref({
+  visible: false,
+  originalLen: 0,
+  truncatedLen: 0,
+  maxLen: 0
+})
+const ghostFailureVisible = ref(false)
+const ghostErrorText = ref('')
+let ghostFailureTimer: ReturnType<typeof setTimeout> | null = null
+const tooltipRef = ref<HTMLElement | null>(null)
+const tooltipStyle = ref<Record<string, string>>({})
+let tooltipTimer: ReturnType<typeof setTimeout> | null = null
+
+function positionTooltip(target: HTMLElement) {
+  if (!tooltipRef.value) return
+  const rect = target.getBoundingClientRect()
+  const popupEl = tooltipRef.value
+  const popupHeight = popupEl.offsetHeight || 60
+  const popupWidth = Math.min(340, popupEl.offsetWidth || 260)
+  const viewportH = window.innerHeight
+  const viewportW = window.innerWidth
+  const gap = 4
+
+  let top: number
+  const below = rect.bottom + gap
+  const above = rect.top - popupHeight - gap
+
+  if (below + popupHeight <= viewportH - 16 || above < 0) {
+    top = below
+  } else {
+    top = above
+  }
+
+  let left = rect.left + rect.width / 2 - popupWidth / 2
+  left = Math.max(8, Math.min(left, viewportW - popupWidth - 8))
+
+  tooltipStyle.value = {
+    top: `${top}px`,
+    left: `${left}px`,
+    minWidth: '280px',
+    maxWidth: '340px'
+  }
+}
+
+watch(
+  () => lastTruncations?.value,
+  (truncations) => {
+    if (!truncations || truncations.length === 0) return
+    const first = truncations[0]
+    truncTooltip.value = {
+      visible: true,
+      originalLen: String(first.originalValue ?? '').length,
+      truncatedLen: String(first.value).length,
+      maxLen: first.maxLength ?? 0
+    }
+    if (tooltipTimer) clearTimeout(tooltipTimer)
+    nextTick(() => {
+      const cellEl = document.querySelector(`[data-column="${(first as any).column}"]`)
+      if (cellEl instanceof HTMLElement) positionTooltip(cellEl)
+    })
+    tooltipTimer = setTimeout(() => { truncTooltip.value.visible = false }, 3000)
+  },
+  { deep: true }
+)
+
+// Ghost row insert result handling
+watch(
+  () => insertResult?.value,
+  (result) => {
+    if (!result) return
+    // Only act on results for THIS table (prevents cross-table race condition per Pitfall 3)
+    if (result.tableName !== props.table.name) return
+
+    if (result.success) {
+      // Clear ghost row on success
+      Object.keys(ghostRow).forEach((k) => delete ghostRow[k])
+    } else {
+      // Show failure styling on the ghost row
+      ghostFailureVisible.value = true
+      ghostErrorText.value = result.error
+        ? `插入失败: ${result.error}`
+        : '插入失败，请修正数据后重试'
+
+      // Auto-dismiss after 3 seconds (unless user starts typing)
+      if (ghostFailureTimer) clearTimeout(ghostFailureTimer)
+      ghostFailureTimer = setTimeout(() => {
+        ghostFailureVisible.value = false
+      }, 3000)
+    }
+
+    // Reset insertResult so the same result isn't consumed twice
+    insertResult.value = null
+  }
+)
+
+function dismissTooltip() {
+  truncTooltip.value.visible = false
+  if (tooltipTimer) {
+    clearTimeout(tooltipTimer)
+    tooltipTimer = null
+  }
+}
+
 const ghostRow = reactive<Row>({})
 
 // Sort/filter/page pipeline — extracted into composable
@@ -424,7 +552,15 @@ watch(
 const { autoResizeGhost, handleBlur } = useInlineEdit(props.table.name, props.table.columnTypes, emit)
 
 const getGhostValue = (col: string) => ghostRow[col] || ''
+const onGhostInputDismiss = () => {
+  if (ghostFailureVisible.value) {
+    ghostFailureVisible.value = false
+    if (ghostFailureTimer) clearTimeout(ghostFailureTimer)
+  }
+}
+
 const updateGhostState = (col: string, val: string) => {
+  onGhostInputDismiss()
   ghostRow[col] = val
 }
 const hasGhostInput = () => {
@@ -433,7 +569,7 @@ const hasGhostInput = () => {
 const onGhostSubmit = () => {
   if (hasGhostInput()) {
     emit('insert-row', { tableName: props.table.name, newRow: { ...ghostRow } })
-    Object.keys(ghostRow).forEach((k) => delete ghostRow[k])
+    // Do NOT clear ghostRow here — watch insertResult to decide
   }
 }
 
@@ -470,6 +606,8 @@ const getCellClasses = (row: any, col: string) => {
 onUnmounted(() => {
   if (hoverLeaveTimer) clearTimeout(hoverLeaveTimer)
   if (animationTimer) clearTimeout(animationTimer)
+  if (tooltipTimer) clearTimeout(tooltipTimer)
+  if (ghostFailureTimer) clearTimeout(ghostFailureTimer)
 })
 </script>
 
@@ -482,4 +620,22 @@ onUnmounted(() => {
 @keyframes fade-out { 0% { opacity: 0.8; } 100% { opacity: 0; } }
 @keyframes flash-bg { 0% { background-color: rgba(250, 204, 21, 0.6); transform: scale(1.02); } 100% { background-color: transparent; transform: scale(1); } }
 .animate-flash { animation: flash-bg 0.8s ease-out; }
+.ghost-failure {
+  position: relative;
+  border: 2px solid var(--destructive) !important;
+  border-opacity: 0.6;
+}
+.ghost-failure::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: var(--destructive);
+  z-index: 5;
+  animation: ghost-fade-out 1.2s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes ghost-fade-out {
+  0% { opacity: 0.7; }
+  100% { opacity: 0; }
+}
 </style>

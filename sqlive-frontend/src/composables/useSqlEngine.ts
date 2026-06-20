@@ -7,7 +7,7 @@ import { useHighlight } from '../composables/useHighlight'
 import { useMultiTabs } from '../composables/useMultiTabs'
 import { API_URL } from '../config'
 import type { ExecuteRequest, ExecuteResponse } from '../model/ApiTypes'
-import type { DatabaseModel, Row } from '../model/DatabaseTypes'
+import type { DatabaseModel, InsertResult, Row } from '../model/DatabaseTypes'
 
 function hashString(s: string): number {
   let hash = 5381
@@ -47,6 +47,7 @@ export function useSqlEngine() {
   const isLoading = ref(false)
   const executionError = ref<{ line: number; message: string } | null>(null)
   const mode = ref<EngineMode>('user')
+  const sessionRecreated = ref(false)
 
   // Multi-tab system
   const {
@@ -73,13 +74,21 @@ export function useSqlEngine() {
   let previousDataState = new Map<string, string>()
 
   const { highlight, highlightedCodeChunk, flashCode, recalculateStaticHighlight } = useHighlight(code, db)
-  const { getLastValidCode, updateRow, deleteRow, insertRowUI, addNewTable, dropTableUI } = useBidirectionalSync(
+  const { getLastValidCode, updateRow, deleteRow, insertRowUI, addNewTable, dropTableUI, lastTruncations } = useBidirectionalSync(
     code,
     db,
     mode,
     flashCode,
     transition
   )
+
+  const insertResult = ref<InsertResult | null>(null)
+  let pendingInsertTable: string | null = null
+
+  const trackedInsertRowUI = (tableName: string, newRowData: Row) => {
+    pendingInsertTable = tableName
+    insertRowUI(tableName, newRowData)
+  }
 
   let abortController: AbortController | null = null
   let currentRequestId = 0
@@ -96,6 +105,25 @@ export function useSqlEngine() {
     // 捕获当前请求 ID，用于防止竞态条件
     const requestId = ++currentRequestId
 
+    // When code is empty, clear db state locally and skip the API call.
+    // Sending empty SQL to the backend always fails validation (400), and the
+    // old error path only set executionError without clearing db — leaving stale
+    // data in the chart/visualizer.
+    if (!code.value || code.value.trim() === '') {
+      db.tables = []
+      db.queryResults = []
+      db.indexes = []
+      db.views = []
+      db.triggers = []
+      db.foreignKeys = []
+      db.metadata = null
+      executionError.value = null
+      isLoading.value = false
+      previousDataState = new Map()
+      highlight.flashingRows = []
+      return
+    }
+
     isLoading.value = true
     executionError.value = null
 
@@ -110,6 +138,10 @@ export function useSqlEngine() {
         } satisfies ExecuteRequest),
         signal: abortController.signal
       })
+      // D-07: Detect session recreation signaled by backend
+      if (response.headers.get('X-Session-Recreated') === 'true') {
+        sessionRecreated.value = true
+      }
       const result: ExecuteResponse = await response.json()
 
       // 检查是否仍是当前请求
@@ -118,6 +150,11 @@ export function useSqlEngine() {
       if (!result.success) {
         const errMsg = result.error?.message || '未知错误'
         executionError.value = { line: result.error?.line || 1, message: errMsg }
+
+        if (pendingInsertTable) {
+          insertResult.value = { success: false, tableName: pendingInsertTable, error: errMsg }
+          pendingInsertTable = null
+        }
 
         if (mode.value === 'reconciling') {
           mode.value = transition(mode.value, 'rollback', 'reconcile error')
@@ -165,6 +202,12 @@ export function useSqlEngine() {
         recalculateStaticHighlight()
       }
       mode.value = transition(mode.value, 'user', 'execute success')
+
+      if (pendingInsertTable) {
+        insertResult.value = { success: true, tableName: pendingInsertTable }
+        pendingInsertTable = null
+      }
+
       markClean()
     } catch (e) {
       // 检查是否仍是当前请求
@@ -215,11 +258,14 @@ export function useSqlEngine() {
     highlightedCodeChunk,
     executionError,
     isLoading,
+    sessionRecreated,
     updateRow,
     deleteRow,
     addNewTable,
     dropTableUI,
-    insertRowUI,
+    insertRowUI: trackedInsertRowUI,
+    lastTruncations,
+    insertResult,
     tabs,
     activeTabId,
     switchTab,
