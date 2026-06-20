@@ -1,10 +1,26 @@
 <template>
+  <AchievementToast
+    :visible="showToast"
+    :streak="toastStreak"
+    :xp="toastXp"
+    :label="toastLabel"
+    :is-high-difficulty="toastHighDiff"
+    @close="showToast = false"
+  />
+  <ConfettiOverlay :key="confettiKey" :active="showConfetti" />
   <Teleport to="body">
     <Transition name="panel-expand">
       <div v-if="isOpen" class="knowledge-panel" @keydown.esc="close">
         <div class="knowledge-panel__backdrop" @click="close" />
 
         <div class="knowledge-panel__content">
+          <!-- Level-up celebration toast -->
+          <Transition name="toast-slide">
+            <div v-if="showLevelUpToast" class="level-up-toast">
+              <span class="level-up-toast__emoji">🎉</span>
+              <span class="level-up-toast__text">升级了！{{ kgProgress.levelName }}</span>
+            </div>
+          </Transition>
           <!-- Top bar -->
           <div class="knowledge-panel__topbar">
             <button class="knowledge-panel__back-btn" @click="close">
@@ -19,7 +35,14 @@
             />
             <div class="knowledge-panel__filters">
               <button
-                v-for="f in difficultyOptions"
+                class="knowledge-panel__filter-btn"
+                :class="{ 'knowledge-panel__filter-btn--active': !activeDifficulty && !activeCategory }"
+                @click="resetAllFilters"
+              >
+                全部
+              </button>
+              <button
+                v-for="f in difficultyChips"
                 :key="f.key"
                 class="knowledge-panel__filter-btn"
                 :class="{ 'knowledge-panel__filter-btn--active': activeDifficulty === f.key }"
@@ -29,18 +52,30 @@
               </button>
               <span class="knowledge-panel__filter-sep" />
               <button
-                v-for="f in statusOptions"
+                v-for="f in categoryChips"
                 :key="f.key"
                 class="knowledge-panel__filter-btn"
-                :class="{ 'knowledge-panel__filter-btn--active': activeStatus === f.key }"
-                @click="activeStatus = activeStatus === f.key ? null : f.key"
+                :class="{ 'knowledge-panel__filter-btn--active': activeCategory === f.key }"
+                @click="activeCategory = activeCategory === f.key ? null : f.key"
               >
                 {{ f.label }}
               </button>
             </div>
-            <span class="knowledge-panel__progress">
-              {{ kgProgress.count }}/{{ kgProgress.total }}  {{ kgProgress.level }}
-            </span>
+            <div class="knowledge-panel__level-bar">
+              <span class="knowledge-panel__level-badge">{{ kgProgress.levelName }}</span>
+              <div class="knowledge-panel__xp-bar-track">
+                <div
+                  class="knowledge-panel__xp-bar-fill"
+                  :style="{ width: xpBarPercent + '%' }"
+                />
+              </div>
+              <span class="knowledge-panel__xp-text">{{ kgProgress.xp }}/{{ kgProgress.nextLevelXp }}</span>
+              <span class="knowledge-panel__progress-text">{{ kgProgress.count }}/{{ kgProgress.total }}</span>
+              <span v-if="kgProgress.streak > 0" class="knowledge-panel__streak">
+                <span class="knowledge-panel__streak-fire">🔥</span>
+                {{ kgProgress.streak }}
+              </span>
+            </div>
           </div>
 
           <!-- Body: full-width graph -->
@@ -54,7 +89,7 @@
               :selected-topic="kgSelectedNodeData"
               :mastered-topics="kgMasteredTopics"
               @node-select="onNodeSelect"
-              @toggle-mastered="kg.toggleMastered"
+              @toggle-mastered="onToggleMastered"
               @ask-ai="onAskAi"
               @deselect-node="onDeselectNode"
             />
@@ -71,7 +106,9 @@ import { computed, inject, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { KnowledgeNodeData } from '@/composables/useKnowledgeGraph'
 import { useKnowledgeGraph } from '@/composables/useKnowledgeGraph'
 import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
-import type KnowledgeGraph from './KnowledgeGraph.vue'
+import AchievementToast from './AchievementToast.vue'
+import ConfettiOverlay from './ConfettiOverlay.vue'
+import KnowledgeGraph from './KnowledgeGraph.vue'
 
 const props = defineProps<{
   isOpen: boolean
@@ -85,23 +122,23 @@ const emit = defineEmits<{
 const sqlContext = inject(SQL_CONTEXT_KEY)!
 const searchQuery = ref('')
 const activeDifficulty = ref<string | null>(null)
-const activeStatus = ref<string | null>(null)
+const activeCategory = ref<string | null>(null)
 
 interface FilterOption {
   key: string
   label: string
 }
 
-const difficultyOptions: FilterOption[] = [
-  { key: '1', label: '入门' },
-  { key: '2', label: '进阶' },
-  { key: '3', label: '高级' }
+const difficultyChips: FilterOption[] = [
+  { key: '1', label: '入门 L1' },
+  { key: '2', label: '进阶 L2' },
+  { key: '3', label: '高级 L3' }
 ]
 
-const statusOptions: FilterOption[] = [
-  { key: 'mastered', label: '已掌握' },
-  { key: 'in-progress', label: '学习中' },
-  { key: 'unlearned', label: '未学习' }
+const categoryChips: FilterOption[] = [
+  { key: 'query', label: '查询类' },
+  { key: 'dml', label: '增删改' },
+  { key: 'advanced', label: '高级特性' }
 ]
 
 const kg = useKnowledgeGraph({
@@ -120,28 +157,94 @@ const kgSelectedNodeData = computed(() => kg.selectedNodeData.value)
 const kgProgress = computed(() => kg.progress.value)
 const kgMasteredTopics = computed(() => kg.masteredTopics.value)
 
-const filteredNodes = computed(() => {
-  let nodes: Node<KnowledgeNodeData>[] = kgNodes.value
-
-  if (activeDifficulty.value) {
-    const d = parseInt(activeDifficulty.value, 10)
-    nodes = nodes.filter((n) => n.data.difficulty === d)
-  }
-  if (activeStatus.value) {
-    nodes = nodes.filter((n) => n.data.status === activeStatus.value)
-  }
-
-  return nodes
+const xpBarPercent = computed(() => {
+  const p = kgProgress.value
+  if (!p || p.nextLevelXp === 0) return 0
+  const currentLevelXp = p.level * p.xpForNext
+  const xpInLevel = p.xp - currentLevelXp
+  return Math.min(100, Math.round((xpInLevel / p.xpForNext) * 100))
 })
 
-const filteredEdges = computed(() => {
-  if (!activeDifficulty.value && !activeStatus.value) return kgEdges.value
-  const visibleIds = new Set(filteredNodes.value.map((n) => n.id))
+const filteredNodes = computed<Node<KnowledgeNodeData>[]>(() => {
+  return kgNodes.value.map((node) => {
+    let dimmed = false
+    if (activeDifficulty.value) {
+      const d = parseInt(activeDifficulty.value, 10)
+      if (node.data.difficulty !== d) dimmed = true
+    }
+    if (activeCategory.value) {
+      if (node.data.category !== activeCategory.value) dimmed = true
+    }
+    return {
+      ...node,
+      style: { ...node.style, opacity: dimmed ? 0.12 : 1 }
+    }
+  })
+})
+
+const filteredEdges = computed<Edge[]>(() => {
+  if (!activeDifficulty.value && !activeCategory.value) return kgEdges.value
+  const visibleIds = new Set(
+    kgNodes.value
+      .filter((n) => {
+        if (activeDifficulty.value && n.data.difficulty !== parseInt(activeDifficulty.value, 10)) return false
+        if (activeCategory.value && n.data.category !== activeCategory.value) return false
+        return true
+      })
+      .map((n) => n.id)
+  )
   return kgEdges.value.filter((e) => visibleIds.has(e.source) && visibleIds.has(e.target))
 })
 
 function close(): void {
   emit('close')
+}
+
+function resetAllFilters(): void {
+  activeDifficulty.value = null
+  activeCategory.value = null
+}
+
+// ── Gamification state (Phase 05-03) ───────────────────────────
+const showToast = ref(false)
+const toastStreak = ref(0)
+const toastXp = ref(0)
+const toastLabel = ref('')
+const toastHighDiff = ref(false)
+const showConfetti = ref(false)
+const confettiKey = ref(0)
+const showLevelUpToast = ref(false)
+
+function onToggleMastered(topicId: string): void {
+  const result = kg.toggleMastered(topicId)
+  if (result.action === 'master') {
+    const topic = kg.graphData.value?.topics.find(t => t.id === topicId)
+    const isHighDiff = topic?.difficulty === 3
+    const label = topic?.label ?? topicId
+
+    graphRef.value?.triggerSparkBurst?.(topicId)
+    graphRef.value?.triggerUnlockGlow?.(topicId)
+
+    showAchievementToast(result, label, isHighDiff)
+    if (result.leveledUp) {
+      showConfetti.value = true
+      confettiKey.value++
+      showLevelUpToast.value = true
+      setTimeout(() => {
+        showConfetti.value = false
+        showLevelUpToast.value = false
+      }, 5000)
+    }
+  }
+}
+
+function showAchievementToast(result: { xpGained: number; leveledUp: boolean; streak: number }, topicLabel: string, isHighDiff: boolean): void {
+  toastStreak.value = result.streak
+  toastXp.value = result.xpGained
+  toastLabel.value = topicLabel
+  toastHighDiff.value = isHighDiff
+  showToast.value = true
+  setTimeout(() => { showToast.value = false }, 2500)
 }
 
 function onNodeSelect(topicId: string): void {
@@ -162,11 +265,12 @@ watch(
     if (open) {
       searchQuery.value = ''
       activeDifficulty.value = null
-      activeStatus.value = null
+      activeCategory.value = null
       kg.selectedNode.value = null
       await kg.fetchGraph()
     }
-  }
+  },
+  { immediate: true }
 )
 
 function onKeydown(e: KeyboardEvent): void {
@@ -179,6 +283,14 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('keydown', onKeydown)
+})
+
+defineExpose({
+  filteredNodes,
+  filteredEdges,
+  activeDifficulty,
+  activeCategory,
+  resetAllFilters
 })
 </script>
 
@@ -282,9 +394,71 @@ onUnmounted(() => {
   border-color: var(--primary);
 }
 
-.knowledge-panel__progress {
+.knowledge-panel__level-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-left: auto;
-  font-size: 13px;
+}
+
+.knowledge-panel__level-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  color: white;
+  white-space: nowrap;
+}
+
+.knowledge-panel__xp-bar-track {
+  width: 80px;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.knowledge-panel__xp-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #16a34a);
+  border-radius: 999px;
+  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.knowledge-panel__streak {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fef2f2;
+  color: #991b1b;
+  white-space: nowrap;
+}
+
+.knowledge-panel__streak-fire {
+  font-size: 14px;
+  animation: fireFlicker 0.3s ease-in-out infinite alternate;
+}
+
+@keyframes fireFlicker {
+  from { transform: scale(1) rotate(-2deg); }
+  to { transform: scale(1.15) rotate(2deg); }
+}
+
+.knowledge-panel__xp-text {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  min-width: 60px;
+  text-align: right;
+}
+
+.knowledge-panel__progress-text {
+  font-size: 12px;
   color: var(--muted-foreground);
   white-space: nowrap;
 }
@@ -300,6 +474,36 @@ onUnmounted(() => {
 }
 
 /* Transitions — expand from / collapse to companion button (bottom-right) */
+/* Level-up celebration toast */
+.level-up-toast {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 110;
+  padding: 16px 32px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  color: white;
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 8px 32px rgba(109, 40, 217, 0.35);
+  pointer-events: none;
+}
+
+.level-up-toast__emoji {
+  font-size: 24px;
+}
+
+/* Slide transition for level-up toast */
+.toast-slide-enter-active { transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.toast-slide-leave-active { transition: all 0.2s ease-in; }
+.toast-slide-enter-from { opacity: 0; transform: translateX(-50%) translateY(-16px); }
+.toast-slide-leave-to { opacity: 0; transform: translateX(-50%) translateY(-16px); }
+
 .panel-expand-enter-active .knowledge-panel__content {
   transition: clip-path 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease-out;
 }
