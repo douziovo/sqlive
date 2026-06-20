@@ -18,11 +18,8 @@ test.describe('Multi-Tab System', () => {
   test('switches between tabs and shows different content', async ({ page, sqlEditor }) => {
     const addBtn = page.locator('button[title="新建标签页"]');
     await addBtn.click();
-    // Wait for the auto-execute triggered by new-tab default SQL to complete
-    await page.waitForResponse(
-      r => r.url().includes('/api/execute') && r.request().method() === 'POST',
-      { timeout: 15_000 },
-    );
+    // New tab has empty code — our empty-code guard skips the API call.
+    // No need to wait for /api/execute here.
     await page.waitForTimeout(500);
 
     // Type distinct SQL in the new tab
@@ -30,7 +27,7 @@ test.describe('Multi-Tab System', () => {
       r => r.url().includes('/api/execute') && r.request().method() === 'POST',
       { timeout: 15_000 },
     );
-    await sqlEditor.replaceAll(
+    await sqlEditor.setText(
       'CREATE TABLE test_tab (id INTEGER PRIMARY KEY, val TEXT);\n' +
       "INSERT INTO test_tab VALUES (1, 'hello');\n" +
       'SELECT * FROM test_tab;'
@@ -80,18 +77,14 @@ test.describe('Multi-Tab System', () => {
   test('tabs with distinct SQL show different tables', async ({ page, sqlEditor }) => {
     const addBtn = page.locator('button[title="新建标签页"]');
     await addBtn.click();
-    // Wait for the auto-execute triggered by new-tab default SQL to complete
-    await page.waitForResponse(
-      r => r.url().includes('/api/execute') && r.request().method() === 'POST',
-      { timeout: 15_000 },
-    );
+    // New tab has empty code — our empty-code guard skips the API call.
     await page.waitForTimeout(500);
 
     const responsePromise = page.waitForResponse(
       r => r.url().includes('/api/execute') && r.request().method() === 'POST',
       { timeout: 15_000 },
     );
-    await sqlEditor.replaceAll(
+    await sqlEditor.setText(
       'CREATE TABLE new_tab_table (id INTEGER, x TEXT);\n' +
       "INSERT INTO new_tab_table VALUES (1, 'data');"
     );
@@ -120,7 +113,7 @@ test.describe('Multi-Tab System', () => {
         r => r.url().includes('/api/execute') && r.request().method() === 'POST',
         { timeout: 15_000 },
       );
-      await sqlEditor.replaceAll(
+      await sqlEditor.setText(
         'CREATE TABLE auto_default (id INTEGER PRIMARY KEY, val TEXT);\n' +
         "INSERT INTO auto_default VALUES (1, 'hello');"
       );
@@ -134,12 +127,12 @@ test.describe('Multi-Tab System', () => {
       await addBtn.click();
       await page.waitForTimeout(300);
 
-      // Wait for auto-execute after replaceAll
+      // Wait for auto-execute after setText
       let responsePromise = page.waitForResponse(
         r => r.url().includes('/api/execute') && r.request().method() === 'POST',
         { timeout: 15_000 },
       );
-      await sqlEditor.replaceAll(
+      await sqlEditor.setText(
         'CREATE TABLE committed_tab (id INTEGER PRIMARY KEY, data TEXT);\n' +
         "INSERT INTO committed_tab VALUES (1, 'from_prompt');"
       );
@@ -184,7 +177,7 @@ test.describe('Multi-Tab System', () => {
         r => r.url().includes('/api/execute') && r.request().method() === 'POST',
         { timeout: 15_000 },
       );
-      await sqlEditor.replaceAll(
+      await sqlEditor.setText(
         'CREATE TABLE only_in_a (id INTEGER PRIMARY KEY, tag TEXT);\n' +
         "INSERT INTO only_in_a VALUES (1, 'from_a');"
       );
@@ -200,7 +193,7 @@ test.describe('Multi-Tab System', () => {
         r => r.url().includes('/api/execute') && r.request().method() === 'POST',
         { timeout: 15_000 },
       );
-      await sqlEditor.replaceAll(
+      await sqlEditor.setText(
         'CREATE TABLE only_in_b (id INTEGER PRIMARY KEY, val TEXT);\n' +
         "INSERT INTO only_in_b VALUES (1, 'from_b');"
       );

@@ -113,32 +113,59 @@ describe('extractSqlStatements', () => {
 
 describe('enforceTypeConstraints', () => {
   it('returns null as-is', () => {
-    expect(enforceTypeConstraints(null, 'VARCHAR(10)')).toBeNull()
+    expect(enforceTypeConstraints(null, 'VARCHAR(10)').value).toBeNull()
   })
 
   it('returns undefined as-is', () => {
-    expect(enforceTypeConstraints(undefined, 'VARCHAR(10)')).toBeUndefined()
+    expect(enforceTypeConstraints(undefined, 'VARCHAR(10)').value).toBeUndefined()
   })
 
   it('truncates string exceeding VARCHAR limit', () => {
-    expect(enforceTypeConstraints('hello world', 'VARCHAR(5)')).toBe('hello')
+    expect(enforceTypeConstraints('hello world', 'VARCHAR(5)').value).toBe('hello')
   })
 
   it('truncates string exceeding CHAR limit', () => {
-    expect(enforceTypeConstraints('abcdefghij', 'CHAR(3)')).toBe('abc')
+    expect(enforceTypeConstraints('abcdefghij', 'CHAR(3)').value).toBe('abc')
   })
 
   it('returns full string within VARCHAR limit', () => {
-    expect(enforceTypeConstraints('hi', 'VARCHAR(10)')).toBe('hi')
+    expect(enforceTypeConstraints('hi', 'VARCHAR(10)').value).toBe('hi')
   })
 
   it('returns value unchanged for non-VARCHAR types', () => {
-    expect(enforceTypeConstraints('hello', 'INTEGER')).toBe('hello')
-    expect(enforceTypeConstraints('text', 'TEXT')).toBe('text')
+    expect(enforceTypeConstraints('hello', 'INTEGER').value).toBe('hello')
+    expect(enforceTypeConstraints('text', 'TEXT').value).toBe('text')
   })
 
   it('truncates numbers (stringified) exceeding VARCHAR limit', () => {
-    expect(enforceTypeConstraints('1234567890', 'VARCHAR(3)')).toBe('123')
+    expect(enforceTypeConstraints('1234567890', 'VARCHAR(3)').value).toBe('123')
+  })
+
+  it('returns wasTruncated=true and originalValue when exceeding VARCHAR limit', () => {
+    const result = enforceTypeConstraints('hello world', 'VARCHAR(5)')
+    expect(result.value).toBe('hello')
+    expect(result.wasTruncated).toBe(true)
+    expect(result.originalValue).toBe('hello world')
+    expect(result.maxLength).toBe(5)
+  })
+
+  it('returns wasTruncated=false when within VARCHAR limit', () => {
+    const result = enforceTypeConstraints('hi', 'VARCHAR(10)')
+    expect(result.value).toBe('hi')
+    expect(result.wasTruncated).toBe(false)
+  })
+
+  it('returns wasTruncated=false for non-VARCHAR types', () => {
+    const result = enforceTypeConstraints(42, 'INTEGER')
+    expect(result.wasTruncated).toBe(false)
+    expect(result.value).toBe(42)
+  })
+
+  it('handles CHAR(N) truncation same as VARCHAR', () => {
+    const result = enforceTypeConstraints('abcdef', 'CHAR(3)')
+    expect(result.wasTruncated).toBe(true)
+    expect(result.value).toBe('abc')
+    expect(result.originalValue).toBe('abcdef')
   })
 })
 

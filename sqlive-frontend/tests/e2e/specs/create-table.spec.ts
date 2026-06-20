@@ -96,6 +96,14 @@ test.describe('Create Table Modal', () => {
     const nameInput = page.locator('input[placeholder*="请输入表名"]').first();
     await expect(nameInput).toBeVisible({ timeout: 5_000 });
     await nameInput.fill('test_create');
+
+    // Fill column type and name
+    const colTypeInputs = page.locator('input[placeholder*="如: int"]');
+    const colNameInputs = page.locator('input[placeholder*="如: id"]');
+    await expect(colTypeInputs.first()).toBeVisible({ timeout: 5_000 });
+    await colTypeInputs.first().fill('INTEGER');
+    await expect(colNameInputs.first()).toBeVisible({ timeout: 5_000 });
+    await colNameInputs.first().fill('id');
     await page.waitForTimeout(200);
 
     // Submit
@@ -104,10 +112,11 @@ test.describe('Create Table Modal', () => {
     const isDisabled = await submitBtn.isDisabled();
     expect(isDisabled).toBeFalsy();
     await submitBtn.click();
-    await page.waitForTimeout(2000);
 
-    const sql = await sqlEditor.getText();
-    expect(sql).toContain('CREATE TABLE');
-    expect(sql).toContain('test_create');
+    // Wait for the new table to appear in the visualizer + verify it has data
+    await expect(page.locator('#table-test_create')).toBeVisible({ timeout: 10_000 });
+    // Table should have at least a header row and one data/ghost row
+    const rows = page.locator('#table-test_create tbody tr');
+    await expect(rows.first()).toBeVisible({ timeout: 5_000 });
   });
 });

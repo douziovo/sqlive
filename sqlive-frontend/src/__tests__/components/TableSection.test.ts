@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
-import { nextTick } from 'vue'
-import type { HighlightState, TableSchema } from '@/model/DatabaseTypes'
+import { afterEach, describe, expect, it } from 'vitest'
+import { nextTick, ref } from 'vue'
+import type { HighlightState, InsertResult, TableSchema, TruncationInfo } from '@/model/DatabaseTypes'
 import TableSection from '../../components/TableSection.vue'
 import { SQL_CONTEXT_KEY } from '../../model/injectionKeys'
 
@@ -26,7 +26,7 @@ const defaultHighlight: HighlightState = {
 }
 
 function mountTable(overrides: Record<string, any> = {}) {
-  const { highlight, ...propOverrides } = overrides
+  const { highlight, lastTruncations, insertResult, ...propOverrides } = overrides
   return mount(TableSection, {
     props: {
       table: mockTable,
@@ -37,7 +37,11 @@ function mountTable(overrides: Record<string, any> = {}) {
     },
     global: {
       provide: {
-        [SQL_CONTEXT_KEY as symbol]: { highlight: highlight ?? defaultHighlight }
+        [SQL_CONTEXT_KEY as symbol]: {
+          highlight: highlight ?? defaultHighlight,
+          lastTruncations: lastTruncations ?? ref<TruncationInfo[]>([]),
+          insertResult: insertResult ?? ref<InsertResult | null>(null)
+        }
       },
       stubs: {}
     }
@@ -200,5 +204,181 @@ describe('TableSection', () => {
         targetId: expect.any(String)
       })
     }
+  })
+
+  describe('truncation tooltip', () => {
+    let wrappers: ReturnType<typeof mount>[] = []
+    afterEach(() => {
+      wrappers.forEach((w) => w.unmount())
+      wrappers = []
+      // Clean up stale Teleported elements from document.body
+      document.body.querySelectorAll('.bg-amber-50').forEach((el) => el.remove())
+    })
+
+    it('shows truncation tooltip when lastTruncations is set', async () => {
+      const truncRef = ref<TruncationInfo[]>([])
+      wrappers.push(mountTable({ lastTruncations: truncRef }))
+
+      truncRef.value = [{
+        value: 'hel',
+        wasTruncated: true,
+        originalValue: 'hello world',
+        maxLength: 3
+      }]
+      await nextTick()
+      await nextTick() // Extra tick for Teleport rendering
+
+      const tooltip = document.body.querySelector('.bg-amber-50')
+      expect(tooltip).toBeTruthy()
+      expect(tooltip?.textContent).toContain('值已截断')
+    })
+
+    it('tooltip displays correct length values', async () => {
+      const truncRef = ref<TruncationInfo[]>([])
+      wrappers.push(mountTable({ lastTruncations: truncRef }))
+
+      truncRef.value = [{
+        value: 'he',
+        wasTruncated: true,
+        originalValue: 'hello world!!',
+        maxLength: 2
+      }]
+      await nextTick()
+      await nextTick()
+
+      const tooltip = document.body.querySelector('.bg-amber-50')
+      expect(tooltip).toBeTruthy()
+      expect(tooltip?.textContent).toContain('13')
+      expect(tooltip?.textContent).toContain('2')
+    })
+
+    it('does not show tooltip when lastTruncations is empty', () => {
+      const truncRef = ref<TruncationInfo[]>([])
+      wrappers.push(mountTable({ lastTruncations: truncRef }))
+      const tooltip = document.body.querySelector('.bg-amber-50') as HTMLElement
+      expect(tooltip).toBeTruthy()
+      expect(tooltip.style.display).toBe('none')
+    })
+  })
+
+  describe('ghost row insert result', () => {
+    let wrappers: ReturnType<typeof mount>[] = []
+    afterEach(() => {
+      wrappers.forEach((w) => w.unmount())
+      wrappers = []
+    })
+
+    it('preserves ghost row inputs when insert fails', async () => {
+      const insertResultRef = ref<InsertResult | null>(null)
+      wrappers.push(mountTable({ insertResult: insertResultRef }))
+
+      // Fill ghost row textareas
+      const ghostTextareas = wrappers[0].findAll('textarea[placeholder="+"]')
+      if (ghostTextareas.length > 0) {
+        await ghostTextareas[0].setValue('4')
+        await ghostTextareas[0].trigger('keydown.enter')
+      }
+
+      // Simulate failed insert
+      insertResultRef.value = { success: false, tableName: 'users', error: 'UNIQUE constraint failed' }
+      await nextTick()
+      await nextTick()
+
+      // Ghost row inputs should still be present
+      const ghostTextareasAfter = wrappers[0].findAll('textarea[placeholder="+"]')
+      if (ghostTextareasAfter.length > 0) {
+        expect(ghostTextareasAfter[0].element.value).toBe('4')
+      }
+
+      // Verify failure styling
+      const ghostRow = wrappers[0].find('[data-testid="ghost-row"]')
+      expect(ghostRow.classes()).toContain('ghost-failure')
+
+      // Verify error text
+      const errorRow = wrappers[0].find('.ghost-error-row')
+      expect(errorRow.exists()).toBe(true)
+      expect(errorRow.text()).toContain('UNIQUE constraint failed')
+    })
+
+    it('clears ghost row when insert succeeds', async () => {
+      const insertResultRef = ref<InsertResult | null>(null)
+      wrappers.push(mountTable({ insertResult: insertResultRef }))
+
+      // Fill ghost row textareas
+      const ghostTextareas = wrappers[0].findAll('textarea[placeholder="+"]')
+      if (ghostTextareas.length > 0) {
+        await ghostTextareas[0].setValue('4')
+        await ghostTextareas[0].trigger('keydown.enter')
+      }
+
+      // Simulate successful insert
+      insertResultRef.value = { success: true, tableName: 'users' }
+      await nextTick()
+      await nextTick()
+
+      // Ghost row inputs should be cleared
+      const ghostTextareasAfter = wrappers[0].findAll('textarea[placeholder="+"]')
+      if (ghostTextareasAfter.length > 0) {
+        expect(ghostTextareasAfter[0].element.value).toBe('')
+      }
+    })
+
+    it('ignores insertResult for different tableName', async () => {
+      const insertResultRef = ref<InsertResult | null>(null)
+      wrappers.push(mountTable({ insertResult: insertResultRef }))
+
+      // Fill ghost row textareas
+      const ghostTextareas = wrappers[0].findAll('textarea[placeholder="+"]')
+      if (ghostTextareas.length > 0) {
+        await ghostTextareas[0].setValue('4')
+        await ghostTextareas[0].trigger('keydown.enter')
+      }
+
+      // Simulate result for a different table
+      insertResultRef.value = { success: false, tableName: 'products', error: 'test' }
+      await nextTick()
+      await nextTick()
+
+      // Ghost row should NOT be cleared (wrong table)
+      const ghostTextareasAfter = wrappers[0].findAll('textarea[placeholder="+"]')
+      if (ghostTextareasAfter.length > 0) {
+        expect(ghostTextareasAfter[0].element.value).toBe('4')
+      }
+
+      // No failure styling should appear
+      const ghostRow = wrappers[0].find('[data-testid="ghost-row"]')
+      expect(ghostRow.classes()).not.toContain('ghost-failure')
+    })
+
+    it('auto-dismisses failure styling after typing in ghost row', async () => {
+      const insertResultRef = ref<InsertResult | null>(null)
+      wrappers.push(mountTable({ insertResult: insertResultRef }))
+
+      // Submit empty ghost row (just trigger failure)
+      const ghostTextareas = wrappers[0].findAll('textarea[placeholder="+"]')
+      if (ghostTextareas.length > 0) {
+        await ghostTextareas[0].setValue('test')
+        await ghostTextareas[0].trigger('keydown.enter')
+      }
+
+      // Simulate failed insert
+      insertResultRef.value = { success: false, tableName: 'users', error: 'test error' }
+      await nextTick()
+      await nextTick()
+
+      // Verify failure visible
+      let ghostRow = wrappers[0].find('[data-testid="ghost-row"]')
+      expect(ghostRow.classes()).toContain('ghost-failure')
+
+      // User types in ghost row textarea — should dismiss
+      if (ghostTextareas.length > 0) {
+        await ghostTextareas[0].trigger('input')
+        await nextTick()
+      }
+
+      // Verify failure styling removed
+      ghostRow = wrappers[0].find('[data-testid="ghost-row"]')
+      expect(ghostRow.classes()).not.toContain('ghost-failure')
+    })
   })
 })

@@ -66,15 +66,15 @@ test.describe('AI Chat', () => {
     await page.waitForTimeout(500);
 
     // Find input and send message
-    const input = page.locator('textarea, input[type="text"]').last();
+    const input = page.locator('textarea[placeholder*="消息"], textarea[placeholder*="提问"]');
     await expect(input).toBeVisible({ timeout: 10_000 });
     await input.fill('Explain this query');
     await input.press('Enter');
     await page.waitForTimeout(1000);
 
-    // Streaming response should render markdown
-    await expect(page.locator('text=/Hello/').first()).toBeVisible({ timeout: 5_000 });
-    await expect(page.locator('text=/departments/').first()).toBeVisible();
+    // Use visible filter to avoid matching invisible table cells like "Hello SQLite"
+    await expect(page.locator('text=/Hello/').locator('visible=true').first()).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('text=/departments/').locator('visible=true').first()).toBeVisible();
   });
 
   test('closes AI panel', async ({ page }) => {
@@ -110,7 +110,7 @@ test.describe('AI Chat', () => {
     await page.locator('button:has-text("AI")').first().click();
     await page.waitForTimeout(500);
 
-    const input = page.locator('textarea, input[type="text"]').last();
+    const input = page.locator('textarea[placeholder*="消息"], textarea[placeholder*="提问"]');
     await expect(input).toBeVisible({ timeout: 10_000 });
     await input.fill('Help me');
     await input.press('Enter');
@@ -141,7 +141,7 @@ test.describe('AI Chat', () => {
     await page.locator('button:has-text("AI")').first().click();
     await page.waitForTimeout(500);
 
-    const input = page.locator('textarea, input[type="text"]').last();
+    const input = page.locator('textarea[placeholder*="消息"], textarea[placeholder*="提问"]');
     await expect(input).toBeVisible({ timeout: 10_000 });
     await input.fill('Explain');
     await input.press('Enter');
