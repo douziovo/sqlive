@@ -5,14 +5,20 @@ import com.douzi.sqlive.dto.ai.AiProviderConfig;
 import com.douzi.sqlive.dto.ai.StreamChunk;
 import com.douzi.sqlive.exception.AiProviderException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.netty.channel.ChannelOption;
+import io.netty.handler.timeout.WriteTimeoutHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
+import reactor.netty.http.client.HttpClient;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class OpenAiCompatibleProvider implements AiProvider {
@@ -22,25 +28,34 @@ public class OpenAiCompatibleProvider implements AiProvider {
     private final String providerName;
     private final Protocol protocol;
     private final String endpoint;
+    private final Duration connectTimeout;
+    private final Duration readTimeout;
+    private final Duration writeTimeout;
 
     // Full constructor — package-private for test injection
     OpenAiCompatibleProvider(AiProviderConfig config,
                              WebClient webClient, Protocol protocol,
-                             String providerName, String endpoint) {
+                             String providerName, String endpoint,
+                             Duration connectTimeout, Duration readTimeout, Duration writeTimeout) {
         this.config = config;
         this.webClient = webClient;
         this.protocol = protocol;
         this.providerName = providerName;
         this.endpoint = endpoint;
+        this.connectTimeout = connectTimeout;
+        this.readTimeout = readTimeout;
+        this.writeTimeout = writeTimeout;
     }
 
     // Production constructor
     public OpenAiCompatibleProvider(AiProviderConfig config,
-                                    Protocol protocol, String providerName, String endpoint) {
-        this(config, buildWebClient(config), protocol, providerName, endpoint);
+                                    Protocol protocol, String providerName, String endpoint,
+                                    Duration connectTimeout, Duration readTimeout, Duration writeTimeout) {
+        this(config, buildWebClient(config, connectTimeout, readTimeout, writeTimeout), protocol, providerName, endpoint, connectTimeout, readTimeout, writeTimeout);
     }
 
-    public static OpenAiCompatibleProvider create(String name, AiProviderConfig cfg, ObjectMapper mapper) {
+    public static OpenAiCompatibleProvider create(String name, AiProviderConfig cfg, ObjectMapper mapper,
+                                                   Duration connectTimeout, Duration readTimeout, Duration writeTimeout) {
         Protocol proto = switch (name) {
             case "deepseek" -> new DeepSeekProtocol(mapper);
             case "ollama" -> new OllamaProtocol(mapper);
@@ -52,12 +67,20 @@ public class OpenAiCompatibleProvider implements AiProvider {
             case "lmstudio" -> "/api/v1/chat";
             default -> "/chat/completions";
         };
-        return new OpenAiCompatibleProvider(cfg, proto, name, ep);
+        return new OpenAiCompatibleProvider(cfg, proto, name, ep, connectTimeout, readTimeout, writeTimeout);
     }
 
-    private static WebClient buildWebClient(AiProviderConfig config) {
+    private static WebClient buildWebClient(AiProviderConfig config,
+                                             Duration connectTimeout, Duration readTimeout, Duration writeTimeout) {
+        HttpClient httpClient = HttpClient.create()
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) connectTimeout.toMillis())
+                .responseTimeout(readTimeout)
+                .doOnConnected(conn -> conn.addHandlerLast(
+                        new WriteTimeoutHandler(writeTimeout.toSeconds(), TimeUnit.SECONDS)));
+
         var builder = WebClient.builder()
                 .baseUrl(config.getBaseUrl())
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .defaultHeader("Content-Type", "application/json");
         if (config.hasApiKey()) {
             builder.defaultHeader("Authorization", "Bearer " + config.getApiKey());
@@ -106,8 +129,13 @@ public class OpenAiCompatibleProvider implements AiProvider {
             return result;
         } catch (Exception e) {
             long elapsed = System.currentTimeMillis() - start;
-            log.error("{} API call failed: model={}, elapsed={}ms", providerName, config.getModel(), elapsed, e);
-            throw new AiProviderException("AI service call failed: " + e.getMessage());
+            String msg = e.getMessage();
+            String sanitized = sanitizeErrorMessage(msg);
+            if (msg != null) {
+                sanitized = sanitized.replace(config.getApiKey(), "[REDACTED]");
+            }
+            log.error("{} API call failed: model={}, elapsed={}ms, error={}", providerName, config.getModel(), elapsed, sanitized);
+            throw new AiProviderException("AI service call failed: " + sanitized);
         }
     }
 
@@ -129,6 +157,11 @@ public class OpenAiCompatibleProvider implements AiProvider {
                 .retrieve()
                 .bodyToFlux(String.class)
                 .transform(protocol::processStream);
+    }
+
+    private static String sanitizeErrorMessage(String message) {
+        if (message == null) return null;
+        return message.replaceAll("(?i)Authorization:\\s*Bearer\\s+\\S+", "Authorization: Bearer [REDACTED]");
     }
 
     private List<Map<String, String>> buildMessages(String systemPrompt,

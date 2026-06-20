@@ -18,6 +18,13 @@ public class SqlResponse {
         private List<TriggerInfo> triggers;
         private List<ForeignKeyInfo> foreignKeys;
         private ExecutionMetadata metadata;
+        private List<CanonicalStatement> canonicalStatements;
+    }
+
+    @Data
+    public static class CanonicalStatement {
+        private int start;
+        private int end;
     }
 
     public static SqlResponse error(String message, int line) {
