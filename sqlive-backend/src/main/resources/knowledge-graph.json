@@ -152,7 +152,7 @@
       "patterns": ["DELETE\\s+FROM"],
       "difficulty": 1,
       "prerequisites": ["insert"],
-      "nextTopics": ["create-table", "views"],
+      "nextTopics": ["create-table", "views", "transactions"],
       "category": "dml"
     },
     {

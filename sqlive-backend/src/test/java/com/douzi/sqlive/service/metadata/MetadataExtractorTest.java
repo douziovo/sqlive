@@ -1,6 +1,8 @@
 package com.douzi.sqlive.service.metadata;
 
+import com.douzi.sqlive.config.PoolProperties;
 import com.douzi.sqlive.service.database.DatabasePoolManager;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,7 +13,12 @@ import static org.junit.jupiter.api.Assertions.*;
 class MetadataExtractorTest {
 
     private final MetadataExtractor extractor = new MetadataExtractor();
-    private final DatabasePoolManager poolManager = new DatabasePoolManager();
+    private final DatabasePoolManager poolManager = createPoolManager();
+
+    private DatabasePoolManager createPoolManager() {
+        PoolProperties props = new PoolProperties();
+        return new DatabasePoolManager(props, new SimpleMeterRegistry());
+    }
     private JdbcTemplate jdbc;
 
     @BeforeEach
