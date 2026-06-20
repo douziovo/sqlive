@@ -104,7 +104,7 @@ npm install
 npm run dev
 ```
 
-前端运行在 `http://localhost:5173`，API 请求自动代理至后端 8080 端口。
+前端运行在 `http://localhost:5173`，API 请求通过 `VITE_API_URL` 环境变量直接连接后端 8080 端口。
 
 ### 3. 配置 AI（可选）
 
@@ -133,9 +133,8 @@ sqlive/
 │   │   │   ├── DataVisualizer.vue      # 数据表格 / ER 图 / 元数据页签
 │   │   │   ├── TableSection.vue        # 单表视图（排序/过滤/分页）
 │   │   │   ├── ResultTable.vue         # 查询结果表 + 图表切换
-│   │   │   ├── ChartView.vue           # Chart.js 可视化
+│   │   │   ├── ChartView.vue           # ECharts 可视化
 │   │   │   ├── AiChatPanel.vue         # AI 对话面板
-│   │   │   ├── AiInlineResult.vue      # AI 内联结果展示
 │   │   │   ├── AiMessageFooter.vue     # AI 消息底部操作栏
 │   │   │   ├── CreateTableModal.vue    # 可视化建表
 │   │   │   ├── SortFilterToolbar.vue   # 排序/过滤工具栏
@@ -153,13 +152,11 @@ sqlive/
 │   │   │   │   ├── ErToolbar.vue       # 布局/缩放工具栏
 │   │   │   │   └── ErSearchBar.vue     # 搜索过滤
 │   │   │   └── ui/                     # Reka-ui 组件封装（30+ 组件）
-│   │   ├── viewmodel/
+│   │   ├── composables/
 │   │   │   ├── useSqlEngine.ts         # 核心状态机（SQL 执行 / 双向同步）
 │   │   │   ├── useAiChat.ts            # AI 聊天状态管理
 │   │   │   ├── useErDiagram.ts         # ER 图数据转换 + dagre 布局
 │   │   │   ├── useInlineActions.ts     # 内联 AI 操作处理
-│   │   │   └── injectionKeys.ts        # provide/inject 依赖注入键
-│   │   ├── composables/
 │   │   │   ├── useMultiTabs.ts         # 多 Tab 状态管理
 │   │   │   ├── useBidirectionalSync.ts # 双向同步引擎
 │   │   │   ├── useDatabaseLifecycle.ts # 数据库生命周期
@@ -169,26 +166,25 @@ sqlive/
 │   │   │   ├── useAiStreaming.ts       # AI 流式传输封装
 │   │   │   └── useKnowledgeGraph.ts    # 知识图谱数据管理
 │   │   ├── model/
-│   │   │   └── DatabaseTypes.ts        # TypeScript 类型定义
-│   │   └── utils/
+│   │   │   ├── DatabaseTypes.ts        # TypeScript 类型定义
+│   │   │   └── injectionKeys.ts        # provide/inject 依赖注入键
+│   │   ├── utils/
 │   │       ├── sse.ts                  # SSE 流解析器
 │   │       ├── sqlStatements.ts        # SQL 语句解析工具
 │   │       ├── tupleParser.ts          # VALUES 元组提取器
-│   │       ├── aiQuickFix.ts           # AI 快速修复工具
 │   │       ├── aiFormatter.ts          # AI 响应格式化
 │   │       ├── sql.ts                  # SQL 字面量生成
-│   │       ├── sqlTopics.ts            # SQL 主题常量
 │   │       ├── file.ts                 # 文件下载工具
 │   │       └── html.ts                 # HTML 处理工具
 │   ├── tests/e2e/                      # Playwright E2E 测试（8 个 spec）
-│   └── src/__tests__/                  # Vitest 单元测试（27 个文件，476 用例）
+│   └── src/__tests__/                  # Vitest 单元测试（33 个文件，476 用例）
 │
 └── sqlive-backend/             # Spring Boot 4 后端
     └── src/main/java/com/douzi/sqlive/
         ├── SqliveApplication.java      # 启动入口
         ├── controller/
         │   ├── SqlController.java      # POST /api/execute
-        │   └── ai/AiController.java    # POST /api/ai/chat, /api/ai/suggest
+        │   └── AiController.java       # POST /api/ai/chat, /analyze-error, /fix-code, /explain, /optimize
         ├── service/
         │   ├── SqlExecutionService.java     # SQL 执行核心逻辑
         │   ├── database/DatabasePoolManager.java  # 多数据库隔离管理
@@ -206,16 +202,14 @@ sqlive/
         │   │   ├── PromptBuilder.java        # Prompt 模板引擎
         │   │   └── RequestContext.java       # 请求上下文封装
         │   └── knowledge/
-        │       ├── KnowledgeGraphService.java # 知识图谱服务
-        │       └── SqlTopicClassifier.java   # SQL 主题分类器
+        │       └── KnowledgeGraphService.java # 知识图谱服务
         ├── dto/
         │   ├── SqlRequest.java          # SQL 执行请求
         │   ├── SqlResponse.java         # SQL 执行响应
         │   ├── TableSchema.java         # 表结构 DTO
         │   └── ai/                      # AI 相关 DTO
         ├── exception/
-        │   ├── GlobalExceptionHandler.java   # 全局异常处理
-        │   └── SqlExecutionException.java    # SQL 执行异常
+        │   └── GlobalExceptionHandler.java   # 全局异常处理
         └── config/
             └── RateLimitFilter.java     # 滑动窗口限流
 
@@ -231,9 +225,79 @@ npm run test:e2e         # Playwright E2E 测试
 
 # 后端测试
 cd sqlive-backend
-./lew test            # 运行全部 JUnit 5 用例
+./gradlew test         # 运行全部 JUnit 5 用例
 ```
 
 ## 许可证
 
 Copyright (c) 2026 douzi. All Rights Reserved.
+
+## 安装步骤
+
+```bash
+# 前端依赖
+cd sqlive-frontend && npm install
+
+# 后端依赖（首次运行或构建 jar）
+cd ../sqlive-backend
+./gradlew build      # Linux / macOS
+gradlew.bat build    # Windows
+```
+
+## 使用示例
+
+### 示例 1：通过 API 执行 SQL
+
+后端运行后，可直接通过 HTTP API 执行任意 SQL 脚本：
+
+```bash
+curl -X POST http://localhost:8080/api/execute \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sql": "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);\nINSERT INTO users VALUES (1, '\''Alice'\'');\nSELECT * FROM users;",
+    "dbName": "demo",
+    "reset": true
+  }'
+```
+
+成功时返回表结构、列类型和数据行：
+
+```json
+{
+  "success": true,
+  "data": {
+    "tables": [
+      {
+        "name": "users",
+        "columns": ["id", "name"],
+        "columnTypes": { "id": "INTEGER", "name": "TEXT" },
+        "data": [{ "id": 1, "name": "Alice" }]
+      }
+    ]
+  }
+}
+```
+
+### 示例 2：多表 JOIN 查询（Web 界面）
+
+在 Web 编辑器中编写以下 SQL，左侧输入、右侧实时渲染：
+
+```sql
+CREATE TABLE departments (id INTEGER PRIMARY KEY, name TEXT);
+CREATE TABLE employees (id INTEGER PRIMARY KEY, name TEXT, dept_id INTEGER, salary REAL);
+
+INSERT INTO departments VALUES (1, '技术部'), (2, '市场部');
+INSERT INTO employees VALUES (1, '张三', 1, 15000), (2, '李四', 2, 12000), (3, '王五', 1, 18000);
+
+-- 联合查询：员工姓名 + 部门名称
+SELECT e.name AS 员工, d.name AS 部门, e.salary AS 薪资
+FROM employees e
+JOIN departments d ON e.dept_id = d.id
+ORDER BY e.salary DESC;
+```
+
+执行后在右侧"表格"标签页看到查询结果，在"ER 图"标签页看到自动生成的实体关系图（employees -- departments，1:N 关系）。
+
+### 示例 3：批量导入 SQL 文件
+
+项目根目录提供了 `test-multi-table.sql` 示例文件，包含 14 张表、10 个索引、4 个视图、7 个触发器、8 条 INSERT 数据以及 20+ 种查询类型（窗口函数、递归 CTE、子查询、UNION 等）。可通过 Web 界面的"导入"按钮加载，一键体验全部功能。
