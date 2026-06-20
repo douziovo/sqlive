@@ -1,4 +1,5 @@
 import { parsePrimaryType } from './sql'
+import type { TruncationInfo } from '../model/DatabaseTypes'
 
 /**
  * Utility functions for SQL statement parsing, type enforcement, and value comparison.
@@ -71,16 +72,23 @@ export const extractSqlStatements = (script: string) => {
   return statements
 }
 
-export const enforceTypeConstraints = (val: any, rawType: string) => {
-  if (val === null || val === undefined) return val
+export const enforceTypeConstraints = (val: any, rawType: string): TruncationInfo => {
+  if (val === null || val === undefined) return { value: val, wasTruncated: false }
   const strVal = String(val)
   const typeUpper = parsePrimaryType(rawType).toUpperCase()
   const charMatch = typeUpper.match(/(?:VARCHAR|CHAR)\s*\((\d+)\)/)
   if (charMatch) {
     const maxLength = parseInt(charMatch[1], 10)
-    if (strVal.length > maxLength) return strVal.substring(0, maxLength)
+    if (strVal.length > maxLength) {
+      return {
+        value: strVal.substring(0, maxLength),
+        wasTruncated: true,
+        originalValue: val,
+        maxLength
+      }
+    }
   }
-  return val
+  return { value: val, wasTruncated: false }
 }
 
 export const isApproxEqual = (a: number, b: number) => Math.abs(a - b) < 0.000001

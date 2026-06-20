@@ -44,6 +44,11 @@ export interface ForeignKeyInfo {
   toColumn: string
 }
 
+export interface CanonicalStatement {
+  start: number
+  end: number
+}
+
 export interface DatabaseModel {
   tables: TableSchema[]
   queryResults: TableSchema[]
@@ -103,4 +108,18 @@ export interface CreateTableEvent {
   name: string
   columns: string[]
   data: Record<string, unknown>[]
+}
+
+export interface TruncationInfo {
+  value: any
+  wasTruncated: boolean
+  originalValue?: any
+  maxLength?: number
+  column?: string
+}
+
+export interface InsertResult {
+  success: boolean
+  tableName: string
+  error?: string
 }

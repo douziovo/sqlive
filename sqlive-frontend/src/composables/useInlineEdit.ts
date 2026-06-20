@@ -1,14 +1,14 @@
-import type { Row } from '../model/DatabaseTypes'
+import type { CellUpdateEvent, Row } from '../model/DatabaseTypes'
 import { isNumericType } from '../utils/sql'
 
 export function useInlineEdit(
   tableName: string,
   columnTypes: Record<string, string>,
-  emit: (e: string, ...args: any[]) => void
+  emit: (event: 'update-cell', payload: CellUpdateEvent) => void
 ) {
   function autoResizeGhost(e: Event) {
     const target = e.target as HTMLTextAreaElement
-    const ghost = target.previousElementSibling
+    const ghost = target.parentElement?.querySelector('[data-ghost]') as HTMLElement | null
     if (ghost) ghost.textContent = `${target.value} `
   }
 

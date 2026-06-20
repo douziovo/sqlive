@@ -1,6 +1,6 @@
 import type { ComputedRef, InjectionKey, Ref } from 'vue'
 import type { AiActions } from '../composables/useAiChat'
-import type { DatabaseModel, HighlightState } from './DatabaseTypes'
+import type { DatabaseModel, HighlightState, InsertResult, TruncationInfo } from './DatabaseTypes'
 import type { SchemaTableInfo } from './SchemaTypes'
 
 export interface SqlContext {
@@ -13,6 +13,8 @@ export interface SqlContext {
   schemaTables: ComputedRef<SchemaTableInfo[]>
   db: DatabaseModel
   highlight: HighlightState
+  lastTruncations: Ref<TruncationInfo[]>
+  insertResult: Ref<InsertResult | null>
 }
 
 export const SQL_CONTEXT_KEY: InjectionKey<SqlContext> = Symbol('sqlContext')

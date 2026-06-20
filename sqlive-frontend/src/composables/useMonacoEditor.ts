@@ -78,10 +78,21 @@ export function useMonacoEditor(
 
   function create(initialCode: string) {
     if (!container.value) return
+
+    // Expose monaco on window for E2E tests — Playwright keyboard.type()
+    // cannot reliably type spaces/special chars into Monaco.
+    if (typeof window !== 'undefined' && window.location.search.includes('e2e=1')) {
+      ;(window as any).monaco = monaco
+    }
+
     editor = monaco.editor.create(container.value, {
       value: initialCode,
       language: 'sql',
       theme: 'vs',
+      // Monaco 0.55+ defaults editContext=true, which uses the experimental
+      // EditContext API. This breaks space-key input because EditContext
+      // bypasses traditional keyboard events. Fall back to textarea mode.
+      editContext: false,
       fontSize: 14,
       fontFamily:
         '"Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',

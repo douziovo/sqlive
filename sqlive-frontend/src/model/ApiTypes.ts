@@ -1,4 +1,4 @@
-import type { ExecutionMetadata, ForeignKeyInfo, IndexInfo, TableSchema, TriggerInfo, ViewInfo } from './DatabaseTypes'
+import type { CanonicalStatement, ExecutionMetadata, ForeignKeyInfo, IndexInfo, TableSchema, TriggerInfo, ViewInfo } from './DatabaseTypes'
 
 // ── Execute (SQL) ──────────────────────────────────────────
 
@@ -21,6 +21,7 @@ export interface ExecuteDataPayload {
   views: ViewInfo[]
   triggers: TriggerInfo[]
   foreignKeys: ForeignKeyInfo[]
+  canonicalStatements?: CanonicalStatement[]
   metadata: ExecutionMetadata | null
 }
 

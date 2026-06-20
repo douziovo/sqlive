@@ -1,5 +1,6 @@
 import type { Ref, WritableComputedRef } from 'vue'
-import type { DatabaseModel, Row } from '../model/DatabaseTypes'
+import { ref } from 'vue'
+import type { DatabaseModel, Row, TruncationInfo } from '../model/DatabaseTypes'
 import { parsePrimaryType, toSqlLiteral } from '../utils/sql'
 import {
   enforceTypeConstraints,
@@ -19,6 +20,7 @@ export function useBidirectionalSync(
   transitionFn: (from: EngineMode, to: EngineMode, ctx: string) => EngineMode
 ) {
   let lastValidCode = code.value
+  const lastTruncations = ref<TruncationInfo[]>([])
 
   const beginReconcile = () => {
     lastValidCode = code.value
@@ -27,14 +29,19 @@ export function useBidirectionalSync(
 
   const generateValuesTuple = (tableName: string, row: Row, columns: string[]) => {
     const tableInfo = db.tables.find((t) => t.name === tableName)
+    const truncations: TruncationInfo[] = []
     const values = columns.map((colName) => {
       let val = row[colName]
       const rawType = tableInfo?.columnTypes[colName] || ''
-      val = enforceTypeConstraints(val, rawType)
+      const constraintResult = enforceTypeConstraints(val, rawType)
+      if (constraintResult.wasTruncated) {
+        truncations.push({ ...constraintResult, column: colName })
+      }
+      val = constraintResult.value
       const type = parsePrimaryType(rawType)
       return toSqlLiteral(val, type)
     })
-    return `(${values.join(', ')})`
+    return { sql: `(${values.join(', ')})`, truncations }
   }
 
   const findTupleInBatch = (stmtText: string, tableName: string, rowData: Row) => {
@@ -85,7 +92,8 @@ export function useBidirectionalSync(
       if (match) {
         const absoluteStart = stmt.start + match.start
         const absoluteEnd = stmt.start + match.end
-        const newTupleSql = generateValuesTuple(tableName, newRowData, match.explicitCols)
+        const { sql: newTupleSql, truncations } = generateValuesTuple(tableName, newRowData, match.explicitCols)
+        if (truncations.length > 0) lastTruncations.value = truncations
         code.value = code.value.substring(0, absoluteStart) + newTupleSql + code.value.substring(absoluteEnd)
         flashCode(newTupleSql)
         return
@@ -140,7 +148,8 @@ export function useBidirectionalSync(
     const table = db.tables.find((t) => t.name === tableName)
     if (!table) return
     const physicalColumns = table.columns.filter((c) => !table.columnTypes[c].includes('VIRTUAL'))
-    const valuesSql = generateValuesTuple(tableName, newRowData, physicalColumns)
+    const { sql: valuesSql, truncations } = generateValuesTuple(tableName, newRowData, physicalColumns)
+    if (truncations.length > 0) lastTruncations.value = truncations
     const newSql = `INSERT INTO ${tableName} (${physicalColumns.join(', ')}) VALUES ${valuesSql};`
     let currentCode = code.value.trimEnd()
     if (!currentCode.endsWith(';')) currentCode += ';'
@@ -193,6 +202,7 @@ export function useBidirectionalSync(
     deleteRow,
     insertRowUI,
     addNewTable,
-    dropTableUI
+    dropTableUI,
+    lastTruncations
   }
 }
