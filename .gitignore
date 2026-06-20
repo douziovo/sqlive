@@ -1,14 +1,23 @@
 sqlive-backend/gradle
 misc
 .gated-pipeline-checkpoint
+graphify-out
+.chrome-devtools
+.gated-pipeline-checkpoint
+
 
 # IDE
 .idea/
 
 # Claude Code
+.claude
 .claude/worktrees/
 .claude/scheduled_tasks.json
 .claude/settings.local.json
+
+# Claude local settings
+settings.local.json
+settings.local.*.json
 docs/superpowers
 .playwright-mcp
 .superpowers
@@ -23,6 +32,16 @@ docs/superpowers
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# GSD Planning (separate branch)
+.planning/
+
+# UAT artifacts
+uat-*.png
+uat-*.yml
+knowledge-panel.png
+knowledge-panel-snapshot.yml
+*.snap.png
 
 # Logs
 *.log
