@@ -15,6 +15,13 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 
+# UAT artifacts
+uat-*.png
+uat-*.yml
+knowledge-panel.png
+knowledge-panel-snapshot.yml
+*.snap.png
+
 # Logs
 *.log
 logs/
