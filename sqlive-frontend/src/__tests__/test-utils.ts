@@ -1,9 +1,15 @@
 import { vi } from 'vitest'
 import type { useAiChat } from '../composables/useAiChat'
 import type { useSqlEngine } from '../composables/useSqlEngine'
+import { API_URL } from '../config'
 
 export function jsonOk(data: any) {
-  return Promise.resolve({ status: 200, ok: true, json: () => Promise.resolve(data) })
+  return Promise.resolve({
+    status: 200,
+    ok: true,
+    json: () => Promise.resolve(data),
+    headers: { get: () => null }
+  })
 }
 
 export function mockSuccess(fetchSpy: ReturnType<typeof vi.fn>, data: any) {
@@ -21,8 +27,6 @@ export function mockReject(fetchSpy: ReturnType<typeof vi.fn>, err: Error) {
 export async function tick(ms = 150) {
   await vi.advanceTimersByTimeAsync(ms)
 }
-
-const API_URL = 'http://localhost:8080/api/execute'
 
 export interface SqlEngineSetup {
   useSqlEngine: typeof useSqlEngine
