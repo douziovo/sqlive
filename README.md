@@ -27,9 +27,9 @@
 - **学习建议**：基于知识图谱的 SQL 主题分类与学习路径推荐
 - **知识图谱**：全屏知识图谱面板，语义缩放（3 级细节），难度/状态双组筛选，浮层详情卡片，圆形扩展动画从悬浮伴侣按钮入口
 
+![知识图谱细节](docs/screenshots/08-knowledge-graph.png)
+![知识图谱](docs/screenshots/09-knowledge-graph-detail.png)
 ![AI 对话](docs/screenshots/07-ai-chat.png)
-
-![知识图谱](docs/screenshots/08-knowledge-graph.png)
 
 ### 数据可视化
 
@@ -121,99 +121,6 @@ ai:
 
 默认使用 DeepSeek，需设置环境变量 `DEEPSEEK_API_KEY`。仅使用 SQL 执行功能则可跳过此步骤。
 
-## 项目结构
-
-```
-sqlive/
-├── sqlive-frontend/            # Vue 3 + TypeScript 前端
-│   ├── src/
-│   │   ├── App.vue             # 顶层布局（代码编辑器 | 数据可视化 | AI 聊天）
-│   │   ├── components/
-│   │   │   ├── CodeEditor.vue          # Monaco SQL 编辑器 + 多 Tab 工具栏
-│   │   │   ├── DataVisualizer.vue      # 数据表格 / ER 图 / 元数据页签
-│   │   │   ├── TableSection.vue        # 单表视图（排序/过滤/分页）
-│   │   │   ├── ResultTable.vue         # 查询结果表 + 图表切换
-│   │   │   ├── ChartView.vue           # ECharts 可视化
-│   │   │   ├── AiChatPanel.vue         # AI 对话面板
-│   │   │   ├── AiMessageFooter.vue     # AI 消息底部操作栏
-│   │   │   ├── CreateTableModal.vue    # 可视化建表
-│   │   │   ├── SortFilterToolbar.vue   # 排序/过滤工具栏
-│   │   │   ├── HoverPreview.vue        # 悬停预览弹窗（索引/触发器详情）
-│   │   │   ├── EmptyState.vue          # 空状态引导
-│   │   │   ├── knowledge/                # 知识图谱子组件
-│   │   │   │   ├── KnowledgePanel.vue    # 全屏知识图谱面板（圆形展开动画 + 筛选标签）
-│   │   │   │   ├── KnowledgeGraph.vue    # VueFlow 图谱画布（语义缩放 + 浮层卡片）
-│   │   │   │   ├── KnowledgeNode.vue     # 自定义节点（3 级缩放细节）
-│   │   │   │   ├── KnowledgeDetail.vue   # 浮层详情卡片
-│   │   │   │   └── LearningCompanion.vue # 浮动伴侣按钮（入口）
-│   │   │   ├── er/                     # ER 图子组件
-│   │   │   │   ├── ErDiagram.vue       # VueFlow 容器
-│   │   │   │   ├── ErTableNode.vue     # 自定义表节点
-│   │   │   │   ├── ErToolbar.vue       # 布局/缩放工具栏
-│   │   │   │   └── ErSearchBar.vue     # 搜索过滤
-│   │   │   └── ui/                     # Reka-ui 组件封装（30+ 组件）
-│   │   ├── composables/
-│   │   │   ├── useSqlEngine.ts         # 核心状态机（SQL 执行 / 双向同步）
-│   │   │   ├── useAiChat.ts            # AI 聊天状态管理
-│   │   │   ├── useErDiagram.ts         # ER 图数据转换 + dagre 布局
-│   │   │   ├── useInlineActions.ts     # 内联 AI 操作处理
-│   │   │   ├── useMultiTabs.ts         # 多 Tab 状态管理
-│   │   │   ├── useBidirectionalSync.ts # 双向同步引擎
-│   │   │   ├── useDatabaseLifecycle.ts # 数据库生命周期
-│   │   │   ├── useHighlight.ts         # 代码高亮与动画
-│   │   │   ├── useSortFilter.ts        # 列级排序/过滤状态
-│   │   │   ├── useTablePipeline.ts     # 表格数据管道
-│   │   │   ├── useAiStreaming.ts       # AI 流式传输封装
-│   │   │   └── useKnowledgeGraph.ts    # 知识图谱数据管理
-│   │   ├── model/
-│   │   │   ├── DatabaseTypes.ts        # TypeScript 类型定义
-│   │   │   └── injectionKeys.ts        # provide/inject 依赖注入键
-│   │   ├── utils/
-│   │       ├── sse.ts                  # SSE 流解析器
-│   │       ├── sqlStatements.ts        # SQL 语句解析工具
-│   │       ├── tupleParser.ts          # VALUES 元组提取器
-│   │       ├── aiFormatter.ts          # AI 响应格式化
-│   │       ├── sql.ts                  # SQL 字面量生成
-│   │       ├── file.ts                 # 文件下载工具
-│   │       └── html.ts                 # HTML 处理工具
-│   ├── tests/e2e/                      # Playwright E2E 测试（8 个 spec）
-│   └── src/__tests__/                  # Vitest 单元测试（33 个文件，476 用例）
-│
-└── sqlive-backend/             # Spring Boot 4 后端
-    └── src/main/java/com/douzi/sqlive/
-        ├── SqliveApplication.java      # 启动入口
-        ├── controller/
-        │   ├── SqlController.java      # POST /api/execute
-        │   └── AiController.java       # POST /api/ai/chat, /analyze-error, /fix-code, /explain, /optimize
-        ├── service/
-        │   ├── SqlExecutionService.java     # SQL 执行核心逻辑
-        │   ├── database/DatabasePoolManager.java  # 多数据库隔离管理
-        │   ├── sql/SqlParser.java            # 手写 SQL 词法解析器
-        │   ├── metadata/MetadataExtractor.java    # 7 类元数据提取
-        │   ├── ai/
-        │   │   ├── AiService.java            # AI 编排服务
-        │   │   ├── AiProvider.java           # Provider 接口
-        │   │   ├── Protocol.java             # 协议抽象
-        │   │   ├── OpenAiProtocol.java       # OpenAI 兼容协议
-        │   │   ├── DeepSeekProtocol.java     # DeepSeek 协议
-        │   │   ├── OllamaProtocol.java       # Ollama 协议
-        │   │   ├── LmStudioProtocol.java     # LM Studio 协议
-        │   │   ├── OpenAiCompatibleProvider.java  # Provider 工厂
-        │   │   ├── PromptBuilder.java        # Prompt 模板引擎
-        │   │   └── RequestContext.java       # 请求上下文封装
-        │   └── knowledge/
-        │       └── KnowledgeGraphService.java # 知识图谱服务
-        ├── dto/
-        │   ├── SqlRequest.java          # SQL 执行请求
-        │   ├── SqlResponse.java         # SQL 执行响应
-        │   ├── TableSchema.java         # 表结构 DTO
-        │   └── ai/                      # AI 相关 DTO
-        ├── exception/
-        │   └── GlobalExceptionHandler.java   # 全局异常处理
-        └── config/
-            └── RateLimitFilter.java     # 滑动窗口限流
-
-```
 
 ## 测试
 
@@ -227,10 +134,6 @@ npm run test:e2e         # Playwright E2E 测试
 cd sqlive-backend
 ./gradlew test         # 运行全部 JUnit 5 用例
 ```
-
-## 许可证
-
-Copyright (c) 2026 douzi. All Rights Reserved.
 
 ## 安装步骤
 
@@ -301,3 +204,7 @@ ORDER BY e.salary DESC;
 ### 示例 3：批量导入 SQL 文件
 
 项目根目录提供了 `test-multi-table.sql` 示例文件，包含 14 张表、10 个索引、4 个视图、7 个触发器、8 条 INSERT 数据以及 20+ 种查询类型（窗口函数、递归 CTE、子查询、UNION 等）。可通过 Web 界面的"导入"按钮加载，一键体验全部功能。
+
+## 许可证
+
+Copyright (c) 2026 douzi. All Rights Reserved.
