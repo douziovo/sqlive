@@ -123,19 +123,14 @@ test.describe('Cross-Feature User Journeys', () => {
     }
 
     // Step 5: Drop table
-    page.once('dialog', (dialog) => dialog.accept());
-
-    const tableHeader = page.locator('#table-journey_test').locator('.group').first();
-    await tableHeader.hover();
-
     const dropBtn = page.locator('#table-journey_test').locator('button[title="删除表格"]');
     if (await dropBtn.isVisible().catch(() => false)) {
-      responsePromise = page.waitForResponse(
-        (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',
-        { timeout: 15_000 },
-      );
+      page.once('dialog', (dialog) => dialog.accept());
       await dropBtn.click();
-      await responsePromise;
+      await page.waitForTimeout(2000);
+
+      // Table should be gone after drop
+      await expect(page.locator('#table-journey_test')).not.toBeVisible({ timeout: 5_000 });
     }
 
     // App should not crash after full lifecycle
@@ -309,7 +304,9 @@ test.describe('Cross-Feature User Journeys', () => {
     await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({ timeout: 5_000 });
 
     // Verify AI response relates to the topic
-    await expect(page.locator('text=/SELECT/').first()).toBeVisible({ timeout: 5_000 });
+    const chatPanel = page.locator('.ai-chat-panel');
+    await expect(chatPanel).toBeVisible();
+    await expect(chatPanel.getByText(/SELECT queries retrieve data/)).toBeVisible({ timeout: 5_000 });
 
     await expect(page.locator('.monaco-editor')).toBeVisible();
   });

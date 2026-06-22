@@ -86,7 +86,7 @@ test.describe('Knowledge Graph', () => {
     const nodeCount = await page.locator('.vue-flow__node').count();
     if (nodeCount > 0) {
       await expect(page.locator('.vue-flow__node').first()).toBeVisible({ timeout: 5_000 });
-      await expect(page.locator('.vue-flow')).toBeVisible({ timeout: 5_000 });
+      await expect(page.locator('.knowledge-panel .vue-flow')).toBeVisible({ timeout: 5_000 });
     } else {
       await expect(page.locator('.knowledge-graph-empty').first()).toBeVisible({ timeout: 3_000 });
     }
@@ -156,7 +156,7 @@ test.describe('Knowledge Graph', () => {
     await page.waitForTimeout(500);
 
     // Get initial progress text
-    const progressEl = page.locator('.knowledge-panel__progress');
+    const progressEl = page.locator('.knowledge-panel__progress-text');
     await expect(progressEl).toBeVisible();
 
     // Click "标记已掌握" button
