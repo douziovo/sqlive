@@ -57,6 +57,12 @@ public class SqlExecutionService {
 
             for (SqlParser.SqlStatement s : statements) {
                 if (s.sql().trim().isEmpty()) continue;
+
+                String blockedReason = isBlockedStatement(s.sql());
+                if (blockedReason != null) {
+                    return SqlResponse.error(blockedReason, s.startLine());
+                }
+
                 try {
                     jdbc.execute((Statement stmt) -> {
                         boolean hasResultSet = stmt.execute(s.sql());
@@ -106,6 +112,18 @@ public class SqlExecutionService {
         }
 
         return response;
+    }
+
+    private String isBlockedStatement(String sql) {
+        String trimmed = sql.trim();
+        String upper = trimmed.toUpperCase();
+        if (upper.startsWith("ATTACH")) {
+            return "ATTACH DATABASE is not allowed for security reasons";
+        }
+        if (upper.startsWith("PRAGMA")) {
+            return "PRAGMA statements are not allowed";
+        }
+        return null;
     }
 
     private void clearDatabase(JdbcTemplate jdbc) {
