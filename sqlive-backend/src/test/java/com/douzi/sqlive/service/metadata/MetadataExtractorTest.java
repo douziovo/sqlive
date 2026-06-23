@@ -1,22 +1,33 @@
 package com.douzi.sqlive.service.metadata;
 
+import com.douzi.sqlive.config.PoolProperties;
 import com.douzi.sqlive.service.database.DatabasePoolManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.time.Duration;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class MetadataExtractorTest {
 
     private final MetadataExtractor extractor = new MetadataExtractor();
-    private final DatabasePoolManager poolManager = new DatabasePoolManager();
+    private final DatabasePoolManager poolManager;
+
+    {
+        var props = new PoolProperties();
+        props.setMaxDatabases(500);
+        props.setIdleTimeout(Duration.ofMinutes(30));
+        props.setCleanupInterval(Duration.ofMinutes(5));
+        poolManager = new DatabasePoolManager(props);
+    }
     private JdbcTemplate jdbc;
 
     @BeforeEach
     void setUp() {
-        jdbc = poolManager.getOrCreateJdbcTemplate("meta_test_db");
+        jdbc = poolManager.getOrCreateJdbcTemplate("meta_test_db").jdbcTemplate();
     }
 
     @AfterEach

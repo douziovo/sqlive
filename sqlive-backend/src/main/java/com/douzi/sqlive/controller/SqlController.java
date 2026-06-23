@@ -4,6 +4,7 @@ import com.douzi.sqlive.dto.SqlRequest;
 import com.douzi.sqlive.dto.SqlResponse;
 import com.douzi.sqlive.service.SqlExecutionService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -20,7 +21,9 @@ public class SqlController {
     }
 
     @PostMapping("/execute")
-    public SqlResponse executeSql(@Valid @RequestBody SqlRequest request, HttpServletRequest httpRequest) {
+    public SqlResponse executeSql(@Valid @RequestBody SqlRequest request,
+                                   HttpServletRequest httpRequest,
+                                   HttpServletResponse httpResponse) {
         if (request.getSql() == null || request.getSql().trim().isEmpty()) {
             return SqlResponse.error("SQL cannot be empty", 0);
         }
@@ -33,6 +36,10 @@ public class SqlController {
 
         String clientIp = httpRequest.getRemoteAddr();
         SqlResponse response = sqlService.execute(request.getSql(), dbName, request.isReset(), clientIp);
+
+        if (response.isSessionRecreated()) {
+            httpResponse.setHeader("X-Session-Recreated", "true");
+        }
 
         long elapsed = System.currentTimeMillis() - start;
         if (response.isSuccess()) {

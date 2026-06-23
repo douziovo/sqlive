@@ -37,10 +37,17 @@ public class SqlExecutionService {
     @SuppressWarnings("SqlSourceToSinkFlow")
     public SqlResponse execute(String sqlScript, String dbName, boolean reset, @org.springframework.lang.Nullable String clientIp) {
         SqlResponse response = new SqlResponse();
-        JdbcTemplate jdbc = poolManager.getOrCreateJdbcTemplate(dbName, clientIp);
+        var poolEntry = poolManager.getOrCreateJdbcTemplate(dbName, clientIp);
+        JdbcTemplate jdbc = poolEntry.jdbcTemplate();
+
+        // If the database was just recreated after eviction and the client didn't
+        // request a reset, flag session recreation so the frontend can show a recovery toast.
+        if (poolEntry.isNew() && !reset) {
+            response.setSessionRecreated(true);
+        }
 
         try {
-            if (reset) {
+            if (reset || poolEntry.isNew()) {
                 clearDatabase(jdbc);
             }
             List<SqlParser.SqlStatement> statements = sqlParser.parseStatementsPrecise(sqlScript);
