@@ -33,7 +33,7 @@ test.describe('Table Editing & Bidirectional Sync', () => {
     await hoursCell.click();
     await hoursCell.fill('not-a-number');
     await page.keyboard.press('Tab');
-    await page.waitForTimeout(800);
+    await page.waitForResponse(r => r.url().includes('/api/execute'), { timeout: 10_000 });
 
     // After Tab (blur+submit), value should revert to original (non-numeric rejected)
     // or remain changed (if validation accepts it). Either way, the app must not crash.
@@ -43,7 +43,6 @@ test.describe('Table Editing & Bidirectional Sync', () => {
   test('deletes a row and removes VALUES tuple from SQL', async ({ page, sqlEditor }) => {
     const firstRow = page.locator('#table-departments tbody tr').first();
     await firstRow.hover();
-    await page.waitForTimeout(300);
 
     const delBtn = firstRow.locator('button[title="删除此行"]');
     await expect(delBtn).toBeVisible({ timeout: 5_000 });
@@ -76,7 +75,7 @@ test.describe('Table Editing & Bidirectional Sync', () => {
     if (count > 3) await ghostInputs.nth(3).fill('50000');
     // Tab out of last field triggers commit
     await ghostInputs.nth(Math.min(count - 1, 3)).press('Tab');
-    await page.waitForTimeout(1000);
+    await page.waitForResponse(r => r.url().includes('/api/execute'), { timeout: 10_000 }).catch(() => {});
 
     // Ghost row insert triggers SQL update via Tab commit
     await expect(page.locator('.monaco-editor')).toBeVisible();
@@ -124,7 +123,6 @@ test.describe('Table Editing & Bidirectional Sync', () => {
         await firstCell.fill('FirstEdit');
         await page.keyboard.press('Tab');
         await responsePromise;
-        await page.waitForTimeout(500);
       }
 
       // Edit second row
@@ -152,15 +150,12 @@ test.describe('Table Editing & Bidirectional Sync', () => {
     // Type some text in the editor
     await sqlEditor.click();
     await page.keyboard.type('SELECT * FROM test;', { delay: 5 });
-    await page.waitForTimeout(500);
 
     // Press Ctrl+Z to undo
     await page.keyboard.press('Control+z');
-    await page.waitForTimeout(300);
 
     // Press Ctrl+Z again
     await page.keyboard.press('Control+z');
-    await page.waitForTimeout(300);
 
     // App should not crash
     await expect(page.locator('.monaco-editor')).toBeVisible();
@@ -185,7 +180,6 @@ test.describe('Table Editing & Bidirectional Sync', () => {
     await responsePromise;
 
     // Table may or may not be visible — verify app doesn't crash on BLOB/DATE types
-    await page.waitForTimeout(1000);
     await expect(page.locator('.monaco-editor')).toBeVisible();
   });
 });

@@ -17,15 +17,12 @@ test.describe('Chart View', () => {
 
     // Click on a table to ensure we're viewing results
     await page.locator('#table-departments').click();
-    await page.waitForTimeout(500);
 
     // Switch to query results tab (which can show chart)
     await queryTab.click();
-    await page.waitForTimeout(500);
 
     // Activate chart view (ChartView is hidden by default until toggled)
     await page.locator('button:has-text("查看图表")').first().click();
-    await page.waitForTimeout(500);
 
     // Chart area should exist - chart component renders when columns >= 2
     await expect(page.locator('text=/图表：/').first()).toBeVisible({ timeout: 5_000 });
@@ -39,11 +36,9 @@ test.describe('Chart View', () => {
     const queryTab = page.locator('button:has-text("查询结果")');
     await expect(queryTab).toBeVisible({ timeout: 5_000 });
     await queryTab.click();
-    await page.waitForTimeout(500);
 
     // Activate chart view
     await page.locator('button:has-text("查看图表")').first().click();
-    await page.waitForTimeout(500);
 
     // Chart container must be visible
     await expect(page.locator('.chart-container').first()).toBeVisible({ timeout: 5_000 });
@@ -55,10 +50,8 @@ test.describe('Chart View', () => {
     const chartTypes = ['line', 'pie', 'doughnut', 'area', 'radar', 'bar'];
     for (const type of chartTypes) {
       await chartTypeSelect.selectOption(type);
-      await page.waitForTimeout(300);
-
       // Chart should not crash (no error overlays)
-      await expect(page.locator('.monaco-editor')).toBeVisible();
+      await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: 3_000 });
     }
 
     // App should remain stable after all switches
@@ -69,11 +62,9 @@ test.describe('Chart View', () => {
     const queryTab = page.locator('button:has-text("查询结果")');
     await expect(queryTab).toBeVisible({ timeout: 5_000 });
     await queryTab.click();
-    await page.waitForTimeout(500);
 
     // Activate chart view
     await page.locator('button:has-text("查看图表")').first().click();
-    await page.waitForTimeout(500);
 
     // Label column select must be present
     const labelSelect = page.locator('select:visible').first();
@@ -84,7 +75,6 @@ test.describe('Chart View', () => {
     const optionCount = await options.count();
     if (optionCount > 1) {
       await labelSelect.selectOption({ index: 0 });
-      await page.waitForTimeout(300);
     }
 
     // Toggle a numeric column checkbox if available
@@ -92,7 +82,6 @@ test.describe('Chart View', () => {
     const cbCount = await checkboxes.count();
     if (cbCount > 1) {
       await checkboxes.nth(1).click();
-      await page.waitForTimeout(300);
     }
 
     // App should not crash
@@ -101,22 +90,24 @@ test.describe('Chart View', () => {
 
   test('T2.4 shows empty state for single-column table', async ({ page, sqlEditor }) => {
     // Create a single-column table
+    const singleColResp = page.waitForResponse(
+      (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',
+      { timeout: 15_000 },
+    );
     await sqlEditor.replaceAll(
       'CREATE TABLE single_col (id INTEGER);\n' +
       'INSERT INTO single_col VALUES (1);\n' +
       'INSERT INTO single_col VALUES (2);\n' +
       'SELECT * FROM single_col;'
     );
-    await page.waitForTimeout(2000);
+    await singleColResp;
 
     // Navigate to result tab and activate chart view
     const queryTab = page.locator('button:has-text("查询结果")');
     await expect(queryTab).toBeVisible({ timeout: 5_000 });
     await queryTab.click();
-    await page.waitForTimeout(500);
 
     await page.locator('button:has-text("查看图表")').first().click();
-    await page.waitForTimeout(500);
 
     // Should show "need at least 2 columns" message or equivalent empty state
     const need2Cols = page.locator('text=/至少 2 列/');
@@ -140,7 +131,6 @@ test.describe('Chart View', () => {
     const queryTab = page.locator('button:has-text("查询结果")');
     await expect(queryTab).toBeVisible({ timeout: 5_000 });
     await queryTab.click();
-    await page.waitForTimeout(500);
 
     // App should be stable with default data
     await expect(page.locator('.monaco-editor')).toBeVisible();

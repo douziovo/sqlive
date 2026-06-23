@@ -8,8 +8,9 @@ test.describe('Error Handling', () => {
 
   test('shows error for invalid SQL syntax', async ({ page, sqlEditor }) => {
     // Replace with invalid SQL
+    const responsePromise = page.waitForResponse(r => r.url().includes('/api/execute'), { timeout: 10_000 });
     await sqlEditor.replaceAll('SELECT * FORM departments;');
-    await page.waitForTimeout(2000);
+    await responsePromise;
 
     // Monaco should show error markers (red squiggly underlines)
     const errorMarkers = page.locator('.squiggly-error, .monaco-editor .cdr');
@@ -30,7 +31,7 @@ test.describe('Error Handling', () => {
       'SELECT * FORM test_err;\n' +
       'SELECT 1;'
     );
-    await page.waitForTimeout(2000);
+    await page.waitForResponse(r => r.url().includes('/api/execute'), { timeout: 10_000 });
 
     // App shouldn't crash; error should be shown
     await expect(page.locator('.monaco-editor')).toBeVisible();
@@ -39,11 +40,11 @@ test.describe('Error Handling', () => {
   test('recovers after fixing error', async ({ page, sqlEditor }) => {
     // First introduce error
     await sqlEditor.replaceAll('SELECT * FORM departments;');
-    await page.waitForTimeout(2000);
+    await page.waitForResponse(r => r.url().includes('/api/execute'), { timeout: 10_000 });
 
     // Fix the error
     await sqlEditor.replaceAll('SELECT * FROM departments;');
-    await page.waitForTimeout(2000);
+    await page.waitForResponse(r => r.url().includes('/api/execute'), { timeout: 10_000 });
 
     // Should recover and show results
     await expect(page.locator('text=departments').first()).toBeVisible();
@@ -65,7 +66,7 @@ test.describe('Error Handling', () => {
 
     // Trigger execution
     await sqlEditor.replaceAll('SELECT * FROM departments;');
-    await page.waitForTimeout(2000);
+    await page.waitForResponse(r => r.url().includes('/api/execute'), { timeout: 10_000 });
 
     // Editor should still be visible (app handles gracefully)
     await expect(page.locator('.monaco-editor')).toBeVisible();
@@ -79,7 +80,7 @@ test.describe('Error Handling', () => {
 
     // Trigger execution
     await sqlEditor.replaceAll('SELECT 1;');
-    await page.waitForTimeout(2000);
+    await page.waitForResponse(r => r.url().includes('/api/execute'), { timeout: 10_000 });
 
     // App should show error state, not crash
     await expect(page.locator('.monaco-editor')).toBeVisible();
@@ -87,7 +88,7 @@ test.describe('Error Handling', () => {
 
   test('handles empty SQL without error', async ({ page, sqlEditor }) => {
     await sqlEditor.replaceAll('');
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(500); // no API call for empty SQL, animation debounce
 
     // App should handle empty state gracefully
     await expect(page.locator('.monaco-editor')).toBeVisible();
@@ -98,7 +99,7 @@ test.describe('Error Handling', () => {
       'CREATE TABLE empty_test (id INTEGER);\n' +
       'SELECT * FROM empty_test;'
     );
-    await page.waitForTimeout(2000);
+    await page.waitForResponse(r => r.url().includes('/api/execute'), { timeout: 10_000 });
 
     // Should not crash, may show empty table or query result
     await expect(page.locator('.monaco-editor')).toBeVisible();
@@ -114,7 +115,7 @@ test.describe('Error Handling', () => {
       'SELECT * FRM partial_ok;\n' +
       'SELECT 1;'
     );
-    await page.waitForTimeout(2000);
+    await page.waitForResponse(r => r.url().includes('/api/execute'), { timeout: 10_000 });
 
     // Error markers should appear (the valid statements may still have executed)
     const errorMarkers = page.locator('.squiggly-error, .monaco-editor .cdr');
@@ -136,7 +137,7 @@ test.describe('Error Handling', () => {
       ')\n' +
       'SELECT * FROM counter;'
     );
-    await page.waitForTimeout(2000);
+    await page.waitForResponse(r => r.url().includes('/api/execute'), { timeout: 10_000 });
 
     // Should execute or show error, not crash
     await expect(page.locator('.monaco-editor')).toBeVisible();

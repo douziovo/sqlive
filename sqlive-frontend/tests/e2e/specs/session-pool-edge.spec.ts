@@ -29,7 +29,7 @@ test.describe('Session & Pool Edge Cases', () => {
     });
 
     await gotoApp(page);
-    await page.waitForTimeout(2000);
+    await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: 10_000 });
 
     // May show a toast notification about session recreation
     // At minimum, the app should not crash
@@ -45,7 +45,6 @@ test.describe('Session & Pool Edge Cases', () => {
       const closeCount = await closeBtn.count();
       if (closeCount > 0) {
         await closeBtn.first().click();
-        await page.waitForTimeout(300);
       }
     }
 
@@ -130,7 +129,7 @@ test.describe('Session & Pool Edge Cases', () => {
     });
 
     await gotoApp(page);
-    await page.waitForTimeout(2000);
+    await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: 10_000 });
 
     // Override with request containing special characters in dbName
     await page.unroute('**/api/execute');
@@ -153,7 +152,7 @@ test.describe('Session & Pool Edge Cases', () => {
     const editor = page.locator('.monaco-editor').first();
     await editor.click();
     await page.keyboard.type('\n', { delay: 10 });
-    await page.waitForTimeout(2000);
+    await page.waitForResponse(r => r.url().includes('/api/execute'), { timeout: 10_000 });
 
     // App should handle the 400 without crashing
     await expect(page.locator('.monaco-editor')).toBeVisible();
@@ -202,7 +201,7 @@ test.describe('Session & Pool Edge Cases', () => {
     await editor.click();
     await page.keyboard.press('Control+a');
     await page.keyboard.type('SELECT 1;', { delay: 5 });
-    await page.waitForTimeout(2000);
+    await page.waitForResponse(r => r.url().includes('/api/execute'), { timeout: 10_000 });
 
     // App should still be functional
     await expect(page.locator('.monaco-editor')).toBeVisible();

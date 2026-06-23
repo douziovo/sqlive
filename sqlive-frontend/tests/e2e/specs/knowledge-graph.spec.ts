@@ -93,7 +93,6 @@ test.describe('Knowledge Graph', () => {
 
     // Close via back button
     await page.locator('.knowledge-panel__back-btn').click();
-    await page.waitForTimeout(500);
 
     // Panel should close, LearningCompanion should reappear
     await expect(page.locator('.learning-companion')).toBeVisible({ timeout: 5_000 });
@@ -114,7 +113,6 @@ test.describe('Knowledge Graph', () => {
       // Click on a knowledge node
       const firstNode = nodes.first();
       await firstNode.click();
-      await page.waitForTimeout(500);
 
       // Detail card should appear with topic info
       const detail = page.locator('.knowledge-detail');
@@ -153,7 +151,7 @@ test.describe('Knowledge Graph', () => {
 
     // Click first node to open detail
     await nodes.first().click();
-    await page.waitForTimeout(500);
+    await expect(page.locator('.knowledge-detail')).toBeVisible({ timeout: 5_000 });
 
     // Get initial progress text
     const progressEl = page.locator('.knowledge-panel__progress-text');
@@ -163,7 +161,6 @@ test.describe('Knowledge Graph', () => {
     const masterBtn = page.locator('.knowledge-detail__btn--master');
     await expect(masterBtn).toBeVisible({ timeout: 5_000 });
     await masterBtn.click();
-    await page.waitForTimeout(300);
 
     // Progress should have updated (count changed)
     const progressText = await progressEl.textContent();
@@ -171,7 +168,6 @@ test.describe('Knowledge Graph', () => {
 
     // Click again to un-master ("取消掌握")
     await masterBtn.click();
-    await page.waitForTimeout(300);
 
     // Progress should be different from after mastering
     const progressText2 = await progressEl.textContent();
@@ -211,7 +207,7 @@ test.describe('Knowledge Graph', () => {
     }
     await expect(nodes.first()).toBeVisible({ timeout: 5_000 });
     await nodes.first().click();
-    await page.waitForTimeout(500);
+    await expect(page.locator('.knowledge-detail')).toBeVisible({ timeout: 5_000 });
 
     // Click "让 AI 教我" button
     const teachBtn = page.locator('.knowledge-detail__btn--ai');
@@ -249,7 +245,6 @@ test.describe('Knowledge Graph', () => {
 
     // Close panel
     await page.locator('.knowledge-panel__back-btn').click();
-    await page.waitForTimeout(500);
 
     // Companion should return
     await expect(companion).toBeVisible({ timeout: 5_000 });
@@ -277,7 +272,6 @@ test.describe('Knowledge Graph', () => {
     const searchInput = page.locator('.knowledge-panel__search');
     await expect(searchInput).toBeVisible({ timeout: 5_000 });
     await searchInput.fill('SELECT');
-    await page.waitForTimeout(500);
 
     // Some nodes should still be visible (those matching SELECT)
     const filteredNodes = page.locator('.vue-flow__node');
@@ -287,7 +281,6 @@ test.describe('Knowledge Graph', () => {
 
     // Clear search to restore all nodes
     await searchInput.fill('');
-    await page.waitForTimeout(500);
 
     const restoredCount = await nodes.count();
     expect(restoredCount).toBe(initialNodeCount);

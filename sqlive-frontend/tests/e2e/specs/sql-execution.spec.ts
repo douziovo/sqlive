@@ -59,7 +59,7 @@ test.describe('SQL Execution', () => {
     await expect(page.locator('#table-departments')).toBeVisible({ timeout: 15_000 });
 
     // Wait for debounce to settle then verify data is present
-    await page.waitForTimeout(1500);
+    await page.waitForResponse(r => r.url().includes('/api/execute'), { timeout: 10_000 });
     const rows = page.locator('#table-departments tbody tr');
     expect(await rows.count()).toBeGreaterThan(0);
   });
@@ -105,11 +105,9 @@ test.describe('SQL Execution', () => {
       'ORDER BY d.name, e.name;'
     );
     await responsePromise;
-    await page.waitForTimeout(1000);
 
     // Switch to results tab and verify query result content
     await page.locator('[data-testid="tab-results"]').click();
-    await page.waitForTimeout(500);
     await expect(page.locator('text=/dept_name|emp_name|salary/').first()).toBeVisible({ timeout: 5_000 });
 
     await expect(page.locator('.monaco-editor')).toBeVisible();
@@ -134,11 +132,9 @@ test.describe('SQL Execution', () => {
       'SELECT * FROM dept_summary WHERE emp_count > 0;'
     );
     await responsePromise;
-    await page.waitForTimeout(1000);
 
     // Switch to results tab and verify CTE query result content
     await page.locator('[data-testid="tab-results"]').click();
-    await page.waitForTimeout(500);
     await expect(page.locator('text=/dept_name|emp_count|avg_salary/').first()).toBeVisible({ timeout: 5_000 });
 
     // Query should execute without error

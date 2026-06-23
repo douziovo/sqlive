@@ -22,7 +22,11 @@ test.describe('Split Pane & Viewport Edge Cases', () => {
         await page.mouse.down();
         await page.mouse.move(handleBox.x + 150, handleBox.y + 10, { steps: 10 });
         await page.mouse.up();
-        await page.waitForTimeout(300);
+        // Wait for layout to settle after drag
+        await page.waitForFunction(() => {
+          const el = document.querySelector('.monaco-editor');
+          return el && el.getBoundingClientRect().width > 0;
+        }, { timeout: 3_000 });
 
         // Width should have changed
         const newBox = await leftPanel.boundingBox();
@@ -48,7 +52,11 @@ test.describe('Split Pane & Viewport Edge Cases', () => {
       await page.mouse.down();
       await page.mouse.move(Math.max(0, handleBox.x - 500), handleBox.y + 10, { steps: 10 });
       await page.mouse.up();
-      await page.waitForTimeout(300);
+      // Wait for layout to settle after drag
+      await page.waitForFunction(() => {
+        const el = document.querySelector('.monaco-editor');
+        return el && el.getBoundingClientRect().width > 0;
+      }, { timeout: 3_000 });
 
       // Panel should not collapse to 0
       const box = await leftPanel.boundingBox();
@@ -66,10 +74,9 @@ test.describe('Split Pane & Viewport Edge Cases', () => {
 
     // Double-click the splitter
     await handle.dblclick();
-    await page.waitForTimeout(500);
 
     // App should not crash
-    await expect(page.locator('.monaco-editor')).toBeVisible();
+    await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: 5_000 });
   });
 
   test('T6.4 browser back/forward does not crash', async ({ page }) => {
@@ -77,26 +84,24 @@ test.describe('Split Pane & Viewport Edge Cases', () => {
     await page.evaluate(() => {
       window.history.pushState({}, '', '?test=1');
     });
-    await page.waitForTimeout(300);
 
     // Go back
     await page.goBack();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('domcontentloaded');
 
     // App should not crash (may or may not display correctly)
-    await expect(page.locator('.monaco-editor')).toBeVisible();
+    await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: 5_000 });
 
     // Go forward
     await page.goForward();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('domcontentloaded');
 
-    await expect(page.locator('.monaco-editor')).toBeVisible();
+    await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: 5_000 });
   });
 
   test('T6.5 page reload re-renders default SQL tables', async ({ page }) => {
     // Reload the page
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(3000);
 
     // Wait for initial SQL auto-execute to complete
     await page.waitForSelector('#table-departments', { timeout: 25_000 });
@@ -122,10 +127,10 @@ test.describe('Split Pane & Viewport Edge Cases', () => {
     }
     sql += 'SELECT * FROM many_rows;';
     await sqlEditor.click();
-    await page.waitForTimeout(200);
     await sqlEditor.replaceAll(sql);
     try { await responsePromise; } catch { /* response may not fire */ }
-    await page.waitForTimeout(1500);
+    // Wait for table to render
+    await page.waitForSelector('#table-many_rows', { timeout: 10_000 }).catch(() => {});
 
     // Scroll within the table container if table exists
     const table = page.locator('#table-many_rows');
@@ -155,7 +160,8 @@ test.describe('Split Pane & Viewport Edge Cases', () => {
     sql += 'SELECT * FROM wide_table;';
     await sqlEditor.replaceAll(sql);
     await responsePromise;
-    await page.waitForTimeout(1500);
+    // Wait for table to render
+    await page.waitForSelector('#table-wide_table', { timeout: 10_000 }).catch(() => {});
 
     const table = page.locator('#table-wide_table');
     const tableVisible = await table.isVisible().catch(() => false);
@@ -182,7 +188,8 @@ test.describe('Split Pane & Viewport Edge Cases', () => {
     );
     await sqlEditor.replaceAll('-- empty database');
     await responsePromise;
-    await page.waitForTimeout(1500);
+    // Wait for execution to complete — no tables expected, just verify editor is stable
+    await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: 5_000 });
 
     // App should show empty state UI, not crash
     await expect(page.locator('.monaco-editor')).toBeVisible();
@@ -200,14 +207,13 @@ test.describe('Split Pane & Viewport Edge Cases', () => {
   test('T6.9 Escape key closes panel without crashing', async ({ page }) => {
     // Open AI panel first
     await page.locator('[data-testid="ai-toggle-btn"]').click();
-    await page.waitForTimeout(500);
 
     // Wait for AI panel to be visible
     await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({ timeout: 5_000 });
 
     // Press Escape
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(500);
+    await expect(page.locator('[data-testid="ai-chat-close"]')).not.toBeVisible({ timeout: 3_000 });
 
     // AI panel should close
     // App should not crash
@@ -217,10 +223,9 @@ test.describe('Split Pane & Viewport Edge Cases', () => {
   test('T6.10 window resize to 1024x768 preserves layout', async ({ page }) => {
     // Resize viewport
     await page.setViewportSize({ width: 1024, height: 768 });
-    await page.waitForTimeout(500);
 
     // App should still be functional
-    await expect(page.locator('.monaco-editor')).toBeVisible();
+    await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: 5_000 });
 
     // Layout should adapt - no overlapping elements
     const splitPanes = page.locator('.splitpanes');
@@ -273,7 +278,11 @@ test.describe('Split Pane & Viewport Edge Cases', () => {
 
       // Tab to trigger submit (ghost row auto-commits, no check button)
       await ghostInputs.nth(Math.min(count - 1, 3)).press('Tab');
-      await page.waitForTimeout(1500);
+      // Wait for failed insert response
+      await page.waitForResponse(
+        (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',
+        { timeout: 10_000 },
+      ).catch(() => {});
     }
 
     // Clean up route
@@ -296,7 +305,11 @@ test.describe('Split Pane & Viewport Edge Cases', () => {
       const longValue = 'A'.repeat(300);
       await nameCell.fill(longValue);
       await page.keyboard.press('Tab');
-      await page.waitForTimeout(1000);
+      // Wait for edit to be processed
+      await page.waitForResponse(
+        (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',
+        { timeout: 10_000 },
+      ).catch(() => {});
 
       // May show a truncation warning toast/alert
       const warning = page.locator('text=/截断|truncat|超长/i');
