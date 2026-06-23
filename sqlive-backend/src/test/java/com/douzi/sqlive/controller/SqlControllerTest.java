@@ -1,10 +1,13 @@
 package com.douzi.sqlive.controller;
 
 import com.douzi.sqlive.dto.*;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.web.client.RestTemplate;
+
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -15,6 +18,16 @@ class SqlControllerTest {
     private int port;
 
     private final RestTemplate restTemplate = new RestTemplate();
+    private String dbSuffix;
+
+    @BeforeEach
+    void generateDbSuffix() {
+        dbSuffix = UUID.randomUUID().toString().substring(0, 8);
+    }
+
+    private String db(String prefix) {
+        return prefix + "_" + dbSuffix;
+    }
 
     private String url() {
         return SqlControllerTestSupport.url(port);
@@ -28,7 +41,7 @@ class SqlControllerTest {
     void shouldExecuteSimpleSql() {
         SqlRequest req = new SqlRequest();
         req.setSql("CREATE TABLE t (x INTEGER); INSERT INTO t VALUES (1); SELECT * FROM t;");
-        req.setDbName("controller_test");
+        req.setDbName(db("ctrl_test"));
         req.setReset(true);
 
         SqlResponse body = post(req);
@@ -43,7 +56,7 @@ class SqlControllerTest {
     void shouldReturnErrorForInvalidSql() {
         SqlRequest req = new SqlRequest();
         req.setSql("NOT VALID SQL;");
-        req.setDbName("error_ctrl_test");
+        req.setDbName(db("error_ctrl"));
         req.setReset(true);
 
         SqlResponse body = post(req);
@@ -57,7 +70,7 @@ class SqlControllerTest {
     void shouldRejectEmptyScript() {
         SqlRequest req = new SqlRequest();
         req.setSql("");
-        req.setDbName("empty_ctrl_test");
+        req.setDbName(db("empty_ctrl"));
         req.setReset(true);
 
         SqlResponse body = post(req);
@@ -71,12 +84,12 @@ class SqlControllerTest {
     void shouldIsolateDatabasesByName() {
         SqlRequest req1 = new SqlRequest();
         req1.setSql("CREATE TABLE a (x INTEGER); INSERT INTO a VALUES (1);");
-        req1.setDbName("iso_a_ctrl");
+        req1.setDbName(db("iso_a"));
         req1.setReset(true);
 
         SqlRequest req2 = new SqlRequest();
         req2.setSql("CREATE TABLE b (y TEXT); INSERT INTO b VALUES ('hello');");
-        req2.setDbName("iso_b_ctrl");
+        req2.setDbName(db("iso_b"));
         req2.setReset(true);
 
         post(req1);
@@ -84,7 +97,7 @@ class SqlControllerTest {
 
         SqlRequest checkA = new SqlRequest();
         checkA.setSql("SELECT name FROM sqlite_master WHERE type='table';");
-        checkA.setDbName("iso_a_ctrl");
+        checkA.setDbName(db("iso_a"));
         checkA.setReset(false);
 
         SqlResponse respA = post(checkA);
@@ -97,7 +110,7 @@ class SqlControllerTest {
     void shouldReportMetadata() {
         SqlRequest req = new SqlRequest();
         req.setSql("CREATE TABLE t (id INTEGER); INSERT INTO t VALUES (1);");
-        req.setDbName("meta_ctrl_test");
+        req.setDbName(db("meta_ctrl"));
         req.setReset(true);
 
         SqlResponse body = post(req);
