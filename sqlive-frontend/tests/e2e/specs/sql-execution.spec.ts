@@ -56,10 +56,7 @@ test.describe('SQL Execution', () => {
 
   test('auto-executes after 1s debounce when typing', async ({ page }) => {
     await gotoApp(page);
-    await expect(page.locator('#table-departments')).toBeVisible({ timeout: 15_000 });
-
-    // Wait for debounce to settle then verify data is present
-    await page.waitForResponse(r => r.url().includes('/api/execute'), { timeout: 10_000 });
+    // gotoApp already waits for #table-departments, meaning auto-execute completed
     const rows = page.locator('#table-departments tbody tr');
     expect(await rows.count()).toBeGreaterThan(0);
   });

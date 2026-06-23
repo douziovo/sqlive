@@ -11,7 +11,7 @@ test.describe('Multi-Tab System', () => {
     await addBtn.click();
 
     // New tab should appear (default name "查询 1" or similar)
-    await expect(page.locator('text=/查询/').first()).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[data-testid="tab-close-btn"]')).toHaveCount(2, { timeout: 5_000 });
   });
 
   test('switches between tabs and shows different content', async ({ page, sqlEditor }) => {
@@ -19,7 +19,7 @@ test.describe('Multi-Tab System', () => {
     await addBtn.click();
     // New tab has empty code — our empty-code guard skips the API call.
     // Wait for new tab to be active
-    await expect(page.locator('text=/查询/').last()).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[data-testid="tab-close-btn"]')).toHaveCount(2, { timeout: 5_000 });
 
     // Type distinct SQL in the new tab
     const responsePromise = page.waitForResponse(
@@ -46,15 +46,15 @@ test.describe('Multi-Tab System', () => {
 
   test('closes a tab', async ({ page }) => {
     await page.locator('button[title="新建标签页"]').click();
-    await expect(page.locator('text=/查询/').last()).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[data-testid="tab-close-btn"]')).toHaveCount(2, { timeout: 5_000 });
 
     const closeButtons = page.locator('button:has-text("✕")');
     const count = await closeButtons.count();
     expect(count).toBeGreaterThanOrEqual(2);
 
     await closeButtons.first().click();
-    // Wait for tab to be removed
-    await expect(page.locator('button:has-text("✕")')).toHaveCount(count - 1, { timeout: 3_000 });
+    // With 1 tab remaining, close buttons are hidden (v-if="tabs.length > 1")
+    await expect(page.locator('[data-testid="tab-close-btn"]')).toHaveCount(0, { timeout: 5_000 });
 
     await expect(page.locator('.monaco-editor')).toBeVisible();
   });
@@ -68,7 +68,7 @@ test.describe('Multi-Tab System', () => {
     const addBtn = page.locator('button[title="新建标签页"]');
     await addBtn.click();
     // New tab has empty code — our empty-code guard skips the API call.
-    await expect(page.locator('text=/查询/').last()).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[data-testid="tab-close-btn"]')).toHaveCount(2, { timeout: 5_000 });
 
     const responsePromise = page.waitForResponse(
       r => r.url().includes('/api/execute') && r.request().method() === 'POST',
@@ -90,17 +90,17 @@ test.describe('Multi-Tab System', () => {
       await addBtn.click();
     }
 
-    // Wait for all tabs to be created
+    // 1 initial + 5 new = 6 tabs total
     const closeBtns = page.locator('button:has-text("✕")');
-    await expect(closeBtns).toHaveCount(5, { timeout: 5_000 });
+    await expect(closeBtns).toHaveCount(6, { timeout: 5_000 });
     const count = await closeBtns.count();
-    expect(count).toBeGreaterThanOrEqual(5);
+    expect(count).toBeGreaterThanOrEqual(6);
   });
 
   test('tab rename preserves content', async ({ page, sqlEditor }) => {
     const addBtn = page.locator('button[title="新建标签页"]');
     await addBtn.click();
-    await expect(page.locator('text=/查询/').last()).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[data-testid="tab-close-btn"]')).toHaveCount(2, { timeout: 5_000 });
 
     // Wait for auto-execute after new tab — may timeout, that's OK
     try {
@@ -125,7 +125,7 @@ test.describe('Multi-Tab System', () => {
   test('empty tab submit does not crash', async ({ page }) => {
     const addBtn = page.locator('button[title="新建标签页"]');
     await addBtn.click();
-    await expect(page.locator('text=/查询/').last()).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[data-testid="tab-close-btn"]')).toHaveCount(2, { timeout: 5_000 });
 
     // Wait for auto-execute — may timeout, that's OK
     try {
@@ -179,7 +179,7 @@ test.describe('Multi-Tab System', () => {
     test('submit prompts for dbName when not set, then executes SQL', async ({ page, sqlEditor }) => {
       const addBtn = page.locator('button[title="新建标签页"]');
       await addBtn.click();
-      await expect(page.locator('text=/查询/').last()).toBeVisible({ timeout: 5_000 });
+      await expect(page.locator('[data-testid="tab-close-btn"]')).toHaveCount(2, { timeout: 5_000 });
 
       // Wait for auto-execute after setText
       let responsePromise = page.waitForResponse(
@@ -211,7 +211,7 @@ test.describe('Multi-Tab System', () => {
     test('cancel prompt does not commit dbName', async ({ page, sqlEditor }) => {
       const addBtn = page.locator('button[title="新建标签页"]');
       await addBtn.click();
-      await expect(page.locator('text=/查询/').last()).toBeVisible({ timeout: 5_000 });
+      await expect(page.locator('[data-testid="tab-close-btn"]')).toHaveCount(2, { timeout: 5_000 });
 
       page.once('dialog', async (dialog) => {
         await dialog.dismiss();
@@ -240,7 +240,7 @@ test.describe('Multi-Tab System', () => {
       // Tab 2: create a new tab (gets its own database) and create only_in_b
       const addBtn = page.locator('button[title="新建标签页"]');
       await addBtn.click();
-      await expect(page.locator('text=/查询/').last()).toBeVisible({ timeout: 5_000 });
+      await expect(page.locator('[data-testid="tab-close-btn"]')).toHaveCount(2, { timeout: 5_000 });
 
       responsePromise = page.waitForResponse(
         r => r.url().includes('/api/execute') && r.request().method() === 'POST',

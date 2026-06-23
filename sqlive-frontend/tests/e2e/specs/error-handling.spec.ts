@@ -73,14 +73,15 @@ test.describe('Error Handling', () => {
   });
 
   test('shows connection error when backend is unreachable (mocked)', async ({ page, sqlEditor }) => {
-    // Mock backend to abort (simulate connection refused)
+    // Mock backend to return 502 (simulate unreachable)
     await page.route('**/api/execute', async (route) => {
-      await route.abort('connectionrefused');
+      await route.fulfill({ status: 502, body: 'Bad Gateway' });
     });
 
     // Trigger execution
+    const responsePromise = page.waitForResponse(r => r.url().includes('/api/execute'), { timeout: 10_000 });
     await sqlEditor.replaceAll('SELECT 1;');
-    await page.waitForResponse(r => r.url().includes('/api/execute'), { timeout: 10_000 });
+    await responsePromise;
 
     // App should show error state, not crash
     await expect(page.locator('.monaco-editor')).toBeVisible();

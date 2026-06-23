@@ -250,12 +250,13 @@ test.describe('AI Complete Interactions', () => {
     const deleteBtns = userMsgRow.locator('button[title="删除"]');
     await expect(deleteBtns.first()).toBeVisible({ timeout: 3_000 });
 
-    // Click delete button (trash icon)
+    // Click delete button (trash icon) — useAiChat.deleteMessage() removes
+    // user msg + following assistant msg (splice(idx, 2)), so count drops by 2
     const deleteCount = await deleteBtns.count();
     if (deleteCount > 0) {
       await deleteBtns.first().click();
-      // Wait for message to be removed
-      await expect(page.locator('.group\\/row')).toHaveCount(msgCountBefore - 1, { timeout: 3_000 });
+      // Wait for messages to be removed (2 messages: user + assistant)
+      await expect(page.locator('.group\\/row')).toHaveCount(msgCountBefore - 2, { timeout: 3_000 });
     }
 
     // Verify message count decreased
