@@ -1,261 +1,192 @@
 package com.douzi.sqlive.service.database;
 
-import com.douzi.sqlive.config.PoolProperties;
-import com.douzi.sqlive.exception.PoolFullException;
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.Gauge;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Timer;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
-import org.sqlite.SQLiteDataSource;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.SingleConnectionDataSource;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
-import javax.sql.DataSource;
-import java.sql.Connection;
+import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import jakarta.annotation.PostConstruct;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
 @Slf4j
 public class DatabasePoolManager {
 
-    // DB_NAME_PATTERN stays hardcoded — security-sensitive, NOT configurable
+    private static final int SOFT_MAX = 500;
+    private static final int HARD_MAX = 2000;
+    private static final int MAX_PER_IP = 50;
+    private static final long IDLE_EVICTION_SECONDS = TimeUnit.MINUTES.toSeconds(30);
+    private static final long CLEANER_INTERVAL_SECONDS = TimeUnit.MINUTES.toSeconds(5);
     private static final String DB_NAME_PATTERN = "^[a-zA-Z0-9_-]{1,64}$";
 
-    private final Map<String, DbEntry> jdbcTemplates = new ConcurrentHashMap<>();
-    private final PoolProperties props;
-    private final MeterRegistry registry;
-    private final Counter hitCounter;
-    private final Counter evictionCounter;
-    private final Timer createTimer;
-    private final ExecutorService closeExecutor;
-    private ScheduledExecutorService cleanupScheduler;
+    private final Map<String, JdbcTemplate> pools = new ConcurrentHashMap<>();
+    private final Map<String, AtomicInteger> refCounts = new ConcurrentHashMap<>();
+    private final Map<String, Long> lastAccessNanos = new ConcurrentHashMap<>();
+    private final Map<String, String> poolOwnerIps = new ConcurrentHashMap<>();
+    private final ScheduledExecutorService cleaner = Executors.newSingleThreadScheduledExecutor(r -> {
+        var t = new Thread(r, "db-pool-cleaner");
+        t.setDaemon(true);
+        return t;
+    });
 
-    // D-07: Session resilience tracking
-    private final Set<String> closedDbNames = ConcurrentHashMap.newKeySet();
-    private final Set<String> recreatedSessionNames = ConcurrentHashMap.newKeySet();
-
-    public DatabasePoolManager(PoolProperties props, MeterRegistry registry) {
-        this.props = props;
-        this.registry = registry;
-        Gauge.builder("db.pool.size", jdbcTemplates, m -> (double) m.size())
-                .description("Current number of active databases in pool")
-                .register(registry);
-        this.hitCounter = Counter.builder("db.pool.hits")
-                .description("Cache hit count (existing database reused)")
-                .register(registry);
-        this.evictionCounter = Counter.builder("db.pool.evictions")
-                .description("Total number of evicted databases")
-                .register(registry);
-        this.createTimer = Timer.builder("db.pool.create.latency")
-                .description("Database creation latency")
-                .register(registry);
-        this.closeExecutor = Executors.newSingleThreadExecutor(r -> {
-            Thread t = new Thread(r, "db-close-executor");
-            t.setDaemon(true);
-            return t;
-        });
-    }
-
-    @PostConstruct
-    void init() {
-        this.cleanupScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread t = new Thread(r, "db-cleanup-scheduler");
-            t.setDaemon(true);
-            return t;
-        });
-        long intervalMs = props.getCleanupInterval().toMillis();
-        this.cleanupScheduler.scheduleAtFixedRate(
-                this::evictIdleDatabases,
-                intervalMs,
-                intervalMs,
-                TimeUnit.MILLISECONDS);
-        log.info("Scheduled idle eviction every {}ms (idleTimeout={}ms)",
-                intervalMs, props.getIdleTimeout().toMillis());
+    public DatabasePoolManager() {
+        cleaner.scheduleWithFixedDelay(this::evictIdlePools,
+                CLEANER_INTERVAL_SECONDS, CLEANER_INTERVAL_SECONDS, TimeUnit.SECONDS);
     }
 
     @PreDestroy
     public void cleanup() {
-        synchronized (jdbcTemplates) {
-            for (var entry : jdbcTemplates.entrySet()) {
-                try {
-                    JdbcTemplate jdbc = entry.getValue().jdbcTemplate;
-                    jdbc.update("PRAGMA foreign_keys = OFF");
-                    closeDataSource(jdbc);
-                    log.info("Closed database '{}'", entry.getKey());
-                } catch (Exception e) {
-                    log.warn("Failed to clean up database '{}'", entry.getKey(), e);
-                }
-            }
-            jdbcTemplates.clear();
+        cleaner.shutdownNow();
+        for (var entry : pools.entrySet()) {
+            closeQuietly(entry.getKey(), entry.getValue());
         }
-        try {
-            closeExecutor.shutdown();
-            if (!closeExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
-                closeExecutor.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            closeExecutor.shutdownNow();
-            Thread.currentThread().interrupt();
-        } catch (Exception e) {
-            log.warn("Failed to shut down closeExecutor", e);
-        }
-        if (cleanupScheduler != null) {
-            try {
-                cleanupScheduler.shutdown();
-            } catch (Exception e) {
-                log.warn("Failed to shut down cleanupScheduler", e);
-            }
-        }
+        pools.clear();
+        refCounts.clear();
+        lastAccessNanos.clear();
+        poolOwnerIps.clear();
     }
 
     public JdbcTemplate getOrCreateJdbcTemplate(String dbName) {
+        return getOrCreateJdbcTemplate(dbName, null);
+    }
+
+    public JdbcTemplate getOrCreateJdbcTemplate(String dbName, @Nullable String clientIp) {
         if (dbName == null || !dbName.matches(DB_NAME_PATTERN)) {
             throw new IllegalArgumentException("Invalid dbName: " + dbName);
         }
-        DbEntry existing = jdbcTemplates.get(dbName);
+
+        JdbcTemplate existing = pools.get(dbName);
         if (existing != null) {
-            existing.lastAccessTime = System.currentTimeMillis();
-            hitCounter.increment();
-            return existing.jdbcTemplate;
+            refCounts.computeIfAbsent(dbName, k -> new AtomicInteger()).incrementAndGet();
+            lastAccessNanos.put(dbName, System.nanoTime());
+            return existing;
         }
-        synchronized (jdbcTemplates) {
-            existing = jdbcTemplates.get(dbName);
+
+        synchronized (this) {
+            existing = pools.get(dbName);
             if (existing != null) {
-                existing.lastAccessTime = System.currentTimeMillis();
-                hitCounter.increment();
-                return existing.jdbcTemplate;
+                refCounts.computeIfAbsent(dbName, k -> new AtomicInteger()).incrementAndGet();
+                lastAccessNanos.put(dbName, System.nanoTime());
+                return existing;
             }
-            if (jdbcTemplates.size() >= props.getMaxDatabases()) {
-                throw new PoolFullException(
-                        "All database slots are in use (max: " + props.getMaxDatabases()
-                                + "). Please retry shortly.",
-                        props.getMaxDatabases());
-            }
-            Timer.Sample sample = Timer.start(registry);
+
+            checkHardLimit(dbName, clientIp);
+            checkPerIpLimit(clientIp);
+
             JdbcTemplate jt = createJdbcTemplate(dbName);
-            sample.stop(createTimer);
-            DbEntry entry = new DbEntry(jt);
-            jdbcTemplates.put(dbName, entry);
-            // D-07: Detect session recreation after eviction
-            if (closedDbNames.contains(dbName)) {
-                closedDbNames.remove(dbName);
-                recreatedSessionNames.add(dbName);
-                log.info("Session recreated for database '{}' after eviction", dbName);
+            pools.put(dbName, jt);
+            refCounts.computeIfAbsent(dbName, k -> new AtomicInteger()).incrementAndGet();
+            lastAccessNanos.put(dbName, System.nanoTime());
+            if (clientIp != null) {
+                poolOwnerIps.put(dbName, clientIp);
             }
             return jt;
         }
     }
 
-    private void closeDataSource(JdbcTemplate jdbc) {
-        DataSource ds = jdbc.getDataSource();
-        Future<?> future = closeExecutor.submit(() -> {
-            try {
-                if (ds instanceof SingleConnectionDataSource scds) {
-                    scds.destroy();
-                } else if (ds instanceof SQLiteDataSource sqds) {
-                    try (Connection conn = sqds.getConnection()) {
-                        // getConnection() on in-memory DB triggers SQLite resource release
-                        assert conn != null;
-                    }
-                }
-            } catch (Exception e) {
-                log.debug("DataSource already closed or unreachable", e);
-            }
-        });
-        try {
-            future.get(5, TimeUnit.SECONDS);
-        } catch (TimeoutException e) {
-            log.warn("DataSource close timed out after 5s, abandoning");
-            future.cancel(true);
-        } catch (Exception e) {
-            log.warn("DataSource close interrupted", e);
-        }
-    }
-
-    private JdbcTemplate createJdbcTemplate(String name) {
-        SQLiteDataSource ds = new SQLiteDataSource();
-        ds.setUrl("jdbc:sqlite:file:" + name + "?mode=memory&cache=shared");
-        ds.setEnforceForeignKeys(true);
-        Connection keeper;
-        try {
-            keeper = ds.getConnection();
-            SingleConnectionDataSource scds = new SingleConnectionDataSource(keeper, true);
-            log.info("Created DataSource for database '{}'", name);
-            return new JdbcTemplate(scds);
-        } catch (java.sql.SQLException e) {
-            throw new RuntimeException("Failed to create DataSource for database '" + name + "'", e);
+    public void release(String dbName) {
+        AtomicInteger count = refCounts.get(dbName);
+        if (count != null && count.decrementAndGet() <= 0) {
+            refCounts.remove(dbName);
         }
     }
 
     int getPoolSize() {
-        return jdbcTemplates.size();
+        return pools.size();
     }
 
-    /**
-     * Consumes the session-recreated signal for a database name.
-     * Returns true exactly once per eviction-to-recreation cycle.
-     * Caller (SqlExecutionService-to-SqlController) uses this to set X-Session-Recreated header.
-     */
-    public boolean consumeSessionRecreated(String dbName) {
-        boolean wasPresent = recreatedSessionNames.contains(dbName);
-        if (wasPresent) {
-            recreatedSessionNames.remove(dbName);
+    private void checkHardLimit(String dbName, @Nullable String clientIp) {
+        if (pools.size() >= HARD_MAX) {
+            log.error("HARD_MAX reached: {} pools, refusing '{}' from IP {}", HARD_MAX, dbName, clientIp);
+            throw new TooManyDatabasesException(
+                    String.format("Too many databases (limit: %d). Please try again later.", HARD_MAX));
         }
-        return wasPresent;
+        if (pools.size() >= SOFT_MAX) {
+            log.warn("SOFT_MAX reached: {} pools (current: {}), triggering eager eviction", SOFT_MAX, pools.size());
+            evictOneIdlePool();
+        }
     }
 
-    void evictIdleDatabases() {
-        long now = System.currentTimeMillis();
-        long idleThresholdMs = props.getIdleTimeout().toMillis();
-        int removed = 0;
-        var it = jdbcTemplates.entrySet().iterator();
-        while (it.hasNext()) {
-            var entry = it.next();
-            if (now - entry.getValue().lastAccessTime >= idleThresholdMs) {
-                try {
-                    closeDataSource(entry.getValue().jdbcTemplate);
-                    closedDbNames.add(entry.getKey());
-                    it.remove();
-                    removed++;
-                } catch (Exception e) {
-                    log.warn("Failed to close evicted database '{}'", entry.getKey(), e);
-                }
+    private void checkPerIpLimit(@Nullable String clientIp) {
+        if (clientIp == null || isLocalhost(clientIp)) return;
+        long count = poolOwnerIps.values().stream().filter(clientIp::equals).count();
+        if (count >= MAX_PER_IP) {
+            log.warn("Per-IP limit reached: IP {} has {} pools (max {})", clientIp, count, MAX_PER_IP);
+            throw new TooManyDatabasesException(
+                    String.format("Too many databases for this client (limit: %d).", MAX_PER_IP));
+        }
+    }
+
+    private void evictIdlePools() {
+        long cutoff = System.nanoTime() - TimeUnit.SECONDS.toNanos(IDLE_EVICTION_SECONDS);
+        int target = SOFT_MAX;
+
+        for (var entry : pools.entrySet()) {
+            if (pools.size() <= target) break;
+            String name = entry.getKey();
+            if (isInUse(name)) continue;
+            Long lastNanos = lastAccessNanos.get(name);
+            if (lastNanos != null && lastNanos < cutoff) {
+                evict(name);
             }
         }
-        if (removed > 0) {
-            evictionCounter.increment(removed);
-            log.info("Evicted {} idle databases (threshold={}ms, remaining={})",
-                    removed, idleThresholdMs, jdbcTemplates.size());
-        }
-        // Guard against unbounded closedDbNames growth: if the set grows past
-        // 2x the pool capacity, clear stale session-recreation tracking records
-        // to avoid a slow memory leak.
-        int cap = props.getMaxDatabases() * 2;
-        if (closedDbNames.size() > cap) {
-            log.warn("closedDbNames exceeded {} entries ({}), clearing to prevent unbounded growth",
-                    cap, closedDbNames.size());
-            closedDbNames.clear();
+    }
+
+    private void evictOneIdlePool() {
+        for (var entry : pools.entrySet()) {
+            if (!isInUse(entry.getKey())) {
+                evict(entry.getKey());
+                return;
+            }
         }
     }
 
-    private static class DbEntry {
-        final JdbcTemplate jdbcTemplate;
-        volatile long lastAccessTime;
-        DbEntry(JdbcTemplate jdbcTemplate) {
-            this.jdbcTemplate = jdbcTemplate;
-            this.lastAccessTime = System.currentTimeMillis();
+    private void evict(String dbName) {
+        JdbcTemplate jdbc = pools.remove(dbName);
+        if (jdbc == null) return;
+        refCounts.remove(dbName);
+        lastAccessNanos.remove(dbName);
+        poolOwnerIps.remove(dbName);
+        closeQuietly(dbName, jdbc);
+        log.info("Evicted idle database '{}' (pool size now: {})", dbName, pools.size());
+    }
+
+    private boolean isInUse(String dbName) {
+        AtomicInteger count = refCounts.get(dbName);
+        return count != null && count.get() > 0;
+    }
+
+    private void closeQuietly(String dbName, JdbcTemplate jdbc) {
+        try {
+            jdbc.execute("PRAGMA foreign_keys = OFF");
+            var ds = jdbc.getDataSource();
+            if (ds instanceof HikariDataSource hds) {
+                hds.close();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to close DataSource for '{}'", dbName, e);
         }
+    }
+
+    private JdbcTemplate createJdbcTemplate(String name) {
+        String url = "jdbc:sqlite:file:" + name + "?mode=memory";
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl(url);
+        config.setMaximumPoolSize(1);
+        config.setPoolName("SQLitePool-" + name);
+        log.info("Created DataSource for database '{}'", name);
+        return new JdbcTemplate(new HikariDataSource(config));
+    }
+
+    private boolean isLocalhost(String ip) {
+        return "127.0.0.1".equals(ip) || "0:0:0:0:0:0:0:1".equals(ip);
     }
 }

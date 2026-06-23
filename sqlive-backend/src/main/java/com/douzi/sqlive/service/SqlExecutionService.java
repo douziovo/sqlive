@@ -11,8 +11,8 @@ import org.springframework.stereotype.Service;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
-import java.util.*;
-import java.util.regex.Pattern;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @Slf4j
@@ -22,9 +22,6 @@ public class SqlExecutionService {
     private final SqlParser sqlParser;
     private final MetadataExtractor metadataExtractor;
 
-    private static final Pattern ATTACH_PATTERN = Pattern.compile("(?i)\\bATTACH\\s+(?:DATABASE\\b|')", Pattern.MULTILINE);
-    private static final Pattern PRAGMA_PATTERN = Pattern.compile("(?i)^\\s*PRAGMA\\b", Pattern.MULTILINE);
-
     public SqlExecutionService(DatabasePoolManager poolManager, SqlParser sqlParser,
                                 MetadataExtractor metadataExtractor) {
         this.poolManager = poolManager;
@@ -32,15 +29,15 @@ public class SqlExecutionService {
         this.metadataExtractor = metadataExtractor;
     }
 
+    @SuppressWarnings("SqlSourceToSinkFlow")
     public SqlResponse execute(String sqlScript, String dbName, boolean reset) {
+        return execute(sqlScript, dbName, reset, null);
+    }
+
+    @SuppressWarnings("SqlSourceToSinkFlow")
+    public SqlResponse execute(String sqlScript, String dbName, boolean reset, @org.springframework.lang.Nullable String clientIp) {
         SqlResponse response = new SqlResponse();
-        JdbcTemplate jdbc;
-        try {
-            jdbc = poolManager.getOrCreateJdbcTemplate(dbName);
-        } catch (IllegalStateException e) {
-            log.warn("Database pool full: db={}", dbName);
-            return SqlResponse.error("Database pool at capacity. Please close unused databases and retry.", 0);
-        }
+        JdbcTemplate jdbc = poolManager.getOrCreateJdbcTemplate(dbName, clientIp);
 
         try {
             if (reset) {
@@ -53,13 +50,8 @@ public class SqlExecutionService {
 
             for (SqlParser.SqlStatement s : statements) {
                 if (s.sql().trim().isEmpty()) continue;
-                String blockReason = isBlockedStatement(s.sql().trim());
-                if (blockReason != null) {
-                    return SqlResponse.error(blockReason, s.startLine());
-                }
                 try {
                     jdbc.execute((Statement stmt) -> {
-                        @SuppressWarnings("SqlSourceToSinkFlow")
                         boolean hasResultSet = stmt.execute(s.sql());
                         if (hasResultSet) {
                             try (ResultSet rs = stmt.getResultSet()) {
@@ -81,15 +73,6 @@ public class SqlExecutionService {
                 }
             }
 
-            List<SqlResponse.CanonicalStatement> canonicalList = new ArrayList<>();
-            for (SqlParser.SqlStatement s : statements) {
-                if (s.sql().trim().isEmpty()) continue;
-                SqlResponse.CanonicalStatement cs = new SqlResponse.CanonicalStatement();
-                cs.setStart(s.startPos());
-                cs.setEnd(s.startPos() + s.sql().length());
-                canonicalList.add(cs);
-            }
-
             long durationMs = (System.nanoTime() - startTime) / 1_000_000;
 
             SqlResponse.DataPayload payload = new SqlResponse.DataPayload();
@@ -99,7 +82,6 @@ public class SqlExecutionService {
             payload.setViews(metadataExtractor.extractViews(jdbc));
             payload.setTriggers(metadataExtractor.extractTriggers(jdbc));
             payload.setForeignKeys(metadataExtractor.extractForeignKeys(jdbc));
-            payload.setCanonicalStatements(canonicalList);
 
             ExecutionMetadata meta = new ExecutionMetadata();
             meta.setDurationMs(durationMs);
@@ -112,115 +94,35 @@ public class SqlExecutionService {
         } catch (Exception e) {
             log.error("Failed to execute SQL script", e);
             return SqlResponse.error("Internal server error", 0);
+        } finally {
+            poolManager.release(dbName);
         }
 
         return response;
-    }
-
-    /**
-     * Delegates to DatabasePoolManager.consumeSessionRecreated.
-     * Returns true if the database was evicted and just recreated in this request.
-     */
-    public boolean consumeSessionRecreated(String dbName) {
-        return poolManager.consumeSessionRecreated(dbName);
     }
 
     private void clearDatabase(JdbcTemplate jdbc) {
         var allObjects = jdbc.queryForList(
             "SELECT name, type FROM sqlite_master WHERE type IN ('view','trigger','table') AND name NOT LIKE 'sqlite_%'");
 
-        // Separate objects by type
-        List<String> viewNames = new ArrayList<>();
-        List<String> triggerNames = new ArrayList<>();
-        List<String> tableNames = new ArrayList<>();
-        for (var obj : allObjects) {
-            String type = (String) obj.get("type");
-            if (type == null) continue;
-            switch (type) {
-                case "view" -> viewNames.add((String) obj.get("name"));
-                case "trigger" -> triggerNames.add((String) obj.get("name"));
-                case "table" -> tableNames.add((String) obj.get("name"));
-            }
-        }
-
-        // Topological sort of tables by FK dependency (leaf-first = referencing before referenced)
-        List<String> tableDropOrder = topologicalSortTables(jdbc, tableNames);
-
-        // Execute drops: views first, triggers second, tables in topological order
         jdbc.execute((Connection con) -> {
             try (Statement stmt = con.createStatement()) {
-                for (String name : viewNames) {
-                    stmt.execute("DROP VIEW IF EXISTS " + stmt.enquoteIdentifier(name, false));
+                stmt.execute("PRAGMA foreign_keys = OFF");
+
+                for (var obj : allObjects) {
+                    String type = (String) obj.get("type");
+                    if (type == null) continue;
+                    String name = stmt.enquoteIdentifier((String) obj.get("name"), false);
+                    switch (type) {
+                        case "view" -> stmt.execute("DROP VIEW IF EXISTS " + name);
+                        case "trigger" -> stmt.execute("DROP TRIGGER IF EXISTS " + name);
+                        case "table" -> stmt.execute("DROP TABLE IF EXISTS " + name);
+                    }
                 }
-                for (String name : triggerNames) {
-                    stmt.execute("DROP TRIGGER IF EXISTS " + stmt.enquoteIdentifier(name, false));
-                }
-                for (String name : tableDropOrder) {
-                    stmt.execute("DROP TABLE IF EXISTS " + stmt.enquoteIdentifier(name, false));
-                }
+
+                stmt.execute("PRAGMA foreign_keys = ON");
             }
             return null;
         });
-    }
-
-    private String isBlockedStatement(String sql) {
-        if (ATTACH_PATTERN.matcher(sql).find()) {
-            return "ATTACH DATABASE is not allowed for security reasons";
-        }
-        if (PRAGMA_PATTERN.matcher(sql).find()) {
-            return "PRAGMA statements are not allowed";
-        }
-        return null;
-    }
-
-    private List<String> topologicalSortTables(JdbcTemplate jdbc, List<String> tableNames) {
-        if (tableNames.isEmpty()) return List.of();
-
-        List<ForeignKeyInfo> foreignKeys = metadataExtractor.extractForeignKeys(jdbc);
-
-        // Build adjacency list: table -> tables it references (FK toTable)
-        Map<String, List<String>> adjacency = new HashMap<>();
-        Map<String, Integer> inDegree = new HashMap<>();
-        for (String tn : tableNames) {
-            adjacency.put(tn, new ArrayList<>());
-            inDegree.put(tn, 0);
-        }
-
-        for (ForeignKeyInfo fk : foreignKeys) {
-            String from = fk.getFromTable();
-            String to = fk.getToTable();
-            if (adjacency.containsKey(from) && adjacency.containsKey(to)) {
-                adjacency.get(from).add(to);
-                inDegree.merge(to, 1, Integer::sum);
-            }
-        }
-
-        // Kahn's algorithm for topological sort
-        Queue<String> queue = new LinkedList<>();
-        for (String tn : tableNames) {
-            if (inDegree.get(tn) == 0) {
-                queue.add(tn);
-            }
-        }
-
-        List<String> sorted = new ArrayList<>();
-        while (!queue.isEmpty()) {
-            String node = queue.poll();
-            sorted.add(node);
-            for (String dep : adjacency.get(node)) {
-                inDegree.merge(dep, -1, Integer::sum);
-                if (inDegree.get(dep) == 0) {
-                    queue.add(dep);
-                }
-            }
-        }
-
-        if (sorted.size() < tableNames.size()) {
-            List<String> remaining = new ArrayList<>(tableNames);
-            remaining.removeAll(sorted);
-            log.warn("FK cycle detected among tables: {}. Dropping tables in arbitrary order.", remaining);
-            sorted.addAll(remaining);
-        }
-        return sorted;
     }
 }

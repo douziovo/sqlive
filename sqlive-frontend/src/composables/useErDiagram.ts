@@ -5,6 +5,90 @@ import { layoutNodes } from '../composables/useDagreLayout'
 import type { ColumnMeta, ErTableNodeData, ForeignKeyInfo, TableSchema } from '../model/DatabaseTypes'
 import { parsePrimaryType } from '../utils/sql'
 
+export function buildColumnMeta(
+  table: TableSchema,
+  fkMap: Map<string, { toTable: string; toColumn: string }>
+): ColumnMeta[] {
+  return table.columns.map((col) => {
+    const rawType = (table.columnTypes[col] || '').toUpperCase()
+    const isPK = rawType.includes('PRIMARY KEY')
+    const fkInfo = fkMap.get(`${table.name}.${col}`)
+    const isFK = !!fkInfo
+    const isUQ = rawType.includes('UNIQUE') && !isPK
+    return {
+      name: col,
+      type: parsePrimaryType(rawType).toLowerCase(),
+      isPrimaryKey: isPK,
+      isForeignKey: isFK,
+      isUnique: isUQ,
+      ...(fkInfo ? { referencedTable: fkInfo.toTable, referencedColumn: fkInfo.toColumn } : {})
+    }
+  })
+}
+
+export function tablesToNodes(tables: TableSchema[], foreignKeys: ForeignKeyInfo[]): Node<ErTableNodeData>[] {
+  const fkMap = new Map<string, { toTable: string; toColumn: string }>()
+  for (const fk of foreignKeys) {
+    fkMap.set(`${fk.fromTable}.${fk.fromColumn}`, { toTable: fk.toTable, toColumn: fk.toColumn })
+  }
+
+  return tables.map((table) => ({
+    id: `table-${table.name}`,
+    type: 'table',
+    position: { x: 0, y: 0 },
+    data: {
+      tableName: table.name,
+      columns: buildColumnMeta(table, fkMap),
+      isFiltered: false,
+      table
+    }
+  }))
+}
+
+export function determineCardinality(
+  fromTable: TableSchema | undefined,
+  toTable: TableSchema | undefined,
+  fromColumn: string,
+  toColumn: string
+): string {
+  const fromColType = (fromTable?.columnTypes[fromColumn] || '').toUpperCase()
+  const toColType = (toTable?.columnTypes[toColumn] || '').toUpperCase()
+  const fromIsUnique = fromColType.includes('UNIQUE') || fromColType.includes('PRIMARY KEY')
+  const toIsUnique = toColType.includes('UNIQUE') || toColType.includes('PRIMARY KEY')
+
+  if (fromIsUnique && toIsUnique) return '一对一'
+  if (fromIsUnique) return '一对多'
+  return '多对一'
+}
+
+export function foreignKeysToEdges(fks: ForeignKeyInfo[], tables: TableSchema[]): Edge[] {
+  const tableNames = new Set(tables.map((t) => t.name))
+
+  return fks
+    .filter((fk) => tableNames.has(fk.fromTable) && tableNames.has(fk.toTable))
+    .map((fk, index) => {
+      const fromTable = tables.find((t) => t.name === fk.fromTable)
+      const toTable = tables.find((t) => t.name === fk.toTable)
+      const cardinality = determineCardinality(fromTable, toTable, fk.fromColumn, fk.toColumn)
+
+      const label = fk.name ? `${fk.name}: ${cardinality}` : cardinality
+
+      return {
+        id: `fk-${fk.name || index}`,
+        type: 'smoothstep',
+        source: `table-${fk.fromTable}`,
+        target: `table-${fk.toTable}`,
+        markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
+        style: { stroke: '#94a3b8', strokeWidth: 1.5 },
+        label,
+        labelStyle: { fill: '#64748b', fontWeight: 600, fontSize: 11, whiteSpace: 'nowrap' },
+        labelBgStyle: { fill: '#ffffff', fillOpacity: 1 },
+        labelBgPadding: [4, 6] as [number, number],
+        labelBgBorderRadius: 4
+      }
+    })
+}
+
 export function useErDiagram(tablesSource: () => TableSchema[], foreignKeysSource: () => ForeignKeyInfo[]) {
   const nodes = ref<Node<ErTableNodeData>[]>([])
   const edges = ref<Edge[]>([])
@@ -15,90 +99,6 @@ export function useErDiagram(tablesSource: () => TableSchema[], foreignKeysSourc
 
   function setContainerRef(el: HTMLElement | null) {
     containerRef.value = el
-  }
-
-  function buildColumnMeta(
-    table: TableSchema,
-    fkMap: Map<string, { toTable: string; toColumn: string }>
-  ): ColumnMeta[] {
-    return table.columns.map((col) => {
-      const rawType = (table.columnTypes[col] || '').toUpperCase()
-      const isPK = rawType.includes('PRIMARY KEY')
-      const fkInfo = fkMap.get(`${table.name}.${col}`)
-      const isFK = !!fkInfo
-      const isUQ = rawType.includes('UNIQUE') && !isPK
-      return {
-        name: col,
-        type: parsePrimaryType(rawType).toLowerCase(),
-        isPrimaryKey: isPK,
-        isForeignKey: isFK,
-        isUnique: isUQ,
-        ...(fkInfo ? { referencedTable: fkInfo.toTable, referencedColumn: fkInfo.toColumn } : {})
-      }
-    })
-  }
-
-  function tablesToNodes(tables: TableSchema[], foreignKeys: ForeignKeyInfo[]): Node<ErTableNodeData>[] {
-    const fkMap = new Map<string, { toTable: string; toColumn: string }>()
-    for (const fk of foreignKeys) {
-      fkMap.set(`${fk.fromTable}.${fk.fromColumn}`, { toTable: fk.toTable, toColumn: fk.toColumn })
-    }
-
-    return tables.map((table) => ({
-      id: `table-${table.name}`,
-      type: 'table',
-      position: { x: 0, y: 0 },
-      data: {
-        tableName: table.name,
-        columns: buildColumnMeta(table, fkMap),
-        isFiltered: false,
-        table
-      }
-    }))
-  }
-
-  function determineCardinality(
-    fromTable: TableSchema | undefined,
-    toTable: TableSchema | undefined,
-    fromColumn: string,
-    toColumn: string
-  ): string {
-    const fromColType = (fromTable?.columnTypes[fromColumn] || '').toUpperCase()
-    const toColType = (toTable?.columnTypes[toColumn] || '').toUpperCase()
-    const fromIsUnique = fromColType.includes('UNIQUE') || fromColType.includes('PRIMARY KEY')
-    const toIsUnique = toColType.includes('UNIQUE') || toColType.includes('PRIMARY KEY')
-
-    if (fromIsUnique && toIsUnique) return '一对一'
-    if (fromIsUnique) return '一对多'
-    return '多对一'
-  }
-
-  function foreignKeysToEdges(fks: ForeignKeyInfo[], tables: TableSchema[]): Edge[] {
-    const tableNames = new Set(tables.map((t) => t.name))
-
-    return fks
-      .filter((fk) => tableNames.has(fk.fromTable) && tableNames.has(fk.toTable))
-      .map((fk, index) => {
-        const fromTable = tables.find((t) => t.name === fk.fromTable)
-        const toTable = tables.find((t) => t.name === fk.toTable)
-        const cardinality = determineCardinality(fromTable, toTable, fk.fromColumn, fk.toColumn)
-
-        const label = fk.name ? `${fk.name}: ${cardinality}` : cardinality
-
-        return {
-          id: `fk-${fk.name || index}`,
-          type: 'smoothstep',
-          source: `table-${fk.fromTable}`,
-          target: `table-${fk.toTable}`,
-          markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
-          style: { stroke: '#94a3b8', strokeWidth: 1.5 },
-          label,
-          labelStyle: { fill: '#64748b', fontWeight: 600, fontSize: 11, whiteSpace: 'nowrap' },
-          labelBgStyle: { fill: '#ffffff', fillOpacity: 1 },
-          labelBgPadding: [4, 6] as [number, number],
-          labelBgBorderRadius: 4
-        }
-      })
   }
 
   function rebuild() {

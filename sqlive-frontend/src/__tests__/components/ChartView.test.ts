@@ -1,17 +1,8 @@
 import { mount } from '@vue/test-utils'
-import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 import type { TableSchema } from '@/model/DatabaseTypes'
 import ChartView from '../../components/ChartView.vue'
-
-// jsdom has no ResizeObserver — polyfill to avoid unhandled rejections in useECharts
-beforeAll(() => {
-  ;(globalThis as any).ResizeObserver = class ResizeObserver {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  }
-})
 
 // Mock echarts: jsdom has no canvas support, so prevent ECharts from trying to init
 vi.mock('echarts', () => {
