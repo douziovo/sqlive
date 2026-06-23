@@ -19,5 +19,10 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
   }
 }
 
+// Polyfill scrollIntoView for jsdom (not implemented)
+if (!('scrollIntoView' in Element.prototype)) {
+  Element.prototype.scrollIntoView = () => {}
+}
+
 // No default fetch mock — tests that need fetch must explicitly mock it
 // via mockSuccess/mockError/mockReject from test-utils.ts
