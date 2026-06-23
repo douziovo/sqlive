@@ -110,14 +110,12 @@ describe('DataVisualizer', () => {
 
     const buttons = wrapper.findAll('button')
     const erBtn = buttons.find((b) => b.text() === 'ER 图')
-    if (erBtn) {
-      await erBtn.trigger('click')
-    }
+    expect(erBtn).toBeTruthy()
+    await erBtn!.trigger('click')
 
     const tablesBtn = wrapper.findAll('button').find((b) => b.text() === '表数据')
-    if (tablesBtn) {
-      await tablesBtn.trigger('click')
-    }
+    expect(tablesBtn).toBeTruthy()
+    await tablesBtn!.trigger('click')
     expect(wrapper.text()).toContain('users')
   })
 

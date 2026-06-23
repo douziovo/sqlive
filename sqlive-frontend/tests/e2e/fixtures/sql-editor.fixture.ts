@@ -15,7 +15,7 @@ export class SqlEditor {
   async replaceAll(sql: string) {
     await this.click();
     await this.page.keyboard.press('Control+a');
-    await this.page.keyboard.type(sql, { delay: 5 });
+    await this.page.keyboard.insertText(sql);
   }
 
   async setText(sql: string) {
@@ -57,16 +57,33 @@ export class SqlEditor {
       { timeout },
     );
   }
+
+  async rightClickEditor() {
+    await this.page.locator('.monaco-editor').first().click({ button: 'right' });
+    // Wait for context menu to appear
+    await this.page.locator('.monaco-context-menu, .context-menu, [role="menu"]').first().waitFor({ state: 'visible', timeout: 3_000 }).catch(() => {});
+  }
+
+  async importSql(filepath: string) {
+    // Opens file picker via context menu and imports a .sql file
+    await this.rightClickEditor();
+    const importOption = this.page.locator('text=导入 SQL 文件');
+    if (await importOption.isVisible().catch(() => false)) {
+      const [fileChooser] = await Promise.all([
+        this.page.waitForEvent('filechooser', { timeout: 5_000 }),
+        importOption.click(),
+      ]);
+      await fileChooser.setFiles(filepath);
+      // Wait for file import to be processed — no deterministic DOM signal
+      await this.page.waitForTimeout(1000); // animation debounce, no DOM signal
+    }
+  }
 }
 
 export async function gotoApp(page: Page, path = '/?e2e=1') {
   await page.goto(path, { waitUntil: 'domcontentloaded' })
   // Wait for the initial SQL auto-execute.  Under heavy concurrency the
   // in-memory SQLite backend may queue requests; retry once if needed.
-  // Wait for the initial SQL auto-execute.  Under heavy concurrency the
-  // in-memory SQLite backend serialises requests — just keep waiting.
-  // Reloading is counterproductive: it discards the in-flight request
-  // and queues a fresh one at the back.
   await page.waitForSelector('#table-departments', { timeout: 25_000 })
 }
 
