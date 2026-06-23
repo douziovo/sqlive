@@ -77,34 +77,32 @@ test.describe('Cross-Feature User Journeys', () => {
 
     const ghostInputs = ghostRow.locator('textarea');
     const ghostCount = await ghostInputs.count();
+    expect(ghostCount).toBeGreaterThan(1);
 
-    if (ghostCount > 1) {
-      await ghostInputs.nth(1).fill('Gamma');
-      if (ghostCount > 2) await ghostInputs.nth(2).fill('92.0');
+    await ghostInputs.nth(1).fill('Gamma');
+    if (ghostCount > 2) await ghostInputs.nth(2).fill('92.0');
 
-      responsePromise = page.waitForResponse(
-        (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',
-        { timeout: 15_000 },
-      );
+    responsePromise = page.waitForResponse(
+      (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',
+      { timeout: 15_000 },
+    );
 
-      // Ghost row auto-commits on Tab — wait for response after fill
-      await ghostInputs.nth(Math.min(ghostCount - 1, 2)).press('Tab');
-      try { await responsePromise; } catch { /* response may not fire */ }
-      await page.waitForTimeout(500);
-    }
+    // Ghost row auto-commits on Tab — wait for response after fill
+    await ghostInputs.nth(Math.min(ghostCount - 1, 2)).press('Tab');
+    try { await responsePromise; } catch { /* response may not fire */ }
+    await page.waitForTimeout(500);
 
     // Step 3: Edit a cell
     const nameCell = page.locator('#table-journey_test tbody tr').first().locator('td:nth-child(2) textarea');
-    if (await nameCell.isVisible().catch(() => false)) {
-      responsePromise = page.waitForResponse(
-        (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',
-        { timeout: 15_000 },
-      );
-      await nameCell.click();
-      await nameCell.fill('EditedAlpha');
-      await page.keyboard.press('Tab');
-      await responsePromise;
-    }
+    await expect(nameCell).toBeVisible({ timeout: 5_000 });
+    responsePromise = page.waitForResponse(
+      (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',
+      { timeout: 15_000 },
+    );
+    await nameCell.click();
+    await nameCell.fill('EditedAlpha');
+    await page.keyboard.press('Tab');
+    await responsePromise;
 
     // Step 4: Delete a row
     const firstRow = page.locator('#table-journey_test tbody tr').first();
@@ -113,25 +111,23 @@ test.describe('Cross-Feature User Journeys', () => {
 
     const delBtns = firstRow.locator('td button, td [role="button"]');
     const delCount = await delBtns.count();
-    if (delCount > 0) {
-      responsePromise = page.waitForResponse(
-        (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',
-        { timeout: 15_000 },
-      );
-      await delBtns.last().click();
-      await responsePromise;
-    }
+    expect(delCount).toBeGreaterThan(0);
+    responsePromise = page.waitForResponse(
+      (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',
+      { timeout: 15_000 },
+    );
+    await delBtns.last().click();
+    await responsePromise;
 
     // Step 5: Drop table
     const dropBtn = page.locator('#table-journey_test').locator('button[title="删除表格"]');
-    if (await dropBtn.isVisible().catch(() => false)) {
-      page.once('dialog', (dialog) => dialog.accept());
-      await dropBtn.click();
-      await page.waitForTimeout(2000);
+    await expect(dropBtn).toBeVisible({ timeout: 5_000 });
+    page.once('dialog', (dialog) => dialog.accept());
+    await dropBtn.click();
+    await page.waitForTimeout(2000);
 
-      // Table should be gone after drop
-      await expect(page.locator('#table-journey_test')).not.toBeVisible({ timeout: 5_000 });
-    }
+    // Table should be gone after drop
+    await expect(page.locator('#table-journey_test')).not.toBeVisible({ timeout: 5_000 });
 
     // App should not crash after full lifecycle
     await expect(page.locator('.monaco-editor')).toBeVisible();
@@ -199,32 +195,28 @@ test.describe('Cross-Feature User Journeys', () => {
 
     // Step 3: Edit a cell
     const nameCell = page.locator('#table-imported_data tbody tr').first().locator('td:nth-child(2) textarea');
-    if (await nameCell.isVisible().catch(() => false)) {
-      responsePromise = page.waitForResponse(
-        (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',
-        { timeout: 15_000 },
-      );
-      await nameCell.click();
-      await nameCell.fill('UpdatedItem');
-      await page.keyboard.press('Tab');
-      await responsePromise;
-    }
+    await expect(nameCell).toBeVisible({ timeout: 5_000 });
+    responsePromise = page.waitForResponse(
+      (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',
+      { timeout: 15_000 },
+    );
+    await nameCell.click();
+    await nameCell.fill('UpdatedItem');
+    await page.keyboard.press('Tab');
+    await responsePromise;
 
     // Step 4: Right-click editor for export
     await page.locator('.monaco-editor').first().click({ button: 'right' });
     await page.waitForTimeout(300);
 
-    // Export option should exist
+    // Export option should exist in context menu
     const exportOption = page.locator('text=导出当前标签页');
-    const exportVisible = await exportOption.isVisible().catch(() => false);
-
-    if (exportVisible) {
-      const [download] = await Promise.all([
-        page.waitForEvent('download', { timeout: 5_000 }),
-        exportOption.click(),
-      ]);
-      expect(download.suggestedFilename()).toMatch(/\.sql$/);
-    }
+    await expect(exportOption).toBeVisible({ timeout: 3_000 });
+    const [download] = await Promise.all([
+      page.waitForEvent('download', { timeout: 5_000 }),
+      exportOption.click(),
+    ]);
+    expect(download.suggestedFilename()).toMatch(/\.sql$/);
 
     await expect(page.locator('.monaco-editor')).toBeVisible();
   });
@@ -317,34 +309,30 @@ test.describe('Cross-Feature User Journeys', () => {
 
     // Step 1: Resize split pane
     const handle = page.locator('.splitpanes__splitter');
-    if (await handle.isVisible().catch(() => false)) {
-      const handleBox = await handle.boundingBox();
-      if (handleBox) {
-        await handle.hover();
-        await page.mouse.down();
-        await page.mouse.move(handleBox.x + 50, handleBox.y + 10, { steps: 5 });
-        await page.mouse.up();
-      }
-    }
+    await expect(handle).toBeVisible({ timeout: 5_000 });
+    const handleBox = await handle.boundingBox();
+    expect(handleBox).not.toBeNull();
+    await handle.hover();
+    await page.mouse.down();
+    await page.mouse.move(handleBox!.x + 50, handleBox!.y + 10, { steps: 5 });
+    await page.mouse.up();
 
     // Step 2: Switch to ER diagram
     const erBtn = page.locator('button:has-text("ER 图")');
-    if (await erBtn.isVisible().catch(() => false)) {
-      await erBtn.click();
-      await page.waitForTimeout(1000);
+    await expect(erBtn).toBeVisible({ timeout: 5_000 });
+    await erBtn.click();
+    await page.waitForTimeout(1000);
 
-      // ER nodes should render
-      const erNodes = page.locator('.vue-flow__node');
-      const erNodeCount = await erNodes.count();
-      expect(erNodeCount).toBeGreaterThan(0);
-    }
+    // ER nodes should render
+    const erNodes = page.locator('.vue-flow__node');
+    const erNodeCount = await erNodes.count();
+    expect(erNodeCount).toBeGreaterThan(0);
 
     // Step 3: Switch back to table view
     const tableTab = page.locator('[data-testid="tab-tables"]');
-    if (await tableTab.isVisible().catch(() => false)) {
-      await tableTab.click();
-      await page.waitForTimeout(500);
-    }
+    await expect(tableTab).toBeVisible({ timeout: 5_000 });
+    await tableTab.click();
+    await page.waitForTimeout(500);
 
     // Step 4: Switch to main tab
     await expect(page.locator('.monaco-editor')).toBeVisible();

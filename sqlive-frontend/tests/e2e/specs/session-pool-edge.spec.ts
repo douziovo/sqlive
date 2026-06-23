@@ -35,14 +35,15 @@ test.describe('Session & Pool Edge Cases', () => {
     // At minimum, the app should not crash
     await expect(page.locator('.monaco-editor')).toBeVisible();
 
-    // Look for any toast/notification element
+    // Toast notification is optional — the backend signals session recreation
+    // but the UI may or may not surface it. Assert explicitly if present.
     const toast = page.locator('[role="alert"], .toast, [class*="toast"], [class*="notification"]');
-    const toastVisible = await toast.first().isVisible().catch(() => false);
-
-    // If toast appeared, verify it can be dismissed or auto-closes
-    if (toastVisible) {
+    const toastCount = await toast.count();
+    if (toastCount > 0) {
+      await expect(toast.first()).toBeVisible();
       const closeBtn = toast.locator('button');
-      if (await closeBtn.first().isVisible().catch(() => false)) {
+      const closeCount = await closeBtn.count();
+      if (closeCount > 0) {
         await closeBtn.first().click();
         await page.waitForTimeout(300);
       }
@@ -73,14 +74,14 @@ test.describe('Session & Pool Edge Cases', () => {
     // App should show error state, not crash
     await expect(page.locator('.monaco-editor')).toBeVisible();
 
-    // Error should be displayed somewhere
+    // Error indicator may render depending on how the app surfaces 429 errors.
+    // If present, verify it is visible; either way, app must remain responsive.
     const errorIndicator = page.locator('.squiggly-error, [class*="error"], [class*="destructive"]');
-    const errorVisible = await errorIndicator.first().isVisible().catch(() => false);
-
-    // At minimum, app remains responsive (no white screen)
-    if (!errorVisible) {
-      await expect(page.locator('.monaco-editor')).toBeVisible();
+    const errorCount = await errorIndicator.count();
+    if (errorCount > 0) {
+      await expect(errorIndicator.first()).toBeVisible();
     }
+    await expect(page.locator('.monaco-editor')).toBeVisible();
   });
 
   test('T4.3 503 backend unavailable handled without crash', async ({ page }) => {
