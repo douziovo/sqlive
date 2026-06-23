@@ -72,4 +72,25 @@ describe('AchievementToast', () => {
     await vi.dynamicImportSettled()
     expect(getToastEl()?.classList.contains('achievement-toast--high-diff')).toBe(true)
   })
+
+  it('空 label 不渲染副标题 div', async () => {
+    mount(AchievementToast, { props: { visible: true, streak: 1, xp: 30, label: '', isHighDifficulty: false } })
+    await vi.dynamicImportSettled()
+    const toast = getToastEl()
+    expect(toast).not.toBeNull()
+    const subDiv = toast?.querySelector('.achievement-toast__sub')
+    expect(subDiv).toBeNull()
+  })
+
+  it('streak=2 非高阶显示默认图标和标题，无特殊 CSS class', async () => {
+    mount(AchievementToast, { props: { visible: true, streak: 2, xp: 30, label: 'INSERT', isHighDifficulty: false } })
+    await vi.dynamicImportSettled()
+    const toast = getToastEl()
+    expect(toast).not.toBeNull()
+    expect(toast?.textContent).toContain('🌟')
+    expect(toast?.textContent).toContain('新知识点掌握')
+    expect(toast?.classList.contains('achievement-toast--fire')).toBe(false)
+    expect(toast?.classList.contains('achievement-toast--electric')).toBe(false)
+    expect(toast?.classList.contains('achievement-toast--high-diff')).toBe(false)
+  })
 })
