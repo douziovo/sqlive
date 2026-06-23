@@ -36,15 +36,23 @@ test.describe('Cross-Feature User Journeys', () => {
     await expect(page.locator('#table-departments')).toBeVisible({ timeout: 15_000 });
 
     // Step 1: Introduce error
+    const errResp = page.waitForResponse(
+      (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',
+      { timeout: 15_000 },
+    );
     await sqlEditor.replaceAll('SELECT * FORM departments;');
-    await page.waitForTimeout(2000);
+    try { await errResp; } catch { /* may not fire for syntax error */ }
 
     // Step 2: Verify error state (app didn't crash)
     await expect(page.locator('.monaco-editor')).toBeVisible();
 
     // Step 3: Fix the error manually
+    const fixResp = page.waitForResponse(
+      (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',
+      { timeout: 15_000 },
+    );
     await sqlEditor.replaceAll('SELECT * FROM departments;');
-    await page.waitForTimeout(2000);
+    await fixResp;
 
     // Step 4: Verify recovery - table data should reappear
     await expect(page.locator('#table-departments')).toBeVisible({ timeout: 10_000 });
@@ -66,7 +74,6 @@ test.describe('Cross-Feature User Journeys', () => {
       "INSERT INTO journey_test VALUES (2, 'Beta', 87.3);"
     );
     await responsePromise;
-    await page.waitForTimeout(1000);
 
     // Verify table created
     await expect(page.locator('#table-journey_test')).toBeVisible({ timeout: 10_000 });
@@ -90,7 +97,6 @@ test.describe('Cross-Feature User Journeys', () => {
     // Ghost row auto-commits on Tab — wait for response after fill
     await ghostInputs.nth(Math.min(ghostCount - 1, 2)).press('Tab');
     try { await responsePromise; } catch { /* response may not fire */ }
-    await page.waitForTimeout(500);
 
     // Step 3: Edit a cell
     const nameCell = page.locator('#table-journey_test tbody tr').first().locator('td:nth-child(2) textarea');
@@ -107,9 +113,8 @@ test.describe('Cross-Feature User Journeys', () => {
     // Step 4: Delete a row
     const firstRow = page.locator('#table-journey_test tbody tr').first();
     await firstRow.hover();
-    await page.waitForTimeout(300);
-
     const delBtns = firstRow.locator('td button, td [role="button"]');
+    await expect(delBtns.last()).toBeVisible({ timeout: 3_000 });
     const delCount = await delBtns.count();
     expect(delCount).toBeGreaterThan(0);
     responsePromise = page.waitForResponse(
@@ -124,7 +129,11 @@ test.describe('Cross-Feature User Journeys', () => {
     await expect(dropBtn).toBeVisible({ timeout: 5_000 });
     page.once('dialog', (dialog) => dialog.accept());
     await dropBtn.click();
-    await page.waitForTimeout(2000);
+    // Wait for drop table API response
+    await page.waitForResponse(
+      (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',
+      { timeout: 15_000 },
+    ).catch(() => {});
 
     // Table should be gone after drop
     await expect(page.locator('#table-journey_test')).not.toBeVisible({ timeout: 5_000 });
@@ -152,10 +161,9 @@ test.describe('Cross-Feature User Journeys', () => {
     // Tab 2: Create different table
     const addBtn = page.locator('button[title="新建标签页"]');
     await addBtn.click();
-    await page.waitForTimeout(500);
+    // Wait for new tab to be active
+    await expect(page.locator('.flex.items-center.overflow-x-auto > div[class*="group"]').last()).toBeVisible({ timeout: 5_000 });
 
-    // Wait for auto-execute after new tab creation
-    await page.waitForTimeout(500);
     responsePromise = page.waitForResponse(
       (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',
       { timeout: 15_000 },
@@ -207,7 +215,8 @@ test.describe('Cross-Feature User Journeys', () => {
 
     // Step 4: Right-click editor for export
     await page.locator('.monaco-editor').first().click({ button: 'right' });
-    await page.waitForTimeout(300);
+    // Wait for context menu
+    await page.locator('.monaco-context-menu, .context-menu, [role="menu"]').first().waitFor({ state: 'visible', timeout: 3_000 }).catch(() => {});
 
     // Export option should exist in context menu
     const exportOption = page.locator('text=导出当前标签页');
@@ -278,19 +287,18 @@ test.describe('Cross-Feature User Journeys', () => {
 
     // Open knowledge panel
     await page.locator('.learning-companion').click();
-    await page.waitForTimeout(800);
+    await expect(page.locator('.knowledge-panel')).toBeVisible({ timeout: 8_000 });
 
     // Click first node → detail appears
     const nodes = page.locator('.vue-flow__node');
     await expect(nodes.first()).toBeVisible({ timeout: 5_000 });
     await nodes.first().click();
-    await page.waitForTimeout(500);
+    await expect(page.locator('.knowledge-detail')).toBeVisible({ timeout: 5_000 });
 
     // Click "让 AI 教我"
     const teachBtn = page.locator('.knowledge-detail__btn--ai');
     await expect(teachBtn).toBeVisible({ timeout: 5_000 });
     await teachBtn.click();
-    await page.waitForTimeout(1500);
 
     // AI panel should open, knowledge panel should close
     await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({ timeout: 5_000 });
@@ -321,7 +329,8 @@ test.describe('Cross-Feature User Journeys', () => {
     const erBtn = page.locator('button:has-text("ER 图")');
     await expect(erBtn).toBeVisible({ timeout: 5_000 });
     await erBtn.click();
-    await page.waitForTimeout(1000);
+    // Wait for ER diagram to render
+    await expect(page.locator('.vue-flow')).toBeVisible({ timeout: 5_000 });
 
     // ER nodes should render
     const erNodes = page.locator('.vue-flow__node');
@@ -332,7 +341,7 @@ test.describe('Cross-Feature User Journeys', () => {
     const tableTab = page.locator('[data-testid="tab-tables"]');
     await expect(tableTab).toBeVisible({ timeout: 5_000 });
     await tableTab.click();
-    await page.waitForTimeout(500);
+    await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: 5_000 });
 
     // Step 4: Switch to main tab
     await expect(page.locator('.monaco-editor')).toBeVisible();
@@ -360,8 +369,8 @@ test.describe('Cross-Feature User Journeys', () => {
       await page.keyboard.type(ch, { delay: 5 });
     }
 
-    // Wait for debounce to settle
-    await page.waitForTimeout(3000);
+    // Wait for debounce to settle — debounce is 100ms, no DOM signal for completion
+    await page.waitForTimeout(2000); // animation debounce, no DOM signal
 
     // After rapid typing + debounce, should have at most ~2 API calls
     // (initial load + debounced execution)
@@ -376,8 +385,12 @@ test.describe('Cross-Feature User Journeys', () => {
     await expect(page.locator('#table-departments')).toBeVisible({ timeout: 15_000 });
 
     // Step 1: Introduce syntax error
+    const errResp2 = page.waitForResponse(
+      (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',
+      { timeout: 15_000 },
+    );
     await sqlEditor.replaceAll('SELECT * FORM departments;');
-    await page.waitForTimeout(2000);
+    try { await errResp2; } catch { /* may not fire for syntax error */ }
 
     // Step 2: Fix the error
     const responsePromise = page.waitForResponse(
@@ -386,7 +399,6 @@ test.describe('Cross-Feature User Journeys', () => {
     );
     await sqlEditor.replaceAll('SELECT * FROM departments;');
     await responsePromise;
-    await page.waitForTimeout(1000);
 
     // Step 3: Verify data recovered
     await expect(page.locator('#table-departments')).toBeVisible({ timeout: 10_000 });

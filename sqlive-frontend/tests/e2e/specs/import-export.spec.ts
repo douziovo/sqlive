@@ -9,7 +9,7 @@ test.describe('Import / Export', () => {
   test('exports current tab as .sql file', async ({ page }) => {
     // Right-click on editor to open context menu
     await page.locator('.monaco-editor').first().click({ button: 'right' });
-    await page.waitForTimeout(300);
+    await expect(page.locator('text=导出当前标签页')).toBeVisible({ timeout: 5_000 });
 
     // Look for export option in context menu
     const exportOption = page.locator('text=导出当前标签页');
@@ -24,7 +24,7 @@ test.describe('Import / Export', () => {
 
   test('exports all tabs as multiple files', async ({ page }) => {
     await page.locator('.monaco-editor').first().click({ button: 'right' });
-    await page.waitForTimeout(300);
+    await expect(page.locator('text=导出全部标签页')).toBeVisible({ timeout: 5_000 });
 
     const exportAllOption = page.locator('text=导出全部标签页');
     await expect(exportAllOption).toBeVisible({ timeout: 5_000 });
@@ -68,7 +68,7 @@ test.describe('Import / Export', () => {
 
     // Right-click editor to open context menu
     await page.locator('.monaco-editor').first().click({ button: 'right' });
-    await page.waitForTimeout(300);
+    await expect(page.locator('text=导入 SQL 文件')).toBeVisible({ timeout: 5_000 });
 
     // Look for import option in context menu
     const importOption = page.locator('text=导入 SQL 文件');
@@ -89,7 +89,7 @@ test.describe('Import / Export', () => {
           "INSERT INTO imported_via_picker VALUES (1, 'Hello');"),
       });
 
-      await page.waitForTimeout(2000);
+      await page.waitForResponse(r => r.url().includes('/api/execute'), { timeout: 10_000 }).catch(() => {});
     }
 
     // App should not crash
@@ -117,7 +117,6 @@ test.describe('Import / Export', () => {
 
       // Dispatch drag events
       await page.dispatchEvent('.monaco-editor', 'dragenter', { dataTransfer });
-      await page.waitForTimeout(200);
 
       // Drop overlay should appear
       const overlay = page.locator('text=/释放以导入/');
@@ -125,9 +124,7 @@ test.describe('Import / Export', () => {
 
       // Dispatch dragover and drop
       await page.dispatchEvent('.monaco-editor', 'dragover', { dataTransfer });
-      await page.waitForTimeout(100);
       await page.dispatchEvent('.monaco-editor', 'drop', { dataTransfer });
-      await page.waitForTimeout(500);
     }
 
     // App should not crash

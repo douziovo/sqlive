@@ -60,7 +60,8 @@ export class SqlEditor {
 
   async rightClickEditor() {
     await this.page.locator('.monaco-editor').first().click({ button: 'right' });
-    await this.page.waitForTimeout(300);
+    // Wait for context menu to appear
+    await this.page.locator('.monaco-context-menu, .context-menu, [role="menu"]').first().waitFor({ state: 'visible', timeout: 3_000 }).catch(() => {});
   }
 
   async importSql(filepath: string) {
@@ -73,7 +74,8 @@ export class SqlEditor {
         importOption.click(),
       ]);
       await fileChooser.setFiles(filepath);
-      await this.page.waitForTimeout(1000);
+      // Wait for file import to be processed — no deterministic DOM signal
+      await this.page.waitForTimeout(1000); // animation debounce, no DOM signal
     }
   }
 }
