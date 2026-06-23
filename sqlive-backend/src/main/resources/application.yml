@@ -1,9 +1,9 @@
 spring:
   application:
     name: sqlive-backend
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+  datasource:
+    url: jdbc:sqlite:file:playground?mode=memory&cache=shared
+    driver-class-name: org.sqlite.JDBC
 
 logging:
   level:
@@ -47,7 +47,7 @@ ai:
       temperature: 1
       reasoning-effort: "medium"
     ollama:
-      base-url: http://172.16.1.200:11434
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
       api-key: ""
       model: gemma4:e2b
       max-tokens: 4096
