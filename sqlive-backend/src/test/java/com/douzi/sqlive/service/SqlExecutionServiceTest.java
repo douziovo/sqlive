@@ -1,11 +1,14 @@
 package com.douzi.sqlive.service;
 
+import com.douzi.sqlive.config.PoolProperties;
 import com.douzi.sqlive.dto.*;
 import com.douzi.sqlive.service.database.DatabasePoolManager;
 import com.douzi.sqlive.service.metadata.MetadataExtractor;
 import com.douzi.sqlive.service.sql.SqlParser;
 import org.junit.jupiter.api.*;
 import static org.junit.jupiter.api.Assertions.*;
+
+import java.time.Duration;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,7 +21,11 @@ import java.util.stream.Collectors;
 class SqlExecutionServiceTest {
 
     private static DatabasePoolManager createPoolManager() {
-        return new DatabasePoolManager();
+        var props = new PoolProperties();
+        props.setMaxDatabases(500);
+        props.setIdleTimeout(Duration.ofMinutes(30));
+        props.setCleanupInterval(Duration.ofMinutes(5));
+        return new DatabasePoolManager(props);
     }
 
     private final SqlExecutionService service = new SqlExecutionService(

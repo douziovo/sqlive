@@ -1,5 +1,6 @@
 package com.douzi.sqlive.service.database;
 
+import com.douzi.sqlive.config.PoolProperties;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import jakarta.annotation.PreDestroy;
@@ -8,28 +9,37 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
-import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Component
 @Slf4j
 public class DatabasePoolManager {
 
-    private static final int SOFT_MAX = 500;
-    private static final int HARD_MAX = 2000;
-    private static final int MAX_PER_IP = 50;
-    private static final long IDLE_EVICTION_SECONDS = TimeUnit.MINUTES.toSeconds(30);
-    private static final long CLEANER_INTERVAL_SECONDS = TimeUnit.MINUTES.toSeconds(5);
+    private static final int DEFAULT_SOFT_MAX = 500;
+    private static final int DEFAULT_HARD_MAX = 2000;
+    private static final int DEFAULT_MAX_PER_IP = 50;
     private static final String DB_NAME_PATTERN = "^[a-zA-Z0-9_-]{1,64}$";
+    private static final long MAX_HOLD_NANOS = TimeUnit.MINUTES.toNanos(10);
+    private static final int BUSY_TIMEOUT_MS = 5000;
+    private static final int CONNECTION_TIMEOUT_MS = 5000;
+    private static final int LEAK_DETECTION_MS = 60_000;
+
+    private final int softMax;
+    private final int hardMax;
+    private final int maxPerIp;
+    private final long idleEvictionNanos;
+    private final long cleanerIntervalNanos;
 
     private final Map<String, JdbcTemplate> pools = new ConcurrentHashMap<>();
     private final Map<String, AtomicInteger> refCounts = new ConcurrentHashMap<>();
-    private final Map<String, Long> lastAccessNanos = new ConcurrentHashMap<>();
+    private final Map<String, AtomicLong> lastAccessNanos = new ConcurrentHashMap<>();
+    private final Map<String, Long> acquireStartNanos = new ConcurrentHashMap<>();
     private final Map<String, String> poolOwnerIps = new ConcurrentHashMap<>();
     private final ScheduledExecutorService cleaner = Executors.newSingleThreadScheduledExecutor(r -> {
         var t = new Thread(r, "db-pool-cleaner");
@@ -37,9 +47,16 @@ public class DatabasePoolManager {
         return t;
     });
 
-    public DatabasePoolManager() {
+    public DatabasePoolManager(PoolProperties props) {
+        this.softMax = props.getMaxDatabases() > 0 ? props.getMaxDatabases() : DEFAULT_SOFT_MAX;
+        this.hardMax = softMax * 4;
+        this.maxPerIp = DEFAULT_MAX_PER_IP;
+        this.idleEvictionNanos = props.getIdleTimeout().toNanos();
+        this.cleanerIntervalNanos = props.getCleanupInterval().toNanos();
+
+        long intervalSecs = Math.max(1, props.getCleanupInterval().toSeconds());
         cleaner.scheduleWithFixedDelay(this::evictIdlePools,
-                CLEANER_INTERVAL_SECONDS, CLEANER_INTERVAL_SECONDS, TimeUnit.SECONDS);
+                intervalSecs, intervalSecs, TimeUnit.SECONDS);
     }
 
     @PreDestroy
@@ -51,14 +68,17 @@ public class DatabasePoolManager {
         pools.clear();
         refCounts.clear();
         lastAccessNanos.clear();
+        acquireStartNanos.clear();
         poolOwnerIps.clear();
     }
 
-    public JdbcTemplate getOrCreateJdbcTemplate(String dbName) {
+    public record PoolEntry(JdbcTemplate jdbcTemplate, boolean isNew) {}
+
+    public PoolEntry getOrCreateJdbcTemplate(String dbName) {
         return getOrCreateJdbcTemplate(dbName, null);
     }
 
-    public JdbcTemplate getOrCreateJdbcTemplate(String dbName, @Nullable String clientIp) {
+    public PoolEntry getOrCreateJdbcTemplate(String dbName, @Nullable String clientIp) {
         if (dbName == null || !dbName.matches(DB_NAME_PATTERN)) {
             throw new IllegalArgumentException("Invalid dbName: " + dbName);
         }
@@ -66,36 +86,40 @@ public class DatabasePoolManager {
         JdbcTemplate existing = pools.get(dbName);
         if (existing != null) {
             refCounts.computeIfAbsent(dbName, k -> new AtomicInteger()).incrementAndGet();
-            lastAccessNanos.put(dbName, System.nanoTime());
-            return existing;
+            lastAccessNanos.computeIfAbsent(dbName, k -> new AtomicLong()).set(System.nanoTime());
+            return new PoolEntry(existing, false);
         }
 
-        synchronized (this) {
-            existing = pools.get(dbName);
-            if (existing != null) {
-                refCounts.computeIfAbsent(dbName, k -> new AtomicInteger()).incrementAndGet();
-                lastAccessNanos.put(dbName, System.nanoTime());
-                return existing;
-            }
+        return createNewPool(dbName, clientIp);
+    }
 
-            checkHardLimit(dbName, clientIp);
-            checkPerIpLimit(clientIp);
-
-            JdbcTemplate jt = createJdbcTemplate(dbName);
-            pools.put(dbName, jt);
+    private synchronized PoolEntry createNewPool(String dbName, @Nullable String clientIp) {
+        JdbcTemplate existing = pools.get(dbName);
+        if (existing != null) {
             refCounts.computeIfAbsent(dbName, k -> new AtomicInteger()).incrementAndGet();
-            lastAccessNanos.put(dbName, System.nanoTime());
-            if (clientIp != null) {
-                poolOwnerIps.put(dbName, clientIp);
-            }
-            return jt;
+            lastAccessNanos.computeIfAbsent(dbName, k -> new AtomicLong()).set(System.nanoTime());
+            return new PoolEntry(existing, false);
         }
+
+        checkHardLimit(dbName, clientIp);
+        checkPerIpLimit(clientIp);
+
+        JdbcTemplate jt = createJdbcTemplate(dbName);
+        pools.put(dbName, jt);
+        refCounts.computeIfAbsent(dbName, k -> new AtomicInteger()).incrementAndGet();
+        lastAccessNanos.computeIfAbsent(dbName, k -> new AtomicLong()).set(System.nanoTime());
+        acquireStartNanos.put(dbName, System.nanoTime());
+        if (clientIp != null) {
+            poolOwnerIps.put(dbName, clientIp);
+        }
+        return new PoolEntry(jt, true);
     }
 
     public void release(String dbName) {
         AtomicInteger count = refCounts.get(dbName);
         if (count != null && count.decrementAndGet() <= 0) {
             refCounts.remove(dbName);
+            acquireStartNanos.remove(dbName);
         }
     }
 
@@ -104,38 +128,53 @@ public class DatabasePoolManager {
     }
 
     private void checkHardLimit(String dbName, @Nullable String clientIp) {
-        if (pools.size() >= HARD_MAX) {
-            log.error("HARD_MAX reached: {} pools, refusing '{}' from IP {}", HARD_MAX, dbName, clientIp);
+        if (pools.size() >= hardMax) {
+            log.error("HARD_MAX reached: {} pools, refusing '{}' from IP {}", hardMax, dbName, clientIp);
             throw new TooManyDatabasesException(
-                    String.format("Too many databases (limit: %d). Please try again later.", HARD_MAX));
+                    String.format("服务器繁忙，请稍后重试 (limit: %d)", hardMax));
         }
-        if (pools.size() >= SOFT_MAX) {
-            log.warn("SOFT_MAX reached: {} pools (current: {}), triggering eager eviction", SOFT_MAX, pools.size());
-            evictOneIdlePool();
+        if (pools.size() >= softMax) {
+            log.warn("SOFT_MAX reached: {} pools (current: {}), triggering eager eviction", softMax, pools.size());
         }
     }
 
     private void checkPerIpLimit(@Nullable String clientIp) {
         if (clientIp == null || isLocalhost(clientIp)) return;
         long count = poolOwnerIps.values().stream().filter(clientIp::equals).count();
-        if (count >= MAX_PER_IP) {
-            log.warn("Per-IP limit reached: IP {} has {} pools (max {})", clientIp, count, MAX_PER_IP);
+        if (count >= maxPerIp) {
+            log.warn("Per-IP limit reached: IP {} has {} pools (max {})", clientIp, count, maxPerIp);
             throw new TooManyDatabasesException(
-                    String.format("Too many databases for this client (limit: %d).", MAX_PER_IP));
+                    String.format("当前客户端连接数过多 (limit: %d)，请关闭不用的标签页", maxPerIp));
         }
     }
 
     private void evictIdlePools() {
-        long cutoff = System.nanoTime() - TimeUnit.SECONDS.toNanos(IDLE_EVICTION_SECONDS);
-        int target = SOFT_MAX;
+        long idleCutoff = System.nanoTime() - idleEvictionNanos;
+        long holdCutoff = System.nanoTime() - MAX_HOLD_NANOS;
+
+        // Eager eviction if over softMax (run outside synchronized block)
+        if (pools.size() > softMax) {
+            evictOneIdlePool();
+        }
 
         for (var entry : pools.entrySet()) {
-            if (pools.size() <= target) break;
             String name = entry.getKey();
-            if (isInUse(name)) continue;
-            Long lastNanos = lastAccessNanos.get(name);
-            if (lastNanos != null && lastNanos < cutoff) {
+            AtomicLong lastNanos = lastAccessNanos.get(name);
+            boolean isIdle = !isInUse(name);
+
+            if (isIdle && lastNanos != null && lastNanos.get() < idleCutoff) {
                 evict(name);
+                continue;
+            }
+
+            // Force-evict pools held too long (ref count leak protection)
+            if (!isIdle) {
+                Long acquireStart = acquireStartNanos.get(name);
+                if (acquireStart != null && acquireStart < holdCutoff) {
+                    log.warn("Force-evicting '{}': held for >{}min (possible ref leak)", name,
+                            TimeUnit.NANOSECONDS.toMinutes(MAX_HOLD_NANOS));
+                    evict(name);
+                }
             }
         }
     }
@@ -154,6 +193,7 @@ public class DatabasePoolManager {
         if (jdbc == null) return;
         refCounts.remove(dbName);
         lastAccessNanos.remove(dbName);
+        acquireStartNanos.remove(dbName);
         poolOwnerIps.remove(dbName);
         closeQuietly(dbName, jdbc);
         log.info("Evicted idle database '{}' (pool size now: {})", dbName, pools.size());
@@ -177,10 +217,12 @@ public class DatabasePoolManager {
     }
 
     private JdbcTemplate createJdbcTemplate(String name) {
-        String url = "jdbc:sqlite:file:" + name + "?mode=memory";
+        String url = "jdbc:sqlite:file:" + name + "?mode=memory&busy_timeout=" + BUSY_TIMEOUT_MS;
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl(url);
         config.setMaximumPoolSize(1);
+        config.setConnectionTimeout(CONNECTION_TIMEOUT_MS);
+        config.setLeakDetectionThreshold(LEAK_DETECTION_MS);
         config.setPoolName("SQLitePool-" + name);
         log.info("Created DataSource for database '{}'", name);
         return new JdbcTemplate(new HikariDataSource(config));

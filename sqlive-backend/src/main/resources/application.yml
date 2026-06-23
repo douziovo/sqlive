@@ -1,9 +1,9 @@
 spring:
   application:
     name: sqlive-backend
-  datasource:
-    url: jdbc:sqlite:file:playground?mode=memory&cache=shared
-    driver-class-name: org.sqlite.JDBC
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
 
 logging:
   level:
@@ -70,6 +70,6 @@ management:
       show-details: never
 
 pool:
-  max-databases: 200
-  idle-timeout: 5m
+  max-databases: 500
+  idle-timeout: 30m
   cleanup-interval: 5m

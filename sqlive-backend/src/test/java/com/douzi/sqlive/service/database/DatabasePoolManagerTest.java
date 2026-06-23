@@ -1,9 +1,11 @@
 package com.douzi.sqlive.service.database;
 
+import com.douzi.sqlive.config.PoolProperties;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,7 +24,11 @@ class DatabasePoolManagerTest {
     }
 
     private DatabasePoolManager createManager() {
-        var mgr = new DatabasePoolManager();
+        var props = new PoolProperties();
+        props.setMaxDatabases(500);
+        props.setIdleTimeout(Duration.ofMinutes(30));
+        props.setCleanupInterval(Duration.ofMinutes(5));
+        var mgr = new DatabasePoolManager(props);
         managers.add(mgr);
         return mgr;
     }
@@ -30,7 +36,9 @@ class DatabasePoolManagerTest {
     @Test
     void shouldCreateJdbcTemplateForValidName() {
         var mgr = createManager();
-        JdbcTemplate jdbc = mgr.getOrCreateJdbcTemplate("test_db");
+        var poolEntry = mgr.getOrCreateJdbcTemplate("test_db");
+        assertTrue(poolEntry.isNew());
+        JdbcTemplate jdbc = poolEntry.jdbcTemplate();
         assertNotNull(jdbc);
         assertNotNull(jdbc.getDataSource());
     }
@@ -38,9 +46,11 @@ class DatabasePoolManagerTest {
     @Test
     void shouldReuseJdbcTemplateForSameName() {
         var mgr = createManager();
-        var jdbc1 = mgr.getOrCreateJdbcTemplate("reuse_db");
-        var jdbc2 = mgr.getOrCreateJdbcTemplate("reuse_db");
-        assertSame(jdbc1, jdbc2);
+        var e1 = mgr.getOrCreateJdbcTemplate("reuse_db");
+        var e2 = mgr.getOrCreateJdbcTemplate("reuse_db");
+        assertTrue(e1.isNew());
+        assertFalse(e2.isNew());
+        assertSame(e1.jdbcTemplate(), e2.jdbcTemplate());
     }
 
     @Test
@@ -64,7 +74,7 @@ class DatabasePoolManagerTest {
     @Test
     void shouldAcceptDbNameWithUnderscoreAndDash() {
         var mgr = createManager();
-        assertNotNull(mgr.getOrCreateJdbcTemplate("my-db_01"));
+        assertNotNull(mgr.getOrCreateJdbcTemplate("my-db_01").jdbcTemplate());
     }
 
     @Test
@@ -72,7 +82,7 @@ class DatabasePoolManagerTest {
         var mgr = createManager();
         // SOFT_MAX = 500, create 501 pools without releasing — all are "in use"
         for (int i = 0; i < 501; i++) {
-            assertNotNull(mgr.getOrCreateJdbcTemplate("soft_db_" + i));
+            assertNotNull(mgr.getOrCreateJdbcTemplate("soft_db_" + i).jdbcTemplate());
         }
         // Should allow overflow since all pools are in use
         assertEquals(501, mgr.getPoolSize());
@@ -94,7 +104,7 @@ class DatabasePoolManagerTest {
         var mgr = createManager();
         // HARD_MAX = 2000, create 2000 pools (all in use)
         for (int i = 0; i < 2000; i++) {
-            assertNotNull(mgr.getOrCreateJdbcTemplate("hard_db_" + i));
+            assertNotNull(mgr.getOrCreateJdbcTemplate("hard_db_" + i).jdbcTemplate());
         }
         assertEquals(2000, mgr.getPoolSize());
         // 2001st should throw
@@ -128,7 +138,7 @@ class DatabasePoolManagerTest {
     void shouldAllowLocalhostToBypassPerIpLimit() {
         var mgr = createManager();
         for (int i = 0; i < 60; i++) {
-            assertNotNull(mgr.getOrCreateJdbcTemplate("lh_db_" + i, "127.0.0.1"));
+            assertNotNull(mgr.getOrCreateJdbcTemplate("lh_db_" + i, "127.0.0.1").jdbcTemplate());
         }
         assertEquals(60, mgr.getPoolSize());
     }

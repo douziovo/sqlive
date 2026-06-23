@@ -6,6 +6,7 @@ import java.util.List;
 @Data
 public class SqlResponse {
     private boolean success;
+    private boolean sessionRecreated;
     private DataPayload data;
     private ErrorPayload error;
 
