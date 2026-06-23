@@ -41,6 +41,7 @@ public class DatabasePoolManager {
     private final Map<String, AtomicLong> lastAccessNanos = new ConcurrentHashMap<>();
     private final Map<String, Long> acquireStartNanos = new ConcurrentHashMap<>();
     private final Map<String, String> poolOwnerIps = new ConcurrentHashMap<>();
+    private final Map<String, AtomicInteger> ipCounts = new ConcurrentHashMap<>();
     private final ScheduledExecutorService cleaner = Executors.newSingleThreadScheduledExecutor(r -> {
         var t = new Thread(r, "db-pool-cleaner");
         t.setDaemon(true);
@@ -70,6 +71,7 @@ public class DatabasePoolManager {
         lastAccessNanos.clear();
         acquireStartNanos.clear();
         poolOwnerIps.clear();
+        ipCounts.clear();
     }
 
     public record PoolEntry(JdbcTemplate jdbcTemplate, boolean isNew) {}
@@ -111,6 +113,7 @@ public class DatabasePoolManager {
         acquireStartNanos.put(dbName, System.nanoTime());
         if (clientIp != null) {
             poolOwnerIps.put(dbName, clientIp);
+            ipCounts.computeIfAbsent(clientIp, k -> new AtomicInteger()).incrementAndGet();
         }
         return new PoolEntry(jt, true);
     }
@@ -140,9 +143,10 @@ public class DatabasePoolManager {
 
     private void checkPerIpLimit(@Nullable String clientIp) {
         if (clientIp == null || isLocalhost(clientIp)) return;
-        long count = poolOwnerIps.values().stream().filter(clientIp::equals).count();
-        if (count >= maxPerIp) {
-            log.warn("Per-IP limit reached: IP {} has {} pools (max {})", clientIp, count, maxPerIp);
+        AtomicInteger count = ipCounts.get(clientIp);
+        int current = count != null ? count.get() : 0;
+        if (current >= maxPerIp) {
+            log.warn("Per-IP limit reached: IP {} has {} pools (max {})", clientIp, current, maxPerIp);
             throw new TooManyDatabasesException(
                     String.format("当前客户端连接数过多 (limit: %d)，请关闭不用的标签页", maxPerIp));
         }
@@ -152,9 +156,9 @@ public class DatabasePoolManager {
         long idleCutoff = System.nanoTime() - idleEvictionNanos;
         long holdCutoff = System.nanoTime() - MAX_HOLD_NANOS;
 
-        // Eager eviction if over softMax (run outside synchronized block)
+        // Batch evict idle pools until below softMax
         if (pools.size() > softMax) {
-            evictOneIdlePool();
+            evictToTarget(softMax);
         }
 
         for (var entry : pools.entrySet()) {
@@ -179,12 +183,18 @@ public class DatabasePoolManager {
         }
     }
 
-    private void evictOneIdlePool() {
+    private void evictToTarget(int target) {
+        int evicted = 0;
         for (var entry : pools.entrySet()) {
-            if (!isInUse(entry.getKey())) {
-                evict(entry.getKey());
-                return;
+            if (pools.size() <= target) break;
+            String name = entry.getKey();
+            if (!isInUse(name)) {
+                evict(name);
+                evicted++;
             }
+        }
+        if (evicted > 0) {
+            log.info("Batch evicted {} idle pools to reach target {}", evicted, target);
         }
     }
 
@@ -194,7 +204,13 @@ public class DatabasePoolManager {
         refCounts.remove(dbName);
         lastAccessNanos.remove(dbName);
         acquireStartNanos.remove(dbName);
-        poolOwnerIps.remove(dbName);
+        String ownerIp = poolOwnerIps.remove(dbName);
+        if (ownerIp != null) {
+            AtomicInteger count = ipCounts.get(ownerIp);
+            if (count != null && count.decrementAndGet() <= 0) {
+                ipCounts.remove(ownerIp);
+            }
+        }
         closeQuietly(dbName, jdbc);
         log.info("Evicted idle database '{}' (pool size now: {})", dbName, pools.size());
     }
