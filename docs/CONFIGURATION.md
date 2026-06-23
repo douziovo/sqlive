@@ -25,6 +25,7 @@ These environment variables are read by Spring Boot from `application.yml` place
 | `DEEPSEEK_API_KEY` | **Required** (if using DeepSeek) | (empty) | API key for the DeepSeek AI provider. Failure to set this when `ai.provider` is `deepseek` will cause AI features to fail. |
 | `OPENAI_API_KEY` | No | `not-required` | API key for the OpenAI-compatible provider. Only needed when using `openai-compatible` with a keyed endpoint. |
 | `LM_STUDIO_API_KEY` | No | `not-required` | API key for LM Studio. Typically not required for local LM Studio instances. |
+| `OLLAMA_BASE_URL` | No | `http://localhost:11434` | Base URL for Ollama provider. Defaults to localhost. |
 
 ## Config file format
 
@@ -94,7 +95,7 @@ ai:
       temperature: 1
       reasoning-effort: "medium"
     ollama:
-      base-url: http://172.16.1.200:11434
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
       api-key: ""
       model: gemma4:e2b
       max-tokens: 4096
@@ -157,6 +158,7 @@ The dev server command (`npm run dev`) runs `vite --host`, binding to all networ
 - **`VITE_API_URL`, `VITE_AI_API_URL`, `VITE_KNOWLEDGE_API_URL`** -- The frontend uses sensible defaults (relative paths) if these are not set.
 - **`OPENAI_API_KEY`** -- Only needed when using the `openai-compatible` provider with an authentication-required endpoint. Defaults to `not-required`.
 - **`LM_STUDIO_API_KEY`** -- Not needed for typical local LM Studio usage. Defaults to `not-required`.
+- **`OLLAMA_BASE_URL`** -- Base URL for the Ollama provider. Defaults to `http://localhost:11434`. Override this if Ollama runs on a different host.
 - **`rate.limit.ai`** -- System property (Java `-D` flag). Controls AI endpoint rate limit. Default: `100` requests per 60-second window.
 - **`rate.limit.sql`** -- System property (Java `-D` flag). Controls SQL execute endpoint rate limit. Default: `500` requests per 60-second window.
 
