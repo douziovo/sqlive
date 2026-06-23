@@ -43,5 +43,16 @@ export default defineConfig({
       if (log.includes('[Vue Flow]')) return false
       if (log.includes('Extraneous non-props attributes')) return false
     },
+    coverage: {
+      provider: 'v8',
+      thresholds: {
+        statements: 60,
+        branches: 50,
+        functions: 60,
+        lines: 60,
+      },
+      include: ['src/composables/**', 'src/utils/**', 'src/components/**'],
+      exclude: ['src/__tests__/**', 'src/main.ts', '**/*.d.ts'],
+    },
   },
 })
