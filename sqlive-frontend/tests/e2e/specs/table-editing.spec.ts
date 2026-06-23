@@ -33,10 +33,9 @@ test.describe('Table Editing & Bidirectional Sync', () => {
     await hoursCell.click();
     await hoursCell.fill('not-a-number');
     await page.keyboard.press('Tab');
-    await page.waitForResponse(r => r.url().includes('/api/execute'), { timeout: 10_000 });
-
-    // After Tab (blur+submit), value should revert to original (non-numeric rejected)
-    // or remain changed (if validation accepts it). Either way, the app must not crash.
+    // fill+Tab may trigger sync OR frontend may reject locally without API call.
+    // Either way, the app must not crash.
+    await page.waitForTimeout(500);
     await expect(page.locator('.monaco-editor')).toBeVisible();
   });
 

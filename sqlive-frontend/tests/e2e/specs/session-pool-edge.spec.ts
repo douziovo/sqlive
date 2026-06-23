@@ -13,41 +13,30 @@ async function gotoAppNoWait(page: Page) {
 
 test.describe('Session & Pool Edge Cases', () => {
   test('T4.1 session recreation toast appears when backend signals recreated session', async ({ page }) => {
-    // Mock /api/execute to return X-Session-Recreated header
+    // Mock /api/execute to return X-Session-Recreated header (self-contained, no backend needed)
     await page.route('**/api/execute', async (route) => {
-      const response = await route.fetch();
-      const body = await response.text();
       await route.fulfill({
-        status: response.status(),
+        status: 200,
         contentType: 'application/json',
-        headers: {
-          ...response.headers(),
-          'X-Session-Recreated': 'true',
-        },
-        body,
+        headers: { 'X-Session-Recreated': 'true' },
+        body: JSON.stringify({
+          success: true,
+          data: {
+            tables: [{ name: 'departments', columns: ['id', 'name'], columnTypes: { id: 'INTEGER', name: 'TEXT' }, data: [{ id: 1, name: 'Test' }] }],
+            indexes: [], views: [], triggers: [], queryResults: [], foreignKeys: [], metadata: null
+          }
+        }),
       });
     });
 
     await gotoApp(page);
-    await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: 10_000 });
 
-    // May show a toast notification about session recreation
-    // At minimum, the app should not crash
+    // At minimum, the app should not crash and tables should render
     await expect(page.locator('.monaco-editor')).toBeVisible();
+    await expect(page.locator('#table-departments')).toBeVisible();
 
     // Toast notification is optional — the backend signals session recreation
-    // but the UI may or may not surface it. Assert explicitly if present.
-    const toast = page.locator('[role="alert"], .toast, [class*="toast"], [class*="notification"]');
-    const toastCount = await toast.count();
-    if (toastCount > 0) {
-      await expect(toast.first()).toBeVisible();
-      const closeBtn = toast.locator('button');
-      const closeCount = await closeBtn.count();
-      if (closeCount > 0) {
-        await closeBtn.first().click();
-      }
-    }
-
+    // but the UI does not currently surface it. Verify no crashes.
     await expect(page.locator('.monaco-editor')).toBeVisible();
   });
 

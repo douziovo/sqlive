@@ -80,14 +80,12 @@ test.describe('ER Diagram', () => {
     await sqlEditor.replaceAll('-- empty');
     await emptyResp;
 
-    // Switch to ER
+    // Switch to ER — when no tables exist, ErDiagram shows an overlay message,
+    // not the VueFlow canvas (.vue-flow is v-if="tables.length > 0")
     await page.locator('button:has-text("ER 图")').click();
-    await expect(page.locator('.vue-flow')).toBeVisible({ timeout: 5_000 });
 
-    // Empty state or no nodes shown
-    const nodes = page.locator('.vue-flow__node');
-    const count = await nodes.count();
-    expect(count).toBe(0);
+    // Empty state message should appear
+    await expect(page.locator('text=无法生成 ER 图')).toBeVisible({ timeout: 5_000 });
   });
 
   test('zoom in and out via controls or scroll wheel', async ({ page }) => {

@@ -382,11 +382,20 @@ function onResizeEnd() {
 useEventListener(document, 'mousemove', onResizeMove)
 useEventListener(document, 'mouseup', onResizeEnd)
 
+function onDocumentKeyDown(e: KeyboardEvent) {
+  if (e.key !== 'Escape' || isMinimized.value) return
+  const tag = (e.target as HTMLElement)?.tagName
+  if (tag === 'TEXTAREA' || tag === 'INPUT') return
+  emit('close')
+}
+
 onMounted(() => {
   initPosition()
+  document.addEventListener('keydown', onDocumentKeyDown)
 })
 onUnmounted(() => {
   if (copyTimeout.value) clearTimeout(copyTimeout.value)
+  document.removeEventListener('keydown', onDocumentKeyDown)
 })
 function send(e?: KeyboardEvent) {
   if (e?.isComposing) return

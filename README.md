@@ -1,54 +1,46 @@
 # SQLive — 全栈 SQL 交互式学习平台
 
-在线 SQL 演练环境：左侧编写 SQL，右侧实时渲染表结构与数据。支持可视化编辑数据后反向同步至 SQL 源码，集成多 AI 提供商智能辅助。
+左侧 Monaco 编辑器编写 SQL → 右侧表格即时展示结果。在表格中编辑数据，自动反向修改 SQL 源码，两侧始终保持一致。支持 AI 辅助编写、多 Tab 隔离运行、ER 图与知识图谱导航。专为 SQL 教学场景研发。学生开浏览器即用，无需搭建本地环境；AI 对话解释 SQL 语义，充当即时辅导；知识图谱引导学习路径，避免盲目刷题。
 
 ![主界面](docs/screenshots/01-editor-tables.png)
 
 ## 功能特性
 
-### 核心体验
+### 编辑器 ↔ 视图双向同步
 
-- **代码编辑**：Monaco Editor 提供语法高亮、自动补全、代码格式化
-- **实时执行**：SQL 脚本编写后 1 秒防抖自动执行，表结构与数据即时渲染
-- **多 Tab 管理**：独立标签页编辑不同 SQL 脚本，每个 Tab 拥有独立的 SQLite 内存数据库
-- **文件导入导出**：支持 `.sql` 文件导入及单/多 Tab 导出
+- 在右侧表格中编辑任意单元格，系统自动定位并修改左侧 SQL 对应位置，始终保持两端一致。
+- 修改出错时自动回滚到上一条正确 SQL，不影响当前工作。
 
-### 数据双向同步
+### AI 即时辅导
 
-- **可视化编辑**：在数据表格中直接编辑单元格、新增/删除行
-- **反向工程**：编辑后自动定位并替换 SQL 编辑器中对应的代码
-- **错误回滚**：SQL 执行失败时自动恢复至上一个合法代码状态
+- 切换 AI 后端（DeepSeek、OpenAI 兼容、Ollama、LM Studio），对话解释 SQL 语义、分析错误原因，充当即时辅导，流式输出逐字显示。
+- 新增提供商只需实现一个接口，不影响已有代码。
 
-### AI 智能辅助
-
-- **多提供商支持**：兼容 OpenAI、DeepSeek、Ollama、LM Studio 等多种 AI 后端
-- **多模式交互**：聊天问答 / 错误分析 / 代码修复 / SQL 解释 / 性能优化
-- **流式响应**：SSE 流式传输，实时显示 AI 回复与推理过程
-- **学习建议**：基于知识图谱的 SQL 主题分类与学习路径推荐
-- **知识图谱**：全屏知识图谱面板，语义缩放（3 级细节），难度/状态双组筛选，浮层详情卡片，圆形扩展动画从悬浮伴侣按钮入口
-
-![知识图谱细节](docs/screenshots/08-knowledge-graph.png)
-![知识图谱](docs/screenshots/09-knowledge-graph-detail.png)
 ![AI 对话](docs/screenshots/07-ai-chat.png)
 
-### 数据可视化
+### 多 Tab 隔离 + ER 图导航
 
-- **数据表格**：排序、过滤、分页，列类型约束标注
-- **ER 图**：自动生成实体关系图，外键基数检测（1:1 / 1:N），dagre 自动布局
+- 每个浏览器 Tab 拥有独立的 SQLite 内存数据库，空闲自动回收。
+- 根据建表语句自动生成 ER 图，展示表间外键关系，点击节点即可跳转浏览对应表数据。
 
 ![ER 图](docs/screenshots/02-er-diagram.png)
 
-- **图表视图**：查询结果支持柱状图、折线图、饼图等 ECharts 可视化，支持双轴和自动图表推荐
+### 数据可视化
+
+- 表格支持排序、过滤、分页，查询结果可用柱状图、折线图、饼图展示。
+- 浏览索引、视图、触发器、外键关系等数据库元数据。
 
 ![图表视图](docs/screenshots/03-chart-view.png)
-
-- **元数据浏览**：索引、视图、触发器、外键关系一览
-
 ![索引](docs/screenshots/04-indexes.png)
-
 ![视图](docs/screenshots/05-views.png)
-
 ![触发器](docs/screenshots/06-triggers.png)
+
+### 结构化学习路径
+
+- 24 个 SQL 知识点按前置关系排列，学生知道从哪开始、下一步学什么，追踪每个知识点的学习进度。
+
+![知识图谱细节](docs/screenshots/08-knowledge-graph.png)
+![知识图谱](docs/screenshots/09-knowledge-graph-detail.png)
 
 ## 技术栈
 
@@ -207,4 +199,4 @@ ORDER BY e.salary DESC;
 
 ## 许可证
 
-Copyright (c) 2026 douzi. All Rights Reserved.
+[Apache 2.0](LICENSE)

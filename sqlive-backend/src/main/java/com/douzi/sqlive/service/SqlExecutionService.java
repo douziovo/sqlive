@@ -13,6 +13,7 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 @Service
 @Slf4j
@@ -114,13 +115,16 @@ public class SqlExecutionService {
         return response;
     }
 
+    private static final Pattern SQL_COMMENT = Pattern.compile("(?:/\\*[\\s\\S]*?\\*/|--[^\r\n]*)");
+    private static final Pattern ATTACH_PATTERN = Pattern.compile("(?i)\\bATTACH\\s+(?:DATABASE\\b|')");
+    private static final Pattern PRAGMA_PATTERN = Pattern.compile("(?i)^\\s*PRAGMA\\b");
+
     private String isBlockedStatement(String sql) {
-        String trimmed = sql.trim();
-        String upper = trimmed.toUpperCase();
-        if (upper.startsWith("ATTACH")) {
+        String cleaned = SQL_COMMENT.matcher(sql).replaceAll("");
+        if (ATTACH_PATTERN.matcher(cleaned).find()) {
             return "ATTACH DATABASE is not allowed for security reasons";
         }
-        if (upper.startsWith("PRAGMA")) {
+        if (PRAGMA_PATTERN.matcher(cleaned).find()) {
             return "PRAGMA statements are not allowed";
         }
         return null;
