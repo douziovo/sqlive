@@ -118,3 +118,67 @@ describe('localStorage persistence', () => {
     expect(second.isVisible('chapter:query')).toBe(false)
   })
 })
+
+// ── hierarchical propagation (D-03) ───────────────────────────
+
+describe('hierarchical propagation', () => {
+  it('show with parents sets parent dots visible', () => {
+    const { show, isVisible } = useRedDot()
+    show('task:t1', ['category:core', 'tab:tasks'])
+
+    expect(isVisible('task:t1')).toBe(true)
+    expect(isVisible('category:core')).toBe(true)
+    expect(isVisible('tab:tasks')).toBe(true)
+  })
+
+  it('clear last task under category auto-clears category and tab', () => {
+    const { show, clear, isVisible } = useRedDot()
+    show('task:t1', ['category:core', 'tab:tasks'])
+    show('task:t2', ['category:core', 'tab:tasks'])
+
+    // t1 cleared but t2 still active → category and tab stay visible
+    clear('task:t1')
+    expect(isVisible('task:t1')).toBe(false)
+    expect(isVisible('category:core')).toBe(true)
+    expect(isVisible('tab:tasks')).toBe(true)
+
+    // clear last task under category:core → category auto-clears, then tab auto-clears
+    clear('task:t2')
+    expect(isVisible('task:t2')).toBe(false)
+    expect(isVisible('category:core')).toBe(false)
+    expect(isVisible('tab:tasks')).toBe(false)
+  })
+
+  it('clear non-last task does not auto-clear parent', () => {
+    const { show, clear, isVisible } = useRedDot()
+    show('task:t1', ['category:core', 'tab:tasks'])
+    show('task:t2', ['category:core', 'tab:tasks'])
+
+    clear('task:t1')
+    // t2 still active, so parent should stay visible
+    expect(isVisible('category:core')).toBe(true)
+    expect(isVisible('tab:tasks')).toBe(true)
+  })
+
+  it('show without parents is backward compatible', () => {
+    const { show, isVisible } = useRedDot()
+    show('chapter:basics')
+    expect(isVisible('chapter:basics')).toBe(true)
+  })
+
+  it('clear without parents does not propagate', () => {
+    const { show, clear, isVisible } = useRedDot()
+    show('chapter:basics')
+    clear('chapter:basics')
+    expect(isVisible('chapter:basics')).toBe(false)
+  })
+
+  it('hasDotInPrefix returns true when any key with prefix visible', () => {
+    const { show, hasDotInPrefix } = useRedDot()
+    show('task:t1', ['category:core', 'tab:tasks'])
+
+    expect(hasDotInPrefix('task:')).toBe(true)
+    expect(hasDotInPrefix('category:')).toBe(true)
+    expect(hasDotInPrefix('nav:')).toBe(false)
+  })
+})
