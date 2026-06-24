@@ -56,6 +56,8 @@
           @toggle-mastered="handleToggleMastered"
           @ask-ai="handleAskAi"
           @close="handleDetailClose"
+          @view-all-tasks="handleViewAllTasks"
+          @complete-task="handleTaskCompleteFromDetail"
         />
       </Transition>
     </div>
@@ -92,6 +94,8 @@ const emit = defineEmits<{
   (e: 'toggle-mastered', topicId: string): void
   (e: 'ask-ai', label: string): void
   (e: 'deselect-node'): void
+  (e: 'view-all-tasks'): void
+  (e: 'complete-task', topicId: string): void
 }>()
 
 const nodeTypes = markRaw({ 'knowledge-node': KnowledgeNode }) as any
@@ -125,9 +129,11 @@ const svgBoundsForRegions = computed(() => {
 
 const zoomLevel = ref(0.8)
 const viewportPos = reactive({ x: 0, y: 0 })
+const svgTransform = ref('')
 const isSettling = ref(false)
 provide('zoomLevel', zoomLevel)
 provide('viewportPos', viewportPos)
+provide('svgTransform', svgTransform)
 
 let lastMoveTs = 0
 let pendingSave: ReturnType<typeof setTimeout> | null = null
@@ -335,8 +341,18 @@ function edgeOpacityForZoom(zoom: number): number {
   return 0.18
 }
 
+const _edgeCacheKey = ref('')
+const _edgeCache = ref<Edge[]>([])
+
 const styledEdges = computed<Edge[]>(() => {
-  const baseOpacity = edgeOpacityForZoom(zoomLevel.value)
+  // Round opacity to 2 decimals to avoid recompute on negligible zoom changes
+  const baseOpacity = Math.round(edgeOpacityForZoom(zoomLevel.value) * 100) / 100
+  const cacheKey = `${baseOpacity}|${hoveredNodeId.value || ''}`
+
+  if (cacheKey === _edgeCacheKey.value && _edgeCache.value.length) {
+    return _edgeCache.value
+  }
+  _edgeCacheKey.value = cacheKey
 
   // 计算 hover 时前驱/后继路径集合（仅一层）
   let predSet = new Set<string>()
@@ -346,7 +362,7 @@ const styledEdges = computed<Edge[]>(() => {
     succSet = immediateSuccessors(hoveredNodeId.value)
   }
 
-  return props.edges.map((edge) => {
+  const result = props.edges.map((edge) => {
     const sourceId = edge.source.replace(/^topic-/, '')
     const targetId = edge.target.replace(/^topic-/, '')
 
@@ -400,6 +416,9 @@ const styledEdges = computed<Edge[]>(() => {
       }
     }
   })
+
+  _edgeCache.value = result
+  return result
 })
 
 // Sync displayNodes when props.nodes change, re-run layout
@@ -586,9 +605,23 @@ function handleAskAi(label: string): void {
   emit('ask-ai', label)
 }
 
+function handleViewAllTasks(): void {
+  emit('view-all-tasks')
+}
+
+function handleTaskCompleteFromDetail(topicId: string): void {
+  emit('complete-task', topicId)
+}
+
 function onMove(moveEvent: { event: any; flowTransform: { x: number; y: number; zoom: number } }): void {
   const vp = moveEvent.flowTransform
   viewportPos.x = vp.x; viewportPos.y = vp.y
+
+  // Sync svg transform for RegionBackground (replaces its rAF polling)
+  const pane = (flowRef.value?.$el as HTMLElement)?.querySelector?.('.vue-flow__transformationpane') as HTMLElement | null
+  if (pane && pane.style.transform) {
+    svgTransform.value = pane.style.transform
+  }
 
   isSettling.value = true
   if (settleTimer) clearTimeout(settleTimer)
@@ -719,11 +752,11 @@ defineExpose({
 
 <style>
 /* Smooth edge transitions when zoom-driven LOD changes opacity/stroke */
-.knowledge-panel .vue-flow__edge path {
+.knowledge-graph-container .vue-flow__edge path {
   transition: opacity 0.25s ease, stroke 0.25s ease, stroke-width 0.25s ease, stroke-dasharray 0.25s ease;
 }
 /* Disable during pan/zoom to avoid layout thrashing */
-.knowledge-panel.is-settling .vue-flow__edge path {
+.knowledge-graph-container.is-settling .vue-flow__edge path {
   transition: none;
 }
 </style>
