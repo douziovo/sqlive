@@ -659,76 +659,104 @@ describe('pin/unpin', () => {
 
 // ── chapter progress ─────────────────────────────────────────────
 
-describe('chapter progress', () => {
-  it('getChapterProgress counts completed/total for a chapter', () => {
+describe('getChapterProgress with taskCategories mapping', () => {
+  it('basics chapter counts only core-category done tasks', () => {
     const { addTask, completeTask, getChapterProgress } = useKnowledgeTasks()
-    addTask({
+    const t = addTask({
+      topicId: 'sql-basics',
+      title: 'Core task',
+      notes: '',
+      priority: 'medium',
+      category: 'core'
+    })
+    completeTask(t.id)
+
+    const progress = getChapterProgress('basics')
+    expect(progress.completed).toBe(1)
+    expect(progress.total).toBe(1)
+  })
+
+  it('basics chapter excludes daily-category tasks', () => {
+    const { addTask, completeTask, getChapterProgress } = useKnowledgeTasks()
+    const t = addTask({
+      topicId: 'sql-basics',
+      title: 'Daily task',
+      notes: '',
+      priority: 'low',
+      category: 'daily'
+    })
+    completeTask(t.id)
+
+    // basics.taskCategories = ['core'] — daily tasks should not count
+    const progress = getChapterProgress('basics')
+    expect(progress.completed).toBe(0)
+    expect(progress.total).toBe(0)
+  })
+
+  it('query chapter counts both core and deep-dive done tasks', () => {
+    const { addTask, completeTask, getChapterProgress } = useKnowledgeTasks()
+    const t1 = addTask({
       topicId: 'joins',
-      title: 'Query task 1',
+      title: 'Core task',
       notes: '',
       priority: 'medium',
       category: 'core'
     })
     const t2 = addTask({
-      topicId: 'basics',
-      title: 'Query task 2',
-      notes: '',
-      priority: 'low',
-      category: 'core'
-    })
-    addTask({
-      topicId: 'adv',
-      title: 'Advanced task',
+      topicId: 'subqueries',
+      title: 'Deep dive task',
       notes: '',
       priority: 'high',
       category: 'deep-dive'
     })
-
+    completeTask(t1.id)
     completeTask(t2.id)
 
-    const progress = getChapterProgress('core')
+    // query.taskCategories = ['core', 'deep-dive']
+    const progress = getChapterProgress('query')
+    expect(progress.completed).toBe(2)
     expect(progress.total).toBe(2)
-    expect(progress.completed).toBe(1)
   })
 
-  it('getChapterProgress returns 0/0 for chapter with no tasks', () => {
-    const { addTask, getChapterProgress } = useKnowledgeTasks()
-    addTask({
-      topicId: 'joins',
-      title: 'Only core',
+  it('performance chapter only counts core done tasks', () => {
+    const { addTask, completeTask, getChapterProgress } = useKnowledgeTasks()
+    const t1 = addTask({
+      topicId: 'query-planning',
+      title: 'Core task',
       notes: '',
       priority: 'medium',
       category: 'core'
     })
-
-    const progress = getChapterProgress('daily')
-    expect(progress.total).toBe(0)
-    expect(progress.completed).toBe(0)
-  })
-
-  it('getChapterProgress handles a fully completed chapter', () => {
-    const { addTask, completeTask, getChapterProgress } = useKnowledgeTasks()
-    const t1 = addTask({
-      topicId: 'joins',
-      title: 'Task A',
-      notes: '',
-      priority: 'medium',
-      category: 'daily'
-    })
     const t2 = addTask({
-      topicId: 'basics',
-      title: 'Task B',
+      topicId: 'optimization',
+      title: 'Deep dive task',
       notes: '',
-      priority: 'low',
-      category: 'daily'
+      priority: 'high',
+      category: 'deep-dive'
     })
-
     completeTask(t1.id)
     completeTask(t2.id)
 
-    const progress = getChapterProgress('daily')
-    expect(progress.total).toBe(2)
-    expect(progress.completed).toBe(2)
+    // performance.taskCategories = ['core'] — deep-dive should NOT count
+    const progress = getChapterProgress('performance')
+    expect(progress.completed).toBe(1)
+    expect(progress.total).toBe(1)
+  })
+
+  it('returns 0/0 for unknown chapter id', () => {
+    const { addTask, completeTask, getChapterProgress } = useKnowledgeTasks()
+    const t = addTask({
+      topicId: 'joins',
+      title: 'Core task',
+      notes: '',
+      priority: 'medium',
+      category: 'core'
+    })
+    completeTask(t.id)
+
+    const progress = getChapterProgress('nonexistent')
+    expect(progress.completed).toBe(0)
+    expect(progress.total).toBe(0)
   })
 })
 
