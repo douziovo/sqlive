@@ -29,7 +29,7 @@ describe('LearningCompanion', () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ topics: [] }) })
     const w = mount(LearningCompanion)
     await flushPromises()
-    await w.trigger('click')
+    await w.find('button.learning-companion').trigger('click')
     expect(w.emitted('open')).toBeTruthy()
   })
 

@@ -1,13 +1,23 @@
 <template>
-  <div class="learning-companion" @click="$emit('open')">
-    <span v-if="pendingCount > 0" class="companion-badge">
-      {{ pendingCount > 99 ? '99+' : pendingCount }}
-    </span>
-    <div class="companion-ring-bg">📚</div>
-    <div class="companion-info">
-      <span class="companion-count">{{ count }}/{{ total }}</span>
-      <span class="companion-level">{{ level }}</span>
-    </div>
+  <div class="learning-companion__wrapper">
+    <ActiveTaskTracker
+      v-if="pinnedTask"
+      :pinned-task="pinnedTask"
+      :topic-label="topicLabel"
+      :current-step-label="currentStepLabel"
+      @unpin="handleTrackerUnpin"
+      @navigate="handleTrackerNavigate"
+    />
+    <button class="learning-companion" @click="handleOpen">
+      <span v-if="pendingCount > 0" class="companion-badge">
+        {{ pendingCount > 99 ? '99+' : pendingCount }}
+      </span>
+      <div class="companion-ring-bg">📚</div>
+      <div class="companion-info">
+        <span class="companion-count">{{ count }}/{{ total }}</span>
+        <span class="companion-level">{{ level }}</span>
+      </div>
+    </button>
   </div>
 </template>
 
@@ -16,10 +26,28 @@ import { useLocalStorage } from '@vueuse/core'
 import { computed, onMounted, ref } from 'vue'
 import { KNOWLEDGE_API_BASE } from '@/config'
 import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
+import ActiveTaskTracker from './ActiveTaskTracker.vue'
 
-defineEmits<(e: 'open') => void>()
+const props = withDefaults(defineProps<{
+  topicLabel?: string
+}>(), {
+  topicLabel: ''
+})
 
-const { pendingCount } = useKnowledgeTasks()
+const emit = defineEmits<{
+  (e: 'open'): void
+  (e: 'navigate', topicId: string): void
+}>()
+
+const { pendingCount, getPinnedTask, unpinTask } = useKnowledgeTasks()
+
+const pinnedTask = computed(() => getPinnedTask.value)
+
+const currentStepLabel = computed(() => {
+  if (!pinnedTask.value) return ''
+  const activeStep = pinnedTask.value.substeps.find((s) => s.status === 'active')
+  return activeStep?.label ?? ''
+})
 
 const total = ref(0)
 const masteredTopics = useLocalStorage<string[]>('ai-mastered-topics', [])
@@ -48,14 +76,33 @@ async function fetchTotal(): Promise<void> {
 onMounted(() => {
   void fetchTotal()
 })
+
+function handleOpen(): void {
+  emit('open')
+}
+
+function handleTrackerUnpin(): void {
+  unpinTask()
+}
+
+function handleTrackerNavigate(topicId: string): void {
+  emit('navigate', topicId)
+}
 </script>
 
 <style scoped>
-.learning-companion {
+.learning-companion__wrapper {
   position: fixed;
   bottom: 24px;
   right: 24px;
   z-index: 35;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.learning-companion {
   width: 56px;
   height: 56px;
   border-radius: 50%;
@@ -68,6 +115,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   transition: transform 0.2s, box-shadow 0.2s;
+  flex-shrink: 0;
 }
 
 .learning-companion:hover {
