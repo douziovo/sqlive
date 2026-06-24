@@ -15,19 +15,23 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   visible: boolean
   streak: number
   xp: number
   label: string
   isHighDifficulty: boolean
-}>()
+  variant?: 'mastery' | 'task'
+}>(), {
+  variant: 'mastery'
+})
 
 const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
 const icon = computed(() => {
+  if (props.variant === 'task') return '✅'
   if (props.streak >= 5) return '🔥'
   if (props.streak >= 3) return '⚡'
   if (props.isHighDifficulty) return '💎'
@@ -35,6 +39,7 @@ const icon = computed(() => {
 })
 
 const title = computed(() => {
+  if (props.variant === 'task') return '任务完成！'
   if (props.streak >= 5) return `${props.streak} 连击！势不可挡！`
   if (props.streak >= 3) return `${props.streak} 连击！保持势头！`
   if (props.isHighDifficulty) return '高阶知识点解锁！'
@@ -47,6 +52,7 @@ const subtitle = computed(() => {
 })
 
 const toastClass = computed(() => {
+  if (props.variant === 'task') return 'achievement-toast--task'
   if (props.streak >= 5) return 'achievement-toast--fire'
   if (props.streak >= 3) return 'achievement-toast--electric'
   if (props.isHighDifficulty) return 'achievement-toast--high-diff'
@@ -75,6 +81,9 @@ const toastClass = computed(() => {
 
 .achievement-toast--high-diff {
   background: linear-gradient(135deg, #4c1d95, #7c3aed);
+}
+.achievement-toast--task {
+  background: linear-gradient(135deg, #059669, #10b981);
 }
 .achievement-toast--electric {
   background: linear-gradient(135deg, #92400e, #d97706);
