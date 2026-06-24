@@ -102,6 +102,7 @@ watch(() => props.data.triggerUnlockGlow, (val) => {
   user-select: none;
   display: flex;
   align-items: center;
+  will-change: transform;
 }
 
 .kg-node:hover {

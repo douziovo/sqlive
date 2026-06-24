@@ -222,7 +222,7 @@ const kg = useKnowledgeGraph({
   }
 })
 
-const { tasks: _tasksForMount, getChapterProgress } = useKnowledgeTasks()
+const { tasks: _tasksForMount, getChapterProgress, seedPresetTasksIfFirstRun } = useKnowledgeTasks()
 const { isVisible: isRedDotVisible, clear } = useRedDot()
 
 const showTaskTabDot = computed(() => isRedDotVisible('tab:tasks'))
@@ -424,6 +424,7 @@ function onKeydown(e: KeyboardEvent): void {
 
 onMounted(() => {
   document.addEventListener('keydown', onKeydown)
+  seedPresetTasksIfFirstRun()
 })
 
 onUnmounted(() => {

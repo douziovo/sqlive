@@ -731,3 +731,151 @@ describe('chapter progress', () => {
     expect(progress.completed).toBe(2)
   })
 })
+
+// ── Preset task seeding (Phase 09-07) ─────────────────────────────
+
+describe('seedPresetTasksIfFirstRun', () => {
+  it('seeds preset tasks when localStorage flag is absent (first run)', () => {
+    localStorage.removeItem('ai-knowledge-tasks-seeded')
+    const { tasks, seedPresetTasksIfFirstRun } = useKnowledgeTasks()
+    expect(tasks.value).toHaveLength(0)
+
+    const seeded = seedPresetTasksIfFirstRun()
+
+    expect(seeded).toBe(true)
+    expect(tasks.value.length).toBeGreaterThanOrEqual(24)
+  })
+
+  it('does not re-seed when flag is already true', () => {
+    localStorage.setItem('ai-knowledge-tasks-seeded', 'true')
+    const { tasks, seedPresetTasksIfFirstRun } = useKnowledgeTasks()
+
+    const seeded = seedPresetTasksIfFirstRun()
+
+    expect(seeded).toBe(false)
+    expect(tasks.value).toHaveLength(0)
+  })
+
+  it('respects explicit false flag (user-reset state)', () => {
+    localStorage.setItem('ai-knowledge-tasks-seeded', 'false')
+    const { tasks, seedPresetTasksIfFirstRun } = useKnowledgeTasks()
+
+    const seeded = seedPresetTasksIfFirstRun()
+
+    expect(seeded).toBe(false)
+    expect(tasks.value).toHaveLength(0)
+  })
+
+  it('sets the seeded flag to true after seeding', () => {
+    localStorage.removeItem('ai-knowledge-tasks-seeded')
+    const { seedPresetTasksIfFirstRun } = useKnowledgeTasks()
+
+    seedPresetTasksIfFirstRun()
+
+    expect(localStorage.getItem('ai-knowledge-tasks-seeded')).toBe('true')
+  })
+
+  it('does not re-seed on second call within same session', () => {
+    localStorage.removeItem('ai-knowledge-tasks-seeded')
+    const { tasks, seedPresetTasksIfFirstRun } = useKnowledgeTasks()
+
+    seedPresetTasksIfFirstRun()
+    const firstCount = tasks.value.length
+
+    const seededAgain = seedPresetTasksIfFirstRun()
+
+    expect(seededAgain).toBe(false)
+    expect(tasks.value).toHaveLength(firstCount)
+  })
+
+  it('seeds tasks with valid topicId references', () => {
+    localStorage.removeItem('ai-knowledge-tasks-seeded')
+    const { tasks, seedPresetTasksIfFirstRun } = useKnowledgeTasks()
+    seedPresetTasksIfFirstRun()
+
+    const validTopicIds = new Set([
+      'sql-basics', 'filtering', 'sorting', 'joins', 'aggregation',
+      'subqueries', 'set-operations', 'create-table', 'constraints',
+      'alter-table', 'indexes', 'insert', 'update', 'delete', 'views',
+      'triggers', 'window-functions', 'cte', 'query-planning',
+      'optimization', 'data-types', 'string-functions', 'datetime',
+      'transactions'
+    ])
+    for (const task of tasks.value) {
+      expect(validTopicIds.has(task.topicId)).toBe(true)
+    }
+  })
+
+  it('seeds at least one pinned task (core path)', () => {
+    localStorage.removeItem('ai-knowledge-tasks-seeded')
+    const { tasks, seedPresetTasksIfFirstRun } = useKnowledgeTasks()
+    seedPresetTasksIfFirstRun()
+
+    const pinned = tasks.value.filter((t) => t.isPinned)
+    expect(pinned.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('seeds tasks with substeps having first active, rest locked', () => {
+    localStorage.removeItem('ai-knowledge-tasks-seeded')
+    const { tasks, seedPresetTasksIfFirstRun } = useKnowledgeTasks()
+    seedPresetTasksIfFirstRun()
+
+    const tasksWithSubsteps = tasks.value.filter((t) => t.substeps.length > 0)
+    expect(tasksWithSubsteps.length).toBeGreaterThanOrEqual(1)
+
+    for (const task of tasksWithSubsteps) {
+      expect(task.substeps[0].status).toBe('active')
+      for (let i = 1; i < task.substeps.length; i++) {
+        expect(task.substeps[i].status).toBe('locked')
+      }
+    }
+  })
+
+  it('seeds tasks across multiple categories (core, deep-dive, daily)', () => {
+    localStorage.removeItem('ai-knowledge-tasks-seeded')
+    const { tasks, seedPresetTasksIfFirstRun } = useKnowledgeTasks()
+    seedPresetTasksIfFirstRun()
+
+    const categories = new Set(tasks.value.map((t) => t.category))
+    expect(categories.has('core')).toBe(true)
+    expect(categories.has('deep-dive')).toBe(true)
+    expect(categories.has('daily')).toBe(true)
+  })
+
+  it('presists seeded tasks to localStorage', async () => {
+    localStorage.removeItem('ai-knowledge-tasks-seeded')
+    const { seedPresetTasksIfFirstRun } = useKnowledgeTasks()
+    seedPresetTasksIfFirstRun()
+    await nextTick()
+
+    const stored = localStorage.getItem('ai-knowledge-tasks')
+    expect(stored).not.toBeNull()
+    const parsed = JSON.parse(stored!)
+    expect(Array.isArray(parsed)).toBe(true)
+    expect(parsed.length).toBeGreaterThanOrEqual(24)
+  })
+
+  it('seeds tasks covering all 6 chapter categories', () => {
+    localStorage.removeItem('ai-knowledge-tasks-seeded')
+    const { tasks, seedPresetTasksIfFirstRun } = useKnowledgeTasks()
+    seedPresetTasksIfFirstRun()
+
+    // All 6 chapters should have at least one task via topicId → category mapping
+    const topicToChapter: Record<string, string> = {
+      'sql-basics': 'basics', filtering: 'basics', sorting: 'basics',
+      'data-types': 'basics', 'string-functions': 'basics', datetime: 'basics',
+      joins: 'query', aggregation: 'query', subqueries: 'query', 'set-operations': 'query',
+      'create-table': 'ddl', constraints: 'ddl', 'alter-table': 'ddl', indexes: 'ddl',
+      insert: 'dml', update: 'dml', delete: 'dml',
+      views: 'advanced', triggers: 'advanced', 'window-functions': 'advanced',
+      cte: 'advanced', transactions: 'advanced',
+      'query-planning': 'performance', optimization: 'performance'
+    }
+    const chaptersCovered = new Set<string>()
+    for (const task of tasks.value) {
+      const chapter = topicToChapter[task.topicId]
+      if (chapter) chaptersCovered.add(chapter)
+    }
+    expect(chaptersCovered.size).toBe(6)
+  })
+})

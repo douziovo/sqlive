@@ -2,6 +2,7 @@ import { useLocalStorage } from '@vueuse/core'
 import { computed } from 'vue'
 import { nanoid } from 'nanoid'
 import { useRedDot } from './useRedDot'
+import { buildPresetTasks } from '@/data/presetTasks'
 
 // ── TaskSubstep interface ────────────────────────────────────────
 
@@ -231,6 +232,31 @@ export function useKnowledgeTasks() {
     )
   }
 
+  // ── Preset task seeding (first run only) ──────────────
+
+  /**
+   * Seeds 8 built-in preset tasks on the very first run.
+   * Idempotent — guarded by `ai-knowledge-tasks-seeded` localStorage flag.
+   * Returns true if seeding happened, false if already seeded.
+   *
+   * Call this once at app startup (e.g., in KnowledgePanel's setup).
+   * After first run, user can delete all tasks freely — re-seeding
+   * will NOT happen because the flag remains 'true'.
+   */
+  function seedPresetTasksIfFirstRun(): boolean {
+    const flag = localStorage.getItem('ai-knowledge-tasks-seeded')
+    if (flag === 'true') return false
+    // Only seed when flag is null (never run before). If flag was set to
+    // 'false' explicitly (e.g., user wiped via a future "reset" action),
+    // we also skip seeding to respect the user's empty state.
+    if (flag !== null) return false
+
+    const preset = buildPresetTasks()
+    tasks.value = [...tasks.value, ...preset]
+    localStorage.setItem('ai-knowledge-tasks-seeded', 'true')
+    return true
+  }
+
   // ── Return ────────────────────────────
 
   return {
@@ -247,6 +273,7 @@ export function useKnowledgeTasks() {
     tasksByTopic,
     pendingCount,
     sortedByCategoryGroup,
-    isOverdue
+    isOverdue,
+    seedPresetTasksIfFirstRun
   }
 }
