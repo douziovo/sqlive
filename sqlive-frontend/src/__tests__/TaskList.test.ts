@@ -42,7 +42,10 @@ const todoTask: KnowledgeTask = {
   status: 'todo',
   priority: 'medium',
   createdAt: '2026-06-24T00:00:00.000Z',
-  completedAt: undefined
+  completedAt: undefined,
+  category: 'core',
+  substeps: [],
+  isPinned: false
 }
 
 const doneTask: KnowledgeTask = {
@@ -53,7 +56,10 @@ const doneTask: KnowledgeTask = {
   status: 'done',
   priority: 'high',
   createdAt: '2026-06-23T00:00:00.000Z',
-  completedAt: '2026-06-23T12:00:00.000Z'
+  completedAt: '2026-06-23T12:00:00.000Z',
+  category: 'deep-dive',
+  substeps: [],
+  isPinned: false
 }
 
 // ── helpers ───────────────────────────────────────────────────────
