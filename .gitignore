@@ -3,6 +3,10 @@ misc
 
 # IDE
 .idea/
+.vscode/
+
+# Test
+coverage/
 
 # Environment
 .env
