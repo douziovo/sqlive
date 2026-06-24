@@ -7,6 +7,15 @@
     :is-high-difficulty="toastHighDiff"
     @close="showToast = false"
   />
+  <AchievementToast
+    variant="task"
+    :visible="showTaskToast"
+    :streak="0"
+    :xp="taskToastXp"
+    :label="taskToastLabel"
+    :is-high-difficulty="false"
+    @close="showTaskToast = false"
+  />
   <ConfettiOverlay :key="confettiKey" :active="showConfetti" />
   <Teleport to="body">
     <Transition name="panel-expand">
@@ -33,6 +42,23 @@
               type="text"
               placeholder="搜索知识点..."
             />
+            <div class="knowledge-panel__tabs">
+              <button
+                class="knowledge-panel__tab"
+                :class="{ 'knowledge-panel__tab--active': activeTab === 'graph' }"
+                @click="activeTab = 'graph'"
+              >
+                图谱
+              </button>
+              <button
+                class="knowledge-panel__tab"
+                :class="{ 'knowledge-panel__tab--active': activeTab === 'tasks' }"
+                @click="activeTab = 'tasks'"
+              >
+                任务
+              </button>
+            </div>
+            <template v-if="activeTab === 'graph'">
             <div class="knowledge-panel__filters">
               <button
                 class="knowledge-panel__filter-btn"
@@ -61,6 +87,7 @@
                 {{ f.label }}
               </button>
             </div>
+            </template>
             <div class="knowledge-panel__level-bar">
               <span class="knowledge-panel__level-badge">{{ kgProgress.levelName }}</span>
               <div class="knowledge-panel__xp-bar-track">
@@ -78,8 +105,8 @@
             </div>
           </div>
 
-          <!-- Body: full-width graph -->
-          <div class="knowledge-panel__body">
+          <!-- Body: full-width graph (graph tab) -->
+          <div v-if="activeTab === 'graph'" class="knowledge-panel__body">
             <KnowledgeGraph
               ref="graphRef"
               class="knowledge-panel__graph"
@@ -92,6 +119,16 @@
               @toggle-mastered="onToggleMastered"
               @ask-ai="onAskAi"
               @deselect-node="onDeselectNode"
+              @view-all-tasks="activeTab = 'tasks'"
+              @complete-task="handleTaskComplete"
+            />
+          </div>
+
+          <!-- Body: task list (tasks tab) -->
+          <div v-if="activeTab === 'tasks'" class="knowledge-panel__body knowledge-panel__body--tasks">
+            <TaskList
+              :topics="kg.graphData?.topics ?? []"
+              @complete-task="handleTaskComplete"
             />
           </div>
         </div>
@@ -109,6 +146,8 @@ import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
 import AchievementToast from './AchievementToast.vue'
 import ConfettiOverlay from './ConfettiOverlay.vue'
 import KnowledgeGraph from './KnowledgeGraph.vue'
+import TaskList from './TaskList.vue'
+import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
 
 const props = defineProps<{
   isOpen: boolean
@@ -123,6 +162,7 @@ const sqlContext = inject(SQL_CONTEXT_KEY)!
 const searchQuery = ref('')
 const activeDifficulty = ref<string | null>(null)
 const activeCategory = ref<string | null>(null)
+const activeTab = ref<'graph' | 'tasks'>('graph')
 
 interface FilterOption {
   key: string
@@ -147,6 +187,8 @@ const kg = useKnowledgeGraph({
     return tab?.code ?? ''
   }
 })
+
+const { tasks: _tasksForMount } = useKnowledgeTasks()
 
 const graphRef = ref<InstanceType<typeof KnowledgeGraph> | null>(null)
 
@@ -215,6 +257,11 @@ const showConfetti = ref(false)
 const confettiKey = ref(0)
 const showLevelUpToast = ref(false)
 
+// ── Task gamification state (Phase 09-03) ──────────────────────
+const showTaskToast = ref(false)
+const taskToastLabel = ref('')
+const taskToastXp = ref(0)
+
 function onToggleMastered(topicId: string): void {
   const result = kg.toggleMastered(topicId)
   if (result.action === 'master') {
@@ -245,6 +292,41 @@ function showAchievementToast(result: { xpGained: number; leveledUp: boolean; st
   toastHighDiff.value = isHighDiff
   showToast.value = true
   setTimeout(() => { showToast.value = false }, 2500)
+}
+
+function handleTaskComplete(topicId: string): void {
+  const topic = kg.graphData.value?.topics.find(t => t.id === topicId)
+  if (!topic) return
+
+  const xpGained = (kg.xpForDifficulty(topic.difficulty) ?? 30) + 10
+
+  // Double-award guard (per D-05: masteredLog pattern with task:{topicId} key)
+  const logKey = `task:${topicId}`
+  if (!kg.xpData.value.masteredLog.includes(logKey)) {
+    kg.xpData.value.totalXp += xpGained
+    kg.xpData.value.masteredLog.push(logKey)
+  }
+
+  graphRef.value?.triggerSparkBurst?.(topicId)
+
+  taskToastLabel.value = topic.label
+  taskToastXp.value = xpGained
+  showTaskToast.value = true
+  setTimeout(() => { showTaskToast.value = false }, 2500)
+
+  // Check level up
+  const newLevel = Math.floor(kg.xpData.value.totalXp / kg.progress.value.xpForNext)
+  const leveledUp = newLevel > kg.xpData.value.level
+  if (leveledUp) {
+    kg.xpData.value.level = Math.min(newLevel, 3)
+    showConfetti.value = true
+    confettiKey.value++
+    showLevelUpToast.value = true
+    setTimeout(() => {
+      showConfetti.value = false
+      showLevelUpToast.value = false
+    }, 5000)
+  }
 }
 
 function onNodeSelect(topicId: string): void {
@@ -360,6 +442,40 @@ defineExpose({
 }
 .knowledge-panel__search::placeholder {
   color: var(--muted-foreground);
+}
+
+/* ── Tab bar (Phase 09-03) ──────────────────── */
+
+.knowledge-panel__tabs {
+  display: flex;
+  gap: 0;
+  margin-right: 12px;
+}
+
+.knowledge-panel__tab {
+  padding: 6px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+
+.knowledge-panel__tab--active {
+  color: var(--foreground);
+  border-bottom-color: var(--primary);
+}
+
+.knowledge-panel__tab:hover:not(.knowledge-panel__tab--active) {
+  color: var(--foreground);
+}
+
+.knowledge-panel__body--tasks {
+  padding: 16px 20px;
+  overflow-y: auto;
 }
 
 .knowledge-panel__filters {
