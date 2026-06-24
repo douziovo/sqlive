@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import LearningCompanion from '@/components/knowledge/LearningCompanion.vue'
+import { useKnowledgeGraph } from '@/composables/useKnowledgeGraph'
 
 const mockFetch = vi.fn()
 global.fetch = mockFetch
@@ -9,10 +10,16 @@ describe('LearningCompanion', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
+    // D-02: reset module-level graphData/selectedNode so each test starts fresh
+    const kg = useKnowledgeGraph()
+    kg.graphData.value = null
+    kg.selectedNode.value = null
   })
 
-  it('renders count/total from localStorage and API fetch', async () => {
-    localStorage.setItem('ai-mastered-topics', JSON.stringify(['sql-basics', 'joins']))
+  it('renders count/total from kg.progress (mastered count / graphData total)', async () => {
+    // D-02: count = mastered topics that appear in graphData; total = graphData.topics.length
+    // Set mastered IDs to match mock graph topics so count=2
+    localStorage.setItem('ai-mastered-topics', JSON.stringify(['a', 'b']))
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ topics: [{ id: 'a' }, { id: 'b' }, { id: 'c' }] })
@@ -23,6 +30,43 @@ describe('LearningCompanion', () => {
     await vi.waitFor(() => w.text().includes('2/3'), { timeout: 2000 })
 
     expect(w.text()).toContain('2/3')
+  })
+
+  it('displays levelName from kg.progress (not local percentage-based level)', async () => {
+    // D-02: level comes from kg.progress.value.levelName (XP-based, not percentage)
+    // Default xpData = { totalXp: 0, level: 0 } → levelName = '初级学者'
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ topics: [{ id: 'a' }, { id: 'b' }, { id: 'c' }] })
+    })
+
+    const w = mount(LearningCompanion)
+    await flushPromises()
+    await vi.waitFor(() => w.text().includes('初级学者'), { timeout: 2000 })
+
+    // Level badge shows XP-based level name, not percentage-based '初级'/'进阶'/'大师'
+    expect(w.find('.companion-level').text()).toBe('初级学者')
+  })
+
+  it('does not call fetchTotal (D-02: removed duplicate fetch)', async () => {
+    // D-02: LearningCompanion should not have its own fetchTotal function
+    // It may call kg.fetchGraph() defensively, but only if graphData is null
+    // After kg.fetchGraph() succeeds, a second mount should not fetch again
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ topics: [{ id: 'a' }] })
+    })
+
+    const w = mount(LearningCompanion)
+    await flushPromises()
+    // First mount triggers defensive kg.fetchGraph() — consumes the mock
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+
+    // Second mount should NOT fetch again (graphData already populated by singleton)
+    mockFetch.mockClear()
+    const w2 = mount(LearningCompanion)
+    await flushPromises()
+    expect(mockFetch).not.toHaveBeenCalled()
   })
 
   it('emits open on click', async () => {
