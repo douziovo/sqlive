@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { nanoid } from 'nanoid'
 import { useRedDot } from './useRedDot'
 import { buildPresetTasks } from '@/data/presetTasks'
+import { getChapterById } from '@/data/learningChapters'
 
 // ── TaskSubstep interface ────────────────────────────────────────
 
@@ -186,11 +187,14 @@ export function useKnowledgeTasks() {
 
   // ── Chapter progress ────────────────
 
-  function getChapterProgress(categoryKey: string): {
+  function getChapterProgress(chapterId: string): {
     completed: number
     total: number
   } {
-    const chapterTasks = tasks.value.filter((t) => t.category === categoryKey)
+    const chapter = getChapterById(chapterId)
+    if (!chapter) return { completed: 0, total: 0 }
+    const categories = chapter.taskCategories
+    const chapterTasks = tasks.value.filter((t) => categories.includes(t.category))
     const completed = chapterTasks.filter((t) => t.status === 'done').length
     return { completed, total: chapterTasks.length }
   }

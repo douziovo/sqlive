@@ -154,7 +154,7 @@
                 v-for="chapter in CHAPTERS"
                 :key="chapter.id"
                 :chapter="chapter"
-                :progress="getChapterProgress(chapter.categoryKey)"
+                :progress="getChapterProgress(chapter.id)"
                 :unlocked="kg.xpData.value.level >= chapter.rankRequired"
                 :current-level="kg.xpData.value.level"
                 @open-chapter="handleOpenChapter"
