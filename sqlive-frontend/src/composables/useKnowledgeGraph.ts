@@ -47,16 +47,28 @@ export interface KnowledgeNodeData {
   triggerUnlockGlow?: boolean
 }
 
+// ── D-02: Module-level singletons ─────────────────────────────
+// graphData and selectedNode are hoisted to module scope so all useKnowledgeGraph()
+// calls share the same ref instances. This lets LearningCompanion read graphData
+// that KnowledgePanel already fetched, avoiding a duplicate /api/knowledge/graph
+// request.
+
+const graphData = ref<KnowledgeGraphData | null>(null)
+const selectedNode = ref<string | null>(null)
+
+// ── D-02: LEVEL_NAMES exported as public constant ─────────────
+// ChapterCard / KnowledgePanel / LearningCompanion all import this single
+// source of truth — no more local LEVEL_NAMES copies that drift apart.
+
+export const LEVEL_NAMES = ['初级学者', '进阶学者', 'SQL 大师', '数据库传奇']
+
 export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
-  const graphData = ref<KnowledgeGraphData | null>(null)
-  const selectedNode = ref<string | null>(null)
   const masteredTopics = useLocalStorage<string[]>('ai-mastered-topics', [])
 
   // ── XP/Level/Combo system (Phase 05-03) ──────────────────────
 
   const XP_PER_DIFFICULTY: Record<number, number> = { 1: 30, 2: 50, 3: 80 }
   const XP_PER_LEVEL = 750
-  const LEVEL_NAMES = ['初级学者', '进阶学者', 'SQL 大师', '数据库传奇']
 
   const xpData = useLocalStorage('ai-knowledge-xp', {
     totalXp: 0,

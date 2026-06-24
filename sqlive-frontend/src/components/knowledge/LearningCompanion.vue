@@ -14,18 +14,17 @@
       </span>
       <div class="companion-ring-bg">📚</div>
       <div class="companion-info">
-        <span class="companion-count">{{ count }}/{{ total }}</span>
-        <span class="companion-level">{{ level }}</span>
+        <span class="companion-count">{{ kgProgress.count }}/{{ kgProgress.total }}</span>
+        <span class="companion-level">{{ kgProgress.levelName }}</span>
       </div>
     </button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useLocalStorage } from '@vueuse/core'
-import { computed, onMounted, ref } from 'vue'
-import { KNOWLEDGE_API_BASE } from '@/config'
+import { computed, onMounted } from 'vue'
 import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
+import { useKnowledgeGraph } from '@/composables/useKnowledgeGraph'
 import ActiveTaskTracker from './ActiveTaskTracker.vue'
 
 const props = withDefaults(defineProps<{
@@ -40,6 +39,7 @@ const emit = defineEmits<{
 }>()
 
 const { pendingCount, getPinnedTask, unpinTask } = useKnowledgeTasks()
+const kg = useKnowledgeGraph()
 
 const pinnedTask = computed(() => getPinnedTask.value)
 
@@ -49,32 +49,21 @@ const currentStepLabel = computed(() => {
   return activeStep?.label ?? ''
 })
 
-const total = ref(0)
-const masteredTopics = useLocalStorage<string[]>('ai-mastered-topics', [])
+// D-02: count/total/levelName all come from kg.progress (single source of truth).
+// Removed local masteredTopics useLocalStorage, percentage-based level, and the
+// standalone /api/knowledge/graph request — LearningCompanion now reads from the
+// singleton graphData that KnowledgePanel populates.
+const kgProgress = computed(() => kg.progress.value)
 
-const count = computed(() => (masteredTopics.value || []).length)
-
-const percentage = computed(() => (total.value > 0 ? (count.value / total.value) * 100 : 0))
-
-const level = computed(() => {
-  if (percentage.value < 30) return '初级'
-  if (percentage.value < 70) return '进阶'
-  return '大师'
-})
-
-async function fetchTotal(): Promise<void> {
-  try {
-    const resp = await fetch(`${KNOWLEDGE_API_BASE}/graph`)
-    if (!resp.ok) return
-    const data = await resp.json()
-    total.value = (data.topics || []).length
-  } catch {
-    /* non-critical */
-  }
-}
-
+// D-02 (Rule 2 deviation): defensive fetch on mount if graphData is null.
+// In production, KnowledgePanel mounts first and populates graphData via its own
+// watch(isOpen) hook; this guard only fires when LearningCompanion mounts
+// standalone (e.g., in tests or before KnowledgePanel has opened). Avoids the
+// duplicate /api/knowledge/graph request that D-02 explicitly removed.
 onMounted(() => {
-  void fetchTotal()
+  if (!kg.graphData.value) {
+    void kg.fetchGraph()
+  }
 })
 
 function handleOpen(): void {
