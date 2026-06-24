@@ -145,7 +145,7 @@ const DIFFICULTY_LABELS: Record<number, string> = {
 // ── Composables ─────────────────────────────────────────────────
 
 const { tasks, updateTask, deleteTask, completeTask, updateSubstep, pinTask, isOverdue } = useKnowledgeTasks()
-const { isVisible: isRedDotVisible } = useRedDot()
+const { isVisible: isRedDotVisible, clear: clearRedDot } = useRedDot()
 
 // ── Internal state ──────────────────────────────────────────────
 
@@ -190,9 +190,7 @@ function hasTaskDot(taskId: string): boolean {
 }
 
 function hasCategoryDot(cat: string): boolean {
-  return allTasks.value
-    .filter((t) => t.category === cat)
-    .some((t) => isRedDotVisible('task:' + t.id))
+  return isRedDotVisible('category:' + cat)
 }
 
 function getTaskXp(task: KnowledgeTask): number {
@@ -215,11 +213,13 @@ function priorityDotClass(priority: string): string {
 
 function handleSelectTask(taskId: string): void {
   selectedTaskId.value = taskId
+  clearRedDot('task:' + taskId)
 }
 
 function handleCategoryChange(cat: 'core' | 'deep-dive' | 'daily'): void {
   activeCategory.value = cat
   selectedTaskId.value = null
+  clearRedDot('category:' + cat)
 }
 
 function handleSubstepToggle(substepId: string): void {
