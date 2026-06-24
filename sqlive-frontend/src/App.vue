@@ -52,6 +52,7 @@
   />
 
   <KnowledgePanel
+    ref="knowledgePanelRef"
     :is-open="isKnowledgePanelOpen"
     @close="isKnowledgePanelOpen = false"
     @ask-ai="handleKnowledgeAskAi"
@@ -60,6 +61,7 @@
   <LearningCompanion
     v-if="!isKnowledgePanelOpen"
     @open="isKnowledgePanelOpen = true"
+    @navigate="handleCompanionNavigate"
   />
 
   <SessionRecoveryToast
@@ -203,11 +205,19 @@ const showRecoveryToast = ref(false)
 
 // ── Knowledge graph ───────────────────────────────────────────────
 const isKnowledgePanelOpen = ref(false)
+const knowledgePanelRef = ref<InstanceType<typeof KnowledgePanel> | null>(null)
 
 function handleKnowledgeAskAi(label: string) {
   isKnowledgePanelOpen.value = false
   aiChat.openPanel()
   void aiChat.sendMessage(`教我学习：${label}`)
+}
+
+function handleCompanionNavigate(topicId: string) {
+  isKnowledgePanelOpen.value = true
+  nextTick(() => {
+    knowledgePanelRef.value?.handleNavigateToTopic?.(topicId)
+  })
 }
 
 // Enable splitpanes transitions after initial layout (prevents slide-in animation on load)

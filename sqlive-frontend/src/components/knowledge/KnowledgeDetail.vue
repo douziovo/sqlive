@@ -41,9 +41,14 @@
     <div class="knowledge-detail__tasks">
       <div class="knowledge-detail__tasks-header">
         <span class="text-sm font-semibold">学习任务</span>
-        <button v-if="!showCreateForm" class="knowledge-detail__add-task-btn" @click="handleAddTaskClick">
-          + 添加任务
-        </button>
+        <div class="knowledge-detail__tasks-header-actions">
+          <button class="knowledge-detail__locate-btn" @click="handleNavigateToTopic">
+            定位知识点
+          </button>
+          <button v-if="!showCreateForm" class="knowledge-detail__add-task-btn" @click="handleAddTaskClick">
+            + 添加任务
+          </button>
+        </div>
       </div>
 
       <TaskCreateForm
@@ -129,6 +134,7 @@ const emit = defineEmits<{
   (e: 'close'): void
   (e: 'complete-task', topicId: string): void
   (e: 'view-all-tasks'): void
+  (e: 'navigate-to-topic', topicId: string): void
 }>()
 
 function handleClose(): void {
@@ -179,6 +185,12 @@ function handleTaskComplete(id: string): void {
 
 function handleViewAllTasks(): void {
   emit('view-all-tasks')
+}
+
+function handleNavigateToTopic(): void {
+  if (props.topic?.id) {
+    emit('navigate-to-topic', props.topic.id)
+  }
 }
 
 function toggleHistory(): void {
@@ -287,6 +299,26 @@ function toggleHistory(): void {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
+}
+
+.knowledge-detail__tasks-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.knowledge-detail__locate-btn {
+  font-size: 12px;
+  color: var(--primary);
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.knowledge-detail__locate-btn:hover {
+  background: var(--muted);
 }
 
 .knowledge-detail__add-task-btn {
