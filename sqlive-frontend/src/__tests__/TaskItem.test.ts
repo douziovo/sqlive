@@ -16,13 +16,17 @@ const mockTask: KnowledgeTask = {
   status: 'todo',
   priority: 'medium',
   createdAt: '2026-06-24T00:00:00.000Z',
-  completedAt: undefined
+  completedAt: undefined,
+  category: 'core',
+  substeps: [],
+  isPinned: false
 }
 
 // ── TaskItem ──────────────────────────────────────────────────────
 
 describe('TaskItem', () => {
   beforeEach(() => {
+    localStorage.clear()
     vi.restoreAllMocks()
   })
 
@@ -127,5 +131,84 @@ describe('TaskItem', () => {
       props: { task, topicLabel: 'JOIN 查询', isOverdue: false }
     })
     expect(w.find('.task-item--completed').exists()).toBe(true)
+  })
+
+  // ── New: accent border color (Task 3) ───────────────────────
+
+  it('shows accent border color for core category', () => {
+    const task = { ...mockTask, category: 'core' as const }
+    const w = mount(TaskItem, {
+      props: { task, topicLabel: 'JOIN 查询', isOverdue: false }
+    })
+    const item = w.find('.task-item')
+    // jsdom normalizes hex colors to rgb
+    expect(item.attributes('style')).toContain('rgb(255, 204, 50)')
+  })
+
+  it('shows accent border color for deep-dive category', () => {
+    const task = { ...mockTask, category: 'deep-dive' as const }
+    const w = mount(TaskItem, {
+      props: { task, topicLabel: 'JOIN 查询', isOverdue: false }
+    })
+    const item = w.find('.task-item')
+    // jsdom normalizes hex colors to rgb
+    expect(item.attributes('style')).toContain('rgb(81, 136, 214)')
+  })
+
+  // ── New: step progress count (Task 3) ───────────────────────
+
+  it('shows step progress count when task has substeps', () => {
+    const task = {
+      ...mockTask,
+      substeps: [
+        { id: 's1', label: 'Step 1', status: 'done' as const },
+        { id: 's2', label: 'Step 2', status: 'active' as const },
+        { id: 's3', label: 'Step 3', status: 'locked' as const }
+      ]
+    }
+    const w = mount(TaskItem, {
+      props: { task, topicLabel: 'JOIN 查询', isOverdue: false }
+    })
+    const steps = w.find('.task-item__steps')
+    expect(steps.exists()).toBe(true)
+    expect(steps.text()).toBe('1/3')
+  })
+
+  it('does not show step progress when task has no substeps', () => {
+    const task = { ...mockTask, substeps: [] }
+    const w = mount(TaskItem, {
+      props: { task, topicLabel: 'JOIN 查询', isOverdue: false }
+    })
+    expect(w.find('.task-item__steps').exists()).toBe(false)
+  })
+
+  // ── New: pin button emit (Task 3) ───────────────────────────
+
+  it('emits pin:task when pin button clicked', async () => {
+    const w = mount(TaskItem, {
+      props: { task: mockTask, topicLabel: 'JOIN 查询', isOverdue: false }
+    })
+    await w.find('.task-item__pin').trigger('click')
+    expect(w.emitted('pin:task')).toBeTruthy()
+    expect(w.emitted('pin:task')?.[0]).toEqual(['task-1'])
+  })
+
+  // ── New: pin icon shows pinned state (Task 3) ───────────────
+
+  it('shows filled pin icon when task is pinned', () => {
+    const task = { ...mockTask, isPinned: true }
+    const w = mount(TaskItem, {
+      props: { task, topicLabel: 'JOIN 查询', isOverdue: false }
+    })
+    const pin = w.find('.task-item__pin')
+    expect(pin.text()).toBe('📌')
+  })
+
+  it('shows outline pin icon when task is not pinned', () => {
+    const w = mount(TaskItem, {
+      props: { task: mockTask, topicLabel: 'JOIN 查询', isOverdue: false }
+    })
+    const pin = w.find('.task-item__pin')
+    expect(pin.text()).toBe('📍')
   })
 })
