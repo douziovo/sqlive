@@ -2,6 +2,14 @@ import { useLocalStorage } from '@vueuse/core'
 import { computed } from 'vue'
 import { nanoid } from 'nanoid'
 
+// ── TaskSubstep interface ────────────────────────────────────────
+
+export interface TaskSubstep {
+  id: string
+  label: string
+  status: 'locked' | 'active' | 'done'
+}
+
 // ── KnowledgeTask interface ──────────────────────────────────────
 
 export interface KnowledgeTask {
@@ -14,6 +22,20 @@ export interface KnowledgeTask {
   priority: 'low' | 'medium' | 'high'
   createdAt: string
   completedAt?: string
+  category: 'core' | 'deep-dive' | 'daily'
+  substeps: TaskSubstep[]
+  isPinned: boolean
+}
+
+// ── AddTask input type ───────────────────────────────────────────
+
+type AddTaskInput = Omit<
+  KnowledgeTask,
+  'id' | 'createdAt' | 'completedAt' | 'status' | 'category' | 'substeps' | 'isPinned'
+> & {
+  category?: KnowledgeTask['category']
+  substeps?: TaskSubstep[] | string[]
+  isPinned?: KnowledgeTask['isPinned']
 }
 
 // ── Category sort order ──────────────────────────────────────────
@@ -34,11 +56,27 @@ export function useKnowledgeTasks() {
 
   // ── CRUD operations ──────────────────
 
-  function addTask(
-    input: Omit<KnowledgeTask, 'id' | 'createdAt' | 'completedAt' | 'status'>
-  ): KnowledgeTask {
+  function addTask(input: AddTaskInput): KnowledgeTask {
+    // Normalize substeps: string[] → TaskSubstep[], first active, rest locked
+    let substeps: TaskSubstep[] = []
+    if (Array.isArray(input.substeps) && input.substeps.length > 0) {
+      if (typeof input.substeps[0] === 'string') {
+        substeps = (input.substeps as string[]).map((label, i) => ({
+          id: nanoid(),
+          label,
+          status: i === 0 ? 'active' : 'locked'
+        }))
+      } else {
+        substeps = input.substeps as TaskSubstep[]
+      }
+    }
+
+    const { category, isPinned, substeps: _, ...rest } = input
     const newTask: KnowledgeTask = {
-      ...input,
+      ...rest,
+      category: category ?? 'core',
+      substeps,
+      isPinned: isPinned ?? false,
       id: nanoid(),
       status: 'todo',
       createdAt: new Date().toISOString(),
@@ -76,6 +114,61 @@ export function useKnowledgeTasks() {
     return { task, xpGained: 0 }
   }
 
+  // ── Substep operations ──────────────
+
+  function updateSubstep(
+    taskId: string,
+    substepId: string,
+    status: TaskSubstep['status']
+  ): void {
+    const taskIdx = tasks.value.findIndex((t) => t.id === taskId)
+    if (taskIdx === -1) return
+
+    const task = tasks.value[taskIdx]
+    const substepIdx = task.substeps.findIndex((s) => s.id === substepId)
+    if (substepIdx === -1) return
+
+    const newSubsteps = [...task.substeps]
+    newSubsteps[substepIdx] = { ...newSubsteps[substepIdx], status }
+
+    const allDone = newSubsteps.every((s) => s.status === 'done')
+    const updates: Partial<KnowledgeTask> = { substeps: newSubsteps }
+    if (allDone && task.status !== 'done') {
+      updates.status = 'done'
+      updates.completedAt = new Date().toISOString()
+    }
+
+    tasks.value[taskIdx] = { ...task, ...updates }
+    tasks.value = [...tasks.value]
+  }
+
+  // ── Pin operations ──────────────────
+
+  function pinTask(taskId: string): void {
+    tasks.value = tasks.value.map((t) => ({
+      ...t,
+      isPinned: t.id === taskId
+    }))
+  }
+
+  function unpinTask(): void {
+    tasks.value = tasks.value.map((t) => ({
+      ...t,
+      isPinned: false
+    }))
+  }
+
+  // ── Chapter progress ────────────────
+
+  function getChapterProgress(categoryKey: string): {
+    completed: number
+    total: number
+  } {
+    const chapterTasks = tasks.value.filter((t) => t.category === categoryKey)
+    const completed = chapterTasks.filter((t) => t.status === 'done').length
+    return { completed, total: chapterTasks.length }
+  }
+
   // ── Derived helpers ──────────────────
 
   function tasksByTopic(topicId: string) {
@@ -84,6 +177,10 @@ export function useKnowledgeTasks() {
 
   const pendingCount = computed(
     () => tasks.value.filter((t) => t.status === 'todo').length
+  )
+
+  const getPinnedTask = computed(() =>
+    tasks.value.find((t) => t.isPinned) ?? null
   )
 
   function isOverdue(task: KnowledgeTask): boolean {
@@ -117,6 +214,11 @@ export function useKnowledgeTasks() {
     updateTask,
     deleteTask,
     completeTask,
+    updateSubstep,
+    pinTask,
+    unpinTask,
+    getPinnedTask,
+    getChapterProgress,
     tasksByTopic,
     pendingCount,
     sortedByCategoryGroup,
