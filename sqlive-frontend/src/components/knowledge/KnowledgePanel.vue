@@ -46,21 +46,22 @@
               <button
                 class="knowledge-panel__tab"
                 :class="{ 'knowledge-panel__tab--active': activeTab === 'graph' }"
-                @click="activeTab = 'graph'"
+                @click="handleTabClick('graph')"
               >
                 图谱
               </button>
               <button
-                class="knowledge-panel__tab"
+                class="knowledge-panel__tab knowledge-panel__tab--with-dot"
                 :class="{ 'knowledge-panel__tab--active': activeTab === 'tasks' }"
-                @click="activeTab = 'tasks'"
+                @click="handleTabClick('tasks')"
               >
                 任务
+                <RedDotBadge :show="showTaskTabDot" />
               </button>
               <button
                 class="knowledge-panel__tab"
                 :class="{ 'knowledge-panel__tab--active': activeTab === 'chapters' }"
-                @click="activeTab = 'chapters'"
+                @click="handleTabClick('chapters')"
               >
                 冒险之证
               </button>
@@ -177,8 +178,10 @@ import ConfettiOverlay from './ConfettiOverlay.vue'
 import KnowledgeGraph from './KnowledgeGraph.vue'
 import TaskJournalPanel from './TaskJournalPanel.vue'
 import ChapterCard from './ChapterCard.vue'
+import RedDotBadge from './RedDotBadge.vue'
 import { CHAPTERS } from '@/data/learningChapters'
 import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
+import { useRedDot } from '@/composables/useRedDot'
 
 const props = defineProps<{
   isOpen: boolean
@@ -220,6 +223,9 @@ const kg = useKnowledgeGraph({
 })
 
 const { tasks: _tasksForMount, getChapterProgress } = useKnowledgeTasks()
+const { isVisible: isRedDotVisible, clear } = useRedDot()
+
+const showTaskTabDot = computed(() => isRedDotVisible('tab:tasks'))
 
 const LEVEL_NAMES = ['初级学者', '进阶学者', 'SQL 大师', '数据库传奇']
 
@@ -374,6 +380,14 @@ function onDeselectNode(): void {
   kg.selectedNode.value = null
 }
 
+function handleTabClick(tabName: 'graph' | 'tasks' | 'chapters'): void {
+  activeTab.value = tabName
+  // Clear tab-level red dot when entering tasks tab
+  if (tabName === 'tasks') {
+    clear('tab:tasks')
+  }
+}
+
 function handleOpenChapter(chapterId: string): void {
   activeTab.value = 'tasks'
   // categoryFilter set by chapter.id mapping will be wired in Task 3 (TaskJournalPanel integration)
@@ -512,6 +526,10 @@ defineExpose({
   cursor: pointer;
   border-bottom: 2px solid transparent;
   transition: all 0.15s;
+}
+
+.knowledge-panel__tab--with-dot {
+  position: relative;
 }
 
 .knowledge-panel__tab--active {

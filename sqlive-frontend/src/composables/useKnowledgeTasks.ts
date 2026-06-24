@@ -1,6 +1,7 @@
 import { useLocalStorage } from '@vueuse/core'
 import { computed } from 'vue'
 import { nanoid } from 'nanoid'
+import { useRedDot } from './useRedDot'
 
 // ── TaskSubstep interface ────────────────────────────────────────
 
@@ -83,6 +84,13 @@ export function useKnowledgeTasks() {
       completedAt: undefined
     }
     tasks.value = [...tasks.value, newTask]
+
+    // Mark red dots for new task
+    const redDot = useRedDot()
+    redDot.show(`task:${newTask.id}`)
+    redDot.show(`category:${newTask.category}`)
+    redDot.show('tab:tasks')
+
     return newTask
   }
 
@@ -128,8 +136,25 @@ export function useKnowledgeTasks() {
     const substepIdx = task.substeps.findIndex((s) => s.id === substepId)
     if (substepIdx === -1) return
 
+    const oldStatus = task.substeps[substepIdx].status
+
     const newSubsteps = [...task.substeps]
     newSubsteps[substepIdx] = { ...newSubsteps[substepIdx], status }
+
+    // Mark red dots when substep transitions from locked → active
+    if (oldStatus === 'locked' && status === 'active') {
+      const redDot = useRedDot()
+      redDot.show(`task:${taskId}`)
+
+      // Check if this is the first active substep — also mark category and tab
+      const hasOtherActive = task.substeps.some(
+        (s, i) => i !== substepIdx && s.status === 'active'
+      )
+      if (!hasOtherActive) {
+        redDot.show(`category:${task.category}`)
+        redDot.show('tab:tasks')
+      }
+    }
 
     const allDone = newSubsteps.every((s) => s.status === 'done')
     const updates: Partial<KnowledgeTask> = { substeps: newSubsteps }
