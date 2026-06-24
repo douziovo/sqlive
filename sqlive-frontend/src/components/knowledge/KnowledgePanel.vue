@@ -57,6 +57,13 @@
               >
                 任务
               </button>
+              <button
+                class="knowledge-panel__tab"
+                :class="{ 'knowledge-panel__tab--active': activeTab === 'chapters' }"
+                @click="activeTab = 'chapters'"
+              >
+                冒险之证
+              </button>
             </div>
             <template v-if="activeTab === 'graph'">
             <div class="knowledge-panel__filters">
@@ -131,6 +138,25 @@
               @complete-task="handleTaskComplete"
             />
           </div>
+
+          <!-- Body: chapters (adventurer's handbook tab) -->
+          <div v-if="activeTab === 'chapters'" class="knowledge-panel__body knowledge-panel__body--chapters">
+            <div class="chapters__header">
+              <h2 class="chapters__title">冒险之证</h2>
+              <span class="chapters__level">当前等级：{{ LEVEL_NAMES[kg.xpData.value.level] }}</span>
+            </div>
+            <div class="chapters__list">
+              <ChapterCard
+                v-for="chapter in CHAPTERS"
+                :key="chapter.id"
+                :chapter="chapter"
+                :progress="getChapterProgress(chapter.categoryKey)"
+                :unlocked="kg.xpData.value.level >= chapter.rankRequired"
+                :current-level="kg.xpData.value.level"
+                @open-chapter="handleOpenChapter"
+              />
+            </div>
+          </div>
         </div>
       </div>
     </Transition>
@@ -147,6 +173,8 @@ import AchievementToast from './AchievementToast.vue'
 import ConfettiOverlay from './ConfettiOverlay.vue'
 import KnowledgeGraph from './KnowledgeGraph.vue'
 import TaskList from './TaskList.vue'
+import ChapterCard from './ChapterCard.vue'
+import { CHAPTERS } from '@/data/learningChapters'
 import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
 
 const props = defineProps<{
@@ -162,7 +190,7 @@ const sqlContext = inject(SQL_CONTEXT_KEY)!
 const searchQuery = ref('')
 const activeDifficulty = ref<string | null>(null)
 const activeCategory = ref<string | null>(null)
-const activeTab = ref<'graph' | 'tasks'>('graph')
+const activeTab = ref<'graph' | 'tasks' | 'chapters'>('graph')
 
 interface FilterOption {
   key: string
@@ -188,7 +216,9 @@ const kg = useKnowledgeGraph({
   }
 })
 
-const { tasks: _tasksForMount } = useKnowledgeTasks()
+const { tasks: _tasksForMount, getChapterProgress } = useKnowledgeTasks()
+
+const LEVEL_NAMES = ['初级学者', '进阶学者', 'SQL 大师', '数据库传奇']
 
 const graphRef = ref<InstanceType<typeof KnowledgeGraph> | null>(null)
 
@@ -341,6 +371,11 @@ function onDeselectNode(): void {
   kg.selectedNode.value = null
 }
 
+function handleOpenChapter(chapterId: string): void {
+  activeTab.value = 'tasks'
+  // categoryFilter set by chapter.id mapping will be wired in Task 3 (TaskJournalPanel integration)
+}
+
 watch(
   () => props.isOpen,
   async (open) => {
@@ -476,6 +511,29 @@ defineExpose({
 .knowledge-panel__body--tasks {
   padding: 16px 20px;
   overflow-y: auto;
+}
+
+.knowledge-panel__body--chapters {
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.chapters__header {
+  margin-bottom: 20px;
+}
+
+.chapters__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.chapters__level {
+  font-size: 13px;
+  color: var(--muted-foreground);
+  margin-top: 4px;
+  display: block;
 }
 
 .knowledge-panel__filters {
