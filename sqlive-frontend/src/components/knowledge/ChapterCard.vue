@@ -35,8 +35,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { LearningChapter } from '@/data/learningChapters'
-
-const LEVEL_NAMES = ['初级学者', '进阶学者', 'SQL 大师', '数据库传奇']
+import { LEVEL_NAMES } from '@/composables/useKnowledgeGraph'
 
 const props = defineProps<{
   chapter: LearningChapter

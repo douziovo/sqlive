@@ -147,7 +147,7 @@
           <div v-if="activeTab === 'chapters'" class="knowledge-panel__body knowledge-panel__body--chapters">
             <div class="chapters__header">
               <h2 class="chapters__title">冒险之证</h2>
-              <span class="chapters__level">当前等级：{{ LEVEL_NAMES[kg.xpData.value.level] }}</span>
+              <span class="chapters__level">当前等级：{{ kg.progress.value.levelName }}</span>
             </div>
             <div class="chapters__list">
               <ChapterCard
@@ -226,8 +226,6 @@ const { tasks: _tasksForMount, getChapterProgress, seedPresetTasksIfFirstRun } =
 const { isVisible: isRedDotVisible, clear } = useRedDot()
 
 const showTaskTabDot = computed(() => isRedDotVisible('tab:tasks'))
-
-const LEVEL_NAMES = ['初级学者', '进阶学者', 'SQL 大师', '数据库传奇']
 
 const graphRef = ref<InstanceType<typeof KnowledgeGraph> | null>(null)
 
