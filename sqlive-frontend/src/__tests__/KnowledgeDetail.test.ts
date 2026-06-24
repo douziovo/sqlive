@@ -88,7 +88,10 @@ describe('KnowledgeDetail', () => {
     status: 'todo',
     priority: 'medium',
     createdAt: '2026-06-24T00:00:00.000Z',
-    completedAt: undefined
+    completedAt: undefined,
+    category: 'core',
+    substeps: [],
+    isPinned: false
   }
 
   it('shows add task button when topic is provided', () => {

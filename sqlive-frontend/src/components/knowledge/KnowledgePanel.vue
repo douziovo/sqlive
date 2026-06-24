@@ -128,6 +128,7 @@
               @deselect-node="onDeselectNode"
               @view-all-tasks="activeTab = 'tasks'"
               @complete-task="handleTaskComplete"
+              @navigate-to-topic="handleNavigateToTopic"
             />
           </div>
 
@@ -167,7 +168,7 @@
 
 <script setup lang="ts">
 import type { Edge, Node } from '@vue-flow/core'
-import { computed, inject, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, inject, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { KnowledgeNodeData } from '@/composables/useKnowledgeGraph'
 import { useKnowledgeGraph } from '@/composables/useKnowledgeGraph'
 import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
@@ -383,7 +384,10 @@ function handlePinTask(taskId: string): void {
 }
 
 function handleNavigateToTopic(topicId: string): void {
-  graphRef.value?.flyToNode?.(topicId)
+  activeTab.value = 'graph'
+  nextTick(() => {
+    graphRef.value?.flyToNode?.(topicId)
+  })
 }
 
 watch(
@@ -417,7 +421,8 @@ defineExpose({
   filteredEdges,
   activeDifficulty,
   activeCategory,
-  resetAllFilters
+  resetAllFilters,
+  handleNavigateToTopic
 })
 </script>
 

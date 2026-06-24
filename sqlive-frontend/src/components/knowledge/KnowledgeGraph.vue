@@ -58,6 +58,7 @@
           @close="handleDetailClose"
           @view-all-tasks="handleViewAllTasks"
           @complete-task="handleTaskCompleteFromDetail"
+          @navigate-to-topic="(topicId: string) => emit('navigate-to-topic', topicId)"
         />
       </Transition>
     </div>
@@ -96,6 +97,7 @@ const emit = defineEmits<{
   (e: 'deselect-node'): void
   (e: 'view-all-tasks'): void
   (e: 'complete-task', topicId: string): void
+  (e: 'navigate-to-topic', topicId: string): void
 }>()
 
 const nodeTypes = markRaw({ 'knowledge-node': KnowledgeNode }) as any
@@ -676,9 +678,22 @@ function focusNode(topicId: string): void {
   }
 }
 
+function flyToNode(topicId: string): void {
+  const nodeId = `topic-${topicId}`
+  const node = displayNodes.value.find((n) => n.id === nodeId)
+  if (!node) return
+
+  flowRef.value?.setCenter?.(
+    node.position.x + 75,
+    node.position.y + 20,
+    { zoom: 1.5, duration: 600 }
+  )
+}
+
 defineExpose({
   fitView,
   focusNode,
+  flyToNode,
   hoveredNodeId,
   styledEdges,
   styledNodes,
