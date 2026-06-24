@@ -1,5 +1,8 @@
 <template>
   <div class="learning-companion" @click="$emit('open')">
+    <span v-if="pendingCount > 0" class="companion-badge">
+      {{ pendingCount > 99 ? '99+' : pendingCount }}
+    </span>
     <div class="companion-ring-bg">📚</div>
     <div class="companion-info">
       <span class="companion-count">{{ count }}/{{ total }}</span>
@@ -12,8 +15,11 @@
 import { useLocalStorage } from '@vueuse/core'
 import { computed, onMounted, ref } from 'vue'
 import { KNOWLEDGE_API_BASE } from '@/config'
+import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
 
 defineEmits<(e: 'open') => void>()
+
+const { pendingCount } = useKnowledgeTasks()
 
 const total = ref(0)
 const masteredTopics = useLocalStorage<string[]>('ai-mastered-topics', [])
@@ -67,6 +73,25 @@ onMounted(() => {
 .learning-companion:hover {
   transform: scale(1.1);
   box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+}
+
+.companion-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  z-index: 1;
 }
 
 .companion-ring-bg {
