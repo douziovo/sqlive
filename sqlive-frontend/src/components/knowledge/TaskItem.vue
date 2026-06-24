@@ -2,6 +2,7 @@
   <div
     class="task-item"
     :class="{ 'task-item--completed': task.status === 'done' }"
+    :style="{ borderLeft: '3px solid ' + accentColor }"
   >
     <span
       class="task-item__priority-dot"
@@ -10,6 +11,10 @@
 
     <span class="task-item__title" :class="{ 'text-red-500': isOverdue }">
       {{ task.title }}
+    </span>
+
+    <span v-if="task.substeps.length > 0" class="task-item__steps">
+      {{ doneCount }}/{{ task.substeps.length }}
     </span>
 
     <span v-if="task.dueDate" class="task-item__due">
@@ -21,13 +26,27 @@
       {{ statusLabel }}
     </button>
 
+    <button class="task-item__pin" @click="handlePinClick" :title="task.isPinned ? '已置顶' : '置顶'">
+      {{ task.isPinned ? '📌' : '📍' }}
+    </button>
+
     <button class="task-item__delete" @click="handleDelete">删除</button>
+
+    <RedDotBadge :show="hasDot" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'
+import { useRedDot } from '@/composables/useRedDot'
+import RedDotBadge from './RedDotBadge.vue'
+
+const TASK_CATEGORY_COLORS: Record<string, string> = {
+  core: '#FFCC32',
+  'deep-dive': '#5188D6',
+  daily: '#C06FCF',
+}
 
 const props = defineProps<{
   task: KnowledgeTask
@@ -39,7 +58,23 @@ const emit = defineEmits<{
   (e: 'update:task', id: string, updates: Partial<KnowledgeTask>): void
   (e: 'delete:task', id: string): void
   (e: 'complete:task', id: string): void
+  (e: 'pin:task', id: string): void
+  (e: 'navigate:topic', topicId: string): void
 }>()
+
+const { isVisible: isRedDotVisible } = useRedDot()
+
+const accentColor = computed(() => {
+  return TASK_CATEGORY_COLORS[props.task.category] || TASK_CATEGORY_COLORS.core
+})
+
+const doneCount = computed(() => {
+  return props.task.substeps.filter((s) => s.status === 'done').length
+})
+
+const hasDot = computed(() => {
+  return isRedDotVisible('task:' + props.task.id)
+})
 
 const priorityDotColor = computed(() => ({
   low: 'bg-gray-400',
@@ -72,6 +107,10 @@ function handleDelete(): void {
     emit('delete:task', props.task.id)
   }
 }
+
+function handlePinClick(): void {
+  emit('pin:task', props.task.id)
+}
 </script>
 
 <style scoped>
@@ -80,9 +119,11 @@ function handleDelete(): void {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
+  padding-left: 9px;
   border-radius: 8px;
   font-size: 13px;
   transition: background 0.15s;
+  position: relative;
 }
 
 .task-item:hover {
@@ -112,6 +153,13 @@ function handleDelete(): void {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.task-item__steps {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .task-item__due {
@@ -159,6 +207,22 @@ function handleDelete(): void {
 .task-item__status--done {
   background: rgba(16, 185, 129, 0.12);
   color: #10b981;
+}
+
+.task-item__pin {
+  padding: 2px 4px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.task-item__pin:hover {
+  background: rgba(250, 204, 21, 0.12);
 }
 
 .task-item__delete {

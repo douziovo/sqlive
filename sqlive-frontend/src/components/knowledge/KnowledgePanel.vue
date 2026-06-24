@@ -131,11 +131,13 @@
             />
           </div>
 
-          <!-- Body: task list (tasks tab) -->
+          <!-- Body: task journal (tasks tab) -->
           <div v-if="activeTab === 'tasks'" class="knowledge-panel__body knowledge-panel__body--tasks">
-            <TaskList
+            <TaskJournalPanel
               :topics="kg.graphData?.topics ?? []"
               @complete-task="handleTaskComplete"
+              @pin-task="handlePinTask"
+              @navigate-to-topic="handleNavigateToTopic"
             />
           </div>
 
@@ -172,7 +174,7 @@ import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
 import AchievementToast from './AchievementToast.vue'
 import ConfettiOverlay from './ConfettiOverlay.vue'
 import KnowledgeGraph from './KnowledgeGraph.vue'
-import TaskList from './TaskList.vue'
+import TaskJournalPanel from './TaskJournalPanel.vue'
 import ChapterCard from './ChapterCard.vue'
 import { CHAPTERS } from '@/data/learningChapters'
 import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
@@ -374,6 +376,14 @@ function onDeselectNode(): void {
 function handleOpenChapter(chapterId: string): void {
   activeTab.value = 'tasks'
   // categoryFilter set by chapter.id mapping will be wired in Task 3 (TaskJournalPanel integration)
+}
+
+function handlePinTask(taskId: string): void {
+  // pinTask is called within TaskJournalPanel; no additional action needed here
+}
+
+function handleNavigateToTopic(topicId: string): void {
+  graphRef.value?.flyToNode?.(topicId)
 }
 
 watch(

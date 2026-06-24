@@ -28,6 +28,19 @@
       />
     </div>
     <div class="task-create-form__row">
+      <select v-model="category" class="task-create-form__select">
+        <option value="core">核心路径</option>
+        <option value="deep-dive">深度学习</option>
+        <option value="daily">每日练习</option>
+      </select>
+      <textarea
+        v-model="substepsText"
+        class="task-create-form__textarea"
+        placeholder="输入步骤，每行一个（可选）"
+        rows="3"
+      />
+    </div>
+    <div class="task-create-form__row">
       <input
         v-model="notes"
         type="text"
@@ -67,6 +80,8 @@ const emit = defineEmits<{
     notes: string
     priority: KnowledgeTask['priority']
     topicId: string
+    category?: KnowledgeTask['category']
+    substeps?: string[]
   }): void
   (e: 'cancel'): void
 }>()
@@ -76,6 +91,8 @@ const dueDate = ref('')
 const notes = ref('')
 const priority = ref<KnowledgeTask['priority']>('medium')
 const selectedTopicId = ref(props.topicId ?? '')
+const category = ref<KnowledgeTask['category']>('core')
+const substepsText = ref('')
 
 watch(() => props.topicId, (val) => {
   selectedTopicId.value = val ?? ''
@@ -83,18 +100,28 @@ watch(() => props.topicId, (val) => {
 
 function handleCreate(): void {
   if (!title.value.trim()) return
+
+  const substeps = substepsText.value
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+
   emit('create', {
     title: title.value.trim(),
     dueDate: dueDate.value || undefined,
     notes: notes.value,
     priority: priority.value,
-    topicId: props.mode === 'detail' ? (props.topicId ?? '') : selectedTopicId.value
+    topicId: props.mode === 'detail' ? (props.topicId ?? '') : selectedTopicId.value,
+    category: category.value,
+    substeps: substeps.length > 0 ? substeps : undefined
   })
   title.value = ''
   dueDate.value = ''
   notes.value = ''
   priority.value = 'medium'
   selectedTopicId.value = props.topicId ?? ''
+  category.value = 'core'
+  substepsText.value = ''
 }
 
 function handleCancel(): void {
@@ -164,6 +191,28 @@ function handleCancel(): void {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 1px var(--primary);
+}
+
+.task-create-form__textarea {
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  background: white;
+  color: var(--foreground);
+  width: 100%;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.task-create-form__textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+.task-create-form__textarea::placeholder {
+  color: var(--muted-foreground);
 }
 
 .task-create-form__topic-selector {
