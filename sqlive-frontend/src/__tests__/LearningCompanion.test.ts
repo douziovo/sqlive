@@ -85,4 +85,48 @@ describe('LearningCompanion', () => {
     // Check key CSS properties via element style or classes
     expect(badge.attributes('class')).toContain('companion-badge')
   })
+
+  // ── ActiveTaskTracker integration (Phase 09-06) ────────────────
+
+  it('hides ActiveTaskTracker when no pinned task', async () => {
+    localStorage.setItem('ai-knowledge-tasks', JSON.stringify([]))
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ topics: [] }) })
+    const w = mount(LearningCompanion)
+    await flushPromises()
+    expect(w.find('.active-tracker').exists()).toBe(false)
+  })
+
+  it('renders ActiveTaskTracker when pinned task exists', async () => {
+    const tasks = [{
+      id: 'task-1', topicId: 'joins', title: '练习 JOIN',
+      notes: '', status: 'in-progress', priority: 'medium',
+      createdAt: new Date().toISOString(), category: 'core',
+      substeps: [{ id: 's1', label: 'step 1', status: 'active' }],
+      isPinned: true
+    }]
+    localStorage.setItem('ai-knowledge-tasks', JSON.stringify(tasks))
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ topics: [] }) })
+    const w = mount(LearningCompanion)
+    await flushPromises()
+    expect(w.find('.active-tracker').exists()).toBe(true)
+    expect(w.text()).toContain('练习 JOIN')
+    expect(w.text()).toContain('继续学习')
+  })
+
+  it('emits navigate when tracker continue button clicked', async () => {
+    const tasks = [{
+      id: 'task-1', topicId: 'joins', title: '练习 JOIN',
+      notes: '', status: 'in-progress', priority: 'medium',
+      createdAt: new Date().toISOString(), category: 'core',
+      substeps: [{ id: 's1', label: 'step 1', status: 'active' }],
+      isPinned: true
+    }]
+    localStorage.setItem('ai-knowledge-tasks', JSON.stringify(tasks))
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ topics: [] }) })
+    const w = mount(LearningCompanion)
+    await flushPromises()
+    await w.find('.active-tracker__btn--primary').trigger('click')
+    expect(w.emitted('navigate')).toBeTruthy()
+    expect(w.emitted('navigate')?.[0]).toEqual(['joins'])
+  })
 })

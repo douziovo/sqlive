@@ -190,4 +190,31 @@ describe('KnowledgeDetail', () => {
     // Click again to collapse
     await w.find('.knowledge-detail__history-toggle').trigger('click')
   })
+
+  // ── Locate topic button (Phase 09-06) ──────────────────────────
+
+  it('shows locate button when topic is provided', () => {
+    localStorage.setItem('ai-knowledge-tasks', JSON.stringify([]))
+    const w = mount(KnowledgeDetail, {
+      props: { topic: mockTopic, isMastered: false }
+    })
+    expect(w.text()).toContain('定位知识点')
+  })
+
+  it('emits navigate-to-topic when locate button clicked', async () => {
+    localStorage.setItem('ai-knowledge-tasks', JSON.stringify([]))
+    const w = mount(KnowledgeDetail, {
+      props: { topic: mockTopic, isMastered: false }
+    })
+    await w.find('.knowledge-detail__locate-btn').trigger('click')
+    expect(w.emitted('navigate-to-topic')).toBeTruthy()
+    expect(w.emitted('navigate-to-topic')?.[0]).toEqual(['joins'])
+  })
+
+  it('locate button hidden when no topic', () => {
+    const w = mount(KnowledgeDetail, {
+      props: { topic: null, isMastered: false }
+    })
+    expect(w.find('.knowledge-detail__locate-btn').exists()).toBe(false)
+  })
 })
