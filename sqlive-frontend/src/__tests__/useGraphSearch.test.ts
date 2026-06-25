@@ -104,11 +104,13 @@ describe('useGraphSearch', () => {
     const { showSearch, onGlobalKeydown } = useGraphSearch(flowRef, displayNodes as any)
 
     expect(showSearch.value).toBe(false)
-    // target is an input — guard should bail
+    // D-15: must use a real HTMLInputElement (not a plain object) because
+    // instanceof HTMLElement is now the guard — plain objects fail the check.
+    const inputEl = document.createElement('input')
     onGlobalKeydown(makeFakeEvent({
       key: 'f',
       ctrlKey: true,
-      target: { tagName: 'INPUT' } as HTMLElement
+      target: inputEl
     }))
     expect(showSearch.value).toBe(false)
   })
@@ -123,5 +125,50 @@ describe('useGraphSearch', () => {
     onGlobalKeydown(makeFakeEvent({ key: 'Escape' }))
     expect(showSearch.value).toBe(false)
     expect(searchQuery.value).toBe('')
+  })
+
+  // ── IN-04 (D-15): instanceof type guard — Ctrl+F works when e.target is Document ──
+
+  it('IN-04 Ctrl+F works when e.target is Document (no focused element)', () => {
+    const flowRef = ref<any>({ getViewport: () => ({ x: 0, y: 0, zoom: 1 }) })
+    const displayNodes = ref<Node<KnowledgeNodeData[]>>([])
+    const { showSearch, onGlobalKeydown } = useGraphSearch(flowRef, displayNodes as any)
+
+    // e.target = document (no focused element) — instanceof HTMLElement is false,
+    // but the input/textarea guard should NOT early-return (Document is not input/textarea)
+    onGlobalKeydown({
+      key: 'f', ctrlKey: true, target: document,
+      preventDefault: vi.fn(), stopPropagation: vi.fn()
+    } as unknown as KeyboardEvent)
+    expect(showSearch.value).toBe(true)
+  })
+
+  it('IN-04 input guard still works — Ctrl+F in input is no-op', () => {
+    const flowRef = ref<any>(null)
+    const displayNodes = ref<Node<KnowledgeNodeData[]>>([])
+    const { showSearch, onGlobalKeydown } = useGraphSearch(flowRef, displayNodes as any)
+
+    const inputEl = document.createElement('input')
+    onGlobalKeydown({
+      key: 'f', ctrlKey: true, target: inputEl,
+      preventDefault: vi.fn(), stopPropagation: vi.fn()
+    } as unknown as KeyboardEvent)
+    expect(showSearch.value).toBe(false)
+  })
+
+  // ── IN-03 (D-14): null-safe flowRef when Ctrl+F fires before VueFlow mounts ──
+
+  it('IN-03 Ctrl+F does not crash when flowRef is null', () => {
+    const flowRef = ref<any>(null)
+    const displayNodes = ref<Node<KnowledgeNodeData[]>>([])
+    const { showSearch, onGlobalKeydown, closeSearch } = useGraphSearch(flowRef, displayNodes as any)
+
+    expect(() => onGlobalKeydown({
+      key: 'f', ctrlKey: true, target: document.body,
+      preventDefault: vi.fn(), stopPropagation: vi.fn()
+    } as unknown as KeyboardEvent)).not.toThrow()
+    expect(showSearch.value).toBe(true)
+    // closeSearch should also handle null previousViewport gracefully
+    expect(() => closeSearch()).not.toThrow()
   })
 })

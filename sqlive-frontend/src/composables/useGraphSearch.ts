@@ -96,9 +96,13 @@ export function useGraphSearch(
       return
     }
 
-    // T-10-12 / D-12: only intercept Ctrl+F / Ctrl+0 when focus is not in input/textarea
-    const target = e.target as HTMLElement
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+    // T-10-12 / D-12: only intercept Ctrl+F / Ctrl+0 when focus is not in input/textarea.
+    // D-15 (IN-04): use instanceof type guard instead of `as HTMLElement` cast —
+    // e.target can be Document (no focused element), in which case tagName is
+    // undefined. The cast was a type lie; instanceof correctly returns false
+    // for Document, and the compound condition does not early-return (Document
+    // is not input/textarea), so Ctrl+F/Ctrl+0 still proceed.
+    if (e.target instanceof HTMLElement && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return
 
     // D-12: Ctrl+0 resets view (keyboard equivalent of dblclick) — same guard as Ctrl+F.
     // Decoupled from onPaneDblClick: caller injects the reset callback via opts.
@@ -112,11 +116,15 @@ export function useGraphSearch(
     if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
       e.preventDefault()
       e.stopPropagation()
-      showSearch.value = true
+      // D-14 (IN-03): capture viewport BEFORE showSearch.value = true. If
+      // flowRef is null (composable mounted before VueFlow), previousViewport
+      // stays null and closeSearch handles gracefully via restoreViewport's
+      // `if (previousViewport.value)` guard.
       const vp = flowRef.value?.getViewport?.()
       if (vp) {
         previousViewport.value = vp
       }
+      showSearch.value = true
     }
   }
 
