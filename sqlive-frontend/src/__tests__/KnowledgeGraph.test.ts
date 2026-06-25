@@ -239,6 +239,43 @@ describe('KnowledgeGraph', () => {
     expect(wrapper.vm.showSearch).toBe(true)
   })
 
+  it('Ctrl+0 重置视图（关闭已打开的搜索框，与双击行为一致）', async () => {
+    const wrapper = mount(KnowledgeGraph, {
+      props: { nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: [] },
+      global: { stubs }
+    })
+
+    // Open search first via Ctrl+F (proves baseline state)
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'f', ctrlKey: true, bubbles: true }))
+    await wrapper.vm.$nextTick()
+    expect(wrapper.vm.showSearch).toBe(true)
+
+    // Ctrl+0 should invoke onPaneDblClick which closes search
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: '0', ctrlKey: true, bubbles: true }))
+    await wrapper.vm.$nextTick()
+    expect(wrapper.vm.showSearch).toBe(false)
+  })
+
+  it('Ctrl+0 在 input focus 时不拦截（与 Ctrl+F 相同守卫）', async () => {
+    const wrapper = mount(KnowledgeGraph, {
+      props: { nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: [] },
+      global: { stubs }
+    })
+
+    // Open search first from non-input context
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'f', ctrlKey: true, bubbles: true }))
+    await wrapper.vm.$nextTick()
+    expect(wrapper.vm.showSearch).toBe(true)
+
+    // Dispatch Ctrl+0 from within an input — guard should ignore it
+    const input = document.createElement('input')
+    document.body.appendChild(input)
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: '0', ctrlKey: true, bubbles: true }))
+    await wrapper.vm.$nextTick()
+    expect(wrapper.vm.showSearch).toBe(true) // Still open — Ctrl+0 was ignored
+    document.body.removeChild(input)
+  })
+
   it('Escape 关闭搜索框并清空搜索词', async () => {
     const wrapper = mount(KnowledgeGraph, {
       props: { nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: [] },
