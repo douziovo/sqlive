@@ -161,6 +161,49 @@ describe('useKnowledgeGraph', () => {
     expect(kg.graphData.value).toBeNull()
   })
 
+  // ── CR-03 fetchGraph response shape validation (D-04) ────────
+
+  it('fetchGraph with {} response does not set graphData', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) })
+
+    const kg = useKnowledgeGraph()
+    await kg.fetchGraph()
+
+    expect(kg.graphData.value).toBeNull()
+    expect(kg.nodes.value).toEqual([]) // nodes computed does not throw
+  })
+
+  it('fetchGraph with { topics: null } does not set graphData', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ topics: null }) })
+
+    const kg = useKnowledgeGraph()
+    await kg.fetchGraph()
+
+    expect(kg.graphData.value).toBeNull()
+  })
+
+  it('fetchGraph with { topics: "not-array" } does not set graphData', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ topics: 'not-array' }) })
+
+    const kg = useKnowledgeGraph()
+    await kg.fetchGraph()
+
+    expect(kg.graphData.value).toBeNull()
+  })
+
+  it('fetchGraph preserves previous valid graphData on malformed response', async () => {
+    // First fetch: valid
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockGraphData) })
+    const kg = useKnowledgeGraph()
+    await kg.fetchGraph()
+    expect(kg.graphData.value?.topics).toHaveLength(3)
+
+    // Second fetch: malformed — graphData should stay as previous valid
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) })
+    await kg.fetchGraph()
+    expect(kg.graphData.value?.topics).toHaveLength(3) // unchanged
+  })
+
   // ── inProgressTopics ─────────────────────────────────────────
 
   it('inProgressTopics detects keywords in SQL (case-insensitive)', async () => {
