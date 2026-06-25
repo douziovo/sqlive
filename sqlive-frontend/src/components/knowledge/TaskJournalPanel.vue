@@ -115,7 +115,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { ClipboardList } from 'lucide-vue-next'
 import type { KnowledgeTopic } from '@/composables/useKnowledgeGraph'
 import type { KnowledgeTask, TaskSubstep } from '@/composables/useKnowledgeTasks'
@@ -163,6 +163,20 @@ const activeCategory = ref<'core' | 'deep-dive' | 'daily'>('core')
 const showFilteredOnly = ref(false)
 // D-06: controls TaskCreateForm visibility in empty-state right panel
 const showCreateForm = ref(false)
+
+// D-08: auto-select the first task when tasks arrive (or on mount if non-empty).
+// immediate: true covers the "tasks already present at setup" case; the watch
+// callback covers "tasks arrive later" (e.g., preset seeding fires after the
+// child's setup because Vue 3 fires child onMounted before parent onMounted).
+watch(
+  tasks,
+  (newTasks) => {
+    if (selectedTaskId.value === null && newTasks.length > 0) {
+      selectedTaskId.value = newTasks[0].id
+    }
+  },
+  { immediate: true }
+)
 
 // ── Computed ────────────────────────────────────────────────────
 

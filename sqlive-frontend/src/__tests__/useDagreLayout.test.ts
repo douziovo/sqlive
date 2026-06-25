@@ -123,7 +123,7 @@ describe('useDagreLayout', () => {
   //  Direction options
   // ============================================================
 
-  it('layouts left-to-right by default', () => {
+  it('layouts top-to-bottom by default', () => {
     const nodes: Node[] = [
       { id: 'a', type: 't', position: { x: 0, y: 0 }, data: {} },
       { id: 'b', type: 't', position: { x: 0, y: 0 }, data: {} }
@@ -131,8 +131,8 @@ describe('useDagreLayout', () => {
     const edges: Edge[] = [{ id: 'e1', source: 'a', target: 'b' }]
     const result = layoutNodes(nodes, edges)
 
-    // LR layout: target should be to the right of source
-    expect(result[1].position.x).toBeGreaterThan(result[0].position.x)
+    // TB layout: target should be below source
+    expect(result[1].position.y).toBeGreaterThan(result[0].position.y)
   })
 
   it('layouts top-to-bottom when rankdir is TB', () => {
