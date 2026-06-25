@@ -133,26 +133,36 @@ describe('TaskItem', () => {
     expect(w.find('.task-item--completed').exists()).toBe(true)
   })
 
-  // ── New: accent border color (Task 3) ───────────────────────
+  // ── New: accent border color (Task 3 / D-04 var() tokens) ──
 
-  it('shows accent border color for core category', () => {
+  it('shows accent border color for core category using var(--task-core)', () => {
     const task = { ...mockTask, category: 'core' as const }
     const w = mount(TaskItem, {
       props: { task, topicLabel: 'JOIN 查询', isOverdue: false }
     })
     const item = w.find('.task-item')
-    // jsdom normalizes hex colors to rgb
-    expect(item.attributes('style')).toContain('rgb(255, 204, 50)')
+    // D-04: accentColor now returns var(--task-core) string from shared taskCategories.ts
+    expect(item.attributes('style')).toContain('var(--task-core)')
   })
 
-  it('shows accent border color for deep-dive category', () => {
+  it('shows accent border color for deep-dive category using var(--task-deep)', () => {
     const task = { ...mockTask, category: 'deep-dive' as const }
     const w = mount(TaskItem, {
       props: { task, topicLabel: 'JOIN 查询', isOverdue: false }
     })
     const item = w.find('.task-item')
-    // jsdom normalizes hex colors to rgb
-    expect(item.attributes('style')).toContain('rgb(81, 136, 214)')
+    // D-04: accentColor now returns var(--task-deep) string from shared taskCategories.ts
+    expect(item.attributes('style')).toContain('var(--task-deep)')
+  })
+
+  it('shows accent border color for daily category using var(--task-daily)', () => {
+    const task = { ...mockTask, category: 'daily' as const }
+    const w = mount(TaskItem, {
+      props: { task, topicLabel: 'JOIN 查询', isOverdue: false }
+    })
+    const item = w.find('.task-item')
+    // D-04: accentColor now returns var(--task-daily) string from shared taskCategories.ts
+    expect(item.attributes('style')).toContain('var(--task-daily)')
   })
 
   // ── New: step progress count (Task 3) ───────────────────────
