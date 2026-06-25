@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils'
-import { afterEach, describe, expect, it } from 'vitest'
-import { nextTick, ref } from 'vue'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick, reactive, ref } from 'vue'
 import type { HighlightState, InsertResult, TableSchema, TruncationInfo } from '@/model/DatabaseTypes'
 import TableSection from '../../components/TableSection.vue'
 import { SQL_CONTEXT_KEY } from '../../model/injectionKeys'
@@ -379,6 +379,127 @@ describe('TableSection', () => {
       // Verify failure styling removed
       ghostRow = wrappers[0].find('[data-testid="ghost-row"]')
       expect(ghostRow.classes()).not.toContain('ghost-failure')
+    })
+  })
+
+  describe('getCellClasses coverage', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('flash-overlay class when row in flashingRowSet with isAnimating', async () => {
+      const highlight = reactive<HighlightState>({
+        ...defaultHighlight,
+        actionType: 'ddl',
+        activeTables: ['users'],
+        activeRows: [],
+        activeColumns: [],
+        flashingRows: ['users:1'],
+        refreshSeed: 0
+      })
+
+      const wrapper = mountTable({ highlight })
+
+      // Trigger isAnimating by changing refreshSeed
+      highlight.refreshSeed += 1
+      await nextTick()
+
+      // Alice's row (id=1, rowKey='users:1') should have flash-overlay on its cells
+      const tds = wrapper.findAll('td')
+      // Find a td with flash-overlay class
+      const flashTds = tds.filter(td => td.classes().includes('flash-overlay'))
+      expect(flashTds.length).toBeGreaterThan(0)
+    })
+
+    it('VIRTUAL column gets bg-primary/10 class', () => {
+      const virtualTable: TableSchema = {
+        name: 'users',
+        columns: ['id', 'name', 'generated'],
+        columnTypes: { id: 'INTEGER | PRIMARY KEY', name: 'TEXT | NOT NULL', generated: 'TEXT | VIRTUAL' },
+        data: [{ id: 1, name: 'Alice', generated: 'auto' }]
+      }
+
+      const wrapper = mountTable({ table: virtualTable })
+
+      // The 'generated' column's td should have bg-primary/10 class
+      // We need to inspect the rendered HTML for the class
+      const html = wrapper.html()
+      expect(html).toContain('bg-primary/10')
+    })
+
+    it('activeRows + activeColumns intersection gets bg-yellow-100 class', async () => {
+      const highlight: HighlightState = {
+        actionType: 'select',
+        activeTables: ['users'],
+        activeRows: ['users:1'],    // Alice's rowKey
+        activeColumns: ['name'],     // highlight 'name' column
+        flashingRows: [],
+        refreshSeed: 0
+      }
+
+      const wrapper = mountTable({ highlight })
+      await nextTick()
+
+      // The td at row=Alice, col='name' should have bg-yellow-100
+      const html = wrapper.html()
+      expect(html).toContain('bg-yellow-100')
+    })
+
+    it('non-highlighted cells get text-muted-foreground class', async () => {
+      const highlight: HighlightState = {
+        ...defaultHighlight,
+        actionType: 'none',
+        activeTables: [],
+        activeRows: [],
+        activeColumns: [],
+        flashingRows: [],
+        refreshSeed: 0
+      }
+
+      const wrapper = mountTable({ highlight })
+      await nextTick()
+
+      // Non-highlighted cells should have text-muted-foreground
+      const html = wrapper.html()
+      expect(html).toContain('text-muted-foreground')
+    })
+  })
+
+  describe('filter clear button', () => {
+    it('clear button absent when filterText is empty', () => {
+      const wrapper = mountTable()
+      // The ✕ button should not be in the DOM when filter is empty
+      const buttons = wrapper.findAll('button')
+      const clearBtn = buttons.find(b => b.text() === '✕')
+      expect(clearBtn).toBeFalsy()
+    })
+
+    it('clear button appears and clears filter on click', async () => {
+      const wrapper = mountTable()
+      const filterInput = wrapper.find('input[placeholder="过滤..."]')
+      expect(filterInput.exists()).toBe(true)
+
+      // Set filter text
+      await filterInput.setValue('Alice')
+      await nextTick()
+
+      // Clear button should now be visible
+      const buttons = wrapper.findAll('button')
+      const clearBtn = buttons.find(b => b.text() === '✕')
+      expect(clearBtn).toBeTruthy()
+
+      // Click clear button
+      await clearBtn!.trigger('click')
+      await nextTick()
+
+      // Input should be cleared — no Alice filter
+      // All three rows should be visible
+      expect(wrapper.text()).toContain('Bob')
+      expect(wrapper.text()).toContain('Charlie')
     })
   })
 })

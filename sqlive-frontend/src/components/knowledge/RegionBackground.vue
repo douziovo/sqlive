@@ -29,7 +29,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onMounted, onUnmounted, ref } from 'vue'
+import { computed, inject, ref } from 'vue'
 import type { Node } from '@vue-flow/core'
 import type { KnowledgeNodeData } from '@/composables/useKnowledgeGraph'
 import { computeHull, type Point } from '@/composables/useConcaveHull'
@@ -47,6 +47,7 @@ const props = defineProps<{
 }>()
 
 const zoomLevel = inject<number>('zoomLevel', 1)
+const svgTransform = inject<string>('svgTransform', '')
 
 const labelFontSize = computed(() => 16 / Math.max(0.1, zoomLevel.value))
 
@@ -60,19 +61,6 @@ const CATEGORY_DISPLAY_NAMES: Record<string, string> = {
 }
 
 const svgRef = ref<SVGSVGElement | null>(null)
-const svgTransform = ref('')
-let rafId = 0
-
-function syncTransform() {
-  const pane = document.querySelector('.knowledge-panel .vue-flow__transformationpane') as HTMLElement | null
-  if (pane && pane.style.transform) {
-    svgTransform.value = pane.style.transform
-  }
-  rafId = requestAnimationFrame(syncTransform)
-}
-
-onMounted(() => { rafId = requestAnimationFrame(syncTransform) })
-onUnmounted(() => { cancelAnimationFrame(rafId) })
 
 const svgStyle = computed(() => ({
   position: 'absolute' as const,
