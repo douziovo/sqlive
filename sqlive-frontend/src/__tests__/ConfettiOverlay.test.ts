@@ -95,4 +95,16 @@ describe('ConfettiOverlay', () => {
     expect(left).toBeGreaterThanOrEqual(280)
     expect(left).toBeLessThanOrEqual(380)
   })
+
+  // ── IN-09 (D-20): clear particles on active=false ──
+  it('clears particles when active becomes false (D-20)', async () => {
+    const w = mount(ConfettiOverlay, { props: { active: true } })
+    await nextTick()
+    // active=true generates 40 pieces
+    expect(getPieces().length).toBe(40)
+    // Deactivate — overlay v-if removes container, but particles ref should also clear
+    await w.setProps({ active: false })
+    await nextTick()
+    expect((w.vm as any).particles).toEqual([])
+  })
 })
