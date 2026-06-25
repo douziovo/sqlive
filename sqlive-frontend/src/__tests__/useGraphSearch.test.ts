@@ -63,19 +63,19 @@ describe('useGraphSearch', () => {
       makeNode('b', 'SQL B'),
       makeNode('c', 'SQL C')
     ])
-    const { searchQuery, matchIndex, navigateMatch } = useGraphSearch(flowRef, displayNodes as any)
+    const { searchQuery, currentIndex, navigateMatch } = useGraphSearch(flowRef, displayNodes as any)
 
     searchQuery.value = 'sql'
     await nextTick()
 
-    expect(matchIndex.value).toBe(0)
+    expect(currentIndex.value).toBe(0)
     navigateMatch(1)
-    expect(matchIndex.value).toBe(1)
+    expect(currentIndex.value).toBe(1)
     navigateMatch(1)
-    expect(matchIndex.value).toBe(2)
+    expect(currentIndex.value).toBe(2)
     // Wrap around to 0
     navigateMatch(1)
-    expect(matchIndex.value).toBe(0)
+    expect(currentIndex.value).toBe(0)
   })
 
   it('onGlobalKeydown Ctrl+F opens search', () => {
