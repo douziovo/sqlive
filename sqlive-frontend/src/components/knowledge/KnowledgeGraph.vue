@@ -179,6 +179,14 @@ function onGlobalKeydown(e: KeyboardEvent): void {
   const target = e.target as HTMLElement
   if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
 
+  // D-12: Ctrl+0 resets view (keyboard equivalent of dblclick) — same guard as Ctrl+F
+  if ((e.ctrlKey || e.metaKey) && e.key === '0') {
+    e.preventDefault()
+    e.stopPropagation()
+    onPaneDblClick()
+    return
+  }
+
   if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
     e.preventDefault()
     e.stopPropagation()
