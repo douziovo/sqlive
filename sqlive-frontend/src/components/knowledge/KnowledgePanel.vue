@@ -242,7 +242,7 @@ const xpBarPercent = computed(() => {
   const p = kgProgress.value
   if (!p || p.nextLevelXp === 0) return 0
   const currentLevelXp = p.level * p.xpForNext
-  const xpInLevel = p.xp - currentLevelXp
+  const xpInLevel = Math.max(0, p.xp - currentLevelXp)
   return Math.min(100, Math.round((xpInLevel / p.xpForNext) * 100))
 })
 
