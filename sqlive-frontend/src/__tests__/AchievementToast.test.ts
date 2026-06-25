@@ -93,4 +93,22 @@ describe('AchievementToast', () => {
     expect(toast?.classList.contains('achievement-toast--electric')).toBe(false)
     expect(toast?.classList.contains('achievement-toast--high-diff')).toBe(false)
   })
+
+  // ── D-11 a11y: role=status + aria-live=polite ─────────────
+
+  it('root element has role=status for screen readers', async () => {
+    mount(AchievementToast, { props: { visible: true, streak: 1, xp: 30, label: 'SELECT', isHighDifficulty: false } })
+    await vi.dynamicImportSettled()
+    const toast = getToastEl()
+    expect(toast).not.toBeNull()
+    expect(toast?.getAttribute('role')).toBe('status')
+  })
+
+  it('root element has aria-live=polite for screen readers', async () => {
+    mount(AchievementToast, { props: { visible: true, streak: 1, xp: 30, label: 'SELECT', isHighDifficulty: false } })
+    await vi.dynamicImportSettled()
+    const toast = getToastEl()
+    expect(toast).not.toBeNull()
+    expect(toast?.getAttribute('aria-live')).toBe('polite')
+  })
 })

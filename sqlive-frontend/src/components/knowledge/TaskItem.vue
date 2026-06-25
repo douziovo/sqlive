@@ -32,21 +32,46 @@
 
     <button class="task-item__delete" @click="handleDelete">删除</button>
 
+    <AlertDialogRoot v-model:open="showDeleteDialog">
+      <AlertDialogPortal>
+        <AlertDialogOverlay class="task-item__dialog-overlay" />
+        <AlertDialogContent class="task-item__dialog-content">
+          <AlertDialogTitle class="task-item__dialog-title">删除任务</AlertDialogTitle>
+          <AlertDialogDescription class="task-item__dialog-description">
+            确定删除此任务？此操作不可撤销。
+          </AlertDialogDescription>
+          <div class="task-item__dialog-actions">
+            <AlertDialogCancel class="task-item__dialog-btn task-item__dialog-btn--cancel" @click="showDeleteDialog = false">
+              取消
+            </AlertDialogCancel>
+            <AlertDialogAction class="task-item__dialog-btn task-item__dialog-btn--confirm" @click="confirmDelete">
+              确认删除
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialogPortal>
+    </AlertDialogRoot>
+
     <RedDotBadge :show="hasDot" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'
 import { useRedDot } from '@/composables/useRedDot'
+import {
+  AlertDialogRoot,
+  AlertDialogPortal,
+  AlertDialogOverlay,
+  AlertDialogContent,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from 'reka-ui'
+import { TASK_CATEGORY_COLORS } from '@/data/taskCategories'
 import RedDotBadge from './RedDotBadge.vue'
-
-const TASK_CATEGORY_COLORS: Record<string, string> = {
-  core: '#FFCC32',
-  'deep-dive': '#5188D6',
-  daily: '#C06FCF',
-}
 
 const props = defineProps<{
   task: KnowledgeTask
@@ -63,6 +88,9 @@ const emit = defineEmits<{
 }>()
 
 const { isVisible: isRedDotVisible } = useRedDot()
+
+// D-13: AlertDialog replaces native confirm() — dialog open state
+const showDeleteDialog = ref(false)
 
 const accentColor = computed(() => {
   return TASK_CATEGORY_COLORS[props.task.category] || TASK_CATEGORY_COLORS.core
@@ -103,9 +131,13 @@ function handleStatusToggle(): void {
 }
 
 function handleDelete(): void {
-  if (confirm('确定删除此任务？此操作不可撤销。')) {
-    emit('delete:task', props.task.id)
-  }
+  // D-13: open AlertDialog instead of native confirm()
+  showDeleteDialog.value = true
+}
+
+function confirmDelete(): void {
+  showDeleteDialog.value = false
+  emit('delete:task', props.task.id)
 }
 
 function handlePinClick(): void {
@@ -240,5 +272,74 @@ function handlePinClick(): void {
 
 .task-item__delete:hover {
   background: rgba(239, 68, 68, 0.08);
+}
+
+/* ── D-13: AlertDialog delete confirmation styles ─────────── */
+
+.task-item__dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 200;
+}
+
+.task-item__dialog-content {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--background);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  z-index: 201;
+  min-width: 320px;
+  max-width: calc(100% - 2rem);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+}
+
+.task-item__dialog-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+}
+
+.task-item__dialog-description {
+  font-size: 13px;
+  color: var(--muted-foreground);
+  margin: 0 0 16px 0;
+  line-height: 1.5;
+}
+
+.task-item__dialog-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.task-item__dialog-btn {
+  padding: 6px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--secondary);
+  color: var(--foreground);
+  font-size: 13px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.task-item__dialog-btn:hover {
+  opacity: 0.85;
+}
+
+.task-item__dialog-btn--cancel {
+  background: var(--muted);
+}
+
+.task-item__dialog-btn--confirm {
+  background: var(--destructive);
+  color: white;
+  border-color: var(--destructive);
 }
 </style>

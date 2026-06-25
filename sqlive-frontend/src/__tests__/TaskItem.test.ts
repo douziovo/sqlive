@@ -1,7 +1,7 @@
 // ── imports ────────────────────────────────────────────────────────
 
 import { mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import TaskItem from '@/components/knowledge/TaskItem.vue'
 import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'
 
@@ -28,6 +28,11 @@ describe('TaskItem', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.restoreAllMocks()
+  })
+
+  afterEach(() => {
+    // D-13: AlertDialog teleports to body — clean up between tests
+    document.body.innerHTML = ''
   })
 
   it('renders task title and topic label', () => {
@@ -101,25 +106,49 @@ describe('TaskItem', () => {
     expect(w.emitted('complete:task')?.[0]).toEqual(['task-1'])
   })
 
-  // ── delete ──────────────────────────────────────────────────
+  // ── delete (D-13: AlertDialog replaces native confirm) ────
 
-  it('shows confirm dialog on delete click and emits delete:task', async () => {
+  it('clicking delete opens AlertDialog instead of native confirm', async () => {
     const confirmSpy = vi.fn(() => true)
     vi.stubGlobal('confirm', confirmSpy)
     const w = mount(TaskItem, {
       props: { task: mockTask, topicLabel: 'JOIN 查询', isOverdue: false }
     })
     await w.find('.task-item__delete').trigger('click')
-    expect(confirmSpy).toHaveBeenCalledWith('确定删除此任务？此操作不可撤销。')
-    expect(w.emitted('delete:task')).toBeTruthy()
+    await vi.dynamicImportSettled()
+    // D-13: native confirm must NOT be called — AlertDialog replaces it
+    expect(confirmSpy).not.toHaveBeenCalled()
+    // AlertDialog content should be present in DOM (teleported to body)
+    const dialogContent = document.body.querySelector('.task-item__dialog-content')
+    expect(dialogContent).not.toBeNull()
   })
 
-  it('does not emit delete when confirm cancelled', async () => {
-    vi.stubGlobal('confirm', () => false)
+  it('confirming delete emits delete:task', async () => {
     const w = mount(TaskItem, {
       props: { task: mockTask, topicLabel: 'JOIN 查询', isOverdue: false }
     })
     await w.find('.task-item__delete').trigger('click')
+    await vi.dynamicImportSettled()
+    // AlertDialog is teleported to body — find confirm button there
+    const confirmBtn = document.body.querySelector('.task-item__dialog-btn--confirm') as HTMLButtonElement
+    expect(confirmBtn).not.toBeNull()
+    confirmBtn.click()
+    await vi.dynamicImportSettled()
+    expect(w.emitted('delete:task')).toBeTruthy()
+    expect(w.emitted('delete:task')?.[0]).toEqual(['task-1'])
+  })
+
+  it('cancel closes dialog without emitting delete', async () => {
+    const w = mount(TaskItem, {
+      props: { task: mockTask, topicLabel: 'JOIN 查询', isOverdue: false }
+    })
+    await w.find('.task-item__delete').trigger('click')
+    await vi.dynamicImportSettled()
+    const cancelBtn = document.body.querySelector('.task-item__dialog-btn--cancel') as HTMLButtonElement
+    expect(cancelBtn).not.toBeNull()
+    cancelBtn.click()
+    await vi.dynamicImportSettled()
+    // No delete:task emit should fire on cancel
     expect(w.emitted('delete:task')).toBeFalsy()
   })
 
@@ -133,26 +162,36 @@ describe('TaskItem', () => {
     expect(w.find('.task-item--completed').exists()).toBe(true)
   })
 
-  // ── New: accent border color (Task 3) ───────────────────────
+  // ── New: accent border color (Task 3 / D-04 var() tokens) ──
 
-  it('shows accent border color for core category', () => {
+  it('shows accent border color for core category using var(--task-core)', () => {
     const task = { ...mockTask, category: 'core' as const }
     const w = mount(TaskItem, {
       props: { task, topicLabel: 'JOIN 查询', isOverdue: false }
     })
     const item = w.find('.task-item')
-    // jsdom normalizes hex colors to rgb
-    expect(item.attributes('style')).toContain('rgb(255, 204, 50)')
+    // D-04: accentColor now returns var(--task-core) string from shared taskCategories.ts
+    expect(item.attributes('style')).toContain('var(--task-core)')
   })
 
-  it('shows accent border color for deep-dive category', () => {
+  it('shows accent border color for deep-dive category using var(--task-deep)', () => {
     const task = { ...mockTask, category: 'deep-dive' as const }
     const w = mount(TaskItem, {
       props: { task, topicLabel: 'JOIN 查询', isOverdue: false }
     })
     const item = w.find('.task-item')
-    // jsdom normalizes hex colors to rgb
-    expect(item.attributes('style')).toContain('rgb(81, 136, 214)')
+    // D-04: accentColor now returns var(--task-deep) string from shared taskCategories.ts
+    expect(item.attributes('style')).toContain('var(--task-deep)')
+  })
+
+  it('shows accent border color for daily category using var(--task-daily)', () => {
+    const task = { ...mockTask, category: 'daily' as const }
+    const w = mount(TaskItem, {
+      props: { task, topicLabel: 'JOIN 查询', isOverdue: false }
+    })
+    const item = w.find('.task-item')
+    // D-04: accentColor now returns var(--task-daily) string from shared taskCategories.ts
+    expect(item.attributes('style')).toContain('var(--task-daily)')
   })
 
   // ── New: step progress count (Task 3) ───────────────────────
