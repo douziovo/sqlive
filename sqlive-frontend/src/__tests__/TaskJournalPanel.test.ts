@@ -1,8 +1,53 @@
 import { mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
-import TaskJournalPanel from '@/components/knowledge/TaskJournalPanel.vue'
 import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'
+
+// ── Mock useKnowledgeTasks with a shared ref ───────────────────
+// vi.hoisted runs before any import, so the holder object exists when
+// the vi.mock factory runs (during TaskJournalPanel import). The ref is
+// created lazily inside the factory via dynamic import('vue') so we don't
+// depend on hoisted static imports.
+
+const { mockTasksHolder } = vi.hoisted(() => ({ mockTasksHolder: { ref: null as any } }))
+
+vi.mock('@/composables/useKnowledgeTasks', async () => {
+  const { ref } = await import('vue')
+  if (!mockTasksHolder.ref) mockTasksHolder.ref = ref<KnowledgeTask[]>([])
+  return {
+    useKnowledgeTasks: () => ({
+      tasks: mockTasksHolder.ref,
+      addTask: vi.fn(),
+      updateTask: vi.fn(),
+      deleteTask: vi.fn(),
+      completeTask: vi.fn(),
+      updateSubstep: vi.fn(),
+      pinTask: vi.fn(),
+      unpinTask: vi.fn(),
+      getPinnedTask: { value: null },
+      getChapterProgress: () => ({ completed: 0, total: 0 }),
+      tasksByTopic: () => ({ value: [] }),
+      pendingCount: { value: 0 },
+      sortedByCategoryGroup: () => ({ value: [] }),
+      isOverdue: () => false,
+      seedPresetTasksIfFirstRun: () => false
+    })
+  }
+})
+
+vi.mock('@/composables/useRedDot', () => ({
+  useRedDot: () => ({
+    isVisible: () => false,
+    clear: vi.fn(),
+    show: vi.fn(),
+    hasDotInPrefix: () => false,
+    clearAll: vi.fn(),
+    keyParents: { value: {} }
+  })
+}))
+
+// Import after mocks are registered
+import TaskJournalPanel from '@/components/knowledge/TaskJournalPanel.vue'
 
 const stubs = {
   StepProgress: true,
@@ -26,23 +71,13 @@ function makeTask(overrides: Partial<KnowledgeTask> = {}): KnowledgeTask {
   }
 }
 
-/**
- * Write tasks to localStorage AND dispatch a storage event so vueuse's
- * useLocalStorage ref (used inside useKnowledgeTasks) re-reads the value.
- * jsdom doesn't fire storage events for same-window writes automatically.
- */
 function setTasks(tasks: KnowledgeTask[]): void {
-  const serialized = JSON.stringify(tasks)
-  localStorage.setItem('ai-knowledge-tasks', serialized)
-  window.dispatchEvent(new StorageEvent('storage', {
-    key: 'ai-knowledge-tasks',
-    newValue: serialized
-  }))
+  mockTasksHolder.ref.value = tasks
 }
 
 describe('TaskJournalPanel — D-08 default-select first task', () => {
   beforeEach(() => {
-    localStorage.clear()
+    mockTasksHolder.ref.value = []
   })
 
   it('auto-selects first task when tasks exist on mount', () => {
