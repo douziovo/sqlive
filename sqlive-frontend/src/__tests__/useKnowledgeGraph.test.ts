@@ -50,6 +50,10 @@ describe('useKnowledgeGraph', () => {
     const kg = useKnowledgeGraph()
     kg.graphData.value = null
     kg.selectedNode.value = null
+    // D-08: sessionStreak hoisted to module scope — reset between tests so
+    // 'combo/streak increments with each mastery' starts from 0 regardless of
+    // state left by prior toggleMastered calls in other tests.
+    kg.sessionStreak.value = 0
   })
 
   // ── D-02: LEVEL_NAMES exported as public constant ─────────────
