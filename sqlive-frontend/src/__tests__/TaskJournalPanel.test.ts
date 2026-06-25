@@ -28,7 +28,6 @@ vi.mock('@/composables/useKnowledgeTasks', async () => {
       getChapterProgress: () => ({ completed: 0, total: 0 }),
       tasksByTopic: () => ({ value: [] }),
       pendingCount: { value: 0 },
-      sortedByCategoryGroup: () => ({ value: [] }),
       isOverdue: () => false,
       seedPresetTasksIfFirstRun: () => false
     })

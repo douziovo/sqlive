@@ -41,17 +41,6 @@ type AddTaskInput = Omit<
   isPinned?: KnowledgeTask['isPinned']
 }
 
-// ── Category sort order ──────────────────────────────────────────
-
-const CATEGORY_ORDER: Record<string, number> = {
-  basics: 0,
-  query: 1,
-  ddl: 2,
-  dml: 3,
-  advanced: 4,
-  performance: 5
-}
-
 // ── useKnowledgeTasks composable ─────────────────────────────────
 
 export function useKnowledgeTasks() {
@@ -218,21 +207,6 @@ export function useKnowledgeTasks() {
     )
   }
 
-  function sortedByCategoryGroup(topicCategoryMap: Map<string, string>) {
-    return computed(() =>
-      [...tasks.value].sort((a, b) => {
-        const catA =
-          CATEGORY_ORDER[topicCategoryMap.get(a.topicId) ?? ''] ?? 99
-        const catB =
-          CATEGORY_ORDER[topicCategoryMap.get(b.topicId) ?? ''] ?? 99
-        if (catA !== catB) return catA - catB
-        return (
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        )
-      })
-    )
-  }
-
   // ── Preset task seeding (first run only) ──────────────
 
   /**
@@ -272,7 +246,6 @@ export function useKnowledgeTasks() {
     getPinnedTask,
     tasksByTopic,
     pendingCount,
-    sortedByCategoryGroup,
     isOverdue,
     seedPresetTasksIfFirstRun
   }
