@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body">
-    <div v-if="active" class="confetti-overlay">
+    <div v-if="active" class="confetti-overlay" aria-hidden="true">
       <div
         v-for="(p, i) in particles"
         :key="i"

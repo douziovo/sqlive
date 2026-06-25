@@ -1,11 +1,12 @@
 import type { KnowledgeTask, TaskSubstep } from '@/composables/useKnowledgeTasks'
+import { nanoid } from 'nanoid'
 
 // ── Preset substep helper ─────────────────────────────────────────
 // Seeds substeps so the first one is active, the rest are locked.
 
 function makeSubsteps(labels: string[]): TaskSubstep[] {
   return labels.map((label, i) => ({
-    id: `preset-step-${Math.random().toString(36).slice(2, 10)}-${i}`,
+    id: `preset-step-${nanoid()}-${i}`,
     label,
     status: i === 0 ? 'active' : 'locked'
   }))
@@ -392,7 +393,7 @@ export const PRESET_TASKS: PresetTaskSeed[] = [
 export function buildPresetTasks(): KnowledgeTask[] {
   const now = new Date().toISOString()
   return PRESET_TASKS.map((seed) => ({
-    id: `preset-${Math.random().toString(36).slice(2, 14)}`,
+    id: `preset-${nanoid()}`,
     topicId: seed.topicId,
     title: seed.title,
     notes: seed.notes,
