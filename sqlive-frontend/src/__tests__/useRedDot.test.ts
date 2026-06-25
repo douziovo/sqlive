@@ -64,6 +64,49 @@ describe('clearAll', () => {
     expect(isVisible('chapter:basics')).toBe(true)
     expect(isVisible('chapter:query')).toBe(true)
   })
+
+  // D-06 (WR-02): clearAll must cascade to parents via clear(key) loop.
+
+  it('clearAll cascades to parent when last child removed', () => {
+    const { show, clearAll, isVisible } = useRedDot()
+    show('task:t1', ['category:core', 'tab:tasks'])
+    show('task:t2', ['category:core', 'tab:tasks'])
+
+    clearAll('task:')
+
+    expect(isVisible('task:t1')).toBe(false)
+    expect(isVisible('task:t2')).toBe(false)
+    // Cascade: no remaining visible task → category:core auto-cleared,
+    // then tab:tasks auto-cleared.
+    expect(isVisible('category:core')).toBe(false)
+    expect(isVisible('tab:tasks')).toBe(false)
+  })
+
+  it('clearAll preserves parents with children in other prefixes', () => {
+    const { show, clearAll, isVisible } = useRedDot()
+    show('task:t1', ['category:core', 'tab:tasks'])
+    show('task:t2', ['category:deep-dive', 'tab:tasks'])
+
+    clearAll('task:')  // clears both tasks
+    // Both categories had only 1 child each → both auto-cleared.
+    // tab:tasks had 2 children across categories, both cleared → tab auto-cleared.
+    expect(isVisible('category:core')).toBe(false)
+    expect(isVisible('category:deep-dive')).toBe(false)
+    expect(isVisible('tab:tasks')).toBe(false)
+  })
+
+  it('clearAll with non-visible matching keys is no-op', () => {
+    const { show, clear, clearAll, isVisible } = useRedDot()
+    show('task:t1', ['category:core', 'tab:tasks'])
+    clear('task:t1')  // already cleared via cascade
+
+    // redDots has task:t1=false, category:core=false, tab:tasks=false.
+    // clearAll('task:') should be a no-op (no visible matching keys).
+    expect(() => clearAll('task:')).not.toThrow()
+    expect(isVisible('task:t1')).toBe(false)
+    expect(isVisible('category:core')).toBe(false)
+    expect(isVisible('tab:tasks')).toBe(false)
+  })
 })
 
 // ── hasAnyDot ────────────────────────────────────────────────────
