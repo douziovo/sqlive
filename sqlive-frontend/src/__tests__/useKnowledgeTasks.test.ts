@@ -4,6 +4,7 @@ import {
   useKnowledgeTasks,
   type KnowledgeTask
 } from '@/composables/useKnowledgeTasks'
+import { useRedDot } from '@/composables/useRedDot'
 
 beforeEach(() => {
   localStorage.clear()
@@ -905,5 +906,80 @@ describe('seedPresetTasksIfFirstRun', () => {
       if (chapter) chaptersCovered.add(chapter)
     }
     expect(chaptersCovered.size).toBe(6)
+  })
+})
+
+// ── WR-07 useRedDot hoist + WR-03 deleteTask clears redDot (D-11/D-07) ──
+
+describe('WR-07 useRedDot hoist + WR-03 deleteTask clears redDot', () => {
+  it('deleteTask clears task redDot and cascades to category/tab when last task', async () => {
+    const { addTask, deleteTask } = useKnowledgeTasks()
+    const { isVisible: isRedDotVisible } = useRedDot()
+    const t = addTask({
+      topicId: 'joins',
+      title: 'T',
+      notes: '',
+      priority: 'medium',
+      category: 'core'
+    })
+
+    // Cross-instance useLocalStorage syncs via storage event on nextTick.
+    await nextTick()
+
+    // addTask shows task:t.id + category:core + tab:tasks
+    expect(isRedDotVisible('task:' + t.id)).toBe(true)
+    expect(isRedDotVisible('category:core')).toBe(true)
+    expect(isRedDotVisible('tab:tasks')).toBe(true)
+
+    deleteTask(t.id)
+    await nextTick()
+
+    // Cascade: clearing last task under category:core auto-clears category, then tab
+    expect(isRedDotVisible('task:' + t.id)).toBe(false)
+    expect(isRedDotVisible('category:core')).toBe(false)
+    expect(isRedDotVisible('tab:tasks')).toBe(false)
+  })
+
+  it('deleteTask preserves sibling task redDots and parent dots', async () => {
+    const { addTask, deleteTask } = useKnowledgeTasks()
+    const { isVisible: isRedDotVisible } = useRedDot()
+    const t1 = addTask({
+      topicId: 'a',
+      title: 'T1',
+      notes: '',
+      priority: 'low',
+      category: 'core'
+    })
+    const t2 = addTask({
+      topicId: 'b',
+      title: 'T2',
+      notes: '',
+      priority: 'low',
+      category: 'core'
+    })
+
+    await nextTick()
+
+    deleteTask(t1.id)
+    await nextTick()
+
+    // t2 still visible → category:core and tab:tasks stay visible
+    expect(isRedDotVisible('task:' + t2.id)).toBe(true)
+    expect(isRedDotVisible('category:core')).toBe(true)
+    expect(isRedDotVisible('tab:tasks')).toBe(true)
+  })
+
+  it('addTask shows red dot (hoisted useRedDot at setup scope still works)', async () => {
+    const { addTask } = useKnowledgeTasks()
+    const { isVisible } = useRedDot()
+    const t = addTask({
+      topicId: 'x',
+      title: 'X',
+      notes: '',
+      priority: 'low',
+      category: 'core'
+    })
+    await nextTick()
+    expect(isVisible('task:' + t.id)).toBe(true)
   })
 })

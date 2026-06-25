@@ -57,6 +57,14 @@ const CATEGORY_ORDER: Record<string, number> = {
 export function useKnowledgeTasks() {
   const tasks = useLocalStorage<KnowledgeTask[]>('ai-knowledge-tasks', [])
 
+  // D-11: hoist useRedDot to setup scope so useLocalStorage's storage event
+  // listener registers under the component's effect scope and cleans up on
+  // unmount. Previously addTask/updateSubstep called useRedDot() inside
+  // function bodies (invocation time, not setup time), leaking listeners and
+  // causing each call to construct a fresh useLocalStorage ref that overwrote
+  // prior writes before they flushed to localStorage.
+  const redDot = useRedDot()
+
   // ── CRUD operations ──────────────────
 
   function addTask(input: AddTaskInput): KnowledgeTask {
@@ -89,7 +97,6 @@ export function useKnowledgeTasks() {
 
     // D-03: single show() with parent chain — clear('task:X') will auto-propagate
     // up to category and tab when this is the last task under that category.
-    const redDot = useRedDot()
     redDot.show(`task:${newTask.id}`, [`category:${newTask.category}`, 'tab:tasks'])
 
     return newTask
@@ -104,6 +111,10 @@ export function useKnowledgeTasks() {
   }
 
   function deleteTask(id: string): void {
+    // D-07: clear task redDot before removing — triggers parent cascade
+    // (category: / tab:tasks) via useRedDot.clear when this was the last
+    // visible child. Previously deleteTask left tab:tasks badge stale.
+    redDot.clear('task:' + id)
     tasks.value = tasks.value.filter((t) => t.id !== id)
   }
 
@@ -148,7 +159,7 @@ export function useKnowledgeTasks() {
       // first-active-substep check. show() is idempotent — repeating the same
       // key is a no-op. The parents chain lets clear('task:X') auto-propagate
       // to category and tab when the last task under that category is cleared.
-      const redDot = useRedDot()
+      // D-11: uses hoisted redDot (setup scope) — no per-call useRedDot().
       redDot.show(`task:${taskId}`, [`category:${task.category}`, 'tab:tasks'])
     }
 
