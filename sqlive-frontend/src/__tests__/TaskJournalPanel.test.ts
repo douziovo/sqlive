@@ -118,3 +118,62 @@ describe('TaskJournalPanel — D-08 default-select first task', () => {
     expect(wrapper.find('.journal__list-item--selected').exists()).toBe(true)
   })
 })
+
+// ── WR-05: chapterCategoryFilter union-list mode (D-09/D-09a/D-09b) ──
+
+describe('TaskJournalPanel — WR-05 chapterCategoryFilter union-list mode', () => {
+  beforeEach(() => {
+    mockTasksHolder.ref.value = []
+  })
+
+  it('filters tasks to union of chapterCategoryFilter categories', () => {
+    setTasks([
+      makeTask({ id: 't1', category: 'core' }),
+      makeTask({ id: 't2', category: 'deep-dive' }),
+      makeTask({ id: 't3', category: 'daily' })
+    ])
+    const wrapper = mount(TaskJournalPanel, {
+      props: { topics: [], chapterCategoryFilter: ['core', 'deep-dive'] },
+      global: { stubs }
+    })
+    const items = wrapper.findAll('.journal__list-item')
+    expect(items.length).toBe(2) // t1 (core) + t2 (deep-dive), t3 (daily) excluded
+  })
+
+  it('no category tab highlighted when chapterCategoryFilter is set', () => {
+    setTasks([makeTask({ id: 't1', category: 'core' })])
+    const wrapper = mount(TaskJournalPanel, {
+      props: { topics: [], chapterCategoryFilter: ['core'] },
+      global: { stubs }
+    })
+    const activeTabs = wrapper.findAll('.journal__tab--active')
+    expect(activeTabs.length).toBe(0) // union mode: no single tab highlighted
+  })
+
+  it('auto-selects first task in union-filtered list', () => {
+    setTasks([
+      makeTask({ id: 't1', category: 'core' }),
+      makeTask({ id: 't2', category: 'deep-dive' }),
+      makeTask({ id: 't3', category: 'daily' })
+    ])
+    const wrapper = mount(TaskJournalPanel, {
+      props: { topics: [], chapterCategoryFilter: ['core', 'deep-dive'] },
+      global: { stubs }
+    })
+    const selected = wrapper.find('.journal__list-item--selected')
+    expect(selected.exists()).toBe(true)
+  })
+
+  it('falls back to activeCategory single-filter when chapterCategoryFilter is undefined', () => {
+    setTasks([
+      makeTask({ id: 't1', category: 'core' }),
+      makeTask({ id: 't2', category: 'deep-dive' })
+    ])
+    const wrapper = mount(TaskJournalPanel, {
+      props: { topics: [] }, // no chapterCategoryFilter
+      global: { stubs }
+    })
+    const items = wrapper.findAll('.journal__list-item')
+    expect(items.length).toBe(1) // only core (default activeCategory)
+  })
+})
