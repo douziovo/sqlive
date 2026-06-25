@@ -56,21 +56,17 @@ export function useRedDot() {
   }
 
   function clearAll(prefix: string): void {
-    const newDots: Record<string, boolean> = {}
-    for (const key of Object.keys(redDots.value)) {
-      if (!key.startsWith(prefix)) {
-        newDots[key] = redDots.value[key]
-      }
+    // D-06: implement clearAll as a loop over clear(key) for each matching
+    // visible key. Reuses clear's parent-cascade logic (hasOtherChild check +
+    // recursive clear(p)) so removing the last child of a parent auto-clears
+    // the parent. Previously clearAll dropped parent registrations but left
+    // parent dots visible (asymmetric with clear).
+    const matchingKeys = Object.keys(redDots.value).filter(
+      (k) => k.startsWith(prefix) && redDots.value[k] === true
+    )
+    for (const key of matchingKeys) {
+      clear(key)
     }
-    redDots.value = newDots
-    // Also drop parent registrations for the cleared keys
-    const newParents: Record<string, string[]> = {}
-    for (const key of Object.keys(keyParents.value)) {
-      if (!key.startsWith(prefix)) {
-        newParents[key] = keyParents.value[key]
-      }
-    }
-    keyParents.value = newParents
   }
 
   // Hierarchical red dot: any child visible → parent also visible
