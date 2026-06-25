@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="toast-pop">
-      <div v-if="visible" class="achievement-toast" :class="toastClass">
+      <div v-if="visible" class="achievement-toast" :class="toastClass" role="status" aria-live="polite">
         <span class="achievement-toast__icon">{{ icon }}</span>
         <div class="achievement-toast__body">
           <div class="achievement-toast__title">{{ title }}</div>

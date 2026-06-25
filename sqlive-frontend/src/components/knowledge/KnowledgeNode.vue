@@ -15,8 +15,9 @@
           'kg-node--dimmed': data.isDimmed
         }
       ]"
+      tabindex="0"
     >
-      <span class="kg-node__label">{{ data.label }}</span>
+      <span class="kg-node__label" :title="data.label">{{ data.label }}</span>
       <div v-if="showSparkBurst" class="kg-spark-layer">
         <span
           v-for="(p, i) in particles"
@@ -108,6 +109,24 @@ watch(() => props.data.triggerUnlockGlow, (val) => {
 .kg-node:hover {
   z-index: 30;
   filter: brightness(1.05);
+}
+
+/* D-12: keyboard focus equivalent — same visual cue as :hover plus outline */
+.kg-node:focus-visible {
+  z-index: 30;
+  filter: brightness(1.05);
+  outline: 2px solid var(--node-mastered-d1-border);
+  outline-offset: 2px;
+}
+
+/* D-07: label truncate — long titles (e.g. "CTE 公共表表达式") clip with ellipsis;
+   full title shown via native tooltip from :title attribute on the span. */
+.kg-node__label {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
 }
 
 /* Status colours */
