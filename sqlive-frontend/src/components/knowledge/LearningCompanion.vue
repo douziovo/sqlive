@@ -1,55 +1,98 @@
 <template>
-  <div class="learning-companion" @click="$emit('open')">
-    <div class="companion-ring-bg">📚</div>
-    <div class="companion-info">
-      <span class="companion-count">{{ count }}/{{ total }}</span>
-      <span class="companion-level">{{ level }}</span>
-    </div>
+  <div class="learning-companion__wrapper">
+    <ActiveTaskTracker
+      v-if="pinnedTask"
+      :pinned-task="pinnedTask"
+      :topic-label="topicLabel"
+      :current-step-label="currentStepLabel"
+      @unpin="handleTrackerUnpin"
+      @navigate="handleTrackerNavigate"
+    />
+    <button class="learning-companion" @click="handleOpen">
+      <span v-if="pendingCount > 0" class="companion-badge">
+        {{ pendingCount > 99 ? '99+' : pendingCount }}
+      </span>
+      <GraduationCap class="companion-ring-bg" :size="20" />
+      <div class="companion-info">
+        <span class="companion-count">{{ kgProgress.count }}/{{ kgProgress.total }}</span>
+        <span class="companion-level">{{ kgProgress.levelName }}</span>
+      </div>
+    </button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useLocalStorage } from '@vueuse/core'
-import { computed, onMounted, ref } from 'vue'
-import { KNOWLEDGE_API_BASE } from '@/config'
+import { computed, onMounted } from 'vue'
+import { GraduationCap } from 'lucide-vue-next'
+import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
+import { useKnowledgeGraph } from '@/composables/useKnowledgeGraph'
+import ActiveTaskTracker from './ActiveTaskTracker.vue'
 
-defineEmits<(e: 'open') => void>()
-
-const total = ref(0)
-const masteredTopics = useLocalStorage<string[]>('ai-mastered-topics', [])
-
-const count = computed(() => (masteredTopics.value || []).length)
-
-const percentage = computed(() => (total.value > 0 ? (count.value / total.value) * 100 : 0))
-
-const level = computed(() => {
-  if (percentage.value < 30) return '初级'
-  if (percentage.value < 70) return '进阶'
-  return '大师'
+const props = withDefaults(defineProps<{
+  topicLabel?: string
+}>(), {
+  topicLabel: ''
 })
 
-async function fetchTotal(): Promise<void> {
-  try {
-    const resp = await fetch(`${KNOWLEDGE_API_BASE}/graph`)
-    if (!resp.ok) return
-    const data = await resp.json()
-    total.value = (data.topics || []).length
-  } catch {
-    /* non-critical */
+const emit = defineEmits<{
+  (e: 'open'): void
+  (e: 'navigate', topicId: string): void
+}>()
+
+const { pendingCount, getPinnedTask, unpinTask } = useKnowledgeTasks()
+const kg = useKnowledgeGraph()
+
+const pinnedTask = computed(() => getPinnedTask.value)
+
+const currentStepLabel = computed(() => {
+  if (!pinnedTask.value) return ''
+  const activeStep = pinnedTask.value.substeps.find((s) => s.status === 'active')
+  return activeStep?.label ?? ''
+})
+
+// D-02: count/total/levelName all come from kg.progress (single source of truth).
+// Removed local masteredTopics useLocalStorage, percentage-based level, and the
+// standalone /api/knowledge/graph request — LearningCompanion now reads from the
+// singleton graphData that KnowledgePanel populates.
+const kgProgress = computed(() => kg.progress.value)
+
+// D-02 (Rule 2 deviation): defensive fetch on mount if graphData is null.
+// In production, KnowledgePanel mounts first and populates graphData via its own
+// watch(isOpen) hook; this guard only fires when LearningCompanion mounts
+// standalone (e.g., in tests or before KnowledgePanel has opened). Avoids the
+// duplicate /api/knowledge/graph request that D-02 explicitly removed.
+onMounted(() => {
+  if (!kg.graphData.value) {
+    void kg.fetchGraph()
   }
+})
+
+function handleOpen(): void {
+  emit('open')
 }
 
-onMounted(() => {
-  void fetchTotal()
-})
+function handleTrackerUnpin(): void {
+  unpinTask()
+}
+
+function handleTrackerNavigate(topicId: string): void {
+  emit('navigate', topicId)
+}
 </script>
 
 <style scoped>
-.learning-companion {
+.learning-companion__wrapper {
   position: fixed;
   bottom: 24px;
   right: 24px;
   z-index: 35;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.learning-companion {
   width: 56px;
   height: 56px;
   border-radius: 50%;
@@ -62,6 +105,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   transition: transform 0.2s, box-shadow 0.2s;
+  flex-shrink: 0;
 }
 
 .learning-companion:hover {
@@ -69,9 +113,31 @@ onMounted(() => {
   box-shadow: 0 4px 16px rgba(0,0,0,0.18);
 }
 
+.companion-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+}
+
 .companion-ring-bg {
-  font-size: 18px;
-  line-height: 1;
+  /* D-05: SVG icon (GraduationCap) replaces emoji — color via primary token */
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .companion-info {

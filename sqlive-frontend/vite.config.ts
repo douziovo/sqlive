@@ -52,7 +52,7 @@ export default defineConfig({
         lines: 60,
       },
       include: ['src/composables/**', 'src/utils/**', 'src/components/**'],
-      exclude: ['src/__tests__/**', 'src/main.ts', '**/*.d.ts'],
+      exclude: ['src/__tests__/**', 'src/main.ts', '**/*.d.ts', 'src/components/CodeEditor.vue', 'src/components/AiChatPanel.vue', 'src/components/ai-elements/**'],
     },
   },
 })

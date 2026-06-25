@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { useKnowledgeGraph } from '@/composables/useKnowledgeGraph'
+import { useKnowledgeGraph, LEVEL_NAMES } from '@/composables/useKnowledgeGraph'
 
 const mockFetch = vi.fn()
 global.fetch = mockFetch
@@ -46,6 +46,38 @@ describe('useKnowledgeGraph', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
+    // D-02: graphData/selectedNode hoisted to module scope — reset between tests
+    const kg = useKnowledgeGraph()
+    kg.graphData.value = null
+    kg.selectedNode.value = null
+  })
+
+  // ── D-02: LEVEL_NAMES exported as public constant ─────────────
+
+  it('exports LEVEL_NAMES constant with 4 levels', () => {
+    expect(Array.isArray(LEVEL_NAMES)).toBe(true)
+    expect(LEVEL_NAMES).toHaveLength(4)
+    expect(LEVEL_NAMES[0]).toBe('初级学者')
+    expect(LEVEL_NAMES[1]).toBe('进阶学者')
+    expect(LEVEL_NAMES[2]).toBe('SQL 大师')
+    expect(LEVEL_NAMES[3]).toBe('数据库传奇')
+  })
+
+  it('module-level graphData is shared across useKnowledgeGraph() calls (singleton)', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(mockGraphData)
+    })
+
+    const kg1 = useKnowledgeGraph()
+    await kg1.fetchGraph()
+
+    // Second call should see the same graphData (singleton, no re-fetch needed)
+    const kg2 = useKnowledgeGraph()
+    expect(kg2.graphData.value).not.toBeNull()
+    expect(kg2.graphData.value?.topics).toHaveLength(3)
+    // Both calls return the same ref instance
+    expect(kg1.graphData).toBe(kg2.graphData)
   })
 
   it('fetchGraph loads data and computes nodes/edges', async () => {
@@ -479,5 +511,74 @@ describe('useKnowledgeGraph', () => {
     expect(p).toHaveProperty('xp')
     expect(p).toHaveProperty('xpForNext')
     expect(p).toHaveProperty('streak')
+  })
+
+  // ── D-14: addTaskXp unified XP entry ──────────────────────────
+
+  describe('addTaskXp', () => {
+    it('awards xp and logs task:topicId key', () => {
+      const kg = useKnowledgeGraph()
+      // xpData starts at totalXp=0, level=0
+      expect(kg.xpData.value.totalXp).toBe(0)
+
+      const result = kg.addTaskXp('joins', 60)
+
+      expect(result.xpGained).toBe(60)
+      expect(result.leveledUp).toBe(false)
+      expect(kg.xpData.value.totalXp).toBe(60)
+      expect(kg.xpData.value.masteredLog).toContain('task:joins')
+    })
+
+    it('does not double-award on repeat call with same topicId', () => {
+      const kg = useKnowledgeGraph()
+
+      const r1 = kg.addTaskXp('joins', 60)
+      const r2 = kg.addTaskXp('joins', 60)
+
+      expect(r1.xpGained).toBe(60)
+      expect(r2.xpGained).toBe(0)
+      expect(r2.leveledUp).toBe(false)
+      expect(kg.xpData.value.totalXp).toBe(60) // only awarded once
+    })
+
+    it('detects level up when crossing XP_PER_LEVEL boundary', () => {
+      // XP_PER_LEVEL = 750; start at 740, level 0; +60 → 800 → level 1
+      localStorage.setItem('ai-knowledge-xp', JSON.stringify({
+        totalXp: 740, level: 0, streak: 0, masteredLog: []
+      }))
+      const kg = useKnowledgeGraph()
+      expect(kg.xpData.value.level).toBe(0)
+
+      const result = kg.addTaskXp('joins', 60)
+
+      expect(result.xpGained).toBe(60)
+      expect(result.leveledUp).toBe(true)
+      expect(kg.xpData.value.level).toBe(1)
+    })
+
+    it('does not modify masteredTopics array (task completion ≠ topic mastery)', () => {
+      const kg = useKnowledgeGraph()
+      expect(kg.masteredTopics.value).toHaveLength(0)
+
+      kg.addTaskXp('joins', 60)
+
+      expect(kg.masteredTopics.value).toHaveLength(0)
+      expect(kg.masteredTopics.value).not.toContain('joins')
+    })
+
+    it('caps level at LEVEL_NAMES.length - 1', () => {
+      // LEVEL_NAMES.length = 4 → max level = 3; start at 2940 + 60 = 3000 → level 4 capped to 3
+      localStorage.setItem('ai-knowledge-xp', JSON.stringify({
+        totalXp: 2940, level: 3, streak: 0, masteredLog: []
+      }))
+      const kg = useKnowledgeGraph()
+      expect(kg.xpData.value.level).toBe(3)
+
+      const result = kg.addTaskXp('joins', 60)
+
+      expect(result.xpGained).toBe(60)
+      expect(result.leveledUp).toBe(false) // already at max level, no level-up triggered
+      expect(kg.xpData.value.level).toBe(3) // capped, not 4
+    })
   })
 })

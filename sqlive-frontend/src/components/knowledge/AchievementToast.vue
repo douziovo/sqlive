@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="toast-pop">
-      <div v-if="visible" class="achievement-toast" :class="toastClass">
+      <div v-if="visible" class="achievement-toast" :class="toastClass" role="status" aria-live="polite">
         <span class="achievement-toast__icon">{{ icon }}</span>
         <div class="achievement-toast__body">
           <div class="achievement-toast__title">{{ title }}</div>
@@ -15,19 +15,23 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   visible: boolean
   streak: number
   xp: number
   label: string
   isHighDifficulty: boolean
-}>()
+  variant?: 'mastery' | 'task'
+}>(), {
+  variant: 'mastery'
+})
 
 const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
 const icon = computed(() => {
+  if (props.variant === 'task') return '✅'
   if (props.streak >= 5) return '🔥'
   if (props.streak >= 3) return '⚡'
   if (props.isHighDifficulty) return '💎'
@@ -35,6 +39,7 @@ const icon = computed(() => {
 })
 
 const title = computed(() => {
+  if (props.variant === 'task') return '任务完成！'
   if (props.streak >= 5) return `${props.streak} 连击！势不可挡！`
   if (props.streak >= 3) return `${props.streak} 连击！保持势头！`
   if (props.isHighDifficulty) return '高阶知识点解锁！'
@@ -47,6 +52,7 @@ const subtitle = computed(() => {
 })
 
 const toastClass = computed(() => {
+  if (props.variant === 'task') return 'achievement-toast--task'
   if (props.streak >= 5) return 'achievement-toast--fire'
   if (props.streak >= 3) return 'achievement-toast--electric'
   if (props.isHighDifficulty) return 'achievement-toast--high-diff'
@@ -66,7 +72,7 @@ const toastClass = computed(() => {
   gap: 10px;
   padding: 12px 20px;
   border-radius: 14px;
-  background: linear-gradient(135deg, #1e293b, #334155);
+  background: var(--toast-gradient-default);
   color: white;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
   pointer-events: none;
@@ -74,13 +80,16 @@ const toastClass = computed(() => {
 }
 
 .achievement-toast--high-diff {
-  background: linear-gradient(135deg, #4c1d95, #7c3aed);
+  background: var(--toast-gradient-high-diff);
+}
+.achievement-toast--task {
+  background: var(--toast-gradient-task);
 }
 .achievement-toast--electric {
-  background: linear-gradient(135deg, #92400e, #d97706);
+  background: var(--toast-gradient-electric);
 }
 .achievement-toast--fire {
-  background: linear-gradient(135deg, #991b1b, #dc2626);
+  background: var(--toast-gradient-fire);
 }
 
 .achievement-toast__icon {

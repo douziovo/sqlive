@@ -8,6 +8,10 @@ graphify-out
 
 # IDE
 .idea/
+.vscode/
+
+# Test
+coverage/
 
 # Claude Code
 .claude

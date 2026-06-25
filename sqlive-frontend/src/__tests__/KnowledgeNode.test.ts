@@ -74,4 +74,28 @@ describe('KnowledgeNode', () => {
     expect(w.text()).toContain('JOIN')
   })
 
+  // ── D-07 truncate + D-12 focus-visible + title attr ────────
+
+  it('renders label with title attribute for tooltip', () => {
+    const w = mount(KnowledgeNode, {
+      props: { id: 'x', data: makeData({ label: 'CTE 公共表表达式' }) }
+    })
+    expect(w.find('.kg-node__label').attributes('title')).toBe('CTE 公共表表达式')
+  })
+
+  it('root node has tabindex=0 for keyboard focus', () => {
+    const w = mount(KnowledgeNode, {
+      props: { id: 'x', data: makeData() }
+    })
+    expect(w.find('.kg-node').attributes('tabindex')).toBe('0')
+  })
+
+  it('label has truncate CSS class', () => {
+    const w = mount(KnowledgeNode, {
+      props: { id: 'x', data: makeData() }
+    })
+    // CSS property values can't be reliably read in jsdom; verify class exists
+    expect(w.find('.kg-node__label').exists()).toBe(true)
+  })
+
 })

@@ -7,6 +7,15 @@
     :is-high-difficulty="toastHighDiff"
     @close="showToast = false"
   />
+  <AchievementToast
+    variant="task"
+    :visible="showTaskToast"
+    :streak="0"
+    :xp="taskToastXp"
+    :label="taskToastLabel"
+    :is-high-difficulty="false"
+    @close="showTaskToast = false"
+  />
   <ConfettiOverlay :key="confettiKey" :active="showConfetti" />
   <Teleport to="body">
     <Transition name="panel-expand">
@@ -33,6 +42,31 @@
               type="text"
               placeholder="搜索知识点..."
             />
+            <div class="knowledge-panel__tabs">
+              <button
+                class="knowledge-panel__tab"
+                :class="{ 'knowledge-panel__tab--active': activeTab === 'graph' }"
+                @click="handleTabClick('graph')"
+              >
+                图谱
+              </button>
+              <button
+                class="knowledge-panel__tab knowledge-panel__tab--with-dot"
+                :class="{ 'knowledge-panel__tab--active': activeTab === 'tasks' }"
+                @click="handleTabClick('tasks')"
+              >
+                任务
+                <RedDotBadge :show="showTaskTabDot" />
+              </button>
+              <button
+                class="knowledge-panel__tab"
+                :class="{ 'knowledge-panel__tab--active': activeTab === 'chapters' }"
+                @click="handleTabClick('chapters')"
+              >
+                冒险之证
+              </button>
+            </div>
+            <template v-if="activeTab === 'graph'">
             <div class="knowledge-panel__filters">
               <button
                 class="knowledge-panel__filter-btn"
@@ -61,6 +95,7 @@
                 {{ f.label }}
               </button>
             </div>
+            </template>
             <div class="knowledge-panel__level-bar">
               <span class="knowledge-panel__level-badge">{{ kgProgress.levelName }}</span>
               <div class="knowledge-panel__xp-bar-track">
@@ -78,8 +113,8 @@
             </div>
           </div>
 
-          <!-- Body: full-width graph -->
-          <div class="knowledge-panel__body">
+          <!-- Body: full-width graph (graph tab) -->
+          <div v-if="activeTab === 'graph'" class="knowledge-panel__body">
             <KnowledgeGraph
               ref="graphRef"
               class="knowledge-panel__graph"
@@ -92,7 +127,39 @@
               @toggle-mastered="onToggleMastered"
               @ask-ai="onAskAi"
               @deselect-node="onDeselectNode"
+              @view-all-tasks="activeTab = 'tasks'"
+              @complete-task="handleTaskComplete"
+              @navigate-to-topic="handleNavigateToTopic"
             />
+          </div>
+
+          <!-- Body: task journal (tasks tab) -->
+          <div v-if="activeTab === 'tasks'" class="knowledge-panel__body knowledge-panel__body--tasks">
+            <TaskJournalPanel
+              :topics="kg.graphData?.topics ?? []"
+              @complete-task="handleTaskComplete"
+              @pin-task="handlePinTask"
+              @navigate-to-topic="handleNavigateToTopic"
+            />
+          </div>
+
+          <!-- Body: chapters (adventurer's handbook tab) -->
+          <div v-if="activeTab === 'chapters'" class="knowledge-panel__body knowledge-panel__body--chapters">
+            <div class="chapters__header">
+              <h2 class="chapters__title">冒险之证</h2>
+              <span class="chapters__level">当前等级：{{ kg.progress.value.levelName }}</span>
+            </div>
+            <div class="chapters__list">
+              <ChapterCard
+                v-for="chapter in CHAPTERS"
+                :key="chapter.id"
+                :chapter="chapter"
+                :progress="getChapterProgress(chapter.id)"
+                :unlocked="kg.xpData.value.level >= chapter.rankRequired"
+                :current-level="kg.xpData.value.level"
+                @open-chapter="handleOpenChapter"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -102,13 +169,19 @@
 
 <script setup lang="ts">
 import type { Edge, Node } from '@vue-flow/core'
-import { computed, inject, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, inject, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { KnowledgeNodeData } from '@/composables/useKnowledgeGraph'
 import { useKnowledgeGraph } from '@/composables/useKnowledgeGraph'
 import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
 import AchievementToast from './AchievementToast.vue'
 import ConfettiOverlay from './ConfettiOverlay.vue'
 import KnowledgeGraph from './KnowledgeGraph.vue'
+import TaskJournalPanel from './TaskJournalPanel.vue'
+import ChapterCard from './ChapterCard.vue'
+import RedDotBadge from './RedDotBadge.vue'
+import { CHAPTERS } from '@/data/learningChapters'
+import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
+import { useRedDot } from '@/composables/useRedDot'
 
 const props = defineProps<{
   isOpen: boolean
@@ -123,6 +196,7 @@ const sqlContext = inject(SQL_CONTEXT_KEY)!
 const searchQuery = ref('')
 const activeDifficulty = ref<string | null>(null)
 const activeCategory = ref<string | null>(null)
+const activeTab = ref<'graph' | 'tasks' | 'chapters'>('graph')
 
 interface FilterOption {
   key: string
@@ -147,6 +221,11 @@ const kg = useKnowledgeGraph({
     return tab?.code ?? ''
   }
 })
+
+const { tasks: _tasksForMount, getChapterProgress, seedPresetTasksIfFirstRun } = useKnowledgeTasks()
+const { isVisible: isRedDotVisible, clear } = useRedDot()
+
+const showTaskTabDot = computed(() => isRedDotVisible('tab:tasks'))
 
 const graphRef = ref<InstanceType<typeof KnowledgeGraph> | null>(null)
 
@@ -215,6 +294,11 @@ const showConfetti = ref(false)
 const confettiKey = ref(0)
 const showLevelUpToast = ref(false)
 
+// ── Task gamification state (Phase 09-03) ──────────────────────
+const showTaskToast = ref(false)
+const taskToastLabel = ref('')
+const taskToastXp = ref(0)
+
 function onToggleMastered(topicId: string): void {
   const result = kg.toggleMastered(topicId)
   if (result.action === 'master') {
@@ -247,6 +331,34 @@ function showAchievementToast(result: { xpGained: number; leveledUp: boolean; st
   setTimeout(() => { showToast.value = false }, 2500)
 }
 
+function handleTaskComplete(topicId: string): void {
+  const topic = kg.graphData.value?.topics.find(t => t.id === topicId)
+  if (!topic) return
+
+  const xpGained = (kg.xpForDifficulty(topic.difficulty) ?? 30) + 10
+
+  // D-14: delegate XP award + level-up detection to the unified entry
+  // (no longer directly mutates kg.xpData.value.totalXp / masteredLog / level)
+  const result = kg.addTaskXp(topicId, xpGained)
+
+  graphRef.value?.triggerSparkBurst?.(topicId)
+
+  taskToastLabel.value = topic.label
+  taskToastXp.value = xpGained
+  showTaskToast.value = true
+  setTimeout(() => { showTaskToast.value = false }, 2500)
+
+  if (result.leveledUp) {
+    showConfetti.value = true
+    confettiKey.value++
+    showLevelUpToast.value = true
+    setTimeout(() => {
+      showConfetti.value = false
+      showLevelUpToast.value = false
+    }, 5000)
+  }
+}
+
 function onNodeSelect(topicId: string): void {
   kg.selectedNode.value = topicId
 }
@@ -257,6 +369,30 @@ function onAskAi(label: string): void {
 
 function onDeselectNode(): void {
   kg.selectedNode.value = null
+}
+
+function handleTabClick(tabName: 'graph' | 'tasks' | 'chapters'): void {
+  activeTab.value = tabName
+  // Clear tab-level red dot when entering tasks tab
+  if (tabName === 'tasks') {
+    clear('tab:tasks')
+  }
+}
+
+function handleOpenChapter(chapterId: string): void {
+  activeTab.value = 'tasks'
+  // categoryFilter set by chapter.id mapping will be wired in Task 3 (TaskJournalPanel integration)
+}
+
+function handlePinTask(taskId: string): void {
+  // pinTask is called within TaskJournalPanel; no additional action needed here
+}
+
+function handleNavigateToTopic(topicId: string): void {
+  activeTab.value = 'graph'
+  nextTick(() => {
+    graphRef.value?.flyToNode?.(topicId)
+  })
 }
 
 watch(
@@ -279,6 +415,7 @@ function onKeydown(e: KeyboardEvent): void {
 
 onMounted(() => {
   document.addEventListener('keydown', onKeydown)
+  seedPresetTasksIfFirstRun()
 })
 
 onUnmounted(() => {
@@ -290,7 +427,8 @@ defineExpose({
   filteredEdges,
   activeDifficulty,
   activeCategory,
-  resetAllFilters
+  resetAllFilters,
+  handleNavigateToTopic
 })
 </script>
 
@@ -360,6 +498,67 @@ defineExpose({
 }
 .knowledge-panel__search::placeholder {
   color: var(--muted-foreground);
+}
+
+/* ── Tab bar (Phase 09-03) ──────────────────── */
+
+.knowledge-panel__tabs {
+  display: flex;
+  gap: 0;
+  margin-right: 12px;
+}
+
+.knowledge-panel__tab {
+  padding: 6px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+
+.knowledge-panel__tab--with-dot {
+  position: relative;
+}
+
+.knowledge-panel__tab--active {
+  color: var(--foreground);
+  border-bottom-color: var(--primary);
+}
+
+.knowledge-panel__tab:hover:not(.knowledge-panel__tab--active) {
+  color: var(--foreground);
+}
+
+.knowledge-panel__body--tasks {
+  padding: 16px 20px;
+  overflow-y: auto;
+}
+
+.knowledge-panel__body--chapters {
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.chapters__header {
+  margin-bottom: 20px;
+}
+
+.chapters__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.chapters__level {
+  font-size: 13px;
+  color: var(--muted-foreground);
+  margin-top: 4px;
+  display: block;
 }
 
 .knowledge-panel__filters {

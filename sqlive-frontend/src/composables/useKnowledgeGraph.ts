@@ -47,16 +47,28 @@ export interface KnowledgeNodeData {
   triggerUnlockGlow?: boolean
 }
 
+// ── D-02: Module-level singletons ─────────────────────────────
+// graphData and selectedNode are hoisted to module scope so all useKnowledgeGraph()
+// calls share the same ref instances. This lets LearningCompanion read graphData
+// that KnowledgePanel already fetched, avoiding a duplicate /api/knowledge/graph
+// request.
+
+const graphData = ref<KnowledgeGraphData | null>(null)
+const selectedNode = ref<string | null>(null)
+
+// ── D-02: LEVEL_NAMES exported as public constant ─────────────
+// ChapterCard / KnowledgePanel / LearningCompanion all import this single
+// source of truth — no more local LEVEL_NAMES copies that drift apart.
+
+export const LEVEL_NAMES = ['初级学者', '进阶学者', 'SQL 大师', '数据库传奇']
+
 export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
-  const graphData = ref<KnowledgeGraphData | null>(null)
-  const selectedNode = ref<string | null>(null)
   const masteredTopics = useLocalStorage<string[]>('ai-mastered-topics', [])
 
   // ── XP/Level/Combo system (Phase 05-03) ──────────────────────
 
   const XP_PER_DIFFICULTY: Record<number, number> = { 1: 30, 2: 50, 3: 80 }
   const XP_PER_LEVEL = 750
-  const LEVEL_NAMES = ['初级学者', '进阶学者', 'SQL 大师', '数据库传奇']
 
   const xpData = useLocalStorage('ai-knowledge-xp', {
     totalXp: 0,
@@ -277,6 +289,39 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
     sessionStreak.value = 0
   }
 
+  // ── D-14: addTaskXp — unified XP entry for task completion ─────
+  // KnowledgePanel.handleTaskComplete calls this instead of directly
+  // mutating xpData. logKey uses task: prefix to namespace apart from
+  // toggleMastered's topicId keys in the same masteredLog array.
+
+  function addTaskXp(topicId: string, xpGained: number): { xpGained: number; leveledUp: boolean } {
+    const logKey = `task:${topicId}`
+    let awardedXp = 0
+
+    // Double-award guard — same pattern as toggleMastered
+    if (!xpData.value.masteredLog.includes(logKey)) {
+      xpData.value.totalXp += xpGained
+      xpData.value.masteredLog.push(logKey)
+      awardedXp = xpGained
+    }
+
+    // Level up check — only reports leveledUp when stored level actually advances
+    // (Rule 1 fix: plan pseudocode omitted max-level guard; test spec requires
+    // leveledUp=false when starting at LEVEL_NAMES.length - 1 even if XP crosses
+    // the next threshold, because the stored level cannot advance further)
+    const newLevel = Math.floor(xpData.value.totalXp / XP_PER_LEVEL)
+    const atMaxLevel = xpData.value.level >= LEVEL_NAMES.length - 1
+    const leveledUp = !atMaxLevel && newLevel > xpData.value.level
+    if (leveledUp) {
+      xpData.value.level = Math.min(newLevel, LEVEL_NAMES.length - 1)
+      levelUpTriggered.value = true
+      setTimeout(() => { levelUpTriggered.value = false }, 1000)
+    }
+
+    // NOTE: does not modify masteredTopics — task completion ≠ topic mastery
+    return { xpGained: awardedXp, leveledUp }
+  }
+
   function focusNode(topicId: string): void {
     selectedNode.value = topicId
   }
@@ -293,6 +338,7 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
     getNodeStatus,
     fetchGraph,
     toggleMastered,
+    addTaskXp,
     focusNode,
     // XP/Level/Combo
     xpData,

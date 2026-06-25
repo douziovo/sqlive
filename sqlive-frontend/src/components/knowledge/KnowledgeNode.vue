@@ -15,8 +15,9 @@
           'kg-node--dimmed': data.isDimmed
         }
       ]"
+      tabindex="0"
     >
-      <span class="kg-node__label">{{ data.label }}</span>
+      <span class="kg-node__label" :title="data.label">{{ data.label }}</span>
       <div v-if="showSparkBurst" class="kg-spark-layer">
         <span
           v-for="(p, i) in particles"
@@ -102,6 +103,7 @@ watch(() => props.data.triggerUnlockGlow, (val) => {
   user-select: none;
   display: flex;
   align-items: center;
+  will-change: transform;
 }
 
 .kg-node:hover {
@@ -109,18 +111,36 @@ watch(() => props.data.triggerUnlockGlow, (val) => {
   filter: brightness(1.05);
 }
 
+/* D-12: keyboard focus equivalent — same visual cue as :hover plus outline */
+.kg-node:focus-visible {
+  z-index: 30;
+  filter: brightness(1.05);
+  outline: 2px solid var(--node-mastered-d1-border);
+  outline-offset: 2px;
+}
+
+/* D-07: label truncate — long titles (e.g. "CTE 公共表表达式") clip with ellipsis;
+   full title shown via native tooltip from :title attribute on the span. */
+.kg-node__label {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+}
+
 /* Status colours */
-.kg-node--mastered.kg-node--d1 { background: #dcfce7; border-color: #6ee7b7; color: #166534; }
-.kg-node--mastered.kg-node--d2 { background: #dbeafe; border-color: #93c5fd; color: #1e40af; }
-.kg-node--mastered.kg-node--d3 { background: #fce7f3; border-color: #f9a8d4; color: #9d174d; }
+.kg-node--mastered.kg-node--d1 { background: var(--node-mastered-d1-bg); border-color: var(--node-mastered-d1-border); color: var(--node-mastered-d1-text); }
+.kg-node--mastered.kg-node--d2 { background: var(--node-mastered-d2-bg); border-color: var(--node-mastered-d2-border); color: var(--node-mastered-d2-text); }
+.kg-node--mastered.kg-node--d3 { background: var(--node-mastered-d3-bg); border-color: var(--node-mastered-d3-border); color: var(--node-mastered-d3-text); }
 
-.kg-node--in-progress.kg-node--d1 { background: #fef3c7; border-color: #fcd34d; color: #92400e; }
-.kg-node--in-progress.kg-node--d2 { background: #e0e7ff; border-color: #a5b4fc; color: #3730a3; }
-.kg-node--in-progress.kg-node--d3 { background: #fce7f3; border-color: #f9a8d4; color: #831843; }
+.kg-node--in-progress.kg-node--d1 { background: var(--node-progress-d1-bg); border-color: var(--node-progress-d1-border); color: var(--node-progress-d1-text); }
+.kg-node--in-progress.kg-node--d2 { background: var(--node-progress-d2-bg); border-color: var(--node-progress-d2-border); color: var(--node-progress-d2-text); }
+.kg-node--in-progress.kg-node--d3 { background: var(--node-progress-d3-bg); border-color: var(--node-progress-d3-border); color: var(--node-progress-d3-text); }
 
-.kg-node--unlearned.kg-node--d1 { background: #f8fafc; border-color: #cbd5e1; color: #94a3b8; }
-.kg-node--unlearned.kg-node--d2 { background: #f8fafc; border-color: #cbd5e1; color: #94a3b8; }
-.kg-node--unlearned.kg-node--d3 { background: #f8fafc; border-color: #cbd5e1; color: #94a3b8; }
+.kg-node--unlearned.kg-node--d1 { background: var(--node-unlearned-bg); border-color: var(--node-unlearned-border); color: var(--node-unlearned-text); }
+.kg-node--unlearned.kg-node--d2 { background: var(--node-unlearned-bg); border-color: var(--node-unlearned-border); color: var(--node-unlearned-text); }
+.kg-node--unlearned.kg-node--d3 { background: var(--node-unlearned-bg); border-color: var(--node-unlearned-border); color: var(--node-unlearned-text); }
 
 .kg-node--locked {
   opacity: 0.45;

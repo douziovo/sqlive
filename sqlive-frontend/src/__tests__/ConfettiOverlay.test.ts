@@ -26,6 +26,13 @@ describe('ConfettiOverlay', () => {
     expect(getOverlay()).not.toBeNull()
   })
 
+  it('根 div 有 aria-hidden="true"（纯装饰，屏幕阅读器跳过）', async () => {
+    mount(ConfettiOverlay, { props: { active: true } })
+    const overlay = getOverlay()
+    expect(overlay).not.toBeNull()
+    expect(overlay?.getAttribute('aria-hidden')).toBe('true')
+  })
+
   it('active 时生成 40 个粒子（默认非 burst）', async () => {
     mount(ConfettiOverlay, { props: { active: true } })
     await nextTick()
