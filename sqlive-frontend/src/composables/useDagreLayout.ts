@@ -17,9 +17,9 @@ export function layoutNodes<TNodeData extends Record<string, unknown>>(
 ): Node<TNodeData>[] {
   const g = new dagre.graphlib.Graph()
   g.setGraph({
-    rankdir: options?.rankdir ?? 'LR',
-    ranksep: options?.ranksep ?? 200,
-    nodesep: options?.nodesep ?? 140,
+    rankdir: options?.rankdir ?? 'TB',
+    ranksep: options?.ranksep ?? 120,
+    nodesep: options?.nodesep ?? 80,
     marginx: options?.marginx ?? 60,
     marginy: options?.marginy ?? 60
   })
