@@ -429,4 +429,43 @@ describe('KnowledgeGraph', () => {
     expect(nodes.find((n: any) => n.data.topicId === 'filtering').data.triggerUnlockGlow).toBe(false)
     vi.useRealTimers()
   })
+
+  // ── CR-01 styledEdges cache invalidation (D-02) ──────────────
+
+  it('styledEdges reflects updated props.edges after nextTick (no stale cache)', async () => {
+    const wrapper = mount(KnowledgeGraph, {
+      props: { nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: [] },
+      global: { stubs }
+    })
+
+    // Initial: 2 edges
+    expect(wrapper.vm.getStyledEdges()).toHaveLength(2)
+
+    // Filter to 1 edge — styledEdges should reflect new edge set within nextTick
+    await wrapper.setProps({ edges: [mockEdges[0]] })
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.vm.getStyledEdges()).toHaveLength(1)
+  })
+
+  it('styledEdges updates on hoveredNodeId change', async () => {
+    const wrapper = mount(KnowledgeGraph, {
+      props: { nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: [] },
+      global: { stubs }
+    })
+
+    // No hover initially — no highlighted (opacity=1) edges
+    const initialEdges = wrapper.vm.getStyledEdges() as any[]
+    const initialHighlighted = initialEdges.filter((e: any) => Number(e.style.opacity) === 1)
+    expect(initialHighlighted.length).toBe(0)
+
+    // Hover sql-basics — successor edge (sql-basics → filtering) should highlight
+    await wrapper.vm.setHoveredNode('sql-basics')
+    await wrapper.vm.$nextTick()
+
+    const edges = wrapper.vm.getStyledEdges() as any[]
+    const highlighted = edges.filter((e: any) => Number(e.style.opacity) === 1)
+    expect(highlighted.length).toBe(1)
+    expect(highlighted[0].style.stroke).toBe('#3b82f6') // successor highlight color
+  })
 })
