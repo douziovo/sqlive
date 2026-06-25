@@ -87,11 +87,10 @@ export function useKnowledgeTasks() {
     }
     tasks.value = [...tasks.value, newTask]
 
-    // Mark red dots for new task
+    // D-03: single show() with parent chain — clear('task:X') will auto-propagate
+    // up to category and tab when this is the last task under that category.
     const redDot = useRedDot()
-    redDot.show(`task:${newTask.id}`)
-    redDot.show(`category:${newTask.category}`)
-    redDot.show('tab:tasks')
+    redDot.show(`task:${newTask.id}`, [`category:${newTask.category}`, 'tab:tasks'])
 
     return newTask
   }
@@ -145,17 +144,12 @@ export function useKnowledgeTasks() {
 
     // Mark red dots when substep transitions from locked → active
     if (oldStatus === 'locked' && status === 'active') {
+      // D-03: single show() with parent chain replaces the old triple-show +
+      // first-active-substep check. show() is idempotent — repeating the same
+      // key is a no-op. The parents chain lets clear('task:X') auto-propagate
+      // to category and tab when the last task under that category is cleared.
       const redDot = useRedDot()
-      redDot.show(`task:${taskId}`)
-
-      // Check if this is the first active substep — also mark category and tab
-      const hasOtherActive = task.substeps.some(
-        (s, i) => i !== substepIdx && s.status === 'active'
-      )
-      if (!hasOtherActive) {
-        redDot.show(`category:${task.category}`)
-        redDot.show('tab:tasks')
-      }
+      redDot.show(`task:${taskId}`, [`category:${task.category}`, 'tab:tasks'])
     }
 
     const allDone = newSubsteps.every((s) => s.status === 'done')
