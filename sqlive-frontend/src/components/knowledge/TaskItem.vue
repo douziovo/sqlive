@@ -40,13 +40,8 @@
 import { computed } from 'vue'
 import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'
 import { useRedDot } from '@/composables/useRedDot'
+import { TASK_CATEGORY_COLORS } from '@/data/taskCategories'
 import RedDotBadge from './RedDotBadge.vue'
-
-const TASK_CATEGORY_COLORS: Record<string, string> = {
-  core: '#FFCC32',
-  'deep-dive': '#5188D6',
-  daily: '#C06FCF',
-}
 
 const props = defineProps<{
   task: KnowledgeTask

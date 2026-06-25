@@ -111,17 +111,17 @@ watch(() => props.data.triggerUnlockGlow, (val) => {
 }
 
 /* Status colours */
-.kg-node--mastered.kg-node--d1 { background: #dcfce7; border-color: #6ee7b7; color: #166534; }
-.kg-node--mastered.kg-node--d2 { background: #dbeafe; border-color: #93c5fd; color: #1e40af; }
-.kg-node--mastered.kg-node--d3 { background: #fce7f3; border-color: #f9a8d4; color: #9d174d; }
+.kg-node--mastered.kg-node--d1 { background: var(--node-mastered-d1-bg); border-color: var(--node-mastered-d1-border); color: var(--node-mastered-d1-text); }
+.kg-node--mastered.kg-node--d2 { background: var(--node-mastered-d2-bg); border-color: var(--node-mastered-d2-border); color: var(--node-mastered-d2-text); }
+.kg-node--mastered.kg-node--d3 { background: var(--node-mastered-d3-bg); border-color: var(--node-mastered-d3-border); color: var(--node-mastered-d3-text); }
 
-.kg-node--in-progress.kg-node--d1 { background: #fef3c7; border-color: #fcd34d; color: #92400e; }
-.kg-node--in-progress.kg-node--d2 { background: #e0e7ff; border-color: #a5b4fc; color: #3730a3; }
-.kg-node--in-progress.kg-node--d3 { background: #fce7f3; border-color: #f9a8d4; color: #831843; }
+.kg-node--in-progress.kg-node--d1 { background: var(--node-progress-d1-bg); border-color: var(--node-progress-d1-border); color: var(--node-progress-d1-text); }
+.kg-node--in-progress.kg-node--d2 { background: var(--node-progress-d2-bg); border-color: var(--node-progress-d2-border); color: var(--node-progress-d2-text); }
+.kg-node--in-progress.kg-node--d3 { background: var(--node-progress-d3-bg); border-color: var(--node-progress-d3-border); color: var(--node-progress-d3-text); }
 
-.kg-node--unlearned.kg-node--d1 { background: #f8fafc; border-color: #cbd5e1; color: #94a3b8; }
-.kg-node--unlearned.kg-node--d2 { background: #f8fafc; border-color: #cbd5e1; color: #94a3b8; }
-.kg-node--unlearned.kg-node--d3 { background: #f8fafc; border-color: #cbd5e1; color: #94a3b8; }
+.kg-node--unlearned.kg-node--d1 { background: var(--node-unlearned-bg); border-color: var(--node-unlearned-border); color: var(--node-unlearned-text); }
+.kg-node--unlearned.kg-node--d2 { background: var(--node-unlearned-bg); border-color: var(--node-unlearned-border); color: var(--node-unlearned-text); }
+.kg-node--unlearned.kg-node--d3 { background: var(--node-unlearned-bg); border-color: var(--node-unlearned-border); color: var(--node-unlearned-text); }
 
 .kg-node--locked {
   opacity: 0.45;

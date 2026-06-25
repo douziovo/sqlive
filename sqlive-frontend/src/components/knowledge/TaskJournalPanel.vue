@@ -102,6 +102,7 @@ import type { KnowledgeTopic } from '@/composables/useKnowledgeGraph'
 import type { KnowledgeTask, TaskSubstep } from '@/composables/useKnowledgeTasks'
 import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
 import { useRedDot } from '@/composables/useRedDot'
+import { TASK_CATEGORY_COLORS, TASK_CATEGORY_LABELS } from '@/data/taskCategories'
 import StepProgress from './StepProgress.vue'
 import RedDotBadge from './RedDotBadge.vue'
 
@@ -121,18 +122,6 @@ const emit = defineEmits<{
 }>()
 
 // ── Constants ───────────────────────────────────────────────────
-
-const TASK_CATEGORY_COLORS: Record<string, string> = {
-  core: '#FFCC32',
-  'deep-dive': '#5188D6',
-  daily: '#C06FCF',
-}
-
-const TASK_CATEGORY_LABELS: Record<string, string> = {
-  core: '核心路径',
-  'deep-dive': '深度学习',
-  daily: '每日练习',
-}
 
 const CATEGORY_TABS = ['core', 'deep-dive', 'daily'] as const
 
