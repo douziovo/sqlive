@@ -1,5 +1,5 @@
 <template>
-  <span v-if="show" class="red-dot-badge" />
+  <span v-if="show" class="red-dot-badge" role="status" aria-label="有新内容" />
 </template>
 
 <script setup lang="ts">
