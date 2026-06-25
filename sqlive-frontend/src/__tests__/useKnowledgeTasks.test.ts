@@ -194,6 +194,29 @@ describe('completeTask', () => {
   })
 })
 
+// ── tasksByTopic (IN-07/D-18: plain array, not computed) ─────────
+
+describe('tasksByTopic returns plain array (IN-07/D-18)', () => {
+  it('returns plain array (not computed) for matching topicId', () => {
+    const { addTask, tasksByTopic } = useKnowledgeTasks()
+    addTask({ topicId: 'joins', title: 'T1', notes: '', priority: 'low' })
+    addTask({ topicId: 'joins', title: 'T2', notes: '', priority: 'low' })
+    addTask({ topicId: 'other', title: 'T3', notes: '', priority: 'low' })
+    const result = tasksByTopic('joins')
+    expect(Array.isArray(result)).toBe(true)
+    expect(result.length).toBe(2)
+    expect(result[0].title).toBe('T1')
+    // No .value needed — plain array
+  })
+
+  it('returns empty array for unknown topicId', () => {
+    const { tasksByTopic } = useKnowledgeTasks()
+    const result = tasksByTopic('nonexistent')
+    expect(Array.isArray(result)).toBe(true)
+    expect(result.length).toBe(0)
+  })
+})
+
 // ── pendingCount ──────────────────────────────────────────────────
 
 describe('pendingCount', () => {
