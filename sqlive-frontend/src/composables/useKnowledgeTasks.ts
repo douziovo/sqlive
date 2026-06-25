@@ -187,8 +187,13 @@ export function useKnowledgeTasks() {
 
   // ── Derived helpers ──────────────────
 
-  function tasksByTopic(topicId: string) {
-    return computed(() => tasks.value.filter((t) => t.topicId === topicId))
+  // D-18 (IN-07): return plain array instead of computed. Previously
+  // returned computed(() => tasks.value.filter(...)) — caller (KnowledgeDetail)
+  // used .value inside another computed, creating a new inner computed on
+  // every re-evaluation that was never cleaned up (computed-in-computed leak).
+  // Caller now owns the memoization via its own computed wrapper.
+  function tasksByTopic(topicId: string): KnowledgeTask[] {
+    return tasks.value.filter((t) => t.topicId === topicId)
   }
 
   const pendingCount = computed(
