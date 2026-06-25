@@ -581,4 +581,95 @@ describe('useKnowledgeGraph', () => {
       expect(kg.xpData.value.level).toBe(3) // capped, not 4
     })
   })
+
+  // ── WR-01: getChapterProgress migrated from useKnowledgeTasks (D-05) ──
+  // New semantic: counts MASTERED TOPICS under chapter.categoryKey, divided by
+  // chapter.topicCount (from learningChapters.ts). Previously counted done tasks
+  // / task.length — mixed user-created task count with chapter-defined topicCount,
+  // producing >100% or understated progress.
+
+  describe('getChapterProgress (D-05 migration)', () => {
+    it('basics chapter counts only mastered basics-category topics', async () => {
+      // basics.topicCount = 6 (learningChapters.ts). mockGraphData has sql-basics
+      // and filtering in category='basics'. Mastering only sql-basics → completed=1.
+      localStorage.setItem('ai-mastered-topics', JSON.stringify(['sql-basics']))
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockGraphData)
+      })
+      const kg = useKnowledgeGraph()
+      await kg.fetchGraph()
+
+      const progress = kg.getChapterProgress('basics')
+      expect(progress.completed).toBe(1)
+      expect(progress.total).toBe(6)
+    })
+
+    it('unknown chapter returns 0/0', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockGraphData)
+      })
+      const kg = useKnowledgeGraph()
+      await kg.fetchGraph()
+
+      const progress = kg.getChapterProgress('nonexistent')
+      expect(progress.completed).toBe(0)
+      expect(progress.total).toBe(0)
+    })
+
+    it('returns 0/topicCount when graphData not loaded', () => {
+      // No fetchGraph call — graphData stays null
+      const kg = useKnowledgeGraph()
+
+      const progress = kg.getChapterProgress('basics')
+      expect(progress.completed).toBe(0)
+      expect(progress.total).toBe(6) // basics.topicCount from learningChapters.ts
+    })
+
+    it('query chapter counts mastered topics with category=query', async () => {
+      // query.topicCount = 4 (learningChapters.ts). mockGraphData has joins in
+      // category='query'. Mastering joins → completed=1.
+      localStorage.setItem('ai-mastered-topics', JSON.stringify(['joins']))
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockGraphData)
+      })
+      const kg = useKnowledgeGraph()
+      await kg.fetchGraph()
+
+      const progress = kg.getChapterProgress('query')
+      expect(progress.completed).toBe(1)
+      expect(progress.total).toBe(4)
+    })
+
+    it('does not count done tasks (semantic change from useKnowledgeTasks version)', async () => {
+      // Seed tasks localStorage with done tasks under basics chapter's taskCategories.
+      // useKnowledgeGraph doesn't read tasks — new semantic counts only mastered topics.
+      // With no mastered topics, completed=0 even if tasks are all done.
+      localStorage.setItem('ai-knowledge-tasks', JSON.stringify([{
+        id: 't1',
+        topicId: 'sql-basics',
+        title: 'Done task',
+        notes: '',
+        status: 'done',
+        priority: 'medium',
+        createdAt: new Date().toISOString(),
+        category: 'core',
+        substeps: [],
+        isPinned: false
+      }]))
+      // No mastered topics
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockGraphData)
+      })
+      const kg = useKnowledgeGraph()
+      await kg.fetchGraph()
+
+      const progress = kg.getChapterProgress('basics')
+      expect(progress.completed).toBe(0)
+      expect(progress.total).toBe(6)
+    })
+  })
 })
