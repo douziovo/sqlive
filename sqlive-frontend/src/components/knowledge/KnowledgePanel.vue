@@ -430,7 +430,8 @@ defineExpose({
   activeDifficulty,
   activeCategory,
   resetAllFilters,
-  handleNavigateToTopic
+  handleNavigateToTopic,
+  xpBarPercent
 })
 </script>
 

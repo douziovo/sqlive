@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
 import { useKnowledgeGraph, LEVEL_NAMES } from '@/composables/useKnowledgeGraph'
 
 const mockFetch = vi.fn()
@@ -715,6 +716,41 @@ describe('useKnowledgeGraph', () => {
       // Module-level cleared — a fresh instance reads 0, not a stale 1.
       const kg2 = useKnowledgeGraph()
       expect(kg2.progress.value.streak).toBe(0)
+    })
+  })
+
+  // ── WR-06: xpData.level clamp on load (D-10) ──────────────────
+  // Corrupted localStorage (e.g., level: 99 from manual edit or past bug)
+  // would break nextLevelXp / xpBarPercent numeric semantics. The watch with
+  // { immediate: true } clamps level to [0, LEVEL_NAMES.length - 1] on load.
+
+  describe('xpData level clamp (WR-06/D-10)', () => {
+    it('clamps level:99 to LEVEL_NAMES.length - 1 on load', async () => {
+      localStorage.setItem('ai-knowledge-xp', JSON.stringify({
+        totalXp: 100, level: 99, streak: 0, masteredLog: []
+      }))
+      const kg = useKnowledgeGraph()
+      // wait for immediate watch to fire + flush
+      await nextTick()
+      expect(kg.xpData.value.level).toBe(3) // LEVEL_NAMES.length - 1
+    })
+
+    it('clamps level:-5 to 0 on load', async () => {
+      localStorage.setItem('ai-knowledge-xp', JSON.stringify({
+        totalXp: 100, level: -5, streak: 0, masteredLog: []
+      }))
+      const kg = useKnowledgeGraph()
+      await nextTick()
+      expect(kg.xpData.value.level).toBe(0)
+    })
+
+    it('normal level 0-3 unchanged', async () => {
+      localStorage.setItem('ai-knowledge-xp', JSON.stringify({
+        totalXp: 750, level: 1, streak: 0, masteredLog: []
+      }))
+      const kg = useKnowledgeGraph()
+      await nextTick()
+      expect(kg.xpData.value.level).toBe(1)
     })
   })
 })
