@@ -139,7 +139,6 @@
               :topics="kg.graphData?.topics ?? []"
               :chapter-category-filter="chapterCategoryFilter"
               @complete-task="handleTaskComplete"
-              @pin-task="handlePinTask"
               @navigate-to-topic="handleNavigateToTopic"
             />
           </div>
@@ -230,7 +229,7 @@ const kg = useKnowledgeGraph({
 
 // WR-01 (D-05): chapter-progress function migrated to useKnowledgeGraph.
 // Chapter progress now reflects mastered topics (not done tasks) / topicCount.
-const { tasks: _tasksForMount, seedPresetTasksIfFirstRun } = useKnowledgeTasks()
+const { seedPresetTasksIfFirstRun } = useKnowledgeTasks()
 const { isVisible: isRedDotVisible, clear } = useRedDot()
 
 const showTaskTabDot = computed(() => isRedDotVisible('tab:tasks'))
@@ -398,10 +397,6 @@ function handleOpenChapter(chapterId: string): void {
     chapterCategoryFilter.value = chapter.taskCategories
   }
   activeTab.value = 'tasks'
-}
-
-function handlePinTask(taskId: string): void {
-  // pinTask is called within TaskJournalPanel; no additional action needed here
 }
 
 function handleNavigateToTopic(topicId: string): void {
