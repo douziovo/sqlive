@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="toast-pop">
-      <div v-if="visible" class="achievement-toast" :class="toastClass">
+      <div v-if="visible" class="achievement-toast" :class="toastClass" role="status" aria-live="polite">
         <span class="achievement-toast__icon">{{ icon }}</span>
         <div class="achievement-toast__body">
           <div class="achievement-toast__title">{{ title }}</div>
@@ -72,7 +72,7 @@ const toastClass = computed(() => {
   gap: 10px;
   padding: 12px 20px;
   border-radius: 14px;
-  background: linear-gradient(135deg, #1e293b, #334155);
+  background: var(--toast-gradient-default);
   color: white;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
   pointer-events: none;
@@ -80,16 +80,16 @@ const toastClass = computed(() => {
 }
 
 .achievement-toast--high-diff {
-  background: linear-gradient(135deg, #4c1d95, #7c3aed);
+  background: var(--toast-gradient-high-diff);
 }
 .achievement-toast--task {
-  background: linear-gradient(135deg, #059669, #10b981);
+  background: var(--toast-gradient-task);
 }
 .achievement-toast--electric {
-  background: linear-gradient(135deg, #92400e, #d97706);
+  background: var(--toast-gradient-electric);
 }
 .achievement-toast--fire {
-  background: linear-gradient(135deg, #991b1b, #dc2626);
+  background: var(--toast-gradient-fire);
 }
 
 .achievement-toast__icon {
