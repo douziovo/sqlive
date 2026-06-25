@@ -440,9 +440,9 @@ watch(
     await nextTick()
     const el = flowRef.value?.$el as HTMLElement | undefined
     const layouted = layoutNodes(displayNodes.value as any, props.edges, el, {
-      rankdir: 'LR',
-      ranksep: 200,
-      nodesep: 140,
+      rankdir: 'TB',
+      ranksep: 120,
+      nodesep: 80,
       marginx: 60,
       marginy: 60
     })
@@ -653,9 +653,9 @@ async function onPaneReady(): Promise<void> {
   await nextTick()
   const el = flowRef.value?.$el as HTMLElement | undefined
   const layouted = layoutNodes(displayNodes.value as any, props.edges, el, {
-    rankdir: 'LR',
-    ranksep: 200,
-    nodesep: 140
+    rankdir: 'TB',
+    ranksep: 120,
+    nodesep: 80
   })
   displayNodes.value = layouted as Node<KnowledgeNodeData>[]
 
