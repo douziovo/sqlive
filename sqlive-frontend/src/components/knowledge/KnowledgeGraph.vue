@@ -335,72 +335,84 @@ function edgeOpacityForZoom(zoom: number): number {
   return 0.18
 }
 
-const styledEdges = computed<Edge[]>(() => {
-  const baseOpacity = edgeOpacityForZoom(zoomLevel.value)
+// ── D-02: styledEdges cache (watch+ref pattern, computed stays pure) ──
+// Watch writes to styledEdgesCache; computed reads ref.value. Avoids cache
+// heuristic that lost reactivity to props.edges (CR-01). { immediate: true }
+// ensures cache is populated on mount before first render.
+const styledEdgesCache = ref<Edge[]>([])
 
-  // 计算 hover 时前驱/后继路径集合（仅一层）
-  let predSet = new Set<string>()
-  let succSet = new Set<string>()
-  if (hoveredNodeId.value) {
-    predSet = immediatePredecessors(hoveredNodeId.value)
-    succSet = immediateSuccessors(hoveredNodeId.value)
-  }
+watch(
+  [() => props.edges, () => edgeOpacityForZoom(zoomLevel.value), () => hoveredNodeId.value],
+  () => {
+    const baseOpacity = edgeOpacityForZoom(zoomLevel.value)
 
-  return props.edges.map((edge) => {
-    const sourceId = edge.source.replace(/^topic-/, '')
-    const targetId = edge.target.replace(/^topic-/, '')
+    // 计算 hover 时前驱/后继路径集合（仅一层）
+    let predSet = new Set<string>()
+    let succSet = new Set<string>()
+    if (hoveredNodeId.value) {
+      predSet = immediatePredecessors(hoveredNodeId.value)
+      succSet = immediateSuccessors(hoveredNodeId.value)
+    }
 
-    // 大陆连线：跨 category 的连线，更宽更明显
-    const srcData = nodeDataMap.value.get(sourceId)
-    const tgtData = nodeDataMap.value.get(targetId)
-    const isContinent = srcData && tgtData && srcData.category !== tgtData.category
+    styledEdgesCache.value = props.edges.map((edge) => {
+      const sourceId = edge.source.replace(/^topic-/, '')
+      const targetId = edge.target.replace(/^topic-/, '')
 
-    const isPred = hoveredNodeId.value && predSet.has(sourceId) && targetId === hoveredNodeId.value
-    const isSucc = hoveredNodeId.value && succSet.has(targetId) && sourceId === hoveredNodeId.value
+      // 大陆连线：跨 category 的连线，更宽更明显
+      const srcData = nodeDataMap.value.get(sourceId)
+      const tgtData = nodeDataMap.value.get(targetId)
+      const isContinent = srcData && tgtData && srcData.category !== tgtData.category
 
-    if (isSucc) {
-      return {
-        ...edge,
-        style: {
-          ...edge.style,
-          opacity: 1,
-          stroke: '#3b82f6',
-          strokeWidth: 2,
-          strokeDasharray: 'none',
-          filter: 'drop-shadow(0 0 5px rgba(59,130,246,0.5))'
+      const isPred = hoveredNodeId.value && predSet.has(sourceId) && targetId === hoveredNodeId.value
+      const isSucc = hoveredNodeId.value && succSet.has(targetId) && sourceId === hoveredNodeId.value
+
+      if (isSucc) {
+        return {
+          ...edge,
+          style: {
+            ...edge.style,
+            opacity: 1,
+            stroke: '#3b82f6',
+            strokeWidth: 2,
+            strokeDasharray: 'none',
+            filter: 'drop-shadow(0 0 5px rgba(59,130,246,0.5))'
+          }
         }
       }
-    }
 
-    if (isPred) {
-      return {
-        ...edge,
-        style: {
-          ...edge.style,
-          opacity: 1,
-          stroke: '#f59e0b',
-          strokeWidth: 2,
-          strokeDasharray: 'none',
-          filter: 'drop-shadow(0 0 5px rgba(245,158,11,0.5))'
+      if (isPred) {
+        return {
+          ...edge,
+          style: {
+            ...edge.style,
+            opacity: 1,
+            stroke: '#f59e0b',
+            strokeWidth: 2,
+            strokeDasharray: 'none',
+            filter: 'drop-shadow(0 0 5px rgba(245,158,11,0.5))'
+          }
         }
       }
-    }
 
-    // 默认：大陆宽虚线 / 前置边近透明 / 节点内部细虚线
-    const prereq = (edge as any).data?.isPrereq
-    return {
-      ...edge,
-      type: 'smoothstep',
-      style: {
-        ...edge.style,
-        opacity: isContinent ? baseOpacity * 1.2 : prereq ? 0.06 : baseOpacity,
-        stroke: isContinent ? '#94a3b8' : prereq ? '#e2e8f0' : '#cbd5e1',
-        strokeWidth: isContinent ? 2.5 : 1,
-        strokeDasharray: isContinent ? '8 4' : prereq ? '1 8' : '3 6'
+      // 默认：大陆宽虚线 / 前置边近透明 / 节点内部细虚线
+      const prereq = (edge as any).data?.isPrereq
+      return {
+        ...edge,
+        type: 'smoothstep',
+        style: {
+          ...edge.style,
+          opacity: isContinent ? baseOpacity * 1.2 : prereq ? 0.06 : baseOpacity,
+          stroke: isContinent ? '#94a3b8' : prereq ? '#e2e8f0' : '#cbd5e1',
+          strokeWidth: isContinent ? 2.5 : 1,
+          strokeDasharray: isContinent ? '8 4' : prereq ? '1 8' : '3 6'
+        }
       }
-    }
-  })
-})
+    })
+  },
+  { immediate: true }
+)
+
+const styledEdges = computed<Edge[]>(() => styledEdgesCache.value)
 
 // Sync displayNodes when props.nodes change, re-run layout
 watch(
