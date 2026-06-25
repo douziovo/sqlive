@@ -116,7 +116,7 @@ const showHistory = ref(false)
 
 // ── Task computeds ──────────────────────────────────────────────
 
-const topicTasks = computed(() => props.topic ? tasksByTopic(props.topic.id).value : [])
+const topicTasks = computed(() => props.topic ? tasksByTopic(props.topic.id) : [])
 
 const activeTopicTasks = computed(() => topicTasks.value.filter(t => t.status !== 'done'))
 

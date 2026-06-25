@@ -26,7 +26,7 @@ vi.mock('@/composables/useKnowledgeTasks', async () => {
       unpinTask: vi.fn(),
       getPinnedTask: { value: null },
       getChapterProgress: () => ({ completed: 0, total: 0 }),
-      tasksByTopic: () => ({ value: [] }),
+      tasksByTopic: () => [],
       pendingCount: { value: 0 },
       isOverdue: () => false,
       seedPresetTasksIfFirstRun: () => false
