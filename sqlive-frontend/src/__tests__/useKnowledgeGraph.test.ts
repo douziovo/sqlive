@@ -161,6 +161,49 @@ describe('useKnowledgeGraph', () => {
     expect(kg.graphData.value).toBeNull()
   })
 
+  // ── CR-03 fetchGraph response shape validation (D-04) ────────
+
+  it('fetchGraph with {} response does not set graphData', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) })
+
+    const kg = useKnowledgeGraph()
+    await kg.fetchGraph()
+
+    expect(kg.graphData.value).toBeNull()
+    expect(kg.nodes.value).toEqual([]) // nodes computed does not throw
+  })
+
+  it('fetchGraph with { topics: null } does not set graphData', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ topics: null }) })
+
+    const kg = useKnowledgeGraph()
+    await kg.fetchGraph()
+
+    expect(kg.graphData.value).toBeNull()
+  })
+
+  it('fetchGraph with { topics: "not-array" } does not set graphData', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ topics: 'not-array' }) })
+
+    const kg = useKnowledgeGraph()
+    await kg.fetchGraph()
+
+    expect(kg.graphData.value).toBeNull()
+  })
+
+  it('fetchGraph preserves previous valid graphData on malformed response', async () => {
+    // First fetch: valid
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockGraphData) })
+    const kg = useKnowledgeGraph()
+    await kg.fetchGraph()
+    expect(kg.graphData.value?.topics).toHaveLength(3)
+
+    // Second fetch: malformed — graphData should stay as previous valid
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) })
+    await kg.fetchGraph()
+    expect(kg.graphData.value?.topics).toHaveLength(3) // unchanged
+  })
+
   // ── inProgressTopics ─────────────────────────────────────────
 
   it('inProgressTopics detects keywords in SQL (case-insensitive)', async () => {
@@ -344,6 +387,41 @@ describe('useKnowledgeGraph', () => {
     for (let i = 30; i < 45; i++) kg.toggleMastered(`topic-${i}`)
     expect(kg.progress.value.level).toBe(3)
     expect(kg.progress.value.levelName).toBe('数据库传奇')
+  })
+
+  // ── CR-02 toggleMastered max-level guard (D-03) ──────────────
+
+  it('toggleMastered at max level returns leveledUp: false even when XP crosses threshold', async () => {
+    // Start at max level (3) with totalXp=3000. Mastering 'sql-basics' (+30 XP)
+    // pushes totalXp to 3030, newLevel=floor(3030/750)=4. Without the atMaxLevel
+    // guard, buggy code returns leveledUp=(4>3)=true — false positive confetti.
+    localStorage.setItem('ai-knowledge-xp', JSON.stringify({
+      totalXp: 3000, level: 3, streak: 0, masteredLog: []
+    }))
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockGraphData) })
+    const kg = useKnowledgeGraph()
+    await kg.fetchGraph()
+
+    expect(kg.xpData.value.level).toBe(3) // max level
+
+    const result = kg.toggleMastered('sql-basics') // +30 XP → 3030, newLevel=4
+    expect(result.leveledUp).toBe(false) // atMaxLevel guard blocks false positive
+    expect(kg.xpData.value.level).toBe(3) // unchanged, capped at max
+  })
+
+  it('toggleMastered below max level still levels up when crossing threshold', async () => {
+    // Start at level 0 with totalXp=720. Mastering 'sql-basics' (+30 XP) pushes
+    // totalXp to 750, newLevel=1. atMaxLevel guard should NOT block level-up here.
+    localStorage.setItem('ai-knowledge-xp', JSON.stringify({
+      totalXp: 720, level: 0, streak: 0, masteredLog: []
+    }))
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockGraphData) })
+    const kg = useKnowledgeGraph()
+    await kg.fetchGraph()
+
+    const result = kg.toggleMastered('sql-basics') // +30 XP → 750, newLevel=1
+    expect(result.leveledUp).toBe(true)
+    expect(kg.xpData.value.level).toBe(1)
   })
 
   it('combo/streak increments with each mastery, unmaster resets to 0', async () => {
