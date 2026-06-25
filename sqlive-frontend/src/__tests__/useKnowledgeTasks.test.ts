@@ -763,6 +763,26 @@ describe('seedPresetTasksIfFirstRun', () => {
     }
   })
 
+  // ── IN-02 (D-13): daily-drill dueDate uses local YYYY-MM-DD, not UTC ──
+  it('daily-drill tasks use local YYYY-MM-DD for dueDate (not UTC)', () => {
+    localStorage.removeItem('ai-knowledge-tasks-seeded')
+    const { tasks, seedPresetTasksIfFirstRun } = useKnowledgeTasks()
+    seedPresetTasksIfFirstRun()
+    const dailyTasks = tasks.value.filter((t) => t.category === 'daily')
+    expect(dailyTasks.length).toBeGreaterThan(0)
+    // Verify format: YYYY-MM-DD
+    for (const task of dailyTasks) {
+      if (task.dueDate) {
+        expect(/^\d{4}-\d{2}-\d{2}$/.test(task.dueDate)).toBe(true)
+      }
+    }
+    // Spot-check first daily task: dueDate should match local tomorrow, not UTC
+    const today = new Date()
+    today.setDate(today.getDate() + 1)
+    const expectedTomorrow = today.toLocaleDateString('en-CA')
+    expect(dailyTasks[0].dueDate).toBe(expectedTomorrow)
+  })
+
   it('seeds tasks across multiple categories (core, deep-dive, daily)', () => {
     localStorage.removeItem('ai-knowledge-tasks-seeded')
     const { tasks, seedPresetTasksIfFirstRun } = useKnowledgeTasks()

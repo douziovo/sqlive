@@ -31,7 +31,11 @@ export interface PresetTaskSeed {
 function daysFromNow(days: number): string {
   const d = new Date()
   d.setDate(d.getDate() + days)
-  return d.toISOString().slice(0, 10)
+  // D-13: toLocaleDateString('en-CA') returns 'YYYY-MM-DD' in local time.
+  // Previously used toISOString().slice(0, 10) which returns UTC date —
+  // off by 1 day in UTC+ timezones near midnight (e.g., UTC+8 23:00 local
+  // on June 25 + 1 day → June 26 23:00 local → toISOString returns June 27).
+  return d.toLocaleDateString('en-CA')
 }
 
 export const PRESET_TASKS: PresetTaskSeed[] = [
