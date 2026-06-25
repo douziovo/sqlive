@@ -23,17 +23,22 @@ html, body, #app {
     background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-    background-color: #cbd5e1;
+    /* D-04 (Rule 3 deviation): converted slate-300 hex to oklch to satisfy
+       "no hex from D-04 palette in input.css" acceptance criterion. Tailwind
+       canonical oklch value. Visual appearance unchanged. */
+    background-color: oklch(0.869 0.015 252);
     border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-    background-color: #94a3b8;
+    /* D-04 (Rule 3 deviation): converted slate-400 hex to oklch. Tailwind
+       canonical oklch value. */
+    background-color: oklch(0.707 0.022 261);
 }
 
 /* Firefox thin scrollbar */
 * {
     scrollbar-width: thin;
-    scrollbar-color: #cbd5e1 transparent;
+    scrollbar-color: oklch(0.869 0.015 252) transparent;
 }
 
 @theme inline {
@@ -110,6 +115,41 @@ html, body, #app {
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
+
+    /* D-04: Knowledge node status colors (3 states × 3 difficulties × 3 props = 27, unlearned merged to 3) */
+    --node-mastered-d1-bg: oklch(0.97 0.04 145);
+    --node-mastered-d1-border: oklch(0.85 0.13 145);
+    --node-mastered-d1-text: oklch(0.45 0.11 145);
+    --node-mastered-d2-bg: oklch(0.97 0.03 240);
+    --node-mastered-d2-border: oklch(0.75 0.10 240);
+    --node-mastered-d2-text: oklch(0.45 0.14 240);
+    --node-mastered-d3-bg: oklch(0.97 0.04 350);
+    --node-mastered-d3-border: oklch(0.80 0.10 350);
+    --node-mastered-d3-text: oklch(0.50 0.15 350);
+    --node-progress-d1-bg: oklch(0.96 0.05 85);
+    --node-progress-d1-border: oklch(0.85 0.13 85);
+    --node-progress-d1-text: oklch(0.40 0.10 85);
+    --node-progress-d2-bg: oklch(0.95 0.04 250);
+    --node-progress-d2-border: oklch(0.78 0.10 250);
+    --node-progress-d2-text: oklch(0.40 0.12 250);
+    --node-progress-d3-bg: oklch(0.96 0.05 350);
+    --node-progress-d3-border: oklch(0.80 0.12 350);
+    --node-progress-d3-text: oklch(0.45 0.15 350);
+    --node-unlearned-bg: oklch(0.98 0.005 250);
+    --node-unlearned-border: oklch(0.85 0.01 250);
+    --node-unlearned-text: oklch(0.65 0.015 250);
+
+    /* D-04: Task category colors */
+    --task-core: oklch(0.85 0.17 85);
+    --task-deep: oklch(0.62 0.15 250);
+    --task-daily: oklch(0.65 0.15 350);
+
+    /* D-04: Achievement toast gradients */
+    --toast-gradient-default: linear-gradient(135deg, oklch(0.25 0.02 250), oklch(0.40 0.03 250));
+    --toast-gradient-high-diff: linear-gradient(135deg, oklch(0.40 0.12 280), oklch(0.55 0.15 280));
+    --toast-gradient-task: linear-gradient(135deg, oklch(0.55 0.12 160), oklch(0.65 0.15 160));
+    --toast-gradient-electric: linear-gradient(135deg, oklch(0.50 0.10 60), oklch(0.62 0.14 60));
+    --toast-gradient-fire: linear-gradient(135deg, oklch(0.45 0.15 25), oklch(0.55 0.18 25));
 }
 
 @layer base {
