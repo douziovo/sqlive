@@ -672,4 +672,45 @@ describe('useKnowledgeGraph', () => {
       expect(progress.total).toBe(6)
     })
   })
+
+  // ── sessionStreak hoisted to module scope ────────
+  // Previously per-instance — instance A's toggleMastered incremented streak
+  // but instance B (e.g., LearningCompanion) read progress.value.streak = 0.
+  // Aligns with module-level singleton pattern (graphData/selectedNode).
+
+  describe('sessionStreak module singleton', () => {
+    it('sessionStreak is shared across useKnowledgeGraph() instances', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockGraphData)
+      })
+      const kg1 = useKnowledgeGraph()
+      await kg1.fetchGraph()
+      kg1.toggleMastered('sql-basics') // streak → 1
+      expect(kg1.progress.value.streak).toBe(1)
+
+      // Second instance reads same module-level sessionStreak.
+      // Before fix, kg2.progress.value.streak was 0 (per-instance bug).
+      const kg2 = useKnowledgeGraph()
+      expect(kg2.progress.value.streak).toBe(1)
+    })
+
+    it('resetSessionStreak clears module-level sessionStreak', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockGraphData)
+      })
+      const kg1 = useKnowledgeGraph()
+      await kg1.fetchGraph()
+      kg1.toggleMastered('sql-basics')
+      expect(kg1.progress.value.streak).toBe(1)
+
+      kg1.resetSessionStreak()
+      expect(kg1.progress.value.streak).toBe(0)
+
+      // Module-level cleared — a fresh instance reads 0, not a stale 1.
+      const kg2 = useKnowledgeGraph()
+      expect(kg2.progress.value.streak).toBe(0)
+    })
+  })
 })
