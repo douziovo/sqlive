@@ -244,7 +244,11 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
 
       // Check level up
       const newLevel = Math.floor(xpData.value.totalXp / XP_PER_LEVEL)
-      const leveledUp = newLevel > xpData.value.level
+      // D-03: max-level guard — mirrors addTaskXp (Phase 10 D-14) pattern.
+      // At max level the stored level cannot advance, so leveledUp must be false
+      // even when totalXp crosses the next threshold (prevents false confetti).
+      const atMaxLevel = xpData.value.level >= LEVEL_NAMES.length - 1
+      const leveledUp = !atMaxLevel && newLevel > xpData.value.level
       if (leveledUp) {
         xpData.value.level = Math.min(newLevel, LEVEL_NAMES.length - 1)
         levelUpTriggered.value = true
