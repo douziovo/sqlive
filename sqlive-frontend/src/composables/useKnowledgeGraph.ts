@@ -211,7 +211,15 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
     try {
       const resp = await fetch(`${KNOWLEDGE_API_BASE}/graph`)
       if (!resp.ok) return
-      graphData.value = await resp.json()
+      // D-04: shape validation — malformed 200 response (e.g., {}, { topics: null },
+      // CDN/proxy error page) must not crash nodes computed. Only assign graphData
+      // when the response has a non-null array `topics` field.
+      const data = await resp.json()
+      if (data && Array.isArray(data.topics)) {
+        graphData.value = data
+      }
+      // else: leave graphData as-is (null or previous valid data)
+      // — nodes computed's `if (!graphData.value) return []` handles empty state
     } catch {
       // Silently fail - non-critical feature
     }
