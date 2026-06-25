@@ -191,18 +191,10 @@ export function useKnowledgeTasks() {
   }
 
   // ── Chapter progress ────────────────
-
-  function getChapterProgress(chapterId: string): {
-    completed: number
-    total: number
-  } {
-    const chapter = getChapterById(chapterId)
-    if (!chapter) return { completed: 0, total: 0 }
-    const categories = chapter.taskCategories
-    const chapterTasks = tasks.value.filter((t) => categories.includes(t.category))
-    const completed = chapterTasks.filter((t) => t.status === 'done').length
-    return { completed, total: chapterTasks.length }
-  }
+  // WR-01 (D-05): chapter-progress function migrated to useKnowledgeGraph.
+  // New semantic: counts mastered topics (not done tasks) under
+  // chapter.categoryKey / chapter.topicCount. Callers (KnowledgePanel)
+  // now source it from kg (the useKnowledgeGraph return object).
 
   // ── Derived helpers ──────────────────
 
@@ -278,7 +270,6 @@ export function useKnowledgeTasks() {
     pinTask,
     unpinTask,
     getPinnedTask,
-    getChapterProgress,
     tasksByTopic,
     pendingCount,
     sortedByCategoryGroup,

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
 import { useKnowledgeGraph, LEVEL_NAMES } from '@/composables/useKnowledgeGraph'
 
 const mockFetch = vi.fn()
@@ -50,6 +51,10 @@ describe('useKnowledgeGraph', () => {
     const kg = useKnowledgeGraph()
     kg.graphData.value = null
     kg.selectedNode.value = null
+    // D-08: sessionStreak hoisted to module scope — reset between tests so
+    // 'combo/streak increments with each mastery' starts from 0 regardless of
+    // state left by prior toggleMastered calls in other tests.
+    kg.sessionStreak.value = 0
   })
 
   // ── D-02: LEVEL_NAMES exported as public constant ─────────────
@@ -579,6 +584,173 @@ describe('useKnowledgeGraph', () => {
       expect(result.xpGained).toBe(60)
       expect(result.leveledUp).toBe(false) // already at max level, no level-up triggered
       expect(kg.xpData.value.level).toBe(3) // capped, not 4
+    })
+  })
+
+  // ── WR-01: getChapterProgress migrated from useKnowledgeTasks (D-05) ──
+  // New semantic: counts MASTERED TOPICS under chapter.categoryKey, divided by
+  // chapter.topicCount (from learningChapters.ts). Previously counted done tasks
+  // / task.length — mixed user-created task count with chapter-defined topicCount,
+  // producing >100% or understated progress.
+
+  describe('getChapterProgress (D-05 migration)', () => {
+    it('basics chapter counts only mastered basics-category topics', async () => {
+      // basics.topicCount = 6 (learningChapters.ts). mockGraphData has sql-basics
+      // and filtering in category='basics'. Mastering only sql-basics → completed=1.
+      localStorage.setItem('ai-mastered-topics', JSON.stringify(['sql-basics']))
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockGraphData)
+      })
+      const kg = useKnowledgeGraph()
+      await kg.fetchGraph()
+
+      const progress = kg.getChapterProgress('basics')
+      expect(progress.completed).toBe(1)
+      expect(progress.total).toBe(6)
+    })
+
+    it('unknown chapter returns 0/0', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockGraphData)
+      })
+      const kg = useKnowledgeGraph()
+      await kg.fetchGraph()
+
+      const progress = kg.getChapterProgress('nonexistent')
+      expect(progress.completed).toBe(0)
+      expect(progress.total).toBe(0)
+    })
+
+    it('returns 0/topicCount when graphData not loaded', () => {
+      // No fetchGraph call — graphData stays null
+      const kg = useKnowledgeGraph()
+
+      const progress = kg.getChapterProgress('basics')
+      expect(progress.completed).toBe(0)
+      expect(progress.total).toBe(6) // basics.topicCount from learningChapters.ts
+    })
+
+    it('query chapter counts mastered topics with category=query', async () => {
+      // query.topicCount = 4 (learningChapters.ts). mockGraphData has joins in
+      // category='query'. Mastering joins → completed=1.
+      localStorage.setItem('ai-mastered-topics', JSON.stringify(['joins']))
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockGraphData)
+      })
+      const kg = useKnowledgeGraph()
+      await kg.fetchGraph()
+
+      const progress = kg.getChapterProgress('query')
+      expect(progress.completed).toBe(1)
+      expect(progress.total).toBe(4)
+    })
+
+    it('does not count done tasks (semantic change from useKnowledgeTasks version)', async () => {
+      // Seed tasks localStorage with done tasks under basics chapter's taskCategories.
+      // useKnowledgeGraph doesn't read tasks — new semantic counts only mastered topics.
+      // With no mastered topics, completed=0 even if tasks are all done.
+      localStorage.setItem('ai-knowledge-tasks', JSON.stringify([{
+        id: 't1',
+        topicId: 'sql-basics',
+        title: 'Done task',
+        notes: '',
+        status: 'done',
+        priority: 'medium',
+        createdAt: new Date().toISOString(),
+        category: 'core',
+        substeps: [],
+        isPinned: false
+      }]))
+      // No mastered topics
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockGraphData)
+      })
+      const kg = useKnowledgeGraph()
+      await kg.fetchGraph()
+
+      const progress = kg.getChapterProgress('basics')
+      expect(progress.completed).toBe(0)
+      expect(progress.total).toBe(6)
+    })
+  })
+
+  // ── WR-04: sessionStreak hoisted to module scope (D-08) ────────
+  // Previously per-instance — instance A's toggleMastered incremented streak
+  // but instance B (e.g., LearningCompanion) read progress.value.streak = 0.
+  // Aligns with D-02 module-level singleton pattern (graphData/selectedNode).
+
+  describe('sessionStreak module singleton (WR-04/D-08)', () => {
+    it('sessionStreak is shared across useKnowledgeGraph() instances', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockGraphData)
+      })
+      const kg1 = useKnowledgeGraph()
+      await kg1.fetchGraph()
+      kg1.toggleMastered('sql-basics') // streak → 1
+      expect(kg1.progress.value.streak).toBe(1)
+
+      // Second instance reads same module-level sessionStreak.
+      // Before D-08 fix, kg2.progress.value.streak was 0 (per-instance bug).
+      const kg2 = useKnowledgeGraph()
+      expect(kg2.progress.value.streak).toBe(1)
+    })
+
+    it('resetSessionStreak clears module-level sessionStreak', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockGraphData)
+      })
+      const kg1 = useKnowledgeGraph()
+      await kg1.fetchGraph()
+      kg1.toggleMastered('sql-basics')
+      expect(kg1.progress.value.streak).toBe(1)
+
+      kg1.resetSessionStreak()
+      expect(kg1.progress.value.streak).toBe(0)
+
+      // Module-level cleared — a fresh instance reads 0, not a stale 1.
+      const kg2 = useKnowledgeGraph()
+      expect(kg2.progress.value.streak).toBe(0)
+    })
+  })
+
+  // ── WR-06: xpData.level clamp on load (D-10) ──────────────────
+  // Corrupted localStorage (e.g., level: 99 from manual edit or past bug)
+  // would break nextLevelXp / xpBarPercent numeric semantics. The watch with
+  // { immediate: true } clamps level to [0, LEVEL_NAMES.length - 1] on load.
+
+  describe('xpData level clamp (WR-06/D-10)', () => {
+    it('clamps level:99 to LEVEL_NAMES.length - 1 on load', async () => {
+      localStorage.setItem('ai-knowledge-xp', JSON.stringify({
+        totalXp: 100, level: 99, streak: 0, masteredLog: []
+      }))
+      const kg = useKnowledgeGraph()
+      // wait for immediate watch to fire + flush
+      await nextTick()
+      expect(kg.xpData.value.level).toBe(3) // LEVEL_NAMES.length - 1
+    })
+
+    it('clamps level:-5 to 0 on load', async () => {
+      localStorage.setItem('ai-knowledge-xp', JSON.stringify({
+        totalXp: 100, level: -5, streak: 0, masteredLog: []
+      }))
+      const kg = useKnowledgeGraph()
+      await nextTick()
+      expect(kg.xpData.value.level).toBe(0)
+    })
+
+    it('normal level 0-3 unchanged', async () => {
+      localStorage.setItem('ai-knowledge-xp', JSON.stringify({
+        totalXp: 750, level: 1, streak: 0, masteredLog: []
+      }))
+      const kg = useKnowledgeGraph()
+      await nextTick()
+      expect(kg.xpData.value.level).toBe(1)
     })
   })
 })

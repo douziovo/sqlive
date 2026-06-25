@@ -154,7 +154,7 @@
                 v-for="chapter in CHAPTERS"
                 :key="chapter.id"
                 :chapter="chapter"
-                :progress="getChapterProgress(chapter.id)"
+                :progress="kg.getChapterProgress(chapter.id)"
                 :unlocked="kg.xpData.value.level >= chapter.rankRequired"
                 :current-level="kg.xpData.value.level"
                 @open-chapter="handleOpenChapter"
@@ -222,7 +222,9 @@ const kg = useKnowledgeGraph({
   }
 })
 
-const { tasks: _tasksForMount, getChapterProgress, seedPresetTasksIfFirstRun } = useKnowledgeTasks()
+// WR-01 (D-05): chapter-progress function migrated to useKnowledgeGraph.
+// Chapter progress now reflects mastered topics (not done tasks) / topicCount.
+const { tasks: _tasksForMount, seedPresetTasksIfFirstRun } = useKnowledgeTasks()
 const { isVisible: isRedDotVisible, clear } = useRedDot()
 
 const showTaskTabDot = computed(() => isRedDotVisible('tab:tasks'))
@@ -428,7 +430,8 @@ defineExpose({
   activeDifficulty,
   activeCategory,
   resetAllFilters,
-  handleNavigateToTopic
+  handleNavigateToTopic,
+  xpBarPercent
 })
 </script>
 

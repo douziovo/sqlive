@@ -276,4 +276,25 @@ describe('KnowledgePanel', () => {
     // Edge A→B should be hidden since B is dimmed
     expect(edges.length).toBe(0)
   })
+
+  // ── WR-06: xpBarPercent negative guard (D-10) ─────────────────
+  it('xpBarPercent returns 0 (not negative) with corrupted localStorage level:99', async () => {
+    // Corrupted localStorage: level=99, totalXp=100. Without guards:
+    //   currentLevelXp = 99 * 750 = 74250
+    //   xpInLevel = 100 - 74250 = -74150 → xpBarPercent would be ~-9873
+    // With D-10 guards (xpData.level clamp + Math.max on xpInLevel):
+    //   level clamps to 3 → currentLevelXp = 2250 → xpInLevel = 100-2250 = -2150
+    //   Math.max(0, -2150) = 0 → xpBarPercent = 0
+    localStorage.setItem('ai-knowledge-xp', JSON.stringify({
+      totalXp: 100, level: 99, streak: 0, masteredLog: []
+    }))
+    mockResolve()
+    const w = mount(KnowledgePanel, {
+      props: { isOpen: true },
+      global: { provide: mockProvide, stubs: { teleport: true } }
+    })
+    await vi.waitFor(() => (w.vm as any).xpBarPercent !== undefined, { timeout: 2000 })
+    await nextTick() // let immediate watch clamp level
+    expect((w.vm as any).xpBarPercent).toBe(0)
+  })
 })
