@@ -137,6 +137,7 @@
           <div v-if="activeTab === 'tasks'" class="knowledge-panel__body knowledge-panel__body--tasks">
             <TaskJournalPanel
               :topics="kg.graphData?.topics ?? []"
+              :chapter-category-filter="chapterCategoryFilter"
               @complete-task="handleTaskComplete"
               @pin-task="handlePinTask"
               @navigate-to-topic="handleNavigateToTopic"
@@ -179,7 +180,7 @@ import KnowledgeGraph from './KnowledgeGraph.vue'
 import TaskJournalPanel from './TaskJournalPanel.vue'
 import ChapterCard from './ChapterCard.vue'
 import RedDotBadge from './RedDotBadge.vue'
-import { CHAPTERS } from '@/data/learningChapters'
+import { CHAPTERS, getChapterById } from '@/data/learningChapters'
 import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
 import { useRedDot } from '@/composables/useRedDot'
 
@@ -197,6 +198,11 @@ const searchQuery = ref('')
 const activeDifficulty = ref<string | null>(null)
 const activeCategory = ref<string | null>(null)
 const activeTab = ref<'graph' | 'tasks' | 'chapters'>('graph')
+
+// D-09: chapter → multi-category filter wiring. Non-null array triggers
+// TaskJournalPanel union-list mode (displays tasks across all listed
+// categories). Cleared on manual category tab click (handleTabClick).
+const chapterCategoryFilter = ref<string[] | null>(null)
 
 interface FilterOption {
   key: string
@@ -375,15 +381,23 @@ function onDeselectNode(): void {
 
 function handleTabClick(tabName: 'graph' | 'tasks' | 'chapters'): void {
   activeTab.value = tabName
-  // Clear tab-level red dot when entering tasks tab
+  // Clear chapter filter on manual tab switch (D-09: user takes control)
   if (tabName === 'tasks') {
+    chapterCategoryFilter.value = null
     clear('tab:tasks')
   }
 }
 
 function handleOpenChapter(chapterId: string): void {
+  // D-09: wire multi-category filter — look up chapter.taskCategories
+  // (e.g., ['core', 'deep-dive'] for query/ddl/dml/advanced chapters).
+  // TaskJournalPanel enters union-list mode showing tasks across all
+  // listed categories. Cleared on manual category tab click.
+  const chapter = getChapterById(chapterId)
+  if (chapter) {
+    chapterCategoryFilter.value = chapter.taskCategories
+  }
   activeTab.value = 'tasks'
-  // categoryFilter set by chapter.id mapping will be wired in Task 3 (TaskJournalPanel integration)
 }
 
 function handlePinTask(taskId: string): void {

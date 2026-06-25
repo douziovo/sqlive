@@ -6,7 +6,7 @@
         v-for="cat in CATEGORY_TABS"
         :key="cat"
         class="journal__tab"
-        :class="{ 'journal__tab--active': activeCategory === cat }"
+        :class="{ 'journal__tab--active': !props.chapterCategoryFilter?.length && activeCategory === cat }"
         :style="activeCategory === cat ? { '--tab-accent': TASK_CATEGORY_COLORS[cat] } : {}"
         @click="handleCategoryChange(cat)"
       >
@@ -131,8 +131,10 @@ import RedDotBadge from './RedDotBadge.vue'
 const props = withDefaults(defineProps<{
   topics: KnowledgeTopic[]
   getTopicLabel?: (topicId: string) => string
+  chapterCategoryFilter?: string[]   // D-09a: union-list mode trigger
 }>(), {
-  getTopicLabel: undefined
+  getTopicLabel: undefined,
+  chapterCategoryFilter: undefined
 })
 
 const emit = defineEmits<{
@@ -164,34 +166,39 @@ const showFilteredOnly = ref(false)
 // D-06: controls TaskCreateForm visibility in empty-state right panel
 const showCreateForm = ref(false)
 
-// D-08: auto-select the first task when tasks arrive (or on mount if non-empty).
-// immediate: true covers the "tasks already present at setup" case; the watch
-// callback covers "tasks arrive later" (e.g., preset seeding fires after the
-// child's setup because Vue 3 fires child onMounted before parent onMounted).
-watch(
-  tasks,
-  (newTasks) => {
-    if (selectedTaskId.value === null && newTasks.length > 0) {
-      selectedTaskId.value = newTasks[0].id
-    }
-  },
-  { immediate: true }
-)
-
 // ── Computed ────────────────────────────────────────────────────
 
 const allTasks = computed(() => tasks.value)
 
 const filteredTasksByCategory = computed(() => {
-  let result = allTasks.value.filter((t) => t.category === activeCategory.value)
+  // D-09a: union-list mode — when chapterCategoryFilter is non-empty,
+  // return tasks across all listed categories (e.g., chapter 'query'
+  // has taskCategories=['core','deep-dive'] → show both).
+  const source = props.chapterCategoryFilter?.length
+    ? allTasks.value.filter((t) => props.chapterCategoryFilter!.includes(t.category))
+    : allTasks.value.filter((t) => t.category === activeCategory.value)
   // Pinned tasks always appear first
-  result = [...result].sort((a, b) => {
+  return [...source].sort((a, b) => {
     if (a.isPinned && !b.isPinned) return -1
     if (!a.isPinned && b.isPinned) return 1
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   })
-  return result
 })
+
+// D-08/D-09b: auto-select the first task. Watches filteredTasksByCategory
+// (not raw tasks) so that union-list mode (chapterCategoryFilter set)
+// selects the first task in the filtered union, not tasks[0]. Also covers
+// "tasks arrive later" (preset seeding fires after child setup because
+// Vue 3 fires child onMounted before parent onMounted).
+watch(
+  filteredTasksByCategory,
+  (filtered) => {
+    if (selectedTaskId.value === null && filtered.length > 0) {
+      selectedTaskId.value = filtered[0].id
+    }
+  },
+  { immediate: true }
+)
 
 const selectedTask = computed(() => {
   if (!selectedTaskId.value) return null
