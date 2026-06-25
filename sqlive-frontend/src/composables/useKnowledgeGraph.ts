@@ -57,6 +57,12 @@ export interface KnowledgeNodeData {
 const graphData = ref<KnowledgeGraphData | null>(null)
 const selectedNode = ref<string | null>(null)
 
+// sessionStreak hoisted to module scope (alongside graphData/selectedNode).
+// Previously per-instance — instance A's toggleMastered incremented streak
+// but instance B (e.g., LearningCompanion) read progress.value.streak = 0.
+// Aligns with module-level singleton pattern.
+const sessionStreak = ref(0)
+
 // ── LEVEL_NAMES exported as public constant ─────────────
 // ChapterCard / KnowledgePanel / LearningCompanion all import this single
 // source of truth — no more local LEVEL_NAMES copies that drift apart.
@@ -78,7 +84,7 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
     masteredLog: [] as string[]
   })
 
-  const sessionStreak = ref(0)
+  // sessionStreak is module-level — see declaration above.
   const levelUpTriggered = ref(false)
 
   function xpForDifficulty(difficulty: number): number {
