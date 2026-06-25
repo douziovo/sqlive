@@ -81,4 +81,31 @@ describe('useGraphViewport', () => {
     expect(viewportPos.x).toBe(10)
     expect(viewportPos.y).toBe(20)
   })
+
+  // ── IN-08 (D-19): NODE_HALF_W/H constants extracted ──
+
+  it('IN-08 focusNode uses NODE_HALF_W/H constants (60/30) for centering', () => {
+    // Structural regression guard: verifies constants are named and used in focusNode.
+    // If NODE_HALF_W is renamed or focusNode reverts to magic number, this fails.
+    const fs = require('fs')
+    const source = fs.readFileSync('src/composables/useGraphViewport.ts', 'utf-8')
+    expect(source).toContain('NODE_HALF_W = 60')
+    expect(source).toContain('NODE_HALF_H = 30')
+    expect(source).toContain('node.position.x + NODE_HALF_W')
+    expect(source).toContain('node.position.y + NODE_HALF_H')
+  })
+
+  it('IN-08 focusNode centers on node.position + 60/30 via constants', () => {
+    const setCenterMock = vi.fn()
+    const flowRef = ref<any>({ setCenter: setCenterMock })
+    const displayNodes = ref<Node<KnowledgeNodeData[]>>([makeNode('X', { x: 100, y: 50 })])
+    const { focusNode } = useGraphViewport(flowRef, displayNodes as any)
+
+    focusNode('X')
+    expect(setCenterMock).toHaveBeenCalled()
+    // node.position.x + NODE_HALF_W (60) = 160
+    expect(setCenterMock.mock.calls[0][0]).toBe(160)
+    // node.position.y + NODE_HALF_H (30) = 80
+    expect(setCenterMock.mock.calls[0][1]).toBe(80)
+  })
 })

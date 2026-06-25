@@ -3,6 +3,14 @@ import type { Ref } from 'vue'
 import type { Node } from '@vue-flow/core'
 import type { KnowledgeNodeData } from '@/composables/useKnowledgeGraph'
 
+// D-19 (IN-08): extracted node half-dimensions for centering math.
+// Node size assumed 120x60 (KnowledgeNode.vue width/height).
+// focusNode uses these directly; flyToNode uses +75/+20 offsets because
+// zoom 1.5 crops tighter and a slight upward shift keeps the node label
+// visible below the center crosshair (visual centering differs by zoom).
+const NODE_HALF_W = 60
+const NODE_HALF_H = 30
+
 /**
  * useGraphViewport — viewport persistence + flyToNode + fitView for the
  * knowledge graph.
@@ -86,7 +94,7 @@ export function useGraphViewport(
     const nodeId = `topic-${topicId}`
     const node = displayNodes.value.find((n) => n.id === nodeId)
     if (node) {
-      flowRef.value?.setCenter?.(node.position.x + 60, node.position.y + 30, { zoom: 1.2, duration: 400 })
+      flowRef.value?.setCenter?.(node.position.x + NODE_HALF_W, node.position.y + NODE_HALF_H, { zoom: 1.2, duration: 400 })
     }
   }
 
@@ -97,6 +105,9 @@ export function useGraphViewport(
     if (!node) return
 
     flowRef.value?.setCenter?.(
+      // D-19: zoom 1.5 crops tighter — +75/+20 shifts node slightly up-left
+      // so the label stays visible below center. focusNode (zoom 1.2) uses
+      // NODE_HALF_W/H directly; flyToNode's offset is intentionally different.
       node.position.x + 75,
       node.position.y + 20,
       { zoom: 1.5, duration: 600 }
