@@ -20,7 +20,7 @@
       <!-- Left: task list -->
       <div class="journal__list">
         <div v-if="filteredTasksByCategory.length === 0" class="journal__list-empty">
-          <span class="journal__list-empty-icon">📋</span>
+          <ClipboardList class="journal__list-empty-icon" :size="36" />
           <p>暂无{{ TASK_CATEGORY_LABELS[activeCategory] }}任务</p>
         </div>
         <button
@@ -89,8 +89,26 @@
 
       <!-- Right: empty state -->
       <div v-else class="journal__detail-empty">
-        <span class="journal__detail-empty-icon">📋</span>
-        <p>选择一个任务查看详情</p>
+        <!-- D-06: guided empty state when no tasks exist at all -->
+        <template v-if="allTasks.length === 0">
+          <ClipboardList class="journal__detail-empty-icon" :size="56" />
+          <p class="journal__detail-empty-heading">还没有学习任务</p>
+          <button class="journal__detail-empty-btn" @click="showCreateForm = true">
+            创建你的第一个任务
+          </button>
+          <TaskCreateForm
+            v-if="showCreateForm"
+            mode="global"
+            :topics="topics"
+            @create="handleGlobalCreate"
+            @cancel="showCreateForm = false"
+          />
+        </template>
+        <!-- D-08 will default-select first task in 10-03; this branch is rare post-D-08 -->
+        <template v-else>
+          <ClipboardList class="journal__detail-empty-icon" :size="56" />
+          <p>选择一个任务查看详情</p>
+        </template>
       </div>
     </div>
   </div>
@@ -98,12 +116,14 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { ClipboardList } from 'lucide-vue-next'
 import type { KnowledgeTopic } from '@/composables/useKnowledgeGraph'
 import type { KnowledgeTask, TaskSubstep } from '@/composables/useKnowledgeTasks'
 import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
 import { useRedDot } from '@/composables/useRedDot'
 import { TASK_CATEGORY_COLORS, TASK_CATEGORY_LABELS } from '@/data/taskCategories'
 import StepProgress from './StepProgress.vue'
+import TaskCreateForm from './TaskCreateForm.vue'
 import RedDotBadge from './RedDotBadge.vue'
 
 // ── Props / Emits ───────────────────────────────────────────────
@@ -133,7 +153,7 @@ const DIFFICULTY_LABELS: Record<number, string> = {
 
 // ── Composables ─────────────────────────────────────────────────
 
-const { tasks, updateTask, deleteTask, completeTask, updateSubstep, pinTask, isOverdue } = useKnowledgeTasks()
+const { tasks, addTask, updateTask, deleteTask, completeTask, updateSubstep, pinTask, isOverdue } = useKnowledgeTasks()
 const { isVisible: isRedDotVisible, clear: clearRedDot } = useRedDot()
 
 // ── Internal state ──────────────────────────────────────────────
@@ -141,6 +161,8 @@ const { isVisible: isRedDotVisible, clear: clearRedDot } = useRedDot()
 const selectedTaskId = ref<string | null>(null)
 const activeCategory = ref<'core' | 'deep-dive' | 'daily'>('core')
 const showFilteredOnly = ref(false)
+// D-06: controls TaskCreateForm visibility in empty-state right panel
+const showCreateForm = ref(false)
 
 // ── Computed ────────────────────────────────────────────────────
 
@@ -245,6 +267,20 @@ function handleNavigate(): void {
     emit('navigateToTopic', selectedTask.value.topicId)
   }
 }
+
+// D-06: handle TaskCreateForm submit from empty-state right panel
+function handleGlobalCreate(payload: {
+  title: string
+  dueDate?: string
+  notes: string
+  priority: KnowledgeTask['priority']
+  topicId: string
+  category?: KnowledgeTask['category']
+  substeps?: string[]
+}): void {
+  addTask(payload)
+  showCreateForm.value = false
+}
 </script>
 
 <style scoped>
@@ -317,8 +353,9 @@ function handleNavigate(): void {
 }
 
 .journal__list-empty-icon {
-  font-size: 36px;
-  opacity: 0.3;
+  /* D-06: SVG icon (ClipboardList) replaces 📋 emoji */
+  color: var(--muted-foreground);
+  opacity: 0.4;
 }
 
 .journal__list-item {
@@ -447,8 +484,33 @@ function handleNavigate(): void {
 }
 
 .journal__detail-empty-icon {
-  font-size: 56px;
-  opacity: 0.15;
+  /* D-06: SVG icon (ClipboardList) replaces 📋 emoji */
+  color: var(--muted-foreground);
+  opacity: 0.25;
+}
+
+.journal__detail-empty-heading {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 8px 0 0 0;
+}
+
+.journal__detail-empty-btn {
+  margin-top: 12px;
+  padding: 8px 20px;
+  border-radius: 6px;
+  border: none;
+  background: var(--primary);
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.journal__detail-empty-btn:hover {
+  opacity: 0.9;
 }
 
 /* ── Buttons ──────────────────────────────────────────────────── */

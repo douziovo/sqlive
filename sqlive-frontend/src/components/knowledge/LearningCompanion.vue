@@ -12,7 +12,7 @@
       <span v-if="pendingCount > 0" class="companion-badge">
         {{ pendingCount > 99 ? '99+' : pendingCount }}
       </span>
-      <div class="companion-ring-bg">📚</div>
+      <GraduationCap class="companion-ring-bg" :size="20" />
       <div class="companion-info">
         <span class="companion-count">{{ kgProgress.count }}/{{ kgProgress.total }}</span>
         <span class="companion-level">{{ kgProgress.levelName }}</span>
@@ -23,6 +23,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
+import { GraduationCap } from 'lucide-vue-next'
 import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
 import { useKnowledgeGraph } from '@/composables/useKnowledgeGraph'
 import ActiveTaskTracker from './ActiveTaskTracker.vue'
@@ -132,8 +133,11 @@ function handleTrackerNavigate(topicId: string): void {
 }
 
 .companion-ring-bg {
-  font-size: 18px;
-  line-height: 1;
+  /* D-05: SVG icon (GraduationCap) replaces emoji — color via primary token */
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .companion-info {
