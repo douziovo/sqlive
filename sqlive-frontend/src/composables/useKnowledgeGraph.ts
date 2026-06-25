@@ -1,6 +1,6 @@
 import type { Edge, Node } from '@vue-flow/core'
 import { useLocalStorage } from '@vueuse/core'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { KNOWLEDGE_API_BASE } from '@/config'
 import { getChapterById } from '@/data/learningChapters'
 import { layoutNodes } from './useDagreLayout'
@@ -83,6 +83,19 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
     streak: 0,
     masteredLog: [] as string[]
   })
+
+  // ── D-10: xpData.level clamp on load (WR-06) ─────────────────
+  // Corrupted localStorage (level: 99 / -5 from manual edit or past bug)
+  // breaks nextLevelXp / xpBarPercent numeric semantics. Immediate watch
+  // clamps level to [0, LEVEL_NAMES.length - 1] before any reader observes.
+  watch(
+    () => xpData.value.level,
+    (lvl) => {
+      const clamped = Math.max(0, Math.min(lvl, LEVEL_NAMES.length - 1))
+      if (clamped !== lvl) xpData.value.level = clamped
+    },
+    { immediate: true }
+  )
 
   // sessionStreak is module-level (D-08) — see declaration above.
   const levelUpTriggered = ref(false)
