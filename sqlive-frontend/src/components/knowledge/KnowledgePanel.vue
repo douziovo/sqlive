@@ -337,12 +337,9 @@ function handleTaskComplete(topicId: string): void {
 
   const xpGained = (kg.xpForDifficulty(topic.difficulty) ?? 30) + 10
 
-  // Double-award guard (per D-05: masteredLog pattern with task:{topicId} key)
-  const logKey = `task:${topicId}`
-  if (!kg.xpData.value.masteredLog.includes(logKey)) {
-    kg.xpData.value.totalXp += xpGained
-    kg.xpData.value.masteredLog.push(logKey)
-  }
+  // D-14: delegate XP award + level-up detection to the unified entry
+  // (no longer directly mutates kg.xpData.value.totalXp / masteredLog / level)
+  const result = kg.addTaskXp(topicId, xpGained)
 
   graphRef.value?.triggerSparkBurst?.(topicId)
 
@@ -351,11 +348,7 @@ function handleTaskComplete(topicId: string): void {
   showTaskToast.value = true
   setTimeout(() => { showTaskToast.value = false }, 2500)
 
-  // Check level up
-  const newLevel = Math.floor(kg.xpData.value.totalXp / kg.progress.value.xpForNext)
-  const leveledUp = newLevel > kg.xpData.value.level
-  if (leveledUp) {
-    kg.xpData.value.level = Math.min(newLevel, 3)
+  if (result.leveledUp) {
     showConfetti.value = true
     confettiKey.value++
     showLevelUpToast.value = true
