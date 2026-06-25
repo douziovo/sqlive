@@ -2,6 +2,7 @@ import type { Edge, Node } from '@vue-flow/core'
 import { useLocalStorage } from '@vueuse/core'
 import { computed, ref } from 'vue'
 import { KNOWLEDGE_API_BASE } from '@/config'
+import { getChapterById } from '@/data/learningChapters'
 import { layoutNodes } from './useDagreLayout'
 
 export interface KnowledgeTopic {
@@ -145,6 +146,23 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
 
     return result
   })
+
+  // ── WR-01 (D-05): getChapterProgress migrated from useKnowledgeTasks ──
+  // New semantic: counts MASTERED TOPICS under chapter.categoryKey, divided
+  // by chapter.topicCount (from learningChapters.ts). Aligns with D-02 single
+  // source of truth (masteredTopics + graphData owned by useKnowledgeGraph).
+  // Previously counted done tasks / task.length — mixed user-created task
+  // count with chapter-defined topicCount, producing >100% or understated progress.
+  function getChapterProgress(chapterId: string): { completed: number; total: number } {
+    const chapter = getChapterById(chapterId)
+    if (!chapter) return { completed: 0, total: 0 }
+    if (!graphData.value) return { completed: 0, total: chapter.topicCount }
+    const mastered = new Set(masteredTopics.value)
+    const completed = graphData.value.topics.filter(
+      (t) => t.category === chapter.categoryKey && mastered.has(t.id)
+    ).length
+    return { completed, total: chapter.topicCount }
+  }
 
   function getNodeStatus(topicId: string): 'mastered' | 'in-progress' | 'unlearned' {
     if (masteredTopics.value.includes(topicId)) return 'mastered'
@@ -336,6 +354,7 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
     progress,
     inProgressTopics,
     getNodeStatus,
+    getChapterProgress,
     fetchGraph,
     toggleMastered,
     addTaskXp,
