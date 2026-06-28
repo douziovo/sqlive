@@ -102,6 +102,18 @@ public class SqlExecutionService {
 			payload.setTriggers(metadataExtractor.extractTriggers(jdbc));
 			payload.setForeignKeys(metadataExtractor.extractForeignKeys(jdbc));
 
+			// populate canonicalStatements with 1:1 mapping from parsed statements.
+			// Char offsets match JS String.prototype.substring (UTF-16 code unit indices).
+			List<SqlResponse.CanonicalStatement> canonical = statements.stream()
+					.map(s -> {
+						SqlResponse.CanonicalStatement cs = new SqlResponse.CanonicalStatement();
+						cs.setStart(s.startPos());
+						cs.setEnd(s.endPos());
+						return cs;
+					})
+					.toList();
+			payload.setCanonicalStatements(canonical);
+
 			ExecutionMetadata meta = new ExecutionMetadata();
 			meta.setDurationMs(durationMs);
 			meta.setStatementCount(statementCount);
