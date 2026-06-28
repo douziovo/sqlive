@@ -82,4 +82,16 @@ class SqlControllerValidationTest {
 		assertNotNull(resp.getBody());
 		assertTrue(resp.getBody().isSuccess());
 	}
+
+	@Test
+	void shouldRejectEmptyDbName() {
+		SqlRequest req = new SqlRequest();
+		req.setSql("SELECT 1;");
+		req.setDbName("");  // empty string — fails {1,64} but currently passes {0,64}
+
+		ResponseEntity<SqlResponse> resp = post(req);
+		assertNotNull(resp.getBody());
+		assertFalse(resp.getBody().isSuccess());
+		assertTrue(resp.getBody().getError().getMessage().contains("dbName must be 1-64"));
+	}
 }
