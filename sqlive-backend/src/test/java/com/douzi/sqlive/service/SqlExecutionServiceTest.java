@@ -1170,4 +1170,24 @@ class SqlExecutionServiceTest {
 		assertFalse(r.isSuccess());
 		assertEquals(3, r.getError().getLine(), "ATTACH on line 3 after two blank lines");
 	}
+
+	// ============================================================
+	//  D-03b: canonicalStatements payload population
+	// ============================================================
+
+	@Test
+	void shouldPopulateCanonicalStatementsWithCharOffsets() {
+		SqlResponse r = service.execute("SELECT 1; SELECT 2;", db("canonical"), true);
+		assertTrue(r.isSuccess());
+		assertNotNull(r.getData().getCanonicalStatements(),
+				"canonicalStatements must be populated by SqlExecutionService.execute()");
+		assertEquals(2, r.getData().getCanonicalStatements().size(),
+				"1:1 mapping with parsed statements");
+		assertEquals(0, r.getData().getCanonicalStatements().get(0).getStart());
+		assertEquals(9, r.getData().getCanonicalStatements().get(0).getEnd(),
+				"end == parser endPos (cursor after first ';')");
+		assertEquals(10, r.getData().getCanonicalStatements().get(1).getStart());
+		assertEquals(19, r.getData().getCanonicalStatements().get(1).getEnd(),
+				"end == script.length() for the trailing statement");
+	}
 }
