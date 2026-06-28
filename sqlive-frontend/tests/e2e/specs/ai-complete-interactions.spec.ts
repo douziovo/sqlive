@@ -2,13 +2,15 @@ import {expect, gotoApp, test} from '../fixtures/sql-editor.fixture';
 
 test.describe('AI Complete Interactions', () => {
     test.beforeEach(async ({page}) => {
-        // Mock all AI API endpoints
-        await page.route('**/api/ai/**', (route) => {
+        // Mock all AI API endpoints — dispatch by AiChatRequest.mode field (D-05a).
+        // SSE /chat retained with precise URL match (D-05d); dead /suggest branch
+        // removed (D-05b); fixedCode field aligned with backend DTO (D-05c).
+        await page.route('**/api/ai/**', async (route) => {
             const url = route.request().url();
 
-            if (url.includes('/chat')) {
-                // SSE streaming response
-                route.fulfill({
+            // SSE /chat — D-05d retained (precise URL match)
+            if (url.endsWith('/api/ai/chat')) {
+                return route.fulfill({
                     status: 200,
                     contentType: 'text/event-stream',
                     body: [
@@ -22,71 +24,62 @@ test.describe('AI Complete Interactions', () => {
                         '',
                     ].join('\n'),
                 });
-            } else if (url.includes('/analyze')) {
-                route.fulfill({
-                    status: 200,
-                    contentType: 'application/json',
-                    body: JSON.stringify({
-                        success: true,
-                        data: {
-                            content: 'Analysis: Your query has a syntax error on line 3. Missing comma.',
-                            summary: 'Syntax error detected',
-                        },
-                    }),
-                });
-            } else if (url.includes('/fix')) {
-                route.fulfill({
-                    status: 200,
-                    contentType: 'application/json',
-                    body: JSON.stringify({
-                        success: true,
-                        data: {
-                            content: 'Fixed your SQL.',
-                            fixedCode: 'SELECT * FROM departments ORDER BY name;',
-                        },
-                    }),
-                });
-            } else if (url.includes('/explain')) {
-                route.fulfill({
-                    status: 200,
-                    contentType: 'application/json',
-                    body: JSON.stringify({
-                        success: true,
-                        data: {
-                            content: 'This query selects all columns from the departments table.',
-                            summary: 'Simple SELECT query',
-                        },
-                    }),
-                });
-            } else if (url.includes('/optimize')) {
-                route.fulfill({
-                    status: 200,
-                    contentType: 'application/json',
-                    body: JSON.stringify({
-                        success: true,
-                        data: {
-                            content: 'Optimized query using index hint.',
-                            optimizedCode: 'SELECT * FROM departments INDEXED BY idx_dept_name WHERE name > "A";',
-                        },
-                    }),
-                });
-            } else if (url.includes('/suggest')) {
-                route.fulfill({
-                    status: 200,
-                    contentType: 'application/json',
-                    body: JSON.stringify({
-                        success: true,
-                        data: {
-                            content: 'Suggested improvements: Add LIMIT clause, use specific columns instead of *.',
-                        },
-                    }),
-                });
-            } else {
-                route.fulfill({
-                    status: 200,
-                    contentType: 'application/json',
-                    body: JSON.stringify({success: true, data: {content: 'Mock AI response.'}}),
-                });
+            }
+
+            // Non-streaming endpoints — dispatch by AiChatRequest.mode field (D-05a)
+            // Pitfall 5: postData() returns null for empty bodies; guard with || '{}'.
+            const body = JSON.parse(route.request().postData() || '{}');
+            switch (body.mode) {
+                case 'analyze-error':
+                    return route.fulfill({
+                        status: 200,
+                        contentType: 'application/json',
+                        body: JSON.stringify({
+                            success: true,
+                            data: {
+                                content: 'Analysis: Your query has a syntax error on line 3. Missing comma.',
+                                summary: 'Syntax error detected',
+                            },
+                        }),
+                    });
+                case 'fix-code':
+                    return route.fulfill({
+                        status: 200,
+                        contentType: 'application/json',
+                        body: JSON.stringify({
+                            success: true,
+                            data: {
+                                content: 'Fixed your SQL.',
+                                fixedCode: 'SELECT * FROM departments ORDER BY name;',
+                            },
+                        }),
+                    });
+                case 'explain':
+                    return route.fulfill({
+                        status: 200,
+                        contentType: 'application/json',
+                        body: JSON.stringify({
+                            success: true,
+                            data: {
+                                content: 'This query selects all columns from the departments table.',
+                                summary: 'Simple SELECT query',
+                            },
+                        }),
+                    });
+                case 'optimize':
+                    return route.fulfill({
+                        status: 200,
+                        contentType: 'application/json',
+                        body: JSON.stringify({
+                            success: true,
+                            data: {
+                                content: 'Optimized query using index hint.',
+                                fixedCode: 'SELECT * FROM departments INDEXED BY idx_dept_name WHERE name > "A";',
+                            },
+                        }),
+                    });
+                default:
+                    return route.fulfill({status: 400, body: `Unknown mode: ${body.mode}`});
             }
         });
 
