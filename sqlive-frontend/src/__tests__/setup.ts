@@ -3,25 +3,31 @@
 // Polyfill DOM APIs that monaco-editor calls during ESM module initialization
 // Must run before any test file imports (vitest setupFiles guarantees this)
 if (!('queryCommandSupported' in document)) {
-  Object.defineProperty(document, 'queryCommandSupported', {
-    value: (_cmd: string) => false,
-    writable: false,
-    configurable: true
-  })
+    Object.defineProperty(document, 'queryCommandSupported', {
+        value: (_cmd: string) => false,
+        writable: false,
+        configurable: true
+    })
 }
 
 // Polyfill ResizeObserver for VueFlow/jsdom compatibility
 if (typeof globalThis.ResizeObserver === 'undefined') {
-  globalThis.ResizeObserver = class ResizeObserver {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  }
+    globalThis.ResizeObserver = class ResizeObserver {
+        observe() {
+        }
+
+        unobserve() {
+        }
+
+        disconnect() {
+        }
+    }
 }
 
 // Polyfill scrollIntoView for jsdom (not implemented)
 if (!('scrollIntoView' in Element.prototype)) {
-  Element.prototype.scrollIntoView = () => {}
+    Element.prototype.scrollIntoView = () => {
+    }
 }
 
 // No default fetch mock — tests that need fetch must explicitly mock it

@@ -19,9 +19,11 @@ html, body, #app {
     width: 6px;
     height: 6px;
 }
+
 ::-webkit-scrollbar-track {
     background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
     /* D-04 (Rule 3 deviation): converted slate-300 hex to oklch to satisfy
        "no hex from D-04 palette in input.css" acceptance criterion. Tailwind
@@ -29,6 +31,7 @@ html, body, #app {
     background-color: oklch(0.869 0.015 252);
     border-radius: 3px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
     /* D-04 (Rule 3 deviation): converted slate-400 hex to oklch. Tailwind
        canonical oklch value. */
@@ -153,44 +156,49 @@ html, body, #app {
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
+    * {
+        @apply border-border outline-ring/50;
     }
-  body {
-    @apply bg-background text-foreground;
+
+    body {
+        @apply bg-background text-foreground;
     }
 }
 
 /* Prevent splitpanes slide-in animation on initial page load */
 .splitpanes.no-animate .splitpanes__pane {
-  transition: none !important;
+    transition: none !important;
 }
 
 /* Splitpanes splitter customization */
 .splitpanes.default-theme .splitpanes__splitter {
-  background-color: var(--border);
-  transition: background-color 0.2s ease;
-  position: relative;
+    background-color: var(--border);
+    transition: background-color 0.2s ease;
+    position: relative;
 }
+
 .splitpanes.default-theme .splitpanes__splitter:hover {
-  background-color: color-mix(in srgb, var(--primary) 30%, transparent);
+    background-color: color-mix(in srgb, var(--primary) 30%, transparent);
 }
+
 .splitpanes.default-theme .splitpanes__splitter:active {
-  background-color: var(--primary);
+    background-color: var(--primary);
 }
+
 .splitpanes.default-theme .splitpanes__splitter::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 4px;
-  height: 32px;
-  border-radius: 4px;
-  background: var(--muted-foreground);
-  opacity: 0;
-  transition: opacity 0.2s ease;
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 4px;
+    height: 32px;
+    border-radius: 4px;
+    background: var(--muted-foreground);
+    opacity: 0;
+    transition: opacity 0.2s ease;
 }
+
 .splitpanes.default-theme .splitpanes__splitter:hover::after {
-  opacity: 0.6;
+    opacity: 0.6;
 }

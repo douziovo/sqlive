@@ -1,7 +1,7 @@
-import { computed, getCurrentInstance, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import type { ComputedRef, Ref } from 'vue'
-import type { Node } from '@vue-flow/core'
-import type { KnowledgeNodeData } from '@/composables/useKnowledgeGraph'
+import type {ComputedRef, Ref} from 'vue'
+import {computed, getCurrentInstance, nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
+import type {Node} from '@vue-flow/core'
+import type {KnowledgeNodeData} from '@/composables/useKnowledgeGraph'
 
 /**
  * useGraphSearch — Ctrl+F search bar + match navigation for the knowledge graph.
@@ -24,139 +24,139 @@ import type { KnowledgeNodeData } from '@/composables/useKnowledgeGraph'
  * can be unit-tested outside a component setup without Vue warnings.
  */
 export function useGraphSearch(
-  flowRef: Ref<any>,
-  displayNodes: Ref<Node<KnowledgeNodeData>[]>,
-  opts?: { onResetView?: () => void }
+    flowRef: Ref<any>,
+    displayNodes: Ref<Node<KnowledgeNodeData>[]>,
+    opts?: { onResetView?: () => void }
 ): {
-  showSearch: Ref<boolean>
-  searchQuery: Ref<string>
-  matchNodes: ComputedRef<Node<KnowledgeNodeData>[]>
-  matchCount: ComputedRef<number>
-  currentIndex: ComputedRef<number>
-  navigateMatch: (dir: 1 | -1) => void
-  onGlobalKeydown: (e: KeyboardEvent) => void
-  closeSearch: () => void
+    showSearch: Ref<boolean>
+    searchQuery: Ref<string>
+    matchNodes: ComputedRef<Node<KnowledgeNodeData>[]>
+    matchCount: ComputedRef<number>
+    currentIndex: ComputedRef<number>
+    navigateMatch: (dir: 1 | -1) => void
+    onGlobalKeydown: (e: KeyboardEvent) => void
+    closeSearch: () => void
 } {
-  const showSearch = ref(false)
-  const searchQuery = ref('')
-  const matchIndex = ref(0)
-  const previousViewport = ref<{ x: number; y: number; zoom: number } | null>(null)
+    const showSearch = ref(false)
+    const searchQuery = ref('')
+    const matchIndex = ref(0)
+    const previousViewport = ref<{ x: number; y: number; zoom: number } | null>(null)
 
-  const matchNodes = computed(() => {
-    if (!searchQuery.value) return [] as Node<KnowledgeNodeData>[]
-    const q = searchQuery.value.toLowerCase()
-    return displayNodes.value.filter((node) =>
-      node.data.label.toLowerCase().includes(q) ||
-      (node.data.description || '').toLowerCase().includes(q)
-    )
-  })
-
-  const matchCount = computed(() => matchNodes.value.length)
-
-  const currentIndex = computed(() => {
-    if (!searchQuery.value || matchCount.value === 0) return -1
-    return matchIndex.value
-  })
-
-  function restoreViewport(): void {
-    if (previousViewport.value) {
-      flowRef.value?.setViewport?.(previousViewport.value, { duration: 200 })
-      previousViewport.value = null
-    }
-  }
-
-  function closeSearch(): void {
-    showSearch.value = false
-    searchQuery.value = ''
-    matchIndex.value = 0
-    restoreViewport()
-  }
-
-  function centerOnMatch(index: number): void {
-    if (matchNodes.value.length === 0 || index < 0 || index >= matchNodes.value.length) return
-    const node = matchNodes.value[index]
-    if (node) {
-      flowRef.value?.setCenter?.(node.position.x + 60, node.position.y + 30, { zoom: 1.2, duration: 300 })
-    }
-  }
-
-  function navigateMatch(dir: 1 | -1): void {
-    const matches = matchNodes.value
-    if (matches.length === 0) return
-    matchIndex.value = (matchIndex.value + dir + matches.length) % matches.length
-    centerOnMatch(matchIndex.value)
-  }
-
-  function onGlobalKeydown(e: KeyboardEvent): void {
-    // Escape closes search regardless of focus target (keyboard-only users need this)
-    if (e.key === 'Escape' && showSearch.value) {
-      e.preventDefault()
-      e.stopPropagation()
-      closeSearch()
-      return
-    }
-
-    // T-10-12 / D-12: only intercept Ctrl+F / Ctrl+0 when focus is not in input/textarea.
-    // D-15 (IN-04): use instanceof type guard instead of `as HTMLElement` cast —
-    // e.target can be Document (no focused element), in which case tagName is
-    // undefined. The cast was a type lie; instanceof correctly returns false
-    // for Document, and the compound condition does not early-return (Document
-    // is not input/textarea), so Ctrl+F/Ctrl+0 still proceed.
-    if (e.target instanceof HTMLElement && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return
-
-    // D-12: Ctrl+0 resets view (keyboard equivalent of dblclick) — same guard as Ctrl+F.
-    // Decoupled from onPaneDblClick: caller injects the reset callback via opts.
-    if ((e.ctrlKey || e.metaKey) && e.key === '0') {
-      e.preventDefault()
-      e.stopPropagation()
-      opts?.onResetView?.()
-      return
-    }
-
-    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-      e.preventDefault()
-      e.stopPropagation()
-      // D-14 (IN-03): capture viewport BEFORE showSearch.value = true. If
-      // flowRef is null (composable mounted before VueFlow), previousViewport
-      // stays null and closeSearch handles gracefully via restoreViewport's
-      // `if (previousViewport.value)` guard.
-      const vp = flowRef.value?.getViewport?.()
-      if (vp) {
-        previousViewport.value = vp
-      }
-      showSearch.value = true
-    }
-  }
-
-  watch(searchQuery, (val) => {
-    if (val) {
-      matchIndex.value = 0
-      nextTick(() => centerOnMatch(0))
-    } else {
-      matchIndex.value = 0
-    }
-  })
-
-  // ── Lifecycle (guarded so composable is unit-testable) ───────
-
-  const instance = getCurrentInstance()
-  if (instance) {
-    onMounted(() => {
-      document.addEventListener('keydown', onGlobalKeydown, true)
+    const matchNodes = computed(() => {
+        if (!searchQuery.value) return [] as Node<KnowledgeNodeData>[]
+        const q = searchQuery.value.toLowerCase()
+        return displayNodes.value.filter((node) =>
+            node.data.label.toLowerCase().includes(q) ||
+            (node.data.description || '').toLowerCase().includes(q)
+        )
     })
-    onUnmounted(() => {
-      document.removeEventListener('keydown', onGlobalKeydown, true)
-    })
-  }
 
-  return {
-    showSearch,
-    searchQuery,
-    matchNodes,
-    matchCount,
-    currentIndex,
-    navigateMatch,
-    onGlobalKeydown,
-    closeSearch
-  }
+    const matchCount = computed(() => matchNodes.value.length)
+
+    const currentIndex = computed(() => {
+        if (!searchQuery.value || matchCount.value === 0) return -1
+        return matchIndex.value
+    })
+
+    function restoreViewport(): void {
+        if (previousViewport.value) {
+            flowRef.value?.setViewport?.(previousViewport.value, {duration: 200})
+            previousViewport.value = null
+        }
+    }
+
+    function closeSearch(): void {
+        showSearch.value = false
+        searchQuery.value = ''
+        matchIndex.value = 0
+        restoreViewport()
+    }
+
+    function centerOnMatch(index: number): void {
+        if (matchNodes.value.length === 0 || index < 0 || index >= matchNodes.value.length) return
+        const node = matchNodes.value[index]
+        if (node) {
+            flowRef.value?.setCenter?.(node.position.x + 60, node.position.y + 30, {zoom: 1.2, duration: 300})
+        }
+    }
+
+    function navigateMatch(dir: 1 | -1): void {
+        const matches = matchNodes.value
+        if (matches.length === 0) return
+        matchIndex.value = (matchIndex.value + dir + matches.length) % matches.length
+        centerOnMatch(matchIndex.value)
+    }
+
+    function onGlobalKeydown(e: KeyboardEvent): void {
+        // Escape closes search regardless of focus target (keyboard-only users need this)
+        if (e.key === 'Escape' && showSearch.value) {
+            e.preventDefault()
+            e.stopPropagation()
+            closeSearch()
+            return
+        }
+
+        // T-10-12 / D-12: only intercept Ctrl+F / Ctrl+0 when focus is not in input/textarea.
+        // D-15 (IN-04): use instanceof type guard instead of `as HTMLElement` cast —
+        // e.target can be Document (no focused element), in which case tagName is
+        // undefined. The cast was a type lie; instanceof correctly returns false
+        // for Document, and the compound condition does not early-return (Document
+        // is not input/textarea), so Ctrl+F/Ctrl+0 still proceed.
+        if (e.target instanceof HTMLElement && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return
+
+        // D-12: Ctrl+0 resets view (keyboard equivalent of dblclick) — same guard as Ctrl+F.
+        // Decoupled from onPaneDblClick: caller injects the reset callback via opts.
+        if ((e.ctrlKey || e.metaKey) && e.key === '0') {
+            e.preventDefault()
+            e.stopPropagation()
+            opts?.onResetView?.()
+            return
+        }
+
+        if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+            e.preventDefault()
+            e.stopPropagation()
+            // D-14 (IN-03): capture viewport BEFORE showSearch.value = true. If
+            // flowRef is null (composable mounted before VueFlow), previousViewport
+            // stays null and closeSearch handles gracefully via restoreViewport's
+            // `if (previousViewport.value)` guard.
+            const vp = flowRef.value?.getViewport?.()
+            if (vp) {
+                previousViewport.value = vp
+            }
+            showSearch.value = true
+        }
+    }
+
+    watch(searchQuery, (val) => {
+        if (val) {
+            matchIndex.value = 0
+            nextTick(() => centerOnMatch(0))
+        } else {
+            matchIndex.value = 0
+        }
+    })
+
+    // ── Lifecycle (guarded so composable is unit-testable) ───────
+
+    const instance = getCurrentInstance()
+    if (instance) {
+        onMounted(() => {
+            document.addEventListener('keydown', onGlobalKeydown, true)
+        })
+        onUnmounted(() => {
+            document.removeEventListener('keydown', onGlobalKeydown, true)
+        })
+    }
+
+    return {
+        showSearch,
+        searchQuery,
+        matchNodes,
+        matchCount,
+        currentIndex,
+        navigateMatch,
+        onGlobalKeydown,
+        closeSearch
+    }
 }
