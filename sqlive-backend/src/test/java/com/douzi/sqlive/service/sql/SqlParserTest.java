@@ -107,12 +107,20 @@ class SqlParserTest {
 
 	@Test
 	void shouldPopulateEndPosAsCharOffsetAfterSemicolon() {
+		// "SELECT 1; SELECT 2;" — length 19
+		//   stmt 0: 'SELECT 1;' chars 0..8 (; at index 8) → endPos = 9 (cursor AFTER ';')
+		//   stmt 1: 'SELECT 2;' chars 10..18 (; at index 18) → endPos = 19
 		var stmts = parser.parseStatementsPrecise("SELECT 1; SELECT 2;");
 		assertEquals(2, stmts.size());
 		assertEquals(0, stmts.get(0).startPos());
-		assertEquals(10, stmts.get(0).endPos());   // cursor AFTER first ';'
-		assertEquals(11, stmts.get(1).startPos());
-		assertEquals(21, stmts.get(1).endPos());   // cursor AFTER second ';'
+		assertEquals(9, stmts.get(0).endPos());    // cursor AFTER first ';'
+		assertEquals(10, stmts.get(1).startPos());
+		assertEquals(19, stmts.get(1).endPos());   // cursor AFTER second ';'
+		// Lock the substring contract: sql() must be exactly the char-offset slice.
+		assertEquals("SELECT 1;", "SELECT 1; SELECT 2;".substring(
+				stmts.get(0).startPos(), stmts.get(0).endPos()));
+		assertEquals("SELECT 2;", "SELECT 1; SELECT 2;".substring(
+				stmts.get(1).startPos(), stmts.get(1).endPos()));
 	}
 
 	@Test
@@ -123,11 +131,15 @@ class SqlParserTest {
 		// Lock the char-offset contract: UTF-16 code unit indices, NOT byte offsets.
 		// A byte-offset implementation would slice into the middle of the multi-byte
 		// '中' sequence and the assertions below would fail.
-		assertEquals(script.substring(0, 10), stmts.get(0).sql());
-		assertEquals(script.substring(11), stmts.get(1).sql());
+		assertEquals(script.substring(stmts.get(0).startPos(), stmts.get(0).endPos()),
+				stmts.get(0).sql());
+		assertEquals(script.substring(stmts.get(1).startPos(), stmts.get(1).endPos()),
+				stmts.get(1).sql());
+		// Specific offset assertions: stmt 0 ends at index 9 (right after first ';');
+		// stmt 1 starts at index 16 (after the line comment "\n" consumed by skipWhitespace).
 		assertEquals(0, stmts.get(0).startPos());
-		assertEquals(10, stmts.get(0).endPos());
-		assertEquals(11, stmts.get(1).startPos());
+		assertEquals(9, stmts.get(0).endPos());
+		assertEquals(16, stmts.get(1).startPos());
 		assertEquals(script.length(), stmts.get(1).endPos());
 	}
 
