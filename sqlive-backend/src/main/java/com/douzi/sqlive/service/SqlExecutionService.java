@@ -1,6 +1,7 @@
 package com.douzi.sqlive.service;
 
 import com.douzi.sqlive.dto.ExecutionMetadata;
+import com.douzi.sqlive.dto.ForeignKeyInfo;
 import com.douzi.sqlive.dto.SqlResponse;
 import com.douzi.sqlive.dto.TableSchema;
 import com.douzi.sqlive.service.database.DatabasePoolManager;
@@ -13,8 +14,12 @@ import org.springframework.stereotype.Service;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 @Service
@@ -147,10 +152,21 @@ public class SqlExecutionService {
 		var allObjects = jdbc.queryForList(
 				"SELECT name, type FROM sqlite_master WHERE type IN ('view','trigger','table') AND name NOT LIKE 'sqlite_%'");
 
+		// D-06: use MetadataExtractor.extractForeignKeys to get FK graph data.
+		List<ForeignKeyInfo> fks = metadataExtractor.extractForeignKeys(jdbc);
+
+		// D-07: topological sort — referencing (leaf) tables dropped first, referenced (parent) tables last.
+		List<String> tableNames = new ArrayList<>();
+		for (var obj : allObjects) {
+			if ("table".equals(obj.get("type"))) {
+				tableNames.add((String) obj.get("name"));
+			}
+		}
+		List<String> dropOrder = topologicalSortTables(tableNames, fks);
+
 		jdbc.execute((Connection con) -> {
 			try (Statement stmt = con.createStatement()) {
-				stmt.execute("PRAGMA foreign_keys = OFF");
-
+				// Drop VIEW and TRIGGER objects first (independent of FK graph — no FK constraints).
 				for (var obj : allObjects) {
 					String type = (String) obj.get("type");
 					if (type == null) continue;
@@ -158,13 +174,73 @@ public class SqlExecutionService {
 					switch (type) {
 						case "view" -> stmt.execute("DROP VIEW IF EXISTS " + name);
 						case "trigger" -> stmt.execute("DROP TRIGGER IF EXISTS " + name);
-						case "table" -> stmt.execute("DROP TABLE IF EXISTS " + name);
+						default -> { /* tables dropped below in topological order */ }
 					}
 				}
-
-				stmt.execute("PRAGMA foreign_keys = ON");
+				// D-08: no FK enforcement toggle — topological order makes DROP safe without disabling enforcement.
+				for (String tableName : dropOrder) {
+					String name = stmt.enquoteIdentifier(tableName, false);
+					stmt.execute("DROP TABLE IF EXISTS " + name);
+				}
 			}
 			return null;
 		});
+	}
+
+	/**
+	 * D-07: Kahn's BFS topological sort for FK-safe DROP order.
+	 * <p>
+	 * CRITICAL: see 12-PATTERNS.md "Critical Warning" — RESEARCH.md Example 6 has reversed adjacency direction.
+	 * Correct semantics: {@code fromTable} = referencing/child, {@code toTable} = referenced/parent
+	 * (ForeignKeyInfo.java:8,11 + MetadataExtractor.java:199-201).
+	 * <p>
+	 * Referencing/leaf tables (inDegree 0 = no one references me) are dropped FIRST;
+	 * referenced/parent tables (inDegree > 0) are dropped LAST — no child references a dropped parent.
+	 * <p>
+	 * Cycle fallback (D-07): if FK cycle exists, appends unvisited tables in arbitrary order + log.warn.
+	 * Package-private for synthetic test access from same-package test class.
+	 */
+	List<String> topologicalSortTables(List<String> tables, List<ForeignKeyInfo> fks) {
+		// Adjacency: referencing → [referenced] (fromTable → [toTable])
+		Map<String, List<String>> referencingToReferenced = new HashMap<>();
+		for (ForeignKeyInfo fk : fks) {
+			referencingToReferenced.computeIfAbsent(fk.getFromTable(), k -> new ArrayList<>()).add(fk.getToTable());
+		}
+
+		// inDegree = number of FKs pointing TO this table (referenced/parent tables have inDegree > 0)
+		Map<String, Integer> inDegree = new HashMap<>();
+		for (String t : tables) inDegree.put(t, 0);
+		for (ForeignKeyInfo fk : fks) {
+			if (inDegree.containsKey(fk.getToTable())) inDegree.merge(fk.getToTable(), 1, Integer::sum);
+		}
+
+		// Kahn's BFS — start with referencing/leaf tables (inDegree 0 = no one references me)
+		Deque<String> queue = new ArrayDeque<>();
+		for (Map.Entry<String, Integer> e : inDegree.entrySet()) {
+			if (e.getValue() == 0) queue.add(e.getKey());
+		}
+
+		List<String> result = new ArrayList<>();
+		while (!queue.isEmpty()) {
+			String t = queue.poll();  // referencing/leaf table — safe to drop first
+			result.add(t);
+			// Decrement inDegree of tables this one references (removing the edge)
+			List<String> referenced = referencingToReferenced.get(t);
+			if (referenced != null) {
+				for (String ref : referenced) {
+					if (inDegree.containsKey(ref) && inDegree.merge(ref, -1, Integer::sum) == 0) {
+						queue.add(ref);
+					}
+				}
+			}
+		}
+
+		// Cycle fallback — D-07: "降级为随机顺序 + log.warn"
+		if (result.size() < tables.size()) {
+			List<String> unvisited = tables.stream().filter(t -> !result.contains(t)).toList();
+			log.warn("FK cycle detected, dropping in arbitrary order: {}", unvisited);
+			result.addAll(unvisited);
+		}
+		return result;
 	}
 }
