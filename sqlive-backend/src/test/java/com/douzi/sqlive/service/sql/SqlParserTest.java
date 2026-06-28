@@ -103,6 +103,34 @@ class SqlParserTest {
 		assertEquals(1, stmts.size());
 	}
 
+	// ── D-03a: endPos char-offset contract ───────────────────
+
+	@Test
+	void shouldPopulateEndPosAsCharOffsetAfterSemicolon() {
+		var stmts = parser.parseStatementsPrecise("SELECT 1; SELECT 2;");
+		assertEquals(2, stmts.size());
+		assertEquals(0, stmts.get(0).startPos());
+		assertEquals(10, stmts.get(0).endPos());   // cursor AFTER first ';'
+		assertEquals(11, stmts.get(1).startPos());
+		assertEquals(21, stmts.get(1).endPos());   // cursor AFTER second ';'
+	}
+
+	@Test
+	void shouldHandleNonAsciiWithoutByteOffsetMismatch() {
+		String script = "SELECT 1; -- 中文\nSELECT 2;";
+		var stmts = parser.parseStatementsPrecise(script);
+		assertEquals(2, stmts.size());
+		// Lock the char-offset contract: UTF-16 code unit indices, NOT byte offsets.
+		// A byte-offset implementation would slice into the middle of the multi-byte
+		// '中' sequence and the assertions below would fail.
+		assertEquals(script.substring(0, 10), stmts.get(0).sql());
+		assertEquals(script.substring(11), stmts.get(1).sql());
+		assertEquals(0, stmts.get(0).startPos());
+		assertEquals(10, stmts.get(0).endPos());
+		assertEquals(11, stmts.get(1).startPos());
+		assertEquals(script.length(), stmts.get(1).endPos());
+	}
+
 	// ── locateErrorLine ─────────────────────────────────────
 
 	@Test
