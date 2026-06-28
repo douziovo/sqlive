@@ -11,6 +11,18 @@ import {
     tick
 } from './test-utils'
 
+// D-03c: spy on extractSqlStatements to verify canonicalStatements consumption.
+// vi.mock is hoisted by vitest; factory wraps the real impl so existing tests
+// (which don't reference extractSqlStatements directly) continue to work, while
+// tests in this file can assert call counts on the spy.
+vi.mock('../utils/sqlStatements', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../utils/sqlStatements')>()
+    return {
+        ...actual,
+        extractSqlStatements: vi.fn(actual.extractSqlStatements)
+    }
+})
+
 describe('useSqlEngine', () => {
     let useSqlEngine: SqlEngineSetup['useSqlEngine']
     let fetchSpy: ReturnType<typeof vi.fn>
@@ -443,5 +455,40 @@ describe('useSqlEngine', () => {
 
         // Should not crash
         expect(engine.isLoading.value).toBe(false)
+    })
+
+    // --- D-03c: frontend consumes backend canonicalStatements ---
+
+    it('consumes backend canonicalStatements for updateRow', async () => {
+        // After setupSqlEngine's vi.resetModules(), a fresh dynamic import returns
+        // the same sqlStatements module instance that useBidirectionalSync references.
+        const sqlStatementsModule = await import('../utils/sqlStatements')
+        const extractSpy = sqlStatementsModule.extractSqlStatements as ReturnType<typeof vi.fn>
+
+        // Mock response WITH canonicalStatements present — the contract under test.
+        mockSuccess(fetchSpy, {
+            tables: [
+                {
+                    name: 't',
+                    columns: ['id'],
+                    columnTypes: {id: 'INTEGER'},
+                    data: [{id: 1}]
+                }
+            ],
+            canonicalStatements: [{start: 0, end: 25}]
+        })
+        const engine = useSqlEngine()
+        await tick()
+
+        // Clear any spy calls from the initial fetch success path
+        // (useHighlight.recalculateStaticHighlight may call extractSqlStatements in RED).
+        extractSpy.mockClear()
+
+        // updateRow triggers getStatements() — in GREEN it prefers canonicalStatements.value
+        // and skips extractSqlStatements; in RED updateRow calls extractSqlStatements(code.value)
+        // directly at line 89 of useBidirectionalSync.ts.
+        engine.updateRow('t', {id: 1}, {id: 2})
+
+        expect(extractSpy).not.toHaveBeenCalled()
     })
 })
