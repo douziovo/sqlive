@@ -23,7 +23,6 @@ interface ExplainData {
 
 interface OptimizeData {
     summary?: string
-    optimizedCode?: string
     fixedCode?: string
     explanation?: string
     content?: string
@@ -67,7 +66,7 @@ export function formatExplain(d: ExplainData): string {
 }
 
 export function formatOptimize(d: OptimizeData, options: { selectedCode: string }): string {
-    const optimizedCode = d.optimizedCode || d.fixedCode || ''
+    const optimizedCode = d.fixedCode || ''
     let content = ''
     if (d.summary) content += `## ⚡ 优化建议\n${d.summary}\n\n`
     if (optimizedCode) {
