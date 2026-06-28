@@ -1,6 +1,8 @@
 package com.douzi.sqlive.controller;
 
-import com.douzi.sqlive.dto.ai.*;
+import com.douzi.sqlive.dto.ai.AiChatRequest;
+import com.douzi.sqlive.dto.ai.AiChatResponse;
+import com.douzi.sqlive.dto.ai.StreamChunk;
 import com.douzi.sqlive.service.ai.AiService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,110 +19,109 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class AiControllerTest {
 
-    @Value("${local.server.port}")
-    private int port;
+	private final RestTemplate restTemplate = new RestTemplate();
+	@Value("${local.server.port}")
+	private int port;
+	@Autowired
+	private AiService aiService;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+	private String url(String path) {
+		return "http://localhost:" + port + path;
+	}
 
-    private String url(String path) {
-        return "http://localhost:" + port + path;
-    }
+	private HttpHeaders jsonHeaders() {
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+		return headers;
+	}
 
-    @TestConfiguration
-    static class MockConfig {
-        @Bean
-        @Primary
-        AiService mockAiService() {
-            var mock = mock(AiService.class);
+	@Test
+	void chatShouldReturnStreamingResponse() {
+		AiChatRequest req = new AiChatRequest();
+		req.setMode("chat");
+		req.setMessage("Hello");
+		req.setStream(true);
 
-            var resp = new AiChatResponse();
-            resp.setSuccess(true);
-            var data = new AiChatResponse.DataPayload();
-            data.setContent("AI response");
-            data.setSummary("summary");
-            resp.setData(data);
-            when(mock.executeNonStreaming(argThat(req -> req != null && req.getMode() != null))).thenReturn(resp);
+		HttpHeaders headers = jsonHeaders();
+		headers.setAccept(List.of(MediaType.TEXT_EVENT_STREAM));
+		HttpEntity<AiChatRequest> entity = new HttpEntity<>(req, headers);
 
-            when(mock.streamChat(argThat(req -> req != null && req.getMode() != null)))
-                    .thenReturn(Flux.just(StreamChunk.text("hello"), StreamChunk.text(" world")));
+		ResponseEntity<String> resp = restTemplate.exchange(
+				url("/api/ai/chat"), HttpMethod.POST, entity, String.class);
 
-            return mock;
-        }
-    }
+		assertEquals(HttpStatus.OK, resp.getStatusCode());
+		assertNotNull(resp.getBody());
+		assertTrue(resp.getBody().contains("hello"), "SSE response should contain 'hello' chunk content");
+		assertTrue(resp.getBody().contains("world"), "SSE response should contain 'world' chunk content");
+	}
 
-    @Autowired
-    private AiService aiService;
+	// ── /api/ai/chat (streaming) ─────────────────────────────
 
-    private HttpHeaders jsonHeaders() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        return headers;
-    }
+	@Test
+	void analyzeErrorShouldReturnResponse() {
+		AiChatRequest req = new AiChatRequest();
+		req.setMode("analyze-error");
+		req.setCurrentSql("SELECT * FORM users");
+		var err = new AiChatRequest.ErrorInfo();
+		err.setMessage("syntax error");
+		err.setLine(1);
+		req.setError(err);
 
-    // ── /api/ai/chat (streaming) ─────────────────────────────
+		HttpEntity<AiChatRequest> entity = new HttpEntity<>(req, jsonHeaders());
 
-    @Test
-    void chatShouldReturnStreamingResponse() {
-        AiChatRequest req = new AiChatRequest();
-        req.setMode("chat");
-        req.setMessage("Hello");
-        req.setStream(true);
+		ResponseEntity<AiChatResponse> resp = restTemplate.exchange(
+				url("/api/ai/analyze-error"), HttpMethod.POST, entity, AiChatResponse.class);
 
-        HttpHeaders headers = jsonHeaders();
-        headers.setAccept(List.of(MediaType.TEXT_EVENT_STREAM));
-        HttpEntity<AiChatRequest> entity = new HttpEntity<>(req, headers);
+		assertEquals(HttpStatus.OK, resp.getStatusCode());
+		assertNotNull(resp.getBody());
+		assertTrue(resp.getBody().isSuccess());
+	}
 
-        ResponseEntity<String> resp = restTemplate.exchange(
-                url("/api/ai/chat"), HttpMethod.POST, entity, String.class);
+	// ── /api/ai/analyze-error ────────────────────────────────
 
-        assertEquals(HttpStatus.OK, resp.getStatusCode());
-        assertNotNull(resp.getBody());
-        assertTrue(resp.getBody().contains("hello"), "SSE response should contain 'hello' chunk content");
-        assertTrue(resp.getBody().contains("world"), "SSE response should contain 'world' chunk content");
-    }
+	@Test
+	void explainShouldReturnResponse() {
+		AiChatRequest req = new AiChatRequest();
+		req.setMode("explain");
+		req.setMessage("SELECT 1");
 
-    // ── /api/ai/analyze-error ────────────────────────────────
+		HttpEntity<AiChatRequest> entity = new HttpEntity<>(req, jsonHeaders());
 
-    @Test
-    void analyzeErrorShouldReturnResponse() {
-        AiChatRequest req = new AiChatRequest();
-        req.setMode("analyze-error");
-        req.setCurrentSql("SELECT * FORM users");
-        var err = new AiChatRequest.ErrorInfo();
-        err.setMessage("syntax error");
-        err.setLine(1);
-        req.setError(err);
+		ResponseEntity<AiChatResponse> resp = restTemplate.exchange(
+				url("/api/ai/explain"), HttpMethod.POST, entity, AiChatResponse.class);
 
-        HttpEntity<AiChatRequest> entity = new HttpEntity<>(req, jsonHeaders());
+		assertEquals(HttpStatus.OK, resp.getStatusCode());
+		assertNotNull(resp.getBody());
+		assertTrue(resp.getBody().isSuccess());
+	}
 
-        ResponseEntity<AiChatResponse> resp = restTemplate.exchange(
-                url("/api/ai/analyze-error"), HttpMethod.POST, entity, AiChatResponse.class);
+	// ── /api/ai/explain ──────────────────────────────────────
 
-        assertEquals(HttpStatus.OK, resp.getStatusCode());
-        assertNotNull(resp.getBody());
-        assertTrue(resp.getBody().isSuccess());
-    }
+	@TestConfiguration
+	static class MockConfig {
+		@Bean
+		@Primary
+		AiService mockAiService() {
+			var mock = mock(AiService.class);
 
-    // ── /api/ai/explain ──────────────────────────────────────
+			var resp = new AiChatResponse();
+			resp.setSuccess(true);
+			var data = new AiChatResponse.DataPayload();
+			data.setContent("AI response");
+			data.setSummary("summary");
+			resp.setData(data);
+			when(mock.executeNonStreaming(argThat(req -> req != null && req.getMode() != null))).thenReturn(resp);
 
-    @Test
-    void explainShouldReturnResponse() {
-        AiChatRequest req = new AiChatRequest();
-        req.setMode("explain");
-        req.setMessage("SELECT 1");
+			when(mock.streamChat(argThat(req -> req != null && req.getMode() != null)))
+					.thenReturn(Flux.just(StreamChunk.text("hello"), StreamChunk.text(" world")));
 
-        HttpEntity<AiChatRequest> entity = new HttpEntity<>(req, jsonHeaders());
-
-        ResponseEntity<AiChatResponse> resp = restTemplate.exchange(
-                url("/api/ai/explain"), HttpMethod.POST, entity, AiChatResponse.class);
-
-        assertEquals(HttpStatus.OK, resp.getStatusCode());
-        assertNotNull(resp.getBody());
-        assertTrue(resp.getBody().isSuccess());
-    }
+			return mock;
+		}
+	}
 }

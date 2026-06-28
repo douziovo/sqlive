@@ -6,9 +6,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class HealthController {
 
-    @GetMapping("/health")
-    @SuppressWarnings("SameReturnValue")
-    public String health() {
-        return "OK";
-    }
+	@GetMapping("/health")
+	@SuppressWarnings("SameReturnValue")
+	public String health() {
+		return "OK";
+	}
 }

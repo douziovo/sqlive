@@ -4,6 +4,6 @@ import lombok.Data;
 
 @Data
 public class ViewInfo {
-    private String name;
-    private String sql;
+	private String name;
+	private String sql;
 }

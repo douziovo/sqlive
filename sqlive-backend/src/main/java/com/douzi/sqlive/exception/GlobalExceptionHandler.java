@@ -20,38 +20,38 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 @Slf4j
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
-    @ExceptionHandler(TooManyDatabasesException.class)
-    @ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
-    public SqlResponse handleTooManyDatabases(TooManyDatabasesException e) {
-        log.warn("Too many databases: {}", e.getMessage());
-        return SqlResponse.error(e.getMessage(), 0);
-    }
+	@ExceptionHandler(TooManyDatabasesException.class)
+	@ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
+	public SqlResponse handleTooManyDatabases(TooManyDatabasesException e) {
+		log.warn("Too many databases: {}", e.getMessage());
+		return SqlResponse.error(e.getMessage(), 0);
+	}
 
-    @ExceptionHandler(AiProviderException.class)
-    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
-    public AiChatResponse handleAiProvider(AiProviderException e) {
-        log.warn("AI provider failed: {}", e.getMessage());
-        return AiChatResponse.error(e.getMessage());
-    }
+	@ExceptionHandler(AiProviderException.class)
+	@ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+	public AiChatResponse handleAiProvider(AiProviderException e) {
+		log.warn("AI provider failed: {}", e.getMessage());
+		return AiChatResponse.error(e.getMessage());
+	}
 
-    @Override
-    protected ResponseEntity<Object> handleMethodArgumentNotValid(
-            MethodArgumentNotValidException ex,
-            @Nullable HttpHeaders headers,
-            @Nullable HttpStatusCode status,
-            @Nullable WebRequest request) {
-        String message = ex.getBindingResult().getFieldErrors().stream()
-                .map(f -> f.getField() + ": " + f.getDefaultMessage())
-                .reduce((a, b) -> a + "; " + b)
-                .orElse("Validation failed");
-        log.warn("Validation failed: {}", message);
-        return new ResponseEntity<>(SqlResponse.error(message, 0), HttpStatus.BAD_REQUEST);
-    }
+	@Override
+	protected ResponseEntity<Object> handleMethodArgumentNotValid(
+			MethodArgumentNotValidException ex,
+			@Nullable HttpHeaders headers,
+			@Nullable HttpStatusCode status,
+			@Nullable WebRequest request) {
+		String message = ex.getBindingResult().getFieldErrors().stream()
+				.map(f -> f.getField() + ": " + f.getDefaultMessage())
+				.reduce((a, b) -> a + "; " + b)
+				.orElse("Validation failed");
+		log.warn("Validation failed: {}", message);
+		return new ResponseEntity<>(SqlResponse.error(message, 0), HttpStatus.BAD_REQUEST);
+	}
 
-    @ExceptionHandler(Exception.class)
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public SqlResponse handleGeneral(Exception e) {
-        log.error("Unhandled exception", e);
-        return SqlResponse.error("Internal server error", 0);
-    }
+	@ExceptionHandler(Exception.class)
+	@ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+	public SqlResponse handleGeneral(Exception e) {
+		log.error("Unhandled exception", e);
+		return SqlResponse.error("Internal server error", 0);
+	}
 }

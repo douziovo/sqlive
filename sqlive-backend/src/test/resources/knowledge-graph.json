@@ -6,10 +6,22 @@
       "description": "Retrieve data from one or more tables",
       "difficulty": 1,
       "category": "DQL",
-      "keywords": ["SELECT", "FROM", "WHERE"],
-      "patterns": ["SELECT * FROM table", "SELECT col FROM table WHERE condition"],
-      "prerequisites": ["basics"],
-      "nextTopics": ["join", "subquery"]
+      "keywords": [
+        "SELECT",
+        "FROM",
+        "WHERE"
+      ],
+      "patterns": [
+        "SELECT * FROM table",
+        "SELECT col FROM table WHERE condition"
+      ],
+      "prerequisites": [
+        "basics"
+      ],
+      "nextTopics": [
+        "join",
+        "subquery"
+      ]
     },
     {
       "id": "join",
@@ -17,10 +29,20 @@
       "description": "Combine rows from two or more tables",
       "difficulty": 2,
       "category": "DQL",
-      "keywords": ["JOIN", "INNER JOIN", "LEFT JOIN"],
-      "patterns": ["SELECT * FROM a JOIN b ON a.id = b.id"],
-      "prerequisites": ["select"],
-      "nextTopics": ["subquery"]
+      "keywords": [
+        "JOIN",
+        "INNER JOIN",
+        "LEFT JOIN"
+      ],
+      "patterns": [
+        "SELECT * FROM a JOIN b ON a.id = b.id"
+      ],
+      "prerequisites": [
+        "select"
+      ],
+      "nextTopics": [
+        "subquery"
+      ]
     }
   ]
 }

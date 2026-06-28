@@ -8,6 +8,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ErrorPayload {
-    private String message;
-    private int line;
+	private String message;
+	private int line;
 }

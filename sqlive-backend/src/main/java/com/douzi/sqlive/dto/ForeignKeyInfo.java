@@ -4,9 +4,9 @@ import lombok.Data;
 
 @Data
 public class ForeignKeyInfo {
-    private String name;
-    private String fromTable;
-    private String fromColumn;
-    private String toTable;
-    private String toColumn;
+	private String name;
+	private String fromTable;
+	private String fromColumn;
+	private String toTable;
+	private String toColumn;
 }
