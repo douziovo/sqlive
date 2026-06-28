@@ -797,6 +797,50 @@ class SqlExecutionServiceTest {
 	}
 
 	// ============================================================
+	//  D-06/D-07/D-08: clearDatabase FK-safe topological drop (no PRAGMA toggle)
+	// ============================================================
+
+	@Test
+	void shouldDropTablesInFkDependencyOrderWithoutPragmaToggle() {
+		// Setup: parent + child with FK (child.pid REFERENCES parent(id))
+		String setup = "CREATE TABLE parent (id INTEGER PRIMARY KEY); " +
+				"CREATE TABLE child (id INTEGER PRIMARY KEY, pid INTEGER REFERENCES parent(id));";
+		SqlResponse r1 = service.execute(setup, db("fksort"), true);
+		assertTrue(r1.isSuccess(), "setup should succeed");
+
+		// Trigger clearDatabase via reset=true — must drop both tables without PRAGMA foreign_keys toggle (D-08).
+		SqlResponse r2 = service.execute("SELECT 1;", db("fksort"), true);
+		assertTrue(r2.isSuccess(), "clearDatabase should succeed without PRAGMA foreign_keys toggle");
+
+		// Verify both tables are gone (clearDatabase dropped them in FK-safe order: child first, parent last).
+		SqlResponse r3 = service.execute(
+				"SELECT name FROM sqlite_master WHERE type='table' AND name IN ('parent','child');",
+				db("fksort"), false);
+		assertTrue(r3.isSuccess());
+		assertTrue(r3.getData().getQueryResults().getFirst().getData().isEmpty(),
+				"both parent and child should be dropped after clearDatabase");
+	}
+
+	@Test
+	void shouldHandleFkCycleInClearDatabase() {
+		// Synthetic FK cycle: a → b, b → a — Kahn's queue empties after 0 iterations,
+		// cycle fallback must append both unvisited tables in arbitrary order (D-07).
+		ForeignKeyInfo fk1 = new ForeignKeyInfo();
+		fk1.setFromTable("a");
+		fk1.setToTable("b");
+		ForeignKeyInfo fk2 = new ForeignKeyInfo();
+		fk2.setFromTable("b");
+		fk2.setToTable("a");
+		List<ForeignKeyInfo> cycleFks = List.of(fk1, fk2);
+
+		List<String> dropOrder = service.topologicalSortTables(List.of("a", "b"), cycleFks);
+
+		assertEquals(2, dropOrder.size(), "cycle fallback must append all unvisited tables");
+		assertTrue(dropOrder.contains("a"), "table 'a' must be in drop order");
+		assertTrue(dropOrder.contains("b"), "table 'b' must be in drop order");
+	}
+
+	// ============================================================
 	//  Persistence / isolation
 	// ============================================================
 
