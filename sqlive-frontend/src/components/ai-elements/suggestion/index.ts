@@ -1,1 +1,1 @@
-export { default as Suggestion } from './Suggestion.vue'
+export {default as Suggestion} from './Suggestion.vue'

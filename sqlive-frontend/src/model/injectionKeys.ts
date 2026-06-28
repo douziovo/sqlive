@@ -1,20 +1,20 @@
-import type { ComputedRef, InjectionKey, Ref } from 'vue'
-import type { AiActions } from '../composables/useAiChat'
-import type { DatabaseModel, HighlightState, InsertResult, TruncationInfo } from './DatabaseTypes'
-import type { SchemaTableInfo } from './SchemaTypes'
+import type {ComputedRef, InjectionKey, Ref} from 'vue'
+import type {AiActions} from '../composables/useAiChat'
+import type {DatabaseModel, HighlightState, InsertResult, TruncationInfo} from './DatabaseTypes'
+import type {SchemaTableInfo} from './SchemaTypes'
 
 export interface SqlContext {
-  tabs: Ref<{ id: string; name: string; code: string; dbName: string; isModified: boolean }[]>
-  activeTabId: Ref<string>
-  activeDbName: ComputedRef<string>
-  dbList: Ref<string[]>
-  highlightChunk: Ref<string | null>
-  error: Ref<{ line: number; message: string } | null>
-  schemaTables: ComputedRef<SchemaTableInfo[]>
-  db: DatabaseModel
-  highlight: HighlightState
-  lastTruncations: Ref<TruncationInfo[]>
-  insertResult: Ref<InsertResult | null>
+    tabs: Ref<{ id: string; name: string; code: string; dbName: string; isModified: boolean }[]>
+    activeTabId: Ref<string>
+    activeDbName: ComputedRef<string>
+    dbList: Ref<string[]>
+    highlightChunk: Ref<string | null>
+    error: Ref<{ line: number; message: string } | null>
+    schemaTables: ComputedRef<SchemaTableInfo[]>
+    db: DatabaseModel
+    highlight: HighlightState
+    lastTruncations: Ref<TruncationInfo[]>
+    insertResult: Ref<InsertResult | null>
 }
 
 export const SQL_CONTEXT_KEY: InjectionKey<SqlContext> = Symbol('sqlContext')
