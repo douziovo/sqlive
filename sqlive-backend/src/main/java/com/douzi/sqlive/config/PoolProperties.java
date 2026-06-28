@@ -10,7 +10,7 @@ import java.time.Duration;
 @Component
 @ConfigurationProperties(prefix = "pool")
 public class PoolProperties {
-    private int maxDatabases = 200;
-    private Duration idleTimeout = Duration.ofMinutes(5);
-    private Duration cleanupInterval = Duration.ofMinutes(5);
+	private int maxDatabases = 200;
+	private Duration idleTimeout = Duration.ofMinutes(5);
+	private Duration cleanupInterval = Duration.ofMinutes(5);
 }

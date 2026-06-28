@@ -12,14 +12,14 @@ import java.util.Map;
 @Component
 @ConfigurationProperties(prefix = "ai")
 public class AiProperties {
-    private String provider = "deepseek";
-    private Map<String, AiProviderConfig> providers = Map.of();
-    private TimeoutConfig timeout = new TimeoutConfig();
+	private String provider = "deepseek";
+	private Map<String, AiProviderConfig> providers = Map.of();
+	private TimeoutConfig timeout = new TimeoutConfig();
 
-    @Data
-    public static class TimeoutConfig {
-        private Duration connect = Duration.ofSeconds(5);
-        private Duration read = Duration.ofSeconds(60);
-        private Duration write = Duration.ofSeconds(30);
-    }
+	@Data
+	public static class TimeoutConfig {
+		private Duration connect = Duration.ofSeconds(5);
+		private Duration read = Duration.ofSeconds(60);
+		private Duration write = Duration.ofSeconds(30);
+	}
 }

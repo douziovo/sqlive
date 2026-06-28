@@ -5,219 +5,505 @@
       "id": "sql-basics",
       "label": "SQL 基础查询",
       "description": "使用 SELECT 从表中查询数据，使用 FROM 指定表，使用 WHERE 过滤行，使用 LIMIT 限制结果",
-      "keywords": ["SELECT", "FROM", "WHERE", "LIMIT", "OFFSET", "AS", "*"],
-      "patterns": ["SELECT\\s+.*\\s+FROM", "WHERE\\s+"],
+      "keywords": [
+        "SELECT",
+        "FROM",
+        "WHERE",
+        "LIMIT",
+        "OFFSET",
+        "AS",
+        "*"
+      ],
+      "patterns": [
+        "SELECT\\s+.*\\s+FROM",
+        "WHERE\\s+"
+      ],
       "difficulty": 1,
       "prerequisites": [],
-      "nextTopics": ["filtering", "sorting"],
+      "nextTopics": [
+        "filtering",
+        "sorting"
+      ],
       "category": "basics"
     },
     {
       "id": "filtering",
       "label": "条件过滤",
       "description": "使用 WHERE 子句配合 AND、OR、IN、BETWEEN、LIKE 等运算符精确过滤数据",
-      "keywords": ["AND", "OR", "IN", "BETWEEN", "LIKE", "IS NULL", "IS NOT NULL", "NOT"],
-      "patterns": ["WHERE.*(?:AND|OR)", "\\bIN\\s*\\(", "\\bLIKE\\b", "\\bBETWEEN\\b", "IS\\s+(?:NOT\\s+)?NULL"],
+      "keywords": [
+        "AND",
+        "OR",
+        "IN",
+        "BETWEEN",
+        "LIKE",
+        "IS NULL",
+        "IS NOT NULL",
+        "NOT"
+      ],
+      "patterns": [
+        "WHERE.*(?:AND|OR)",
+        "\\bIN\\s*\\(",
+        "\\bLIKE\\b",
+        "\\bBETWEEN\\b",
+        "IS\\s+(?:NOT\\s+)?NULL"
+      ],
       "difficulty": 1,
-      "prerequisites": ["sql-basics"],
-      "nextTopics": ["sorting", "aggregation"],
+      "prerequisites": [
+        "sql-basics"
+      ],
+      "nextTopics": [
+        "sorting",
+        "aggregation"
+      ],
       "category": "basics"
     },
     {
       "id": "sorting",
       "label": "排序与去重",
       "description": "使用 ORDER BY 对结果排序（ASC/DESC），使用 DISTINCT 去重",
-      "keywords": ["ORDER BY", "ASC", "DESC", "DISTINCT", "LIMIT", "OFFSET"],
-      "patterns": ["ORDER\\s+BY", "\\bDISTINCT\\b"],
+      "keywords": [
+        "ORDER BY",
+        "ASC",
+        "DESC",
+        "DISTINCT",
+        "LIMIT",
+        "OFFSET"
+      ],
+      "patterns": [
+        "ORDER\\s+BY",
+        "\\bDISTINCT\\b"
+      ],
       "difficulty": 1,
-      "prerequisites": ["sql-basics"],
-      "nextTopics": ["aggregation", "joins"],
+      "prerequisites": [
+        "sql-basics"
+      ],
+      "nextTopics": [
+        "aggregation",
+        "joins"
+      ],
       "category": "basics"
     },
     {
       "id": "joins",
       "label": "JOIN 查询",
       "description": "使用 INNER/LEFT/RIGHT/CROSS JOIN 关联多张表，通过 ON 子句指定连接条件",
-      "keywords": ["JOIN", "INNER JOIN", "LEFT JOIN", "RIGHT JOIN", "CROSS JOIN", "ON", "USING"],
-      "patterns": ["\\bJOIN\\s+\\w+"],
+      "keywords": [
+        "JOIN",
+        "INNER JOIN",
+        "LEFT JOIN",
+        "RIGHT JOIN",
+        "CROSS JOIN",
+        "ON",
+        "USING"
+      ],
+      "patterns": [
+        "\\bJOIN\\s+\\w+"
+      ],
       "difficulty": 2,
-      "prerequisites": ["sql-basics", "filtering"],
-      "nextTopics": ["subqueries", "aggregation", "set-operations"],
+      "prerequisites": [
+        "sql-basics",
+        "filtering"
+      ],
+      "nextTopics": [
+        "subqueries",
+        "aggregation",
+        "set-operations"
+      ],
       "category": "query"
     },
     {
       "id": "aggregation",
       "label": "聚合查询",
       "description": "使用 GROUP BY 分组，配合 COUNT、SUM、AVG、MIN、MAX 进行聚合计算，使用 HAVING 过滤分组结果",
-      "keywords": ["GROUP BY", "HAVING", "COUNT", "SUM", "AVG", "MIN", "MAX"],
-      "patterns": ["GROUP\\s+BY", "\\bHAVING\\b", "\\bCOUNT\\s*\\(", "\\bSUM\\s*\\(", "\\bAVG\\s*\\("],
+      "keywords": [
+        "GROUP BY",
+        "HAVING",
+        "COUNT",
+        "SUM",
+        "AVG",
+        "MIN",
+        "MAX"
+      ],
+      "patterns": [
+        "GROUP\\s+BY",
+        "\\bHAVING\\b",
+        "\\bCOUNT\\s*\\(",
+        "\\bSUM\\s*\\(",
+        "\\bAVG\\s*\\("
+      ],
       "difficulty": 2,
-      "prerequisites": ["sql-basics", "sorting"],
-      "nextTopics": ["subqueries", "window-functions", "cte"],
+      "prerequisites": [
+        "sql-basics",
+        "sorting"
+      ],
+      "nextTopics": [
+        "subqueries",
+        "window-functions",
+        "cte"
+      ],
       "category": "query"
     },
     {
       "id": "subqueries",
       "label": "子查询",
       "description": "在 SELECT/FROM/WHERE 中嵌套查询，包括标量子查询、EXISTS、IN 子查询和相关子查询",
-      "keywords": ["EXISTS", "NOT EXISTS", "ANY", "ALL"],
-      "patterns": ["SELECT.*\\(\\s*SELECT", "WHERE.*\\(\\s*SELECT", "FROM\\s*\\(\\s*SELECT", "\\bEXISTS\\b", "\\bNOT\\s+EXISTS\\b"],
+      "keywords": [
+        "EXISTS",
+        "NOT EXISTS",
+        "ANY",
+        "ALL"
+      ],
+      "patterns": [
+        "SELECT.*\\(\\s*SELECT",
+        "WHERE.*\\(\\s*SELECT",
+        "FROM\\s*\\(\\s*SELECT",
+        "\\bEXISTS\\b",
+        "\\bNOT\\s+EXISTS\\b"
+      ],
       "difficulty": 2,
-      "prerequisites": ["joins", "aggregation"],
-      "nextTopics": ["cte", "window-functions"],
+      "prerequisites": [
+        "joins",
+        "aggregation"
+      ],
+      "nextTopics": [
+        "cte",
+        "window-functions"
+      ],
       "category": "query"
     },
     {
       "id": "set-operations",
       "label": "集合操作",
       "description": "使用 UNION、INTERSECT、EXCEPT 合并或比较多个查询的结果集",
-      "keywords": ["UNION", "UNION ALL", "INTERSECT", "EXCEPT"],
-      "patterns": ["\\bUNION\\b", "\\bINTERSECT\\b", "\\bEXCEPT\\b"],
+      "keywords": [
+        "UNION",
+        "UNION ALL",
+        "INTERSECT",
+        "EXCEPT"
+      ],
+      "patterns": [
+        "\\bUNION\\b",
+        "\\bINTERSECT\\b",
+        "\\bEXCEPT\\b"
+      ],
       "difficulty": 2,
-      "prerequisites": ["joins", "sql-basics"],
-      "nextTopics": ["cte", "views"],
+      "prerequisites": [
+        "joins",
+        "sql-basics"
+      ],
+      "nextTopics": [
+        "cte",
+        "views"
+      ],
       "category": "query"
     },
     {
       "id": "create-table",
       "label": "CREATE TABLE",
       "description": "创建表：定义列、数据类型（INTEGER/TEXT/REAL/BLOB）、主键、NOT NULL、DEFAULT、UNIQUE 约束",
-      "keywords": ["CREATE TABLE", "PRIMARY KEY", "NOT NULL", "DEFAULT", "UNIQUE", "CHECK", "INTEGER", "TEXT", "REAL", "BLOB"],
-      "patterns": ["CREATE\\s+TABLE\\s+"],
+      "keywords": [
+        "CREATE TABLE",
+        "PRIMARY KEY",
+        "NOT NULL",
+        "DEFAULT",
+        "UNIQUE",
+        "CHECK",
+        "INTEGER",
+        "TEXT",
+        "REAL",
+        "BLOB"
+      ],
+      "patterns": [
+        "CREATE\\s+TABLE\\s+"
+      ],
       "difficulty": 1,
-      "prerequisites": ["sql-basics"],
-      "nextTopics": ["constraints", "alter-table", "insert"],
+      "prerequisites": [
+        "sql-basics"
+      ],
+      "nextTopics": [
+        "constraints",
+        "alter-table",
+        "insert"
+      ],
       "category": "ddl"
     },
     {
       "id": "constraints",
       "label": "表约束",
       "description": "深入理解 PRIMARY KEY、FOREIGN KEY、UNIQUE、CHECK、NOT NULL、DEFAULT 约束的用法和区别",
-      "keywords": ["PRIMARY KEY", "FOREIGN KEY", "REFERENCES", "UNIQUE", "CHECK", "NOT NULL"],
-      "patterns": ["PRIMARY\\s+KEY", "FOREIGN\\s+KEY", "REFERENCES\\s+", "CONSTRAINT"],
+      "keywords": [
+        "PRIMARY KEY",
+        "FOREIGN KEY",
+        "REFERENCES",
+        "UNIQUE",
+        "CHECK",
+        "NOT NULL"
+      ],
+      "patterns": [
+        "PRIMARY\\s+KEY",
+        "FOREIGN\\s+KEY",
+        "REFERENCES\\s+",
+        "CONSTRAINT"
+      ],
       "difficulty": 1,
-      "prerequisites": ["create-table"],
-      "nextTopics": ["joins", "alter-table", "indexes"],
+      "prerequisites": [
+        "create-table"
+      ],
+      "nextTopics": [
+        "joins",
+        "alter-table",
+        "indexes"
+      ],
       "category": "ddl"
     },
     {
       "id": "alter-table",
       "label": "ALTER TABLE",
       "description": "修改表结构：ADD/DROP COLUMN、RENAME TABLE/COLUMN",
-      "keywords": ["ALTER TABLE", "ADD COLUMN", "DROP COLUMN", "RENAME TO", "RENAME COLUMN"],
-      "patterns": ["ALTER\\s+TABLE"],
+      "keywords": [
+        "ALTER TABLE",
+        "ADD COLUMN",
+        "DROP COLUMN",
+        "RENAME TO",
+        "RENAME COLUMN"
+      ],
+      "patterns": [
+        "ALTER\\s+TABLE"
+      ],
       "difficulty": 2,
-      "prerequisites": ["create-table"],
-      "nextTopics": ["indexes"],
+      "prerequisites": [
+        "create-table"
+      ],
+      "nextTopics": [
+        "indexes"
+      ],
       "category": "ddl"
     },
     {
       "id": "indexes",
       "label": "索引",
       "description": "使用 CREATE INDEX 加速查询，了解普通索引、唯一索引、复合索引和部分索引",
-      "keywords": ["CREATE INDEX", "UNIQUE INDEX", "DROP INDEX"],
-      "patterns": ["CREATE\\s+(?:UNIQUE\\s+)?INDEX"],
+      "keywords": [
+        "CREATE INDEX",
+        "UNIQUE INDEX",
+        "DROP INDEX"
+      ],
+      "patterns": [
+        "CREATE\\s+(?:UNIQUE\\s+)?INDEX"
+      ],
       "difficulty": 2,
-      "prerequisites": ["create-table", "constraints"],
-      "nextTopics": ["query-planning", "optimization"],
+      "prerequisites": [
+        "create-table",
+        "constraints"
+      ],
+      "nextTopics": [
+        "query-planning",
+        "optimization"
+      ],
       "category": "ddl"
     },
     {
       "id": "insert",
       "label": "INSERT 插入数据",
       "description": "使用 INSERT INTO ... VALUES 插入单行或多行数据，使用 INSERT ... SELECT 从查询结果插入",
-      "keywords": ["INSERT INTO", "VALUES", "INSERT OR REPLACE", "INSERT OR IGNORE"],
-      "patterns": ["INSERT\\s+INTO"],
+      "keywords": [
+        "INSERT INTO",
+        "VALUES",
+        "INSERT OR REPLACE",
+        "INSERT OR IGNORE"
+      ],
+      "patterns": [
+        "INSERT\\s+INTO"
+      ],
       "difficulty": 1,
-      "prerequisites": ["create-table"],
-      "nextTopics": ["update", "delete"],
+      "prerequisites": [
+        "create-table"
+      ],
+      "nextTopics": [
+        "update",
+        "delete"
+      ],
       "category": "dml"
     },
     {
       "id": "update",
       "label": "UPDATE 更新数据",
       "description": "使用 UPDATE ... SET 修改表中的数据，配合 WHERE 精确更新目标行",
-      "keywords": ["UPDATE", "SET"],
-      "patterns": ["UPDATE\\s+\\w+\\s+SET"],
+      "keywords": [
+        "UPDATE",
+        "SET"
+      ],
+      "patterns": [
+        "UPDATE\\s+\\w+\\s+SET"
+      ],
       "difficulty": 1,
-      "prerequisites": ["insert"],
-      "nextTopics": ["delete", "aggregation"],
+      "prerequisites": [
+        "insert"
+      ],
+      "nextTopics": [
+        "delete",
+        "aggregation"
+      ],
       "category": "dml"
     },
     {
       "id": "delete",
       "label": "DELETE 删除数据",
       "description": "使用 DELETE FROM 删除表中的行，配合 WHERE 精确删除，使用 TRUNCATE（SQLite 不支持）清空表",
-      "keywords": ["DELETE FROM", "DROP TABLE"],
-      "patterns": ["DELETE\\s+FROM"],
+      "keywords": [
+        "DELETE FROM",
+        "DROP TABLE"
+      ],
+      "patterns": [
+        "DELETE\\s+FROM"
+      ],
       "difficulty": 1,
-      "prerequisites": ["insert"],
-      "nextTopics": ["create-table", "views", "transactions"],
+      "prerequisites": [
+        "insert"
+      ],
+      "nextTopics": [
+        "create-table",
+        "views",
+        "transactions"
+      ],
       "category": "dml"
     },
     {
       "id": "views",
       "label": "视图",
       "description": "使用 CREATE VIEW 创建虚拟表，简化复杂查询，提高代码复用性",
-      "keywords": ["CREATE VIEW", "DROP VIEW"],
-      "patterns": ["CREATE\\s+VIEW"],
+      "keywords": [
+        "CREATE VIEW",
+        "DROP VIEW"
+      ],
+      "patterns": [
+        "CREATE\\s+VIEW"
+      ],
       "difficulty": 2,
-      "prerequisites": ["joins", "subqueries"],
-      "nextTopics": ["triggers"],
+      "prerequisites": [
+        "joins",
+        "subqueries"
+      ],
+      "nextTopics": [
+        "triggers"
+      ],
       "category": "advanced"
     },
     {
       "id": "triggers",
       "label": "触发器",
       "description": "使用 CREATE TRIGGER 在 INSERT/UPDATE/DELETE 前后自动执行逻辑（日志、校验、级联操作）",
-      "keywords": ["CREATE TRIGGER", "BEFORE", "AFTER", "INSTEAD OF", "FOR EACH ROW"],
-      "patterns": ["CREATE\\s+TRIGGER"],
+      "keywords": [
+        "CREATE TRIGGER",
+        "BEFORE",
+        "AFTER",
+        "INSTEAD OF",
+        "FOR EACH ROW"
+      ],
+      "patterns": [
+        "CREATE\\s+TRIGGER"
+      ],
       "difficulty": 3,
-      "prerequisites": ["views", "insert", "update"],
-      "nextTopics": ["window-functions"],
+      "prerequisites": [
+        "views",
+        "insert",
+        "update"
+      ],
+      "nextTopics": [
+        "window-functions"
+      ],
       "category": "advanced"
     },
     {
       "id": "window-functions",
       "label": "窗口函数",
       "description": "使用 ROW_NUMBER、RANK、DENSE_RANK、LEAD/LAG、PARTITION BY 进行高级数据分析",
-      "keywords": ["OVER", "PARTITION BY", "ROW_NUMBER", "RANK", "DENSE_RANK", "LEAD", "LAG", "NTILE"],
-      "patterns": ["\\bOVER\\s*\\(", "PARTITION\\s+BY", "ROW_NUMBER\\s*\\(", "RANK\\s*\\("],
+      "keywords": [
+        "OVER",
+        "PARTITION BY",
+        "ROW_NUMBER",
+        "RANK",
+        "DENSE_RANK",
+        "LEAD",
+        "LAG",
+        "NTILE"
+      ],
+      "patterns": [
+        "\\bOVER\\s*\\(",
+        "PARTITION\\s+BY",
+        "ROW_NUMBER\\s*\\(",
+        "RANK\\s*\\("
+      ],
       "difficulty": 3,
-      "prerequisites": ["aggregation", "subqueries"],
-      "nextTopics": ["cte"],
+      "prerequisites": [
+        "aggregation",
+        "subqueries"
+      ],
+      "nextTopics": [
+        "cte"
+      ],
       "category": "advanced"
     },
     {
       "id": "cte",
       "label": "CTE 公共表表达式",
       "description": "使用 WITH 子句定义临时的命名查询，支持递归 CTE 处理树形/层级数据",
-      "keywords": ["WITH", "RECURSIVE", "CTE"],
-      "patterns": ["\\bWITH\\s+(?:RECURSIVE\\s+)?\\w+\\s+AS\\s*\\("],
+      "keywords": [
+        "WITH",
+        "RECURSIVE",
+        "CTE"
+      ],
+      "patterns": [
+        "\\bWITH\\s+(?:RECURSIVE\\s+)?\\w+\\s+AS\\s*\\("
+      ],
       "difficulty": 3,
-      "prerequisites": ["subqueries", "window-functions"],
-      "nextTopics": ["query-planning"],
+      "prerequisites": [
+        "subqueries",
+        "window-functions"
+      ],
+      "nextTopics": [
+        "query-planning"
+      ],
       "category": "advanced"
     },
     {
       "id": "query-planning",
       "label": "查询计划分析",
       "description": "使用 EXPLAIN QUERY PLAN 分析 SQL 查询的执行计划，理解 SQLite 如何执行查询",
-      "keywords": ["EXPLAIN", "QUERY PLAN", "EXPLAIN QUERY PLAN"],
-      "patterns": ["EXPLAIN\\s+"],
+      "keywords": [
+        "EXPLAIN",
+        "QUERY PLAN",
+        "EXPLAIN QUERY PLAN"
+      ],
+      "patterns": [
+        "EXPLAIN\\s+"
+      ],
       "difficulty": 3,
-      "prerequisites": ["indexes", "joins"],
-      "nextTopics": ["optimization"],
+      "prerequisites": [
+        "indexes",
+        "joins"
+      ],
+      "nextTopics": [
+        "optimization"
+      ],
       "category": "performance"
     },
     {
       "id": "optimization",
       "label": "查询优化",
       "description": "SQL 查询性能优化：选择合适索引、避免 SELECT *、优化 JOIN 顺序、减少子查询",
-      "keywords": ["PRAGMA", "ANALYZE", "index", "optimization"],
+      "keywords": [
+        "PRAGMA",
+        "ANALYZE",
+        "index",
+        "optimization"
+      ],
       "patterns": [],
       "difficulty": 3,
-      "prerequisites": ["query-planning", "indexes"],
+      "prerequisites": [
+        "query-planning",
+        "indexes"
+      ],
       "nextTopics": [],
       "category": "performance"
     },
@@ -225,44 +511,114 @@
       "id": "data-types",
       "label": "SQLite 数据类型",
       "description": "SQLite 的数据类型系统（INTEGER/TEXT/REAL/BLOB/NULL），类型亲和性和灵活类型",
-      "keywords": ["INTEGER", "TEXT", "REAL", "BLOB", "NULL", "CAST", "TYPEOF"],
-      "patterns": ["\\bCAST\\s*\\("],
+      "keywords": [
+        "INTEGER",
+        "TEXT",
+        "REAL",
+        "BLOB",
+        "NULL",
+        "CAST",
+        "TYPEOF"
+      ],
+      "patterns": [
+        "\\bCAST\\s*\\("
+      ],
       "difficulty": 1,
-      "prerequisites": ["sql-basics"],
-      "nextTopics": ["create-table", "filtering"],
+      "prerequisites": [
+        "sql-basics"
+      ],
+      "nextTopics": [
+        "create-table",
+        "filtering"
+      ],
       "category": "basics"
     },
     {
       "id": "string-functions",
       "label": "字符串函数",
       "description": "SQL 中的字符串处理：LIKE、UPPER/LOWER、SUBSTR、LENGTH、INSTR、REPLACE、|| 拼接",
-      "keywords": ["UPPER", "LOWER", "SUBSTR", "LENGTH", "INSTR", "REPLACE", "TRIM", "RTRIM", "LTRIM", "LIKE", "GLOB"],
-      "patterns": ["\\bUPPER\\s*\\(", "\\bLOWER\\s*\\(", "\\bSUBSTR\\s*\\(", "\\|\\|"],
+      "keywords": [
+        "UPPER",
+        "LOWER",
+        "SUBSTR",
+        "LENGTH",
+        "INSTR",
+        "REPLACE",
+        "TRIM",
+        "RTRIM",
+        "LTRIM",
+        "LIKE",
+        "GLOB"
+      ],
+      "patterns": [
+        "\\bUPPER\\s*\\(",
+        "\\bLOWER\\s*\\(",
+        "\\bSUBSTR\\s*\\(",
+        "\\|\\|"
+      ],
       "difficulty": 1,
-      "prerequisites": ["sql-basics"],
-      "nextTopics": ["aggregation", "filtering"],
+      "prerequisites": [
+        "sql-basics"
+      ],
+      "nextTopics": [
+        "aggregation",
+        "filtering"
+      ],
       "category": "basics"
     },
     {
       "id": "datetime",
       "label": "日期与时间函数",
       "description": "SQLite 的日期时间处理：DATE、TIME、DATETIME、STRFTIME、JULIANDAY、计算时间差",
-      "keywords": ["DATE", "TIME", "DATETIME", "STRFTIME", "JULIANDAY", "TIMEDIFF"],
-      "patterns": ["\\bDATE\\s*\\(", "\\bDATETIME\\s*\\(", "\\bSTRFTIME\\s*\\(", "\\bJULIANDAY\\s*\\("],
+      "keywords": [
+        "DATE",
+        "TIME",
+        "DATETIME",
+        "STRFTIME",
+        "JULIANDAY",
+        "TIMEDIFF"
+      ],
+      "patterns": [
+        "\\bDATE\\s*\\(",
+        "\\bDATETIME\\s*\\(",
+        "\\bSTRFTIME\\s*\\(",
+        "\\bJULIANDAY\\s*\\("
+      ],
       "difficulty": 2,
-      "prerequisites": ["sql-basics", "string-functions"],
-      "nextTopics": ["aggregation"],
+      "prerequisites": [
+        "sql-basics",
+        "string-functions"
+      ],
+      "nextTopics": [
+        "aggregation"
+      ],
       "category": "basics"
     },
     {
       "id": "transactions",
       "label": "事务处理",
       "description": "使用 BEGIN TRANSACTION、COMMIT、ROLLBACK 管理事务，确保数据一致性",
-      "keywords": ["BEGIN", "COMMIT", "ROLLBACK", "SAVEPOINT", "TRANSACTION"],
-      "patterns": ["\\bBEGIN\\s+(?:TRANSACTION\\b)?", "\\bCOMMIT\\b", "\\bROLLBACK\\b"],
+      "keywords": [
+        "BEGIN",
+        "COMMIT",
+        "ROLLBACK",
+        "SAVEPOINT",
+        "TRANSACTION"
+      ],
+      "patterns": [
+        "\\bBEGIN\\s+(?:TRANSACTION\\b)?",
+        "\\bCOMMIT\\b",
+        "\\bROLLBACK\\b"
+      ],
       "difficulty": 2,
-      "prerequisites": ["insert", "update", "delete"],
-      "nextTopics": ["triggers"],
+      "prerequisites": [
+        "insert",
+        "update",
+        "delete"
+      ],
+      "nextTopics": [
+        "triggers"
+      ],
       "category": "advanced"
     }
   ]

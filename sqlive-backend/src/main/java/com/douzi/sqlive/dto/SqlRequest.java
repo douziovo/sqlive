@@ -7,10 +7,10 @@ import lombok.Data;
 
 @Data
 public class SqlRequest {
-    @NotBlank(message = "SQL cannot be empty")
-    @Size(max = 100000, message = "SQL script too large")
-    private String sql;
-    @Pattern(regexp = "^[a-zA-Z0-9_-]{0,64}$", message = "dbName must be 0-64 characters: letters, digits, underscores, hyphens")
-    private String dbName;
-    private boolean reset;
+	@NotBlank(message = "SQL cannot be empty")
+	@Size(max = 100000, message = "SQL script too large")
+	private String sql;
+	@Pattern(regexp = "^[a-zA-Z0-9_-]{0,64}$", message = "dbName must be 0-64 characters: letters, digits, underscores, hyphens")
+	private String dbName;
+	private boolean reset;
 }
