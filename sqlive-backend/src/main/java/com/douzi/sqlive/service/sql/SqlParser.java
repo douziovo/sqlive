@@ -147,7 +147,7 @@ public class SqlParser {
 
 			String sql = script.substring(start, i);
 			if (!sql.trim().isEmpty()) {
-				list.add(new SqlStatement(sql, startLine, start));
+				list.add(new SqlStatement(sql, startLine, start, i));
 			}
 		}
 		return list;
@@ -257,6 +257,6 @@ public class SqlParser {
 		return index;
 	}
 
-	public record SqlStatement(String sql, int startLine, int startPos) {
+	public record SqlStatement(String sql, int startLine, int startPos, int endPos) {
 	}
 }
