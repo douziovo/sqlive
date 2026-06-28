@@ -1,8 +1,12 @@
 import {reactive, ref} from 'vue'
-import type {DatabaseModel, HighlightState} from '../model/DatabaseTypes'
+import type {CanonicalStatement, DatabaseModel, HighlightState} from '../model/DatabaseTypes'
 import {compareValuesForHighlight, extractSqlStatements} from '../utils/sqlStatements'
 
-export function useHighlight(code: { value: string }, db: DatabaseModel) {
+export function useHighlight(
+    code: { value: string },
+    db: DatabaseModel,
+    canonicalStatements?: { value: CanonicalStatement[] | undefined }
+) {
     const highlightedCodeChunk = ref<string | null>(null)
     let refreshSeedCounter = 0
 
@@ -29,7 +33,16 @@ export function useHighlight(code: { value: string }, db: DatabaseModel) {
         highlight.actionType = 'none'
         highlight.refreshSeed = ++refreshSeedCounter
 
-        const statements = extractSqlStatements(code.value)
+        // D-03c (Pitfall 7): prefer backend canonicalStatements for consistency with
+        // useBidirectionalSync — single source of truth per Phase 2 CORE-01.
+        const canonical = canonicalStatements?.value
+        const statements = (canonical && canonical.length > 0)
+            ? canonical.map((cs) => ({
+                text: code.value.substring(cs.start, cs.end),
+                start: cs.start,
+                end: cs.end
+            }))
+            : extractSqlStatements(code.value)
         for (const stmt of statements) {
             const sqlClean = stmt.text.replace(/--.*$/gm, '').replace(/\s+/g, ' ').trim()
             if (!sqlClean) continue

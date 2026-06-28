@@ -7,7 +7,7 @@ import {useHighlight} from '../composables/useHighlight'
 import {useMultiTabs} from '../composables/useMultiTabs'
 import {API_URL} from '../config'
 import type {ExecuteRequest, ExecuteResponse} from '../model/ApiTypes'
-import type {DatabaseModel, InsertResult, Row} from '../model/DatabaseTypes'
+import type {CanonicalStatement, DatabaseModel, InsertResult, Row} from '../model/DatabaseTypes'
 
 function hashString(s: string): number {
     let hash = 5381
@@ -48,6 +48,9 @@ export function useSqlEngine() {
     const executionError = ref<{ line: number; message: string } | null>(null)
     const mode = ref<EngineMode>('user')
     const sessionRecreated = ref(false)
+    // D-03c: backend canonical statement boundaries — single source of truth for
+    // useBidirectionalSync + useHighlight (Phase 2 CORE-01). Updated on execute success.
+    const canonicalStatements = ref<CanonicalStatement[] | undefined>(undefined)
 
     // Multi-tab system
     const {
@@ -73,7 +76,7 @@ export function useSqlEngine() {
 
     let previousDataState = new Map<string, string>()
 
-    const {highlight, highlightedCodeChunk, flashCode, recalculateStaticHighlight} = useHighlight(code, db)
+    const {highlight, highlightedCodeChunk, flashCode, recalculateStaticHighlight} = useHighlight(code, db, canonicalStatements)
     const {
         getLastValidCode,
         updateRow,
@@ -87,7 +90,8 @@ export function useSqlEngine() {
         db,
         mode,
         flashCode,
-        transition
+        transition,
+        canonicalStatements
     )
 
     const insertResult = ref<InsertResult | null>(null)
@@ -125,6 +129,7 @@ export function useSqlEngine() {
             db.triggers = []
             db.foreignKeys = []
             db.metadata = null
+            canonicalStatements.value = undefined
             executionError.value = null
             isLoading.value = false
             previousDataState = new Map()
@@ -203,6 +208,10 @@ export function useSqlEngine() {
             db.triggers = data.triggers || []
             db.foreignKeys = data.foreignKeys || []
             db.metadata = data.metadata || null
+            // D-03c: capture canonical statement boundaries from backend (single source of truth).
+            // Forwarded to useBidirectionalSync.getStatements() + useHighlight.recalculateStaticHighlight()
+            // so frontend slicing of code.value uses backend-provided offsets, not a second parser.
+            canonicalStatements.value = data.canonicalStatements
             highlight.flashingRows = newFlashingRows
             previousDataState = nextDataState
 
