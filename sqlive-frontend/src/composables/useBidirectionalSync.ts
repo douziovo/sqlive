@@ -1,6 +1,6 @@
 import type {Ref, WritableComputedRef} from 'vue'
 import {ref} from 'vue'
-import type {DatabaseModel, Row, TruncationInfo} from '../model/DatabaseTypes'
+import type {CanonicalStatement, DatabaseModel, Row, TruncationInfo} from '../model/DatabaseTypes'
 import {parsePrimaryType, toSqlLiteral} from '../utils/sql'
 import {
     enforceTypeConstraints,
@@ -17,10 +17,26 @@ export function useBidirectionalSync(
     db: DatabaseModel,
     mode: Ref<EngineMode>,
     flashCode: (sql: string) => void,
-    transitionFn: (from: EngineMode, to: EngineMode, ctx: string) => EngineMode
+    transitionFn: (from: EngineMode, to: EngineMode, ctx: string) => EngineMode,
+    canonicalStatements?: Ref<CanonicalStatement[] | undefined>
 ) {
     let lastValidCode = code.value
     const lastTruncations = ref<TruncationInfo[]>([])
+
+    // D-03c: prefer backend canonicalStatements (single source of truth per Phase 2 CORE-01).
+    // Falls back to extractSqlStatements(code.value) per D-03d when canonical list is absent
+    // (backward compat for responses without canonicalStatements).
+    const getStatements = () => {
+        const canonical = canonicalStatements?.value
+        if (canonical && canonical.length > 0) {
+            return canonical.map((cs) => ({
+                start: cs.start,
+                end: cs.end,
+                text: code.value.substring(cs.start, cs.end)
+            }))
+        }
+        return extractSqlStatements(code.value)
+    }
 
     const beginReconcile = () => {
         lastValidCode = code.value
@@ -86,7 +102,7 @@ export function useBidirectionalSync(
     const updateRow = (tableName: string, oldRow: Row, newRowData: Row) => {
         beginReconcile()
 
-        const statements = extractSqlStatements(code.value)
+        const statements = getStatements()
         for (const stmt of statements) {
             const match = findTupleInBatch(stmt.text, tableName, oldRow)
             if (match) {
@@ -115,7 +131,7 @@ export function useBidirectionalSync(
         }
         if (!targetTableName) return
 
-        const statements = extractSqlStatements(code.value)
+        const statements = getStatements()
         for (const stmt of statements) {
             const match = findTupleInBatch(stmt.text, targetTableName, row)
             if (match) {
@@ -181,7 +197,7 @@ export function useBidirectionalSync(
         const escaped = tableName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
         const tableRefRe = new RegExp(`\\b${escaped}\\b`, 'i')
 
-        const statements = extractSqlStatements(code.value)
+        const statements = getStatements()
         let newCode = code.value
         for (let i = statements.length - 1; i >= 0; i--) {
             if (tableRefRe.test(statements[i].text)) {
