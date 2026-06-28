@@ -42,6 +42,102 @@
 ![知识图谱细节](docs/screenshots/08-knowledge-graph.png)
 ![知识图谱](docs/screenshots/09-knowledge-graph-detail.png)
 
+## 关键设计决策
+
+### 范围取舍
+
+| 决策 | 选择 | 理由 |
+|---|---|---|
+| 安全加固范围 | 仅做 ATTACH 禁用 + 日志脱敏 | CORS 端口收窄需要确定部署端口，当前仅本地开发 |
+| 性能优化 | 移出 v1 范围 | 当前规模未触及瓶颈，优先修正确性问题 |
+| 前端解析器统一 | 采用后端暴露 canonical 边界 | 避免维护两份解析器，从根源消除不一致 |
+| 增量 UPDATE | 不做 | 架构变更大，全脚本重执行够用 |
+| AI 流式非阻塞化 | 不做 | Tomcat 默认 200 线程够用 |
+
+### 后端架构
+
+- **统一 SQL 解析器**：前端不再独立解析，改用后端返回的 canonical 语句边界（start/end 偏移）——消除"前后端两份解析器在 `BEGIN...END` / `CASE...END` 上分歧导致内联编辑静默失败"的系统性 bug。
+- **数据库会话 LRU 淘汰**：`LinkedHashMap` access-order + synchronized，20min 空闲超时 + 5min 定时清理，替代 `ConcurrentHashMap` 随机淘汰——多 tab 用户最久空闲的会话先被回收，而非随机踢出。
+- **FK 安全清理**：`clearDatabase()` 拓扑排序按 FK 依赖顺序 DROP 表，不再开关 `PRAGMA foreign_keys`——消除并发 reset+insert 下的外键竞争。
+- **SQL 沙箱**：阻断 `ATTACH DATABASE` + 关闭 `PRAGMA trusted_schema`，在 `SqlExecutionService` 层而非 SQLite authorizer 层拦截——防止用户读写服务器文件系统。
+- **AI 超时统一**：`connect=5s, read=60s, write=30s`，按 provider 类型区分流式/非流式——慢或不可达的 provider 不再耗尽线程池。
+- **日志脱敏**：AI provider 错误日志中的 `Authorization` header 显示为 `[REDACTED]`，防止 API key 泄露。
+
+### 前端体验
+
+- **知识图谱"按需浮现"连线**：默认隐藏 24 节点的依赖关系，hover 节点才显示——在"必须保留依赖信息"和"全显示太杂乱"之间取平衡，参考 Duolingo 路径感。
+- **Continuous LOD**：用连续 opacity 函数替代 `v-if/v-else` DOM 切换——解决缩放时的 destroy/recreate 卡顿，实现 Google Maps 式平滑过渡。
+- **原神式任务追踪**：双面板任务日志 + 冒险之证章节体系 + HUD 追踪器 + 红点通知——把"学习路径"从被动浏览变成主动探索的游戏化体验。
+
+## 交互与体验亮点
+
+### 编辑器 ↔ 表格双向同步
+
+- 在表格中编辑任意单元格，系统自动定位并改写左侧 SQL 源码对应位置，两端始终一致。
+- 出错自动回滚到上一条有效 SQL，不打断当前工作。
+- VARCHAR 截断不再静默，弹出 tooltip 告知用户。
+- 插入失败保留幽灵行输入状态，不清空，允许修正后重试。
+
+### 知识图谱探索（原神地图风格 + Duolingo 路径感）
+
+- 默认隐藏依赖连线，hover 节点才浮现关联边 + 高亮关联节点 + dim 无关节点。
+- Ctrl+F 弹出搜索框，输入关键词匹配节点脉冲，回车镜头飞行到目标。
+- 点击节点展示完整前置链 + 后继链（蓝色高亮），minimap 同步标记。
+- 难度/类别筛选 chips 可组合使用，非匹配节点 dimmed。
+- Concave hull 不规则多边形区域背景包裹同 category 节点，大地色系 + 高斯羽化无硬边界。
+- 道路式连线：柔和点线默认可见（opacity 0.18），hover 实线 `#6366f1`，无箭头。
+- 4 级 zoom 分层：全景（只看区域+标签）→ dot → compact → expanded（看描述）。
+- 双击画布空白 fit-view 重置，zoom 位置 localStorage 记忆。
+
+### Continuous LOD（连续细节层级）
+
+用连续 opacity 分段线性函数替代 `v-if/v-else` DOM 切换。三层 dot/label/desc 共存于 DOM，缩放时平滑过渡，无 destroy/recreate 卡顿。
+
+### 游戏化学习反馈
+
+- 标记掌握节点 → 彩色火花粒子动画。
+- 成就 toast + 连胜计数，5 连击触发特殊文案。
+- XP 系统 + 等级（初级学者 → SQL 大师 → 数据库传奇），升级全屏撒花。
+- 顶部进度条实时推进。
+
+### 原神式任务追踪
+
+- 双面板任务日志：左侧分类（核心金 / 深度学习蓝 / 每日练习紫）+ 右侧任务详情 + 步骤进度。
+- 冒险之证章节体系：6 章（基础 → 查询 → DDL → DML → 进阶 → 性能），等级解锁 + 进度条 + 章完成奖励。
+- HUD 任务追踪器：置顶任务显示当前步骤 + 继续学习按钮。
+- 红点层级穿透：面板 → 分类 → 任务，浏览即消，不改变任务状态。
+- 子步骤 locked → active → done，垂直步骤线 + 脉冲动画 + 完成打勾。
+
+### 防御性 UX
+
+- 浏览器刷新/崩溃后弹出"会话已恢复" toast，而非默默重置。
+- ER 图面板重新打开后节点位置不归零，保持 dagre 计算的坐标。
+- 多 tab 每个独立 SQLite 内存库 + LRU 空闲回收，用户感知不到资源竞争。
+
+### JetBrains 风格 hover 预览
+
+不是普通 tooltip，而是 Teleport 到 body 的浮窗，带标题栏 + 内嵌过滤器 + 键盘导航，IDE 风格的"hover 即查"体验。
+
+## 演进路线
+
+| Phase | 主题 | 关键产出 |
+|---|---|---|
+| 1 | Backend Infrastructure | LRU 淘汰、AI 超时、volatile 修复、日志脱敏、警告抑制精确化 |
+| 2 | Parser Unification & Data Layer | canonical 语句边界、FK 安全 clearDatabase、dbName 校验统一 |
+| 3 | Frontend Reliability | Emit 类型安全、VARCHAR 截断告警、幽灵行保留、ER 位置持久化 |
+| 4 | Security Hardening | ATTACH/PRAGMA 阻断、SQL 沙箱 |
+| 5 | Knowledge Graph UX | Hover 浮现、Ctrl+F 飞行、游戏化反馈、原神地图风格 |
+| 6 | Test Debt Repair | 267 处 waitForTimeout 替换为事件等待、conditional assertion 修复 |
+| 7 | User Flow Tests | 10 个 E2E spec 加真实断言 |
+| 8 | Coverage Boost | 单元测试覆盖率达标 60% |
+| 9 | Knowledge Task Tracking | 原神任务系统、章节进度、HUD 追踪 |
+| 10 | Knowledge Graph Refactor | 16 问题修复、组件拆分 4 composable |
+| 11 | Code Review Fixes | 19 项审查 findings 零遗留 |
+
+11 个 phase / 43 个 plan / 100% 完成（2026-05-29 → 2026-06-25）。
+
+使用 GSD（Get Stuff Done）工作流：research → requirements → roadmap → 每 phase `CONTEXT → RESEARCH → PLAN → 实施 → VERIFICATION → REVIEW`，带自动 code review + security audit 闭环，分支策略 `gsd/phase-{N}-{slug}`。
+
 ## 技术栈
 
 | 层 | 技术 | 版本 |
