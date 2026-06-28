@@ -10,7 +10,7 @@ vi.mock('@/utils/aiFormatter', () => ({
     formatErrorAnalysis: vi.fn((data: any) => `formatted-error: ${data.summary || data.content}`),
     formatExplain: vi.fn((data: any) => `formatted-explain: ${data.summary || data.content}`),
     formatFixCode: vi.fn((data: any) => `formatted-fix: ${data.fixedCode || data.content}`),
-    formatOptimize: vi.fn((data: any) => `formatted-optimize: ${data.optimizedCode || data.content}`),
+    formatOptimize: vi.fn((data: any) => `formatted-optimize: ${data.fixedCode || data.content}`),
     formatGenerateSql: vi.fn((code: string) => `formatted-sql: ${code}`)
 }))
 
@@ -235,7 +235,7 @@ describe('useInlineActions', () => {
         it('returns optimized code on success', async () => {
             mockFetchSuccess({
                 summary: 'Optimized query',
-                optimizedCode: 'SELECT id FROM users WHERE id > 0;',
+                fixedCode: 'SELECT id FROM users WHERE id > 0;',
                 explanation: 'Added index hint'
             })
 

@@ -184,7 +184,6 @@ export function useInlineActions(state: {
                 data?: {
                     content?: string;
                     summary?: string;
-                    optimizedCode?: string;
                     explanation?: string;
                     fixedCode?: string
                 }
@@ -192,7 +191,7 @@ export function useInlineActions(state: {
             }>('/optimize', {selectedCode, schema: currentSchema.value})
 
             if (resp.success && resp.data) {
-                const optimizedCode = resp.data.optimizedCode || resp.data.fixedCode || ''
+                const optimizedCode = resp.data.fixedCode || ''
                 const content = formatOptimize(resp.data, {selectedCode})
                 const actions = [
                     ...(optimizedCode ? [{label: '✏️ 替换', action: 'apply-fix'}] : []),
