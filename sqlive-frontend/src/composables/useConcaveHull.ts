@@ -12,7 +12,7 @@ export interface Point {
 export interface HullOptions {
     /** Margin to expand the hull outward from the convex hull boundary (default 60). */
     margin?: number
-    /** Reserved parameter for future concave hull support. */
+    /** Concavity parameter (default Infinity = convex). Lower finite values produce a more concave (smaller-area) hull. */
     concavity?: number
 }
 
@@ -81,6 +81,110 @@ export function convexHull(points: Point[]): Point[] {
     upper.pop()
 
     return [...lower, ...upper]
+}
+
+/**
+ * Compute the mean nearest-neighbor distance among a set of points.
+ * Used as the base for the concavity threshold (approximates the mean Delaunay
+ * edge length, which is the typical spacing between nearby points).
+ */
+function meanNearestNeighborDistance(points: Point[]): number {
+    if (points.length < 2) return 0
+    let total = 0
+    for (const p of points) {
+        let minDist = Infinity
+        for (const q of points) {
+            if (p === q) continue
+            const d = Math.hypot(p.x - q.x, p.y - q.y)
+            if (d < minDist) minDist = d
+        }
+        if (minDist < Infinity) total += minDist
+    }
+    return total / points.length
+}
+
+/**
+ * Concaveman-style "dig inward" post-processor.
+ *
+ * Starting from the convex hull, for each edge longer than
+ * `concavity * meanNearestNeighborDistance`, find the nearest non-hull point
+ * on the interior side and insert it between the edge endpoints. Iterate
+ * until no edge qualifies.
+ *
+ * Key invariant: `concavity=Infinity` → no edge qualifies (any finite edge
+ * length ≤ Infinity * base) → returns `convex` unchanged. The caller guards
+ * with `Number.isFinite(concavity)`, but this function is also safe if called
+ * directly with `Infinity`.
+ *
+ * @param convex - Convex hull vertices (CCW order, no duplicate start/end)
+ * @param allPoints - All input points (convex hull points + interior candidates)
+ * @param concavity - Finite positive number; higher = closer to convex
+ * @returns Concave hull vertices (CCW order)
+ */
+function digInward(convex: Point[], allPoints: Point[], concavity: number): Point[] {
+    // Defensive guard: non-finite concavity → no dig-inward
+    if (!Number.isFinite(concavity) || convex.length < 3) return [...convex]
+
+    const hullKeys = new Set(convex.map((p) => `${p.x},${p.y}`))
+    const candidates = allPoints.filter((p) => !hullKeys.has(`${p.x},${p.y}`))
+    if (candidates.length === 0) return [...convex]
+
+    const base = meanNearestNeighborDistance(allPoints)
+    if (base < 1e-10) return [...convex]
+    const threshold = concavity * base
+
+    const hull = [...convex]
+    const used = new Set<string>()
+
+    let changed = true
+    let iterations = 0
+    const MAX_ITERATIONS = 100
+
+    while (changed && iterations < MAX_ITERATIONS) {
+        changed = false
+        iterations++
+
+        for (let i = 0; i < hull.length; i++) {
+            const a = hull[i]
+            const b = hull[(i + 1) % hull.length]
+            const L = Math.hypot(b.x - a.x, b.y - a.y)
+
+            // Edge doesn't qualify for dig-inward
+            if (L <= threshold) continue
+
+            const midX = (a.x + b.x) / 2
+            const midY = (a.y + b.y) / 2
+
+            let bestPoint: Point | null = null
+            let bestDist = Infinity
+
+            for (const p of candidates) {
+                const key = `${p.x},${p.y}`
+                if (used.has(key)) continue
+
+                // p must be on the interior (left) side of edge a→b for a CCW hull
+                const c = cross(a, b, p)
+                if (c <= 0) continue
+
+                const dist = Math.hypot(p.x - midX, p.y - midY)
+                if (dist < bestDist) {
+                    bestDist = dist
+                    bestPoint = p
+                }
+            }
+
+            if (bestPoint) {
+                // Insert bestPoint between a (at index i) and b (at index i+1)
+                hull.splice(i + 1, 0, bestPoint)
+                used.add(`${bestPoint.x},${bestPoint.y}`)
+                changed = true
+                // Re-evaluate the new edge a→bestPoint (don't advance i)
+                // The loop increment will move to bestPoint→b next
+            }
+        }
+    }
+
+    return hull
 }
 
 /**
@@ -307,14 +411,15 @@ export function computeBounds(vertices: Point[]): Bounds {
  * 1. If 0 points → empty result
  * 2. If 1 point → approximate circle around the point (12 segments)
  * 3. If 2 points → blob shape encompassing both points with margin
- * 4. If 3+ points → convex hull (monotone chain) → expand by margin → SVG path d
+ * 4. If 3+ points → convex hull (monotone chain) → [optional dig-inward if concavity finite] → expand by margin → SVG path d
  *
  * @param points - Array of {x, y} points
- * @param options - Optional configuration (margin defaults to 60)
+ * @param options - Optional configuration (margin defaults to 60, concavity defaults to Infinity = convex)
  * @returns HullResult with pathD, centroid, and bounds
  */
 export function computeHull(points: Point[], options: HullOptions = {}): HullResult {
     const margin = options.margin ?? 60
+    const concavity = options.concavity ?? Infinity
 
     // Filter out NaN/Infinity points (defensive)
     const validPoints = points.filter(
@@ -341,19 +446,24 @@ export function computeHull(points: Point[], options: HullOptions = {}): HullRes
         // Two points: blob shape
         vertices = twoPointBlob(uniquePoints[0], uniquePoints[1], margin)
     } else {
-        // 3+ points: convex hull + margin expansion
-        const hull = convexHull(validPoints)
+        // 3+ points: convex hull → [dig-inward if concavity finite] → margin expansion
+        const convex = convexHull(validPoints)
         // If hull degenerated to < 3 points after dedup
-        if (hull.length < 3) {
-            if (hull.length === 1) {
-                vertices = circlePath(hull[0], margin)
-            } else if (hull.length === 2) {
-                vertices = twoPointBlob(hull[0], hull[1], margin)
+        if (convex.length < 3) {
+            if (convex.length === 1) {
+                vertices = circlePath(convex[0], margin)
+            } else if (convex.length === 2) {
+                vertices = twoPointBlob(convex[0], convex[1], margin)
             } else {
                 vertices = []
             }
         } else {
-            vertices = expandHull(hull, margin)
+            // Apply concave dig-inward post-processor when concavity is finite
+            let hull = convex
+            if (Number.isFinite(concavity)) {
+                hull = digInward(convex, validPoints, concavity)
+            }
+            vertices = hull.length >= 3 ? expandHull(hull, margin) : expandHull(convex, margin)
         }
     }
 
