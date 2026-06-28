@@ -34,10 +34,6 @@
         @pane-ready="onPaneReady"
       >
         <Background :gap="20" :size="1" pattern-color="#e2e8f0" />
-        <RegionBackground
-          :positioned-nodes="displayNodes"
-          :svg-bounds="svgBoundsForRegions"
-        />
         <MiniMap
           position="bottom-left"
           :width="160"
@@ -83,7 +79,6 @@ import type { KnowledgeNodeData, KnowledgeTopic } from '@/composables/useKnowled
 import ErSearchBar from '@/components/er/ErSearchBar.vue'
 import KnowledgeDetail from './KnowledgeDetail.vue'
 import KnowledgeNode from './KnowledgeNode.vue'
-import RegionBackground from './RegionBackground.vue'
 
 const props = defineProps<{
   nodes: Node<KnowledgeNodeData>[]
@@ -107,20 +102,6 @@ const nodeTypes = markRaw({ 'knowledge-node': KnowledgeNode }) as any
 const flowRef = ref<any>(null)
 const displayNodes = ref<Node<KnowledgeNodeData>[]>([...props.nodes])
 
-const svgBoundsForRegions = computed(() => {
-  if (displayNodes.value.length === 0) return { minX: 0, minY: 0, width: 800, height: 600 }
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
-  for (const node of displayNodes.value) {
-    const cx = node.position.x + 60, cy = node.position.y + 22
-    if (cx < minX) minX = cx
-    if (cy < minY) minY = cy
-    if (cx > maxX) maxX = cx
-    if (cy > maxY) maxY = cy
-  }
-  const padding = 200
-  return { minX: minX - padding, minY: minY - padding, width: maxX - minX + padding * 2, height: maxY - minY + padding * 2 }
-})
-
 // ── Composables (D-10 split: hover/viewport/search/LOD) ───────
 // NOTE: onResetView injects onPaneDblClick into useGraphSearch so Ctrl+0
 // can reset the view without the composable knowing about hover/viewport.
@@ -132,7 +113,6 @@ const lod = useGraphLOD()
 
 provide('zoomLevel', viewport.zoomLevel)
 provide('viewportPos', viewport.viewportPos)
-provide('svgTransform', viewport.svgTransform)
 
 // ── Styled edges (zoom-tiered opacity + hover path highlight) ──
 

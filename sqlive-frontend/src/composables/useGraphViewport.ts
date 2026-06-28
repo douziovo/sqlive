@@ -16,9 +16,9 @@ const NODE_HALF_H = 30
  * knowledge graph.
  *
  * Owns:
- *   - zoomLevel / viewportPos / svgTransform / isSettling reactive state
- *   - onMove handler (syncs svgTransform for RegionBackground, throttles
- *     zoomLevel updates, debounces localStorage kg-viewport writes)
+ *   - zoomLevel / viewportPos / isSettling reactive state
+ *   - onMove handler (throttles zoomLevel updates, debounces
+ *     localStorage kg-viewport writes)
  *   - fitView / focusNode / flyToNode (with flowRef null guards — T-10-11)
  *   - onMounted: restore localStorage kg-viewport OR fitView if none
  *   - onUnmounted: clear pendingSave / settleTimer
@@ -36,7 +36,6 @@ export function useGraphViewport(
 ): {
     zoomLevel: Ref<number>
     viewportPos: { x: number; y: number }
-    svgTransform: Ref<string>
     isSettling: Ref<boolean>
     onMove: (moveEvent: { event: any; flowTransform: { x: number; y: number; zoom: number } }) => void
     fitView: () => void
@@ -45,7 +44,6 @@ export function useGraphViewport(
 } {
     const zoomLevel = ref(0.8)
     const viewportPos = reactive({x: 0, y: 0})
-    const svgTransform = ref('')
     const isSettling = ref(false)
 
     let lastMoveTs = 0
@@ -56,12 +54,6 @@ export function useGraphViewport(
         const vp = moveEvent.flowTransform
         viewportPos.x = vp.x
         viewportPos.y = vp.y
-
-        // Sync svg transform for RegionBackground (replaces its rAF polling)
-        const pane = (flowRef.value?.$el as HTMLElement)?.querySelector?.('.vue-flow__transformationpane') as HTMLElement | null
-        if (pane && pane.style.transform) {
-            svgTransform.value = pane.style.transform
-        }
 
         isSettling.value = true
         if (settleTimer) clearTimeout(settleTimer)
@@ -147,7 +139,6 @@ export function useGraphViewport(
     return {
         zoomLevel,
         viewportPos,
-        svgTransform,
         isSettling,
         onMove,
         fitView,
