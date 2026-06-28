@@ -129,11 +129,11 @@ describe('formatExplain', () => {
 describe('formatOptimize', () => {
     const selectedCode = 'SELECT * FROM t'
 
-    it('formats with optimizedCode', () => {
+    it('formats with fixedCode', () => {
         const result = formatOptimize(
             {
                 summary: 'Use index hint',
-                optimizedCode: 'SELECT * FROM t WITH (INDEX(idx))',
+                fixedCode: 'SELECT * FROM t WITH (INDEX(idx))',
                 explanation: 'Using index improves performance'
             },
             {selectedCode}
@@ -147,7 +147,7 @@ describe('formatOptimize', () => {
         expect(result).toContain('Using index improves performance')
     })
 
-    it('falls back to fixedCode when optimizedCode is absent', () => {
+    it('reads fixedCode directly', () => {
         const result = formatOptimize({fixedCode: 'SELECT * FROM t WHERE 1=1'}, {selectedCode})
         expect(result).toContain('SELECT * FROM t WHERE 1=1')
     })
