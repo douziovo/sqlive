@@ -86,8 +86,9 @@ test.describe('Create Table Modal', () => {
 
     // Verify modal renders without crashing
     await expect(page.locator('button:has-text("立即创建")')).toBeVisible();
-    await expect(page.locator('button:has-text("取消")')).toBeVisible();
-    await page.locator('button:has-text("取消")').click();
+    const cancelBtn = page.locator('[role="dialog"] button:has-text("取消")');
+    await expect(cancelBtn).toBeVisible();
+    await cancelBtn.click();
     await expect(page.locator('.monaco-editor')).toBeVisible();
   });
 
@@ -102,7 +103,7 @@ test.describe('Create Table Modal', () => {
     await expect(page.locator('input[placeholder*="如: id"]').first()).toBeVisible({ timeout: 5_000 });
 
     // Close modal and verify app doesn't crash
-    await page.locator('button:has-text("取消")').click();
+    await page.locator('[role="dialog"] button:has-text("取消")').click();
     await expect(page.locator('.monaco-editor')).toBeVisible();
   });
 
