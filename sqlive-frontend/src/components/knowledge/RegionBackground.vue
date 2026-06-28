@@ -44,6 +44,7 @@ interface SvgBounds {
 const props = defineProps<{
   positionedNodes: Node<KnowledgeNodeData>[]
   svgBounds: SvgBounds
+  concavity?: number
 }>()
 
 const zoomLevel = inject<number>('zoomLevel', 1)
@@ -96,7 +97,7 @@ const regions = computed<RegionPolygon[]>(() => {
   const result: RegionPolygon[] = []
   for (const [category, points] of groups) {
     if (points.length === 0) continue
-    const hull = computeHull(points, { margin: 60 })
+    const hull = computeHull(points, { margin: 60, concavity: props.concavity })
     result.push({
       category,
       centroid: hull.centroid,
