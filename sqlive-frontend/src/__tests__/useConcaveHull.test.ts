@@ -30,6 +30,34 @@ function makeTriangle(): Point[] {
     ]
 }
 
+// L-shape: convex hull is the 4-corner rectangle, concave hull should notch into {40,40}
+function makeConcaveShape(): Point[] {
+    return [
+        {x: 0, y: 0},
+        {x: 100, y: 0},
+        {x: 100, y: 40},
+        {x: 40, y: 40},
+        {x: 40, y: 100},
+        {x: 0, y: 100}
+    ]
+}
+
+// Decode an SVG path `d` string ("M x,y L x,y ... Z") back into Point[] vertices
+function decodePathD(pathD: string): Point[] {
+    if (!pathD) return []
+    const tokens = pathD.replace(/Z/gi, '').trim().split(/\s+/)
+    const points: Point[] = []
+    for (const tok of tokens) {
+        const [xStr, yStr] = tok.replace(/^[ML]/, '').split(',')
+        const x = parseFloat(xStr)
+        const y = parseFloat(yStr)
+        if (Number.isFinite(x) && Number.isFinite(y)) {
+            points.push({x, y})
+        }
+    }
+    return points
+}
+
 // ── Tests ──────────────────────────────────────────────────────
 
 describe('cross', () => {
@@ -387,5 +415,37 @@ describe('computeHull', () => {
         // Should filter out NaN/Infinity, leaving 2 valid points → blob
         expect(result.pathD).toMatch(/^M/)
         expect(result.pathD).toContain('Z')
+    })
+})
+
+describe('computeHull concavity parameter', () => {
+    it('degrades to convex hull when concavity=Infinity', () => {
+        const points = makeConcaveShape()
+        const convexResult = computeHull(points)
+        const concaveResult = computeHull(points, {concavity: Infinity})
+        expect(concaveResult.pathD).toBe(convexResult.pathD)
+    })
+
+    it('default behavior (no concavity) equals concavity=Infinity', () => {
+        const points = makeConcaveShape()
+        const defaultResult = computeHull(points)
+        const infinityResult = computeHull(points, {concavity: Infinity})
+        expect(defaultResult.pathD).toBe(infinityResult.pathD)
+    })
+
+    it('produces smaller-or-equal-area hull with finite concavity', () => {
+        const points = makeConcaveShape()
+        // Use margin: 0 to isolate the dig-inward effect from expandHull
+        const convexArea = polygonArea(convexHull(points))
+        const concaveResult = computeHull(points, {margin: 0, concavity: 2})
+        const concaveArea = polygonArea(decodePathD(concaveResult.pathD))
+        // Concave hull area must be <= convex hull area (contract: no worse than convex)
+        expect(concaveArea).toBeLessThanOrEqual(convexArea + 1e-6)
+        // For an L-shape, the concave hull should be STRICTLY smaller (dig-inward notches
+        // the inner corner at {40,40}). This assertion fails if concavity is ignored.
+        expect(concaveArea).toBeLessThan(convexArea - 1)
+        // The concave pathD must differ from the default (convex) pathD
+        const defaultResult = computeHull(points, {margin: 0})
+        expect(concaveResult.pathD).not.toBe(defaultResult.pathD)
     })
 })
