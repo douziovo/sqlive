@@ -3,6 +3,7 @@ services:
     name: sqlive
     runtime: docker
     plan: free
+    branch: master
     dockerfilePath: ./Dockerfile
     healthCheckPath: /actuator/health
     autoDeploy: true
