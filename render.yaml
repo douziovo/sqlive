@@ -10,6 +10,8 @@ services:
     envVars:
       - key: PORT
         value: 8080
+      - key: JAVA_TOOL_OPTIONS
+        value: -Xmx384m -Xms128m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC
       - key: DEEPSEEK_API_KEY
         sync: false
       - key: SQLIVE_SQLITE_URL
