@@ -7,7 +7,9 @@ import com.douzi.sqlive.dto.TableSchema;
 import com.douzi.sqlive.service.database.DatabasePoolManager;
 import com.douzi.sqlive.service.metadata.MetadataExtractor;
 import com.douzi.sqlive.service.sql.SqlParser;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -27,8 +29,20 @@ import java.util.regex.Pattern;
 public class SqlExecutionService {
 
 	private static final Pattern SQL_COMMENT = Pattern.compile("(?:/\\*[\\s\\S]*?\\*/|--[^\r\n]*)");
-	private static final Pattern ATTACH_PATTERN = Pattern.compile("(?i)\\bATTACH\\s+(?:DATABASE\\b|')");
-	private static final Pattern PRAGMA_PATTERN = Pattern.compile("(?i)^\\s*PRAGMA\\b");
+	static final String DEFAULT_ATTACH_PATTERN = "(?i)\\bATTACH\\s+(?:DATABASE\\b|')";
+	static final String DEFAULT_PRAGMA_PATTERN = "(?i)^\\s*PRAGMA\\b";
+	static final String DEFAULT_ATTACH_ERROR = "ATTACH DATABASE is not allowed for security reasons";
+	static final String DEFAULT_PRAGMA_ERROR = "PRAGMA statements are not allowed";
+	@Value("${SQLIVE_ATTACH_PATTERN:" + DEFAULT_ATTACH_PATTERN + "}")
+	private String attachPatternStr;
+	@Value("${SQLIVE_PRAGMA_PATTERN:" + DEFAULT_PRAGMA_PATTERN + "}")
+	private String pragmaPatternStr;
+	@Value("${SQLIVE_ATTACH_ERROR:" + DEFAULT_ATTACH_ERROR + "}")
+	private String attachError;
+	@Value("${SQLIVE_PRAGMA_ERROR:" + DEFAULT_PRAGMA_ERROR + "}")
+	private String pragmaError;
+	private Pattern attachPattern;
+	private Pattern pragmaPattern;
 	private final DatabasePoolManager poolManager;
 	private final SqlParser sqlParser;
 	private final MetadataExtractor metadataExtractor;
@@ -38,6 +52,15 @@ public class SqlExecutionService {
 		this.poolManager = poolManager;
 		this.sqlParser = sqlParser;
 		this.metadataExtractor = metadataExtractor;
+		initPatterns();
+	}
+
+	@PostConstruct
+	void initPatterns() {
+		attachPattern = Pattern.compile(attachPatternStr != null ? attachPatternStr : DEFAULT_ATTACH_PATTERN);
+		pragmaPattern = Pattern.compile(pragmaPatternStr != null ? pragmaPatternStr : DEFAULT_PRAGMA_PATTERN);
+		if (attachError == null) attachError = DEFAULT_ATTACH_ERROR;
+		if (pragmaError == null) pragmaError = DEFAULT_PRAGMA_ERROR;
 	}
 
 	@SuppressWarnings("SqlSourceToSinkFlow")
@@ -139,11 +162,11 @@ public class SqlExecutionService {
 
 	private String isBlockedStatement(String sql) {
 		String cleaned = SQL_COMMENT.matcher(sql).replaceAll("");
-		if (ATTACH_PATTERN.matcher(cleaned).find()) {
-			return "ATTACH DATABASE is not allowed for security reasons";
+		if (attachPattern.matcher(cleaned).find()) {
+			return attachError;
 		}
-		if (PRAGMA_PATTERN.matcher(cleaned).find()) {
-			return "PRAGMA statements are not allowed";
+		if (pragmaPattern.matcher(cleaned).find()) {
+			return pragmaError;
 		}
 		return null;
 	}
