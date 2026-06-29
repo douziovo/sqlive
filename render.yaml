@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: sqlive
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /actuator/health
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: SQLIVE_SQLITE_URL
+        value: jdbc:sqlite:file:playground?mode=memory&cache=shared
+      - key: SQLIVE_POOL_MAX_DB
+        value: 50
