@@ -9,11 +9,17 @@ RUN npm run build
 # Stage 2: Build backend JAR with frontend static files
 FROM eclipse-temurin:21-jdk AS backend
 WORKDIR /app
+# Gradle wrapper JAR not in git — download Gradle 9.2.1 directly
+RUN apt-get update && apt-get install -y --no-install-recommends unzip wget && \
+    rm -rf /var/lib/apt/lists/* && \
+    wget -q https://services.gradle.org/distributions/gradle-9.2.1-bin.zip -O /tmp/gradle.zip && \
+    unzip -q /tmp/gradle.zip -d /opt && \
+    rm /tmp/gradle.zip
+ENV PATH="/opt/gradle-9.2.1/bin:$PATH"
 COPY sqlive-backend/ ./
-RUN chmod +x gradlew
 # Copy frontend dist into Spring Boot static resources
 COPY --from=frontend /app/frontend/dist/ ./src/main/resources/static/
-RUN ./gradlew bootJar --no-daemon -x test
+RUN gradle bootJar --no-daemon -x test
 
 # Stage 3: Runtime
 FROM eclipse-temurin:21-jre
