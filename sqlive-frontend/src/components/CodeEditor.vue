@@ -5,18 +5,17 @@
        @drop.prevent="onDrop">
     <div class="flex items-center justify-between mb-3">
       <h2 class="text-xl font-bold text-foreground flex items-center gap-2">
-        <span>&#x1F4BB;</span> SQL 编辑器
+        <span>  </span> SQL 编辑器
       </h2>
       <div class="flex items-center gap-2">
         <!-- DB selector -->
         <div class="flex items-center gap-1">
-          <span class="text-xs text-muted-foreground">数据库</span>
           <select
             :value="activeDbName"
             @change="emit('set-db-name', activeTabId, ($event.target as HTMLSelectElement).value)"
             class="text-xs font-medium border border-border rounded px-2 py-1 bg-card text-black outline-none cursor-pointer hover:border-primary/60"
           >
-            <option value="">（实时模式）</option>
+            <option value="">实时模式</option>
             <option v-for="name in dbList" :key="name" :value="name">{{ name }}</option>
           </select>
           <button
@@ -44,8 +43,7 @@
           title="AI 助手 (Alt+Enter QuickFix)"
         >
           <span v-if="ai.isLoading.value" class="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-          <span v-else>🤖</span>
-          AI
+          <span v-else>AI助手</span>
         </button>
         <!-- GitHub repo link -->
         <a
