@@ -10,6 +10,7 @@
 
 - 在右侧表格中编辑任意单元格，系统自动定位并修改左侧 SQL 对应位置，始终保持两端一致。
 - 修改出错时自动回滚到上一条正确 SQL，不影响当前工作。
+- VARCHAR 截断不再静默，弹出 tooltip 告知用户；插入失败保留幽灵行输入状态，允许修正后重试。
 
 ### AI 即时辅导
 
@@ -71,13 +72,6 @@
 
 ## 交互与体验亮点
 
-### 编辑器 ↔ 表格双向同步
-
-- 在表格中编辑任意单元格，系统自动定位并改写左侧 SQL 源码对应位置，两端始终一致。
-- 出错自动回滚到上一条有效 SQL，不打断当前工作。
-- VARCHAR 截断不再静默，弹出 tooltip 告知用户。
-- 插入失败保留幽灵行输入状态，不清空，允许修正后重试。
-
 ### 知识图谱探索（原神地图风格 + Duolingo 路径感）
 
 - 默认隐藏依赖连线，hover 节点才浮现关联边 + 高亮关联节点 + dim 无关节点。
@@ -102,6 +96,8 @@
 
 ### 原神式任务追踪
 
+把学习路径包装成 RPG 任务系统，章节按难度递进解锁，每个知识点是一个可领取、可完成的任务：
+
 - 双面板任务日志：左侧分类（核心金 / 深度学习蓝 / 每日练习紫）+ 右侧任务详情 + 步骤进度。
 - 冒险之证章节体系：6 章（基础 → 查询 → DDL → DML → 进阶 → 性能），等级解锁 + 进度条 + 章完成奖励。
 - HUD 任务追踪器：置顶任务显示当前步骤 + 继续学习按钮。
@@ -120,21 +116,7 @@
 
 ## 演进路线
 
-| Phase | 主题 | 关键产出 |
-|---|---|---|
-| 1 | Backend Infrastructure | LRU 淘汰、AI 超时、volatile 修复、日志脱敏、警告抑制精确化 |
-| 2 | Parser Unification & Data Layer | canonical 语句边界、FK 安全 clearDatabase、dbName 校验统一 |
-| 3 | Frontend Reliability | Emit 类型安全、VARCHAR 截断告警、幽灵行保留、ER 位置持久化 |
-| 4 | Security Hardening | ATTACH/PRAGMA 阻断、SQL 沙箱 |
-| 5 | Knowledge Graph UX | Hover 浮现、Ctrl+F 飞行、游戏化反馈、原神地图风格 |
-| 6 | Test Debt Repair | 267 处 waitForTimeout 替换为事件等待、conditional assertion 修复 |
-| 7 | User Flow Tests | 10 个 E2E spec 加真实断言 |
-| 8 | Coverage Boost | 单元测试覆盖率达标 60% |
-| 9 | Knowledge Task Tracking | 原神任务系统、章节进度、HUD 追踪 |
-| 10 | Knowledge Graph Refactor | 16 问题修复、组件拆分 4 composable |
-| 11 | Code Review Fixes | 19 项审查 findings 零遗留 |
-
-11 个 phase / 43 个 plan / 100% 完成（2026-05-29 → 2026-06-25）。
+11 个 phase / 43 个 plan / 100% 完成（2026-05-29 → 2026-06-25），覆盖后端基础设施、解析器统一、前端可靠性、安全加固、知识图谱 UX、测试债务修复、E2E 用户流、覆盖率提升、知识任务追踪、知识图谱重构、代码审查修复。
 
 使用 GSD（Get Stuff Done）工作流：research → requirements → roadmap → 每 phase `CONTEXT → RESEARCH → PLAN → 实施 → VERIFICATION → REVIEW`，带自动 code review + security audit 闭环，分支策略 `gsd/phase-{N}-{slug}`。
 
@@ -223,17 +205,28 @@ cd sqlive-backend
 ./gradlew test         # 运行全部 JUnit 5 用例
 ```
 
-## 安装步骤
+## 部署
+
+### 本地构建 JAR
 
 ```bash
-# 前端依赖
-cd sqlive-frontend && npm install
-
-# 后端依赖（首次运行或构建 jar）
-cd ../sqlive-backend
-./gradlew build      # Linux / macOS
-gradlew.bat build    # Windows
+cd sqlive-backend
+./gradlew bootJar      # 产物在 build/libs/，含前端静态资源
+java -jar build/libs/*.jar
 ```
+
+### Docker
+
+根目录 `Dockerfile` 多阶段构建（前端 `dist/` → Spring Boot `static/` → `eclipse-temurin:21-jre` 运行 jar），无需本地 JDK/Node：
+
+```bash
+docker build -t sqlive .
+docker run -p 8080:8080 sqlive
+```
+
+### Render
+
+`render.yaml` 单服务配置，绑 `master` 分支自动部署，免费 tier JVM 已限 `-Xmx384m -XX:+UseSerialGC`，环境变量 `DEEPSEEK_API_KEY` 需在 Render 控制台设置。
 
 ## 使用示例
 
@@ -288,10 +281,6 @@ ORDER BY e.salary DESC;
 ```
 
 执行后在右侧"表格"标签页看到查询结果，在"ER 图"标签页看到自动生成的实体关系图（employees -- departments，1:N 关系）。
-
-### 示例 3：批量导入 SQL 文件
-
-项目根目录提供了 `test-multi-table.sql` 示例文件，包含 14 张表、10 个索引、4 个视图、7 个触发器、8 条 INSERT 数据以及 20+ 种查询类型（窗口函数、递归 CTE、子查询、UNION 等）。可通过 Web 界面的"导入"按钮加载，一键体验全部功能。
 
 ## 许可证
 
