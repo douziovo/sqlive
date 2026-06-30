@@ -5,7 +5,7 @@ import {useBidirectionalSync} from '../composables/useBidirectionalSync'
 import {useDatabaseLifecycle} from '../composables/useDatabaseLifecycle'
 import {useHighlight} from '../composables/useHighlight'
 import {useMultiTabs} from '../composables/useMultiTabs'
-import {API_URL} from '../config'
+import {API_URL, DEBOUNCE_MS} from '../config'
 import type {ExecuteRequest, ExecuteResponse} from '../model/ApiTypes'
 import type {CanonicalStatement, DatabaseModel, InsertResult, Row} from '../model/DatabaseTypes'
 
@@ -253,7 +253,7 @@ export function useSqlEngine() {
     )
 
     const isE2E = typeof window !== 'undefined' && window.location.search.includes('e2e=1')
-    const debouncedExecuteSql = useDebounceFn(() => executeSqlRemote(), isE2E ? 50 : 100)
+    const debouncedExecuteSql = useDebounceFn(() => executeSqlRemote(), isE2E ? 50 : DEBOUNCE_MS)
 
     watch(
         code,

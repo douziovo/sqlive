@@ -31,6 +31,9 @@ docs/superpowers
 .env.local
 .env.*.local
 
+# SQLive backend local tweaks (not tracked)
+sqlive-backend/local-tweaks.yml
+
 # OS
 .DS_Store
 Thumbs.db

@@ -22,7 +22,6 @@ import java.util.concurrent.atomic.AtomicLong;
 public class DatabasePoolManager {
 
 	private static final int DEFAULT_SOFT_MAX = 500;
-	private static final int DEFAULT_HARD_MAX = 2000;
 	private static final int DEFAULT_MAX_PER_IP = 50;
 	private static final String DB_NAME_PATTERN = "^[a-zA-Z0-9_-]{1,64}$";
 	private static final long MAX_HOLD_NANOS = TimeUnit.MINUTES.toNanos(10);
