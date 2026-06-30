@@ -1,10 +1,12 @@
 server:
   port: ${PORT:8080}
 spring:
+  config:
+    import: optional:file:./local-tweaks.yml
   application:
     name: sqlive-backend
   datasource:
-    url: jdbc:sqlite:file:playground?mode=memory&cache=shared
+    url: ${SQLIVE_SQLITE_URL:jdbc:sqlite:file:playground?mode=memory&cache=shared}
     driver-class-name: org.sqlite.JDBC
 
 logging:
@@ -72,6 +74,6 @@ management:
       show-details: never
 
 pool:
-  max-databases: 500
-  idle-timeout: 30m
-  cleanup-interval: 5m
+  max-databases: ${SQLIVE_POOL_MAX_DB:500}
+  idle-timeout: ${SQLIVE_POOL_IDLE_TIMEOUT:30m}
+  cleanup-interval: ${SQLIVE_POOL_CLEANUP_INTERVAL:5m}
