@@ -52,7 +52,7 @@ describe('useHighlight', () => {
     it('initializes with empty highlight state', () => {
         const code = {value: ''}
         const db = makeDb([])
-        const {highlight} = useHighlight(code, db)
+        const {highlight} = useHighlight(code, () => db.tables)
 
         expect(highlight.activeTables).toEqual([])
         expect(highlight.activeColumns).toEqual([])
@@ -65,7 +65,7 @@ describe('useHighlight', () => {
     it('recalculateStaticHighlight detects CREATE TABLE', () => {
         const code = {value: 'CREATE TABLE users (id INTEGER, name TEXT);'}
         const db = makeDb([])
-        const {highlight, recalculateStaticHighlight} = useHighlight(code, db)
+        const {highlight, recalculateStaticHighlight} = useHighlight(code, () => db.tables)
 
         recalculateStaticHighlight()
 
@@ -76,7 +76,7 @@ describe('useHighlight', () => {
     it('recalculateStaticHighlight detects INSERT INTO', () => {
         const code = {value: "INSERT INTO users (id, name) VALUES (1, 'Alice');"}
         const db = makeDb([])
-        const {highlight, recalculateStaticHighlight} = useHighlight(code, db)
+        const {highlight, recalculateStaticHighlight} = useHighlight(code, () => db.tables)
 
         recalculateStaticHighlight()
 
@@ -91,7 +91,7 @@ describe('useHighlight', () => {
         ])
         const code = {value: "SELECT * FROM users WHERE name = 'Alice';"}
         const db = makeDb([usersTable])
-        const {highlight, recalculateStaticHighlight} = useHighlight(code, db)
+        const {highlight, recalculateStaticHighlight} = useHighlight(code, () => db.tables)
 
         recalculateStaticHighlight()
 
@@ -105,7 +105,7 @@ describe('useHighlight', () => {
         const usersTable = makeTable('users', ['id', 'name', 'email'], [])
         const code = {value: 'SELECT id, name FROM users;'}
         const db = makeDb([usersTable])
-        const {highlight, recalculateStaticHighlight} = useHighlight(code, db)
+        const {highlight, recalculateStaticHighlight} = useHighlight(code, () => db.tables)
 
         recalculateStaticHighlight()
 
@@ -118,7 +118,7 @@ describe('useHighlight', () => {
         const usersTable = makeTable('users', ['id', 'name'], [])
         const code = {value: 'SELECT * FROM users;'}
         const db = makeDb([usersTable])
-        const {highlight, recalculateStaticHighlight} = useHighlight(code, db)
+        const {highlight, recalculateStaticHighlight} = useHighlight(code, () => db.tables)
 
         recalculateStaticHighlight()
 
@@ -129,7 +129,7 @@ describe('useHighlight', () => {
     it('recalculateStaticHighlight resets previous state on re-run', () => {
         const code = {value: 'CREATE TABLE users (id INTEGER);'}
         const db = makeDb([])
-        const {highlight, recalculateStaticHighlight} = useHighlight(code, db)
+        const {highlight, recalculateStaticHighlight} = useHighlight(code, () => db.tables)
 
         recalculateStaticHighlight()
         expect(highlight.activeTables).toContain('users')
@@ -143,7 +143,7 @@ describe('useHighlight', () => {
     it('recalculateStaticHighlight increments refreshSeed', () => {
         const code = {value: ''}
         const db = makeDb([])
-        const {highlight, recalculateStaticHighlight} = useHighlight(code, db)
+        const {highlight, recalculateStaticHighlight} = useHighlight(code, () => db.tables)
 
         recalculateStaticHighlight()
         expect(highlight.refreshSeed).toBe(1)
@@ -156,7 +156,7 @@ describe('useHighlight', () => {
         vi.useFakeTimers()
         const code = {value: ''}
         const db = makeDb([])
-        const {highlightedCodeChunk, flashCode} = useHighlight(code, db)
+        const {highlightedCodeChunk, flashCode} = useHighlight(code, () => db.tables)
 
         expect(highlightedCodeChunk.value).toBeNull()
 
@@ -174,7 +174,7 @@ describe('useHighlight', () => {
         const ordersTable = makeTable('orders', ['id', 'user_id'], [{id: 10, user_id: 1}])
         const code = {value: 'SELECT u.name FROM users u JOIN orders o ON u.id = o.user_id;'}
         const db = makeDb([usersTable, ordersTable])
-        const {highlight, recalculateStaticHighlight} = useHighlight(code, db)
+        const {highlight, recalculateStaticHighlight} = useHighlight(code, () => db.tables)
 
         recalculateStaticHighlight()
 
@@ -185,7 +185,7 @@ describe('useHighlight', () => {
     it('ignores comments in SQL', () => {
         const code = {value: '-- this is a comment\nCREATE TABLE t (id INTEGER);'}
         const db = makeDb([])
-        const {highlight, recalculateStaticHighlight} = useHighlight(code, db)
+        const {highlight, recalculateStaticHighlight} = useHighlight(code, () => db.tables)
 
         recalculateStaticHighlight()
 
