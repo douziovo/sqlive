@@ -4,6 +4,8 @@ import jakarta.servlet.DispatcherType;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
@@ -40,11 +42,24 @@ public class SecurityConfig {
 	@Bean
 	SecurityFilterChain filterChain(HttpSecurity http, ApiKeyFilter apiKeyFilter) throws Exception {
 		return http
+				// WR-03: integrate Spring Security with the WebMvc CORS configuration in
+				// WebConfig.addCorsMappings. Without http.cors(...), Spring Security filters
+				// run before the dispatcher servlet, so 401 responses from ApiKeyFilter never
+				// reach the CorsInterceptor — the browser sees an opaque CORS error instead
+				// of a readable 401 body. Customizer.withDefaults() picks up the existing
+				// WebMvc CORS mappings (no separate CorsConfigurationSource bean needed).
+				.cors(Customizer.withDefaults())
 				.authorizeHttpRequests(auth -> auth
 						// SSE streaming uses servlet ASYNC dispatch — permit without
 						// re-checking auth (the initial REQUEST already enforced it).
 						.dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
 						.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
+						// WR-03: permit CORS preflight (OPTIONS) on /api/ai/** so the
+						// browser can negotiate X-API-Key before sending the actual POST.
+						// Preflight requests don't carry X-API-Key, so without this
+						// exemption ApiKeyFilter would 401 the preflight and block the
+						// real request entirely.
+						.requestMatchers(HttpMethod.OPTIONS, "/api/ai/**").permitAll()
 						.requestMatchers("/api/ai/**").authenticated()
 						.anyRequest().permitAll())
 				.addFilterBefore(apiKeyFilter, UsernamePasswordAuthenticationFilter.class)
