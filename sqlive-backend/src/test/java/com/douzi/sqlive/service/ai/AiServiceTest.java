@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
+import org.springframework.test.util.ReflectionTestUtils;
 import reactor.core.publisher.Flux;
 
 import java.util.Map;
@@ -40,7 +41,9 @@ class AiServiceTest {
 		when(mockProvider.isAvailable()).thenReturn(true);
 
 		service = new AiService(props, mapper);
-		service.providers = Map.of("test", mockProvider);
+		// Field is private (init is the only writer in production). Inject mock map via
+		// reflection since @PostConstruct init() is not invoked in unit tests.
+		ReflectionTestUtils.setField(service, "providers", Map.of("test", mockProvider));
 	}
 
 	// ── getProvider ─────────────────────────────────────────
