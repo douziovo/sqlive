@@ -11,17 +11,22 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
  * Mock strategy:
  * - `minisearch` mocked with a class that counts constructor calls and
  *   returns canned search results for 'edit' queries.
- * - Test 5 overrides with `vi.doMock` to make `default` non-constructor →
- *   `new undefined()` throws → caught → `indexError = true` (D-07 fallback).
+ * - `shouldThrow` flag (on the hoisted mock object) lets test 5 simulate
+ *   MiniSearch instantiation failure without vi.doMock/unmock (which would
+ *   also strip the hoisted vi.mock and break subsequent tests).
  */
 const mockMinisearch = vi.hoisted(() => {
     const ctorCalls = {count: 0}
+    const shouldThrow = {value: false}
     return {
         ctorCalls,
+        shouldThrow,
         MockMiniSearch: class MockMiniSearch {
             constructor() {
                 ctorCalls.count++
+                if (shouldThrow.value) throw new Error('MiniSearch init failed')
             }
+
             addAll() {
             }
 
@@ -45,12 +50,12 @@ beforeEach(() => {
     // Reset module registry so `let index = null` and refs re-initialize per test
     vi.resetModules()
     mockMinisearch.ctorCalls.count = 0
+    mockMinisearch.shouldThrow.value = false
 })
 
 afterEach(() => {
-    // Remove any per-test vi.doMock overrides; hoisted vi.mock stays in effect
-    vi.doUnmock('minisearch')
     vi.restoreAllMocks()
+    mockMinisearch.shouldThrow.value = false
 })
 
 async function loadUseDocsSearch() {
@@ -99,10 +104,10 @@ describe('useDocsSearch', () => {
         expect(search('   ')).toEqual([])
     })
 
-    it('marks unavailable when minisearch import fails', async () => {
+    it('marks unavailable when minisearch init fails', async () => {
         // D-07 error fallback: if MiniSearch import or instantiation throws,
         // indexError becomes true (does NOT throw to caller). Sidebar nav still works.
-        vi.doMock('minisearch', () => ({default: undefined}))
+        mockMinisearch.shouldThrow.value = true
         const useDocsSearch = await loadUseDocsSearch()
         const {ensureIndex, indexError, indexReady} = useDocsSearch()
         await ensureIndex()
