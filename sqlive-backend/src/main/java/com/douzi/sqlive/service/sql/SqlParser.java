@@ -5,6 +5,21 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * SQL statement splitter for the playground's clear-and-re-execute model.
+ *
+ * <p>Offsets contract (must match frontend {@code code.value.substring(start, end)}):
+ * <ul>
+ *   <li>{@code endPos} = cursor position <b>after</b> the trailing semicolon (i.e. {@code i} after {@code i++; break;})</li>
+ *   <li>All offsets are <b>UTF-16 code unit indices</b>, matching JS String.prototype.substring</li>
+ *   <li>Single-quote {@code ''} and double-quote {@code ""} escapes are <b>asymmetric</b>:
+ *       single-quote supports backslash escape ({@code E'\'}}, PostgreSQL-compat),
+ *       double-quote does not</li>
+ * </ul>
+ *
+ * <p>Depth tracking: {@code beginDepth} (BEGIN/END), {@code caseDepth} (CASE/END).
+ * {@code END} resolves to CASE first when {@code caseDepth > 0}.
+ */
 @Component
 public class SqlParser {
 
@@ -127,6 +142,8 @@ public class SqlParser {
 					continue;
 				}
 				if (isKeyword(script, i, start, "END")) {
+					// END ambiguity: prefer CASE/END closure (caseDepth > 0) over BEGIN/END closure.
+					// Rationale: CASE always appears inside expression context; BEGIN is statement-level.
 					if (caseDepth > 0) {
 						caseDepth--;
 					} else {
