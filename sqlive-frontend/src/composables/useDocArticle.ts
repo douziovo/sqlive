@@ -37,8 +37,13 @@ export function useDocArticle(slug: Ref<string>) {
             // (target=_blank + rel=noopener noreferrer on every <a>).
             return DOMPurify.sanitize(parsed, sanitizeConfig)
         } catch (e) {
-            // Error Handling 4.8: marked.parse exception → <pre> fallback
-            return `<pre>${raw.value}</pre>`
+            // Error Handling 4.8: marked.parse exception → escaped <pre> fallback
+            // (escape so raw markdown is shown as text, not rendered as HTML)
+            const escaped = raw.value
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+            return `<pre>${escaped}</pre>`
         }
     })
 
