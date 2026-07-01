@@ -67,11 +67,13 @@ function makeState(overrides?: Partial<{
     code: string
     error: { line: number; message: string } | null
 }>) {
+    // D-R2-004: composable now takes tablesSource getter instead of whole DatabaseModel
+    const db = makeDb()
     return {
         isLoading: ref(false) as Ref<boolean>,
         messages: ref([]) as Ref<AiMessage[]>,
         code: ref(overrides?.code ?? 'SELECT 1;') as Ref<string>,
-        db: makeDb(),
+        tablesSource: () => db.tables,
         error: ref(overrides?.error ?? null) as Ref<{ line: number; message: string } | null>
     }
 }

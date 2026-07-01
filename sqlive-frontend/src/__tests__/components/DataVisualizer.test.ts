@@ -110,6 +110,34 @@ describe('DataVisualizer', () => {
         vi.useRealTimers()
     })
 
+    // D-R2-003: DataVisualizer wraps each db field in a computed. Removing any
+    // DatabaseModel field breaks the `computed(() => db.<field>)` line at tsc
+    // time — verified by this type-level assertion. Pick<> requires every
+    // listed key to remain present on DatabaseModel; otherwise tsc errors and
+    // this test file fails to compile (catches silent template breakage early).
+    it('D-R2-003: computed-wrapped db fields remain present on DatabaseModel (compile-time guard)', () => {
+        type ExpectedFields = Pick<
+            DatabaseModel,
+            'tables' | 'indexes' | 'views' | 'triggers' | 'foreignKeys' | 'metadata' | 'queryResults'
+        >
+        const sample: ExpectedFields = {
+            tables: [],
+            indexes: [],
+            views: [],
+            triggers: [],
+            foreignKeys: [],
+            metadata: null,
+            queryResults: []
+        }
+        expect(sample.tables).toEqual([])
+        expect(sample.indexes).toEqual([])
+        expect(sample.views).toEqual([])
+        expect(sample.triggers).toEqual([])
+        expect(sample.foreignKeys).toEqual([])
+        expect(sample.metadata).toBeNull()
+        expect(sample.queryResults).toEqual([])
+    })
+
     it('renders 6 tab buttons', () => {
         const wrapper = mount(DataVisualizer, {
             global: {

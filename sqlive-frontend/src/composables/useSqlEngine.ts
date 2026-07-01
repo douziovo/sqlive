@@ -52,6 +52,31 @@ export function useSqlEngine() {
     // useBidirectionalSync + useHighlight (Phase 2 CORE-01). Updated on execute success.
     const canonicalStatements = ref<CanonicalStatement[] | undefined>(undefined)
 
+    // D-R2-002: centralize db mutations so adding a new DatabaseModel field only
+    // requires updating DatabaseTypes + this single pair (previously 3 call sites:
+    // init + clear + assign). The reactive literal init above stays — reactive()
+    // requires an object literal and cannot be replaced by a function call.
+    function setDb(data: ExecuteResponse['data']) {
+        db.tables = data.tables || []
+        db.queryResults = data.queryResults || []
+        db.indexes = data.indexes || []
+        db.views = data.views || []
+        db.triggers = data.triggers || []
+        db.foreignKeys = data.foreignKeys || []
+        db.metadata = data.metadata || null
+    }
+
+    function clearDb() {
+        db.tables = []
+        db.queryResults = []
+        db.indexes = []
+        db.views = []
+        db.triggers = []
+        db.foreignKeys = []
+        db.metadata = null
+        canonicalStatements.value = undefined
+    }
+
     // Multi-tab system
     const {
         tabs,
@@ -76,7 +101,7 @@ export function useSqlEngine() {
 
     let previousDataState = new Map<string, string>()
 
-    const {highlight, highlightedCodeChunk, flashCode, recalculateStaticHighlight} = useHighlight(code, db, canonicalStatements)
+    const {highlight, highlightedCodeChunk, flashCode, recalculateStaticHighlight} = useHighlight(code, () => db.tables, canonicalStatements)
     const {
         getLastValidCode,
         updateRow,
@@ -87,7 +112,7 @@ export function useSqlEngine() {
         lastTruncations
     } = useBidirectionalSync(
         code,
-        db,
+        () => db.tables,
         mode,
         flashCode,
         transition,
@@ -122,14 +147,7 @@ export function useSqlEngine() {
         // old error path only set executionError without clearing db — leaving stale
         // data in the chart/visualizer.
         if (!code.value || code.value.trim() === '') {
-            db.tables = []
-            db.queryResults = []
-            db.indexes = []
-            db.views = []
-            db.triggers = []
-            db.foreignKeys = []
-            db.metadata = null
-            canonicalStatements.value = undefined
+            clearDb()
             executionError.value = null
             isLoading.value = false
             previousDataState = new Map()
@@ -179,7 +197,6 @@ export function useSqlEngine() {
             if (!result.data) return
             const data = result.data
             const newTables = data.tables || []
-            const newQueryResults = data.queryResults || []
 
             // Assign _highlightId to rows in physical tables
             const nextDataState = new Map<string, string>()
@@ -201,13 +218,7 @@ export function useSqlEngine() {
                 })
             })
 
-            db.tables = newTables
-            db.queryResults = newQueryResults
-            db.indexes = data.indexes || []
-            db.views = data.views || []
-            db.triggers = data.triggers || []
-            db.foreignKeys = data.foreignKeys || []
-            db.metadata = data.metadata || null
+            setDb(data)
             // D-03c: capture canonical statement boundaries from backend (single source of truth).
             // Forwarded to useBidirectionalSync.getStatements() + useHighlight.recalculateStaticHighlight()
             // so frontend slicing of code.value uses backend-provided offsets, not a second parser.

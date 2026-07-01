@@ -22,21 +22,21 @@
     </div>
 
     <!-- Metadata bar -->
-    <div v-if="db.metadata" class="text-xs text-muted-foreground/70 mb-3 px-1">
-      &#x26A1; {{ db.metadata.durationMs }}ms | {{ db.metadata.statementCount }} 条语句
+    <div v-if="metadata" class="text-xs text-muted-foreground/70 mb-3 px-1">
+      &#x26A1; {{ metadata.durationMs }}ms | {{ metadata.statementCount }} 条语句
     </div>
 
     <!-- Tab: 表数据 -->
     <div v-show="activeTab === 'tables'" class="flex flex-col">
-      <EmptyState v-if="db.tables.length === 0" icon="&#x1F4ED;" title="暂无数据表" />
+      <EmptyState v-if="tables.length === 0" icon="&#x1F4ED;" title="暂无数据表" />
 
       <TableSection
-          v-for="table in db.tables"
+          v-for="table in tables"
           :key="table.name"
           :table="table"
-          :indexes="db.indexes"
-          :triggers="db.triggers"
-          :views="db.views"
+          :indexes="indexes"
+          :triggers="triggers"
+          :views="views"
           :flash-table-name="flashTableName"
           @update-cell="emit('update-cell', $event)"
           @delete-row="emit('delete-row', $event)"
@@ -57,15 +57,15 @@
     <!-- Tab: ER 图 -->
     <div v-show="activeTab === 'er'" class="flex-1 min-h-0">
       <ErDiagram
-          :tables="db.tables"
-          :foreign-keys="db.foreignKeys"
+          :tables="tables"
+          :foreign-keys="foreignKeys"
           @navigate-tab="handleNavigate"
       />
     </div>
 
     <!-- Tab: 索引 -->
     <div v-show="activeTab === 'indexes'">
-      <EmptyState v-if="db.indexes.length === 0" icon="&#x1F4ED;" title="暂无索引" subtitle="在 SQL 中使用 CREATE INDEX 语句创建索引" />
+      <EmptyState v-if="indexes.length === 0" icon="&#x1F4ED;" title="暂无索引" subtitle="在 SQL 中使用 CREATE INDEX 语句创建索引" />
 
       <template v-else>
         <SortFilterToolbar
@@ -76,7 +76,7 @@
             :sort-dir="idxSortDir"
             @toggle-sort="idxToggleSort"
             item-label="索引"
-            :total-count="db.indexes.length"
+            :total-count="indexes.length"
             :filtered-count="idxFiltered.length"
         />
 
@@ -115,7 +115,7 @@
 
     <!-- Tab: 视图 -->
     <div v-show="activeTab === 'views'">
-      <EmptyState v-if="db.views.length === 0" icon="&#x1F4ED;" title="暂无视图" subtitle="在 SQL 中使用 CREATE VIEW 语句创建视图" />
+      <EmptyState v-if="views.length === 0" icon="&#x1F4ED;" title="暂无视图" subtitle="在 SQL 中使用 CREATE VIEW 语句创建视图" />
 
       <template v-else>
         <SortFilterToolbar
@@ -126,7 +126,7 @@
             :sort-dir="viewSortDir"
             @toggle-sort="viewToggleSort"
             item-label="视图"
-            :total-count="db.views.length"
+            :total-count="views.length"
             :filtered-count="viewFiltered.length"
         />
 
@@ -150,7 +150,7 @@
 
     <!-- Tab: 触发器 -->
     <div v-show="activeTab === 'triggers'">
-      <EmptyState v-if="db.triggers.length === 0" icon="&#x1F4ED;" title="暂无触发器" subtitle="在 SQL 中使用 CREATE TRIGGER 语句创建触发器" />
+      <EmptyState v-if="triggers.length === 0" icon="&#x1F4ED;" title="暂无触发器" subtitle="在 SQL 中使用 CREATE TRIGGER 语句创建触发器" />
 
       <template v-else>
         <SortFilterToolbar
@@ -161,7 +161,7 @@
             :sort-dir="trgSortDir"
             @toggle-sort="trgToggleSort"
             item-label="触发器"
-            :total-count="db.triggers.length"
+            :total-count="triggers.length"
             :filtered-count="trgFiltered.length"
         />
 
@@ -188,10 +188,10 @@
 
     <!-- Tab: 查询结果 -->
     <div v-show="activeTab === 'results'">
-      <EmptyState v-if="db.queryResults.length === 0" icon="&#x1F4CA;" title="暂无查询结果" subtitle="执行 SELECT 语句后结果会显示在这里" />
+      <EmptyState v-if="queryResults.length === 0" icon="&#x1F4CA;" title="暂无查询结果" subtitle="执行 SELECT 语句后结果会显示在这里" />
 
       <ResultTable
-          v-for="(result, i) in db.queryResults"
+          v-for="(result, i) in queryResults"
           :key="i"
           :result="result"
           :index="i"
@@ -202,12 +202,11 @@
 </template>
 
 <script setup lang="ts">
-import { inject, nextTick, onUnmounted, provide, ref, watch } from 'vue'
+import { computed, inject, nextTick, onUnmounted, provide, ref, watch } from 'vue'
 import { type SortField, useSortFilter } from '../composables/useSortFilter'
 import type {
   CellUpdateEvent,
   CreateTableEvent,
-  DatabaseModel,
   HighlightState,
   IndexInfo,
   RowDeleteEvent,
@@ -225,6 +224,17 @@ import SortFilterToolbar from './SortFilterToolbar.vue'
 import TableSection from './TableSection.vue'
 
 const { db, highlight } = inject(SQL_CONTEXT_KEY)!
+
+// D-R2-003: wrap each db field in computed so dropping a DatabaseModel field
+// becomes a compile-time error (template references the computed, which fails
+// tsc if the underlying db field is removed) instead of a silent template fail.
+const tables = computed(() => db.tables)
+const indexes = computed(() => db.indexes)
+const views = computed(() => db.views)
+const triggers = computed(() => db.triggers)
+const foreignKeys = computed(() => db.foreignKeys)
+const metadata = computed(() => db.metadata)
+const queryResults = computed(() => db.queryResults)
 
 const emit = defineEmits<{
   'update-cell': [event: CellUpdateEvent]
@@ -317,7 +327,7 @@ const {
   toggleSort: idxToggleSort,
   result: idxFiltered
 } = useSortFilter(
-  () => db.indexes,
+  () => indexes.value,
   idxSortFields,
   (idx, f) =>
     idx.name.toLowerCase().includes(f) ||
@@ -339,7 +349,7 @@ const {
   toggleSort: viewToggleSort,
   result: viewFiltered
 } = useSortFilter(
-  () => db.views,
+  () => views.value,
   viewSortFields,
   (v, f) => v.name.toLowerCase().includes(f) || (v.sql || '').toLowerCase().includes(f)
 )
@@ -347,7 +357,7 @@ const {
 // Navigate from view to table (best effort: match table name in SQL)
 function navigateToViewTable(v: ViewInfo) {
   const sql = v.sql || ''
-  for (const t of db.tables) {
+  for (const t of tables.value) {
     if (sql.includes(t.name) || sql.includes(`"${t.name}"`) || sql.includes(`\`${t.name}\``)) {
       handleNavigate({ tab: 'tables', targetId: `table-${t.name}` })
       return
@@ -374,7 +384,7 @@ const {
   toggleSort: trgToggleSort,
   result: trgFiltered
 } = useSortFilter(
-  () => db.triggers,
+  () => triggers.value,
   trgSortFields,
   (t, f) =>
     t.name.toLowerCase().includes(f) || t.tableName.toLowerCase().includes(f) || (t.sql || '').toLowerCase().includes(f)

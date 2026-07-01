@@ -1,6 +1,6 @@
 import type {Ref, WritableComputedRef} from 'vue'
 import {ref} from 'vue'
-import type {CanonicalStatement, DatabaseModel, Row, TruncationInfo} from '../model/DatabaseTypes'
+import type {CanonicalStatement, Row, TableSchema, TruncationInfo} from '../model/DatabaseTypes'
 import {parsePrimaryType, toSqlLiteral} from '../utils/sql'
 import {
     enforceTypeConstraints,
@@ -12,9 +12,12 @@ import {extractTuplesWithDepth, splitTupleContent} from '../utils/tupleParser'
 
 type EngineMode = 'user' | 'reconciling' | 'rollback'
 
+// D-R2-004: previously received the whole DatabaseModel but only read db.tables.
+// Narrowed to a `tablesSource: () => TableSchema[]` getter (matches the
+// useErDiagram L92 范式) so this composable no longer couples to the whole DatabaseModel shape.
 export function useBidirectionalSync(
     code: WritableComputedRef<string>,
-    db: DatabaseModel,
+    tablesSource: () => TableSchema[],
     mode: Ref<EngineMode>,
     flashCode: (sql: string) => void,
     transitionFn: (from: EngineMode, to: EngineMode, ctx: string) => EngineMode,
@@ -44,7 +47,7 @@ export function useBidirectionalSync(
     }
 
     const generateValuesTuple = (tableName: string, row: Row, columns: string[]) => {
-        const tableInfo = db.tables.find((t) => t.name === tableName)
+        const tableInfo = tablesSource().find((t) => t.name === tableName)
         const truncations: TruncationInfo[] = []
         const values = columns.map((colName) => {
             let val = row[colName]
@@ -70,7 +73,7 @@ export function useBidirectionalSync(
         if (explicitCols) {
             compareCols = explicitCols
         } else {
-            const table = db.tables.find((t) => t.name === tableName)
+            const table = tablesSource().find((t) => t.name === tableName)
             if (!table) return null
             compareCols = table.columns.filter((c) => !table.columnTypes[c]?.includes('VIRTUAL'))
         }
@@ -122,7 +125,7 @@ export function useBidirectionalSync(
         beginReconcile()
         let targetTableName = tableName || ''
         if (!targetTableName) {
-            for (const t of db.tables) {
+            for (const t of tablesSource()) {
                 if (t.data.includes(row)) {
                     targetTableName = t.name
                     break
@@ -161,7 +164,7 @@ export function useBidirectionalSync(
 
     const insertRowUI = (tableName: string, newRowData: Row) => {
         beginReconcile()
-        const table = db.tables.find((t) => t.name === tableName)
+        const table = tablesSource().find((t) => t.name === tableName)
         if (!table) return
         const physicalColumns = table.columns.filter((c) => !table.columnTypes[c].includes('VIRTUAL'))
         const {sql: valuesSql, truncations} = generateValuesTuple(tableName, newRowData, physicalColumns)

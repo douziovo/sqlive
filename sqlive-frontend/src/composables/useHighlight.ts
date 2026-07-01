@@ -1,10 +1,13 @@
 import {reactive, ref} from 'vue'
-import type {CanonicalStatement, DatabaseModel, HighlightState} from '../model/DatabaseTypes'
+import type {CanonicalStatement, HighlightState, TableSchema} from '../model/DatabaseTypes'
 import {compareValuesForHighlight, extractSqlStatements} from '../utils/sqlStatements'
 
+// D-R2-004: previously received the whole DatabaseModel but only read db.tables.
+// Narrowed to a `tablesSource: () => TableSchema[]` getter (matches the
+// useErDiagram L92 范式) so this composable no longer couples to the whole DatabaseModel shape.
 export function useHighlight(
     code: { value: string },
-    db: DatabaseModel,
+    tablesSource: () => TableSchema[],
     canonicalStatements?: { value: CanonicalStatement[] | undefined }
 ) {
     const highlightedCodeChunk = ref<string | null>(null)
@@ -109,7 +112,7 @@ export function useHighlight(
         conditions: { table: string | null; col: string; op: string; val: string }[]
     ) {
         involvedTables.forEach((tName) => {
-            const table = db.tables.find((t) => t.name === tName)
+            const table = tablesSource().find((t) => t.name === tName)
             if (!table?.data[0]) return
             const colIndex = new Map(Object.keys(table.data[0]).map((k) => [k.toLowerCase(), k]))
             const relevantConds = conditions.filter((c) => !c.table || c.table === tName)
@@ -130,12 +133,12 @@ export function useHighlight(
         selectCols.forEach((colDef) => {
             if (colDef === '*') {
                 involvedTables.forEach((t) =>
-                    db.tables.find((tt) => tt.name === t)?.columns.forEach((c) => highlight.activeColumns.push(c))
+                    tablesSource().find((tt) => tt.name === t)?.columns.forEach((c) => highlight.activeColumns.push(c))
                 )
             } else {
                 const colName = colDef.split('.').pop() || ''
                 involvedTables.forEach((t) => {
-                    const realCol = db.tables
+                    const realCol = tablesSource()
                         .find((tt) => tt.name === t)
                         ?.columns.find((c) => c.toLowerCase() === colName.toLowerCase())
                     if (realCol) highlight.activeColumns.push(realCol)

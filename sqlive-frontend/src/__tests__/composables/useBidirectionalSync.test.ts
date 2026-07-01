@@ -45,8 +45,10 @@ function setup(initialCode: string, db?: DatabaseModel) {
     })
     const flashCode = vi.fn()
     const transitionFn = makeTransitionFn()
-    const sync = useBidirectionalSync(code, db ?? makeDb(), mode, flashCode, transitionFn)
-    return {sync, code, codeRef, mode, flashCode}
+    // D-R2-004: composable now takes tablesSource getter instead of whole DatabaseModel
+    const dbRef = db ?? makeDb()
+    const sync = useBidirectionalSync(code, () => dbRef.tables, mode, flashCode, transitionFn)
+    return {sync, code, codeRef, mode, flashCode, db: dbRef}
 }
 
 describe('useBidirectionalSync', () => {
