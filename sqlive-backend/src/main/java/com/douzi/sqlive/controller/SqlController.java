@@ -3,6 +3,8 @@ package com.douzi.sqlive.controller;
 import com.douzi.sqlive.dto.SqlRequest;
 import com.douzi.sqlive.dto.SqlResponse;
 import com.douzi.sqlive.service.SqlExecutionService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api")
+@Tag(name = "SQL", description = "SQL 执行与管理")
 @Slf4j
 public class SqlController {
 
@@ -24,6 +27,7 @@ public class SqlController {
 	}
 
 	@PostMapping("/execute")
+	@Operation(summary = "执行 SQL 脚本", description = "接收 SQL 脚本，在指定数据库内执行，返回表数据 + 元数据")
 	public SqlResponse executeSql(@Valid @RequestBody SqlRequest request,
 	                              HttpServletRequest httpRequest,
 	                              HttpServletResponse httpResponse) {
