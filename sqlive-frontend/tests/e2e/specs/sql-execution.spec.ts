@@ -1,6 +1,6 @@
 import {expect, gotoApp, test} from '../fixtures/sql-editor.fixture';
 
-test.describe('SQL Execution', () => {
+test.describe('SQL Execution @smoke', () => {
     test('loads default SQL and displays tables on page load', async ({page}) => {
         await gotoApp(page);
 
