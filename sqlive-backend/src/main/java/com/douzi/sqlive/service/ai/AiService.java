@@ -5,9 +5,9 @@ import com.douzi.sqlive.dto.ai.AiChatRequest;
 import com.douzi.sqlive.dto.ai.AiChatResponse;
 import com.douzi.sqlive.dto.ai.StreamChunk;
 import com.douzi.sqlive.exception.AiProviderException;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,7 +26,7 @@ public class AiService {
 
 	private final AiProperties aiProperties;
 	private final ObjectMapper objectMapper;
-	volatile Map<String, AiProvider> providers = Map.of();
+	private Map<String, AiProvider> providers = Map.of();
 
 	public AiService(AiProperties aiProperties, ObjectMapper objectMapper) {
 		this.aiProperties = aiProperties;
@@ -52,31 +52,6 @@ public class AiService {
 		}
 		this.providers = map;
 		log.info("AI providers initialized: {}", map.keySet());
-	}
-
-	/**
-	 * Atomically rebuilds the provider map from the current aiProperties configuration.
-	 * Safe to call at runtime — the volatile providers field ensures visibility across threads.
-	 */
-	public synchronized void refreshProviders() {
-		var configs = aiProperties.getProviders();
-		if (configs == null || configs.isEmpty()) {
-			this.providers = Map.of();
-			log.warn("AI providers refreshed — no providers configured");
-			return;
-		}
-
-		Map<String, AiProvider> map = new LinkedHashMap<>();
-		for (var entry : configs.entrySet()) {
-			var cfg = entry.getValue();
-			var provider = OpenAiCompatibleProvider.create(entry.getKey(), cfg, objectMapper,
-					aiProperties.getTimeout().getConnect(),
-					aiProperties.getTimeout().getRead(),
-					aiProperties.getTimeout().getWrite());
-			map.put(entry.getKey(), provider);
-		}
-		this.providers = map;
-		log.info("AI providers refreshed: {}", map.keySet());
 	}
 
 	public AiChatResponse executeNonStreaming(AiChatRequest request) {
@@ -211,7 +186,7 @@ public class AiService {
 			} else {
 				data.setContent(raw);
 			}
-		} catch (JsonProcessingException e) {
+		} catch (JacksonException e) {
 			log.warn("AI response not valid JSON, using raw text (len={})", raw.length());
 			data.setContent(raw);
 		}

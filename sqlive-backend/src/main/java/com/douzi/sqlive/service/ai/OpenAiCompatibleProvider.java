@@ -4,7 +4,7 @@ import com.douzi.sqlive.dto.ai.AiChatRequest;
 import com.douzi.sqlive.dto.ai.AiProviderConfig;
 import com.douzi.sqlive.dto.ai.StreamChunk;
 import com.douzi.sqlive.exception.AiProviderException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.WriteTimeoutHandler;
 import lombok.extern.slf4j.Slf4j;

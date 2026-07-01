@@ -1,8 +1,8 @@
 package com.douzi.sqlive.service.ai;
 
 import com.douzi.sqlive.dto.ai.StreamChunk;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 
