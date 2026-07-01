@@ -120,8 +120,21 @@ public class AiService {
 				})
 				.onErrorResume(e -> {
 					long elapsed = System.currentTimeMillis() - start;
-					log.error("Stream chat failed: provider={}, elapsed={}ms", provider.getProviderName(), elapsed, e);
-					return Flux.just(StreamChunk.error("AI 服务调用出错：" + e.getMessage()));
+					// D-R0-001 / SEC-02: sanitize Authorization header + raw API key from error message
+					// before logging or returning to client — prevents API key leakage via SSE + log files.
+					String rawMsg = e.getMessage();
+					String sanitized = rawMsg == null ? "unknown error" : rawMsg;
+					sanitized = sanitized.replaceAll("(?i)Authorization:\\s*Bearer\\s+\\S+", "Authorization: Bearer [REDACTED]");
+					// Also redact raw API key if present in the message (defensive: cfg may be null if
+					// providers map was concurrently refreshed — skip apiKey replace in that case).
+					var cfg = aiProperties.getProviders().get(aiProperties.getProvider());
+					String apiKey = cfg != null ? cfg.getApiKey() : null;
+					if (apiKey != null && !apiKey.isBlank()) {
+						sanitized = sanitized.replace(apiKey, "[REDACTED]");
+					}
+					log.error("Stream chat failed: provider={}, elapsed={}ms, error={}",
+							provider.getProviderName(), elapsed, sanitized);
+					return Flux.just(StreamChunk.error("AI 服务调用出错：" + sanitized));
 				});
 	}
 
