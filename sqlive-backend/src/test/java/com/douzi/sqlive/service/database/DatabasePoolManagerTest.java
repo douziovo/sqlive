@@ -158,4 +158,33 @@ class DatabasePoolManagerTest {
 		mgr.release("ref_db"); // matches second acquire
 		assertEquals(1, mgr.getPoolSize()); // pool still exists, cleaner will remove later
 	}
+
+	@Test
+	void shouldEvictLeastRecentlyUsedFirst() {
+		var mgr = createManager();
+		// Create 3 pools (release each so they're evictable: isInUse == false)
+		mgr.getOrCreateJdbcTemplate("lru_db1", null);
+		mgr.release("lru_db1");
+		mgr.getOrCreateJdbcTemplate("lru_db2", null);
+		mgr.release("lru_db2");
+		mgr.getOrCreateJdbcTemplate("lru_db3", null);
+		mgr.release("lru_db3");
+
+		// Re-access db2 and db3 (NOT db1) — db1 stays least-recently-used.
+		// Under LinkedHashMap access-order this reorders the tail: db1, db2, db3.
+		mgr.getOrCreateJdbcTemplate("lru_db2", null);
+		mgr.release("lru_db2");
+		mgr.getOrCreateJdbcTemplate("lru_db3", null);
+		mgr.release("lru_db3");
+
+		// Evict down to 1 pool — should retain db3 (MRU), evict db1 (LRU) then db2.
+		mgr.evictToTarget(1);
+
+		// db1 (LRU) evicted → re-access creates a new pool (isNew=true)
+		assertTrue(mgr.getOrCreateJdbcTemplate("lru_db1", null).isNew(),
+				"db1 should be evicted (LRU) — isNew=true means pool was recreated");
+		// db3 (MRU) retained → re-access returns existing pool (isNew=false)
+		assertFalse(mgr.getOrCreateJdbcTemplate("lru_db3", null).isNew(),
+				"db3 should be retained (MRU) — isNew=false means pool still exists");
+	}
 }
