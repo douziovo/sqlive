@@ -1,6 +1,6 @@
 import {expect, gotoApp, test} from '../fixtures/sql-editor.fixture';
 
-test.describe('Create Table Modal', () => {
+test.describe('Create Table Modal @smoke', () => {
     test.beforeEach(async ({page}) => {
         await gotoApp(page);
         await expect(page.locator('#table-departments')).toBeVisible({timeout: 15_000});

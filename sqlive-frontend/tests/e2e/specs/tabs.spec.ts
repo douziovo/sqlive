@@ -1,6 +1,6 @@
 import {expect, gotoApp, test} from '../fixtures/sql-editor.fixture';
 
-test.describe('Multi-Tab System', () => {
+test.describe('Multi-Tab System @smoke', () => {
     test.beforeEach(async ({page}) => {
         await gotoApp(page);
         await expect(page.locator('#table-departments')).toBeVisible({timeout: 30_000});
