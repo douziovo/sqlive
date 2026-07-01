@@ -4,6 +4,8 @@ import com.douzi.sqlive.dto.ai.AiChatRequest;
 import com.douzi.sqlive.dto.ai.AiChatResponse;
 import com.douzi.sqlive.dto.ai.StreamChunk;
 import com.douzi.sqlive.service.ai.AiService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +21,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/ai")
 @RequiredArgsConstructor
+@Tag(name = "AI", description = "AI 助手对话与代码生成")
 @Slf4j
 public class AiController {
 
@@ -28,6 +31,7 @@ public class AiController {
 	 * General chat — streaming SSE.
 	 */
 	@PostMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+	@Operation(summary = "AI 对话", description = "流式 SSE 对话，支持非流式回退")
 	public Flux<StreamChunk> chat(@Valid @RequestBody AiChatRequest request) {
 		String chatId = UUID.randomUUID().toString().substring(0, 8);
 		request.setMode("chat");
@@ -52,6 +56,7 @@ public class AiController {
 	 * Error analysis
 	 */
 	@PostMapping("/analyze-error")
+	@Operation(summary = "分析错误", description = "解释 SQL 错误原因并给出修复建议")
 	public AiChatResponse analyzeError(@Valid @RequestBody AiChatRequest request) {
 		String reqId = UUID.randomUUID().toString().substring(0, 8);
 		request.setMode("analyze-error");
@@ -63,6 +68,7 @@ public class AiController {
 	 * Code fix
 	 */
 	@PostMapping("/fix-code")
+	@Operation(summary = "修复代码", description = "针对 SQL 错误生成修复后的代码")
 	public AiChatResponse fixCode(@Valid @RequestBody AiChatRequest request) {
 		String reqId = UUID.randomUUID().toString().substring(0, 8);
 		request.setMode("fix-code");
@@ -74,6 +80,7 @@ public class AiController {
 	 * Explain selected SQL
 	 */
 	@PostMapping("/explain")
+	@Operation(summary = "解释代码", description = "解释选中 SQL 的语义")
 	public AiChatResponse explain(@Valid @RequestBody AiChatRequest request) {
 		String reqId = UUID.randomUUID().toString().substring(0, 8);
 		request.setMode("explain");
@@ -85,6 +92,7 @@ public class AiController {
 	 * Optimize selected SQL
 	 */
 	@PostMapping("/optimize")
+	@Operation(summary = "优化 SQL", description = "对选中 SQL 提出优化建议")
 	public AiChatResponse optimize(@Valid @RequestBody AiChatRequest request) {
 		String reqId = UUID.randomUUID().toString().substring(0, 8);
 		request.setMode("optimize");
