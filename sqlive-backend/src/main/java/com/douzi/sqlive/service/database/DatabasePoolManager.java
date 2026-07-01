@@ -9,6 +9,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -33,9 +37,17 @@ public class DatabasePoolManager {
 	private final int hardMax;
 	private final int maxPerIp;
 	private final long idleEvictionNanos;
-	private final long cleanerIntervalNanos;
 
-	private final Map<String, JdbcTemplate> pools = new ConcurrentHashMap<>();
+	// R0-002: LinkedHashMap access-order (LRU) + synchronizedMap for thread safety.
+	// accessOrder=true means get/put move the entry to the tail (most-recently-used);
+	// iteration order is from oldest (LRU) to newest (MRU) — evictToTarget relies on this.
+	private final Map<String, JdbcTemplate> pools = Collections.synchronizedMap(
+			new LinkedHashMap<>(16, 0.75f, true));
+	// R0-002: versioned entry — fast path snapshots generation before pools.get, then
+	// re-checks after incrementAndGet. If generation changed, an evict happened in
+	// between (TOCTOU window) and the fast path downgrades to createNewPool instead of
+	// returning a potentially-closed JdbcTemplate. volatile guarantees 64-bit visibility.
+	private volatile long evictionGeneration = 0L;
 	private final Map<String, AtomicInteger> refCounts = new ConcurrentHashMap<>();
 	private final Map<String, AtomicLong> lastAccessNanos = new ConcurrentHashMap<>();
 	private final Map<String, Long> acquireStartNanos = new ConcurrentHashMap<>();
@@ -52,7 +64,6 @@ public class DatabasePoolManager {
 		this.hardMax = softMax * 4;
 		this.maxPerIp = DEFAULT_MAX_PER_IP;
 		this.idleEvictionNanos = props.getIdleTimeout().toNanos();
-		this.cleanerIntervalNanos = props.getCleanupInterval().toNanos();
 
 		long intervalSecs = Math.max(1, props.getCleanupInterval().toSeconds());
 		cleaner.scheduleWithFixedDelay(this::evictIdlePools,
@@ -62,10 +73,15 @@ public class DatabasePoolManager {
 	@PreDestroy
 	public void cleanup() {
 		cleaner.shutdownNow();
-		for (var entry : pools.entrySet()) {
-			closeQuietly(entry.getKey(), entry.getValue());
+		// R0-002 / Rule 2: iterate under the lock — the cleaner thread may still be
+		// mid-eviction (shutdownNow interrupts but does not join), and an unsynchronized
+		// iteration over synchronizedMap(LinkedHashMap) would CME on its structural mods.
+		synchronized (pools) {
+			for (var entry : pools.entrySet()) {
+				closeQuietly(entry.getKey(), entry.getValue());
+			}
+			pools.clear();
 		}
-		pools.clear();
 		refCounts.clear();
 		lastAccessNanos.clear();
 		acquireStartNanos.clear();
@@ -82,10 +98,25 @@ public class DatabasePoolManager {
 			throw new IllegalArgumentException("Invalid dbName: " + dbName);
 		}
 
+		// R0-002 TOCTOU fix: snapshot generation BEFORE pools.get. If an evict happens
+		// between pools.get and refCounts.incrementAndGet, generation will have changed
+		// by the time we re-check — we then roll back the refCount bump and fall through
+		// to createNewPool instead of returning a JdbcTemplate whose DataSource was just
+		// closed by evict.closeQuietly. Snapshot order is load-bearing: if we snapshotted
+		// AFTER pools.get, an evict between get and snapshot would already bump generation
+		// and the post-increment check would see gen == evictionGeneration (both post-evict)
+		// — the closed JdbcTemplate would slip through.
+		long gen = evictionGeneration;
 		JdbcTemplate existing = pools.get(dbName);
 		if (existing != null) {
 			refCounts.computeIfAbsent(dbName, k -> new AtomicInteger()).incrementAndGet();
 			lastAccessNanos.computeIfAbsent(dbName, k -> new AtomicLong()).set(System.nanoTime());
+			if (gen != evictionGeneration) {
+				// Evict won the race between pools.get and incrementAndGet — the entry we
+				// got may be closed. Roll back the refCount bump and create a fresh pool.
+				refCounts.computeIfPresent(dbName, (k, v) -> v.decrementAndGet() <= 0 ? null : v);
+				return createNewPool(dbName, clientIp);
+			}
 			return new PoolEntry(existing, false);
 		}
 
@@ -158,35 +189,71 @@ public class DatabasePoolManager {
 			evictToTarget(softMax);
 		}
 
-		for (var entry : pools.entrySet()) {
-			String name = entry.getKey();
-			AtomicLong lastNanos = lastAccessNanos.get(name);
-			boolean isIdle = !isInUse(name);
+		// R0-002 / Rule 2: iterate pools under the lock. With ConcurrentHashMap the
+		// iteration was weakly consistent; with synchronizedMap(LinkedHashMap) an
+		// unsynchronized iteration would CME because the fast path's pools.get (access-
+		// order reorder) and createNewPool's pools.put both structurally modify the map.
+		// Collect names first, then evict outside the lock — evict() does pools.remove
+		// which would CME the iterator even while we hold the synchronized mutex.
+		List<String> toEvict = new ArrayList<>();
+		synchronized (pools) {
+			for (var entry : pools.entrySet()) {
+				String name = entry.getKey();
+				AtomicLong lastNanos = lastAccessNanos.get(name);
+				boolean isIdle = !isInUse(name);
 
-			if (isIdle && lastNanos != null && lastNanos.get() < idleCutoff) {
-				evict(name);
-				continue;
-			}
+				if (isIdle && lastNanos != null && lastNanos.get() < idleCutoff) {
+					toEvict.add(name);
+					continue;
+				}
 
-			// Force-evict pools held too long (ref count leak protection)
-			if (!isIdle) {
-				Long acquireStart = acquireStartNanos.get(name);
-				if (acquireStart != null && acquireStart < holdCutoff) {
-					log.warn("Force-evicting '{}': held for >{}min (possible ref leak)", name,
-							TimeUnit.NANOSECONDS.toMinutes(MAX_HOLD_NANOS));
-					evict(name);
+				// Force-evict pools held too long (ref count leak protection)
+				if (!isIdle) {
+					Long acquireStart = acquireStartNanos.get(name);
+					if (acquireStart != null && acquireStart < holdCutoff) {
+						log.warn("Force-evicting '{}': held for >{}min (possible ref leak)", name,
+								TimeUnit.NANOSECONDS.toMinutes(MAX_HOLD_NANOS));
+						toEvict.add(name);
+					}
 				}
 			}
 		}
+		for (String name : toEvict) {
+			evict(name);
+		}
 	}
 
-	private void evictToTarget(int target) {
+	void evictToTarget(int target) {
 		int evicted = 0;
-		for (var entry : pools.entrySet()) {
-			if (pools.size() <= target) break;
-			String name = entry.getKey();
-			if (!isInUse(name)) {
-				evict(name);
+		// R0-002: synchronized iteration over the LinkedHashMap so the access-order
+		// traversal is LRU-first and no concurrent fast-path get/put can CME the
+		// iterator. it.remove() (not pools.remove) keeps the iterator consistent.
+		// evictionGeneration++ is inside the lock so the fast path's generation
+		// snapshot/check sees a version that is atomic with the pools.remove.
+		synchronized (pools) {
+			var it = pools.entrySet().iterator();
+			while (it.hasNext() && pools.size() > target) {
+				var entry = it.next();
+				String name = entry.getKey();
+				if (isInUse(name)) {
+					continue;
+				}
+				it.remove();
+				// Auxiliary-map cleanup — mirrors evict() minus the pools.remove (already
+				// done by it.remove above). Inline rather than calling evict(name) because
+				// evict()'s pools.remove would CME the iterator even inside synchronized.
+				refCounts.remove(name);
+				lastAccessNanos.remove(name);
+				acquireStartNanos.remove(name);
+				String ownerIp = poolOwnerIps.remove(name);
+				if (ownerIp != null) {
+					AtomicInteger count = ipCounts.get(ownerIp);
+					if (count != null && count.decrementAndGet() <= 0) {
+						ipCounts.remove(ownerIp);
+					}
+				}
+				closeQuietly(name, entry.getValue());
+				evictionGeneration++;
 				evicted++;
 			}
 		}
@@ -196,20 +263,27 @@ public class DatabasePoolManager {
 	}
 
 	private void evict(String dbName) {
-		JdbcTemplate jdbc = pools.remove(dbName);
-		if (jdbc == null) return;
-		refCounts.remove(dbName);
-		lastAccessNanos.remove(dbName);
-		acquireStartNanos.remove(dbName);
-		String ownerIp = poolOwnerIps.remove(dbName);
-		if (ownerIp != null) {
-			AtomicInteger count = ipCounts.get(ownerIp);
-			if (count != null && count.decrementAndGet() <= 0) {
-				ipCounts.remove(ownerIp);
+		// R0-002: hold the pools lock across remove + closeQuietly so the fast path
+		// cannot observe a half-closed JdbcTemplate. evictionGeneration++ is atomic
+		// with pools.remove under this lock — the fast path's generation snapshot/check
+		// reliably detects that the entry is gone.
+		synchronized (pools) {
+			JdbcTemplate jdbc = pools.remove(dbName);
+			if (jdbc == null) return;
+			evictionGeneration++;
+			refCounts.remove(dbName);
+			lastAccessNanos.remove(dbName);
+			acquireStartNanos.remove(dbName);
+			String ownerIp = poolOwnerIps.remove(dbName);
+			if (ownerIp != null) {
+				AtomicInteger count = ipCounts.get(ownerIp);
+				if (count != null && count.decrementAndGet() <= 0) {
+					ipCounts.remove(ownerIp);
+				}
 			}
+			closeQuietly(dbName, jdbc);
+			log.info("Evicted idle database '{}' (pool size now: {})", dbName, pools.size());
 		}
-		closeQuietly(dbName, jdbc);
-		log.info("Evicted idle database '{}' (pool size now: {})", dbName, pools.size());
 	}
 
 	private boolean isInUse(String dbName) {
