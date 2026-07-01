@@ -1,5 +1,5 @@
 <template>
-  <Splitpanes class="default-theme h-screen" :class="{ 'no-animate': noAnimate }">
+  <Splitpanes class="default-theme h-full" :class="{ 'no-animate': noAnimate }">
     <Pane :size="28" :min-size="20">
       <div class="h-full flex flex-col relative">
         <div class="flex-1 min-h-0">
