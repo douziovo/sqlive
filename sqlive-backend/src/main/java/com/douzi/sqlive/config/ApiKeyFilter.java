@@ -39,7 +39,12 @@ import java.util.List;
 public class ApiKeyFilter extends OncePerRequestFilter {
 
 	private static final String API_KEY_HEADER = "X-API-Key";
-	private static final String AI_PATH_PREFIX = "/api/ai/";
+	// WR-02: drop the trailing slash so the filter matches both "/api/ai" and
+	// "/api/ai/..." consistently with SecurityConfig's requestMatchers("/api/ai/**")
+	// (AntPathMatcher ** matches the bare path too). With the trailing slash, a
+	// request to "/api/ai" would bypass the filter while Spring Security still
+	// enforces authenticated() — breaking the dev-mode bypass for the bare path.
+	private static final String AI_PATH_PREFIX = "/api/ai";
 
 	private final String expectedKey;
 
