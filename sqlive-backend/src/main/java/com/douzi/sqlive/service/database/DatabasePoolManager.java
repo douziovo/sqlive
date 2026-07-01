@@ -3,10 +3,10 @@ package com.douzi.sqlive.service.database;
 import com.douzi.sqlive.config.PoolProperties;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import jakarta.annotation.Nullable;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
