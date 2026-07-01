@@ -63,12 +63,10 @@ public class SqlExecutionService {
 		if (pragmaError == null) pragmaError = DEFAULT_PRAGMA_ERROR;
 	}
 
-	@SuppressWarnings("SqlSourceToSinkFlow")
 	public SqlResponse execute(String sqlScript, String dbName, boolean reset) {
 		return execute(sqlScript, dbName, reset, null);
 	}
 
-	@SuppressWarnings("SqlSourceToSinkFlow")
 	public SqlResponse execute(String sqlScript, String dbName, boolean reset, @org.springframework.lang.Nullable String clientIp) {
 		SqlResponse response = new SqlResponse();
 		var poolEntry = poolManager.getOrCreateJdbcTemplate(dbName, clientIp);
@@ -99,6 +97,9 @@ public class SqlExecutionService {
 
 				try {
 					jdbc.execute((Statement stmt) -> {
+						// D-R0-004 / WARN-01: @SuppressWarnings narrowed from method-level to the actual SQL sink
+						// (local variable declaration — Java annotations can only target declarations, not statements).
+						@SuppressWarnings("SqlSourceToSinkFlow")
 						boolean hasResultSet = stmt.execute(s.sql());
 						if (hasResultSet) {
 							try (ResultSet rs = stmt.getResultSet()) {
