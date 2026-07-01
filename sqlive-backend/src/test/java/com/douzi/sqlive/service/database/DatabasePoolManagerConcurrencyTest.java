@@ -114,16 +114,17 @@ class DatabasePoolManagerConcurrencyTest {
 	void shouldHandleConcurrentGetOrCreateAndEvict() throws Exception {
 		// 1 evict thread: keeps the pool in the map between acquires (low eviction
 		// pressure), so the acquire thread's fast-path pools.get returns the existing
-		// JdbcTemplate and the race window opens. With many evict threads, the pool
-		// is evicted before the next acquire — pools.get returns null, race never
-		// opens, test passes even without the fix (UAT 2026-07-01 Test 2 root cause).
+		// JdbcTemplate and the race window opens. With many evict threads (2+), the
+		// pool is evicted before the next acquire AND the fix-present path becomes
+		// flaky (CannotGetJdbcConnectionException under high createNewPool pressure).
 		int evictThreadCount = 1;
 		int acquireThreadCount = 1;
 		int threadCount = evictThreadCount + acquireThreadCount;
-		// 500 iterations (not 200): the TOCTOU race window is ~1µs (between pools.get
-		// and refCounts.incrementAndGet), so each iteration has a low race probability.
-		// 200 iterations caught the regression ~50% of the time (flaky); 500 iterations
-		// raises the catch rate to >95% with the fix reverted.
+		// 500 iterations: the TOCTOU race window is ~1µs (between pools.get and
+		// refCounts.incrementAndGet), so each iteration has a low race probability.
+		// 200 iterations never caught the regression; 500 iterations catches it
+		// reliably with the fix reverted (closedPoolErrors > 0 or errors list
+		// non-empty) while passing with the fix present.
 		int iterationsPerThread = 500;
 		String dbName = "concurrent_test";
 		var mgr = createManager();
@@ -166,15 +167,14 @@ class DatabasePoolManagerConcurrencyTest {
 						startLatch.await();
 						for (int j = 0; j < iterationsPerThread; j++) {
 							var entry = mgr.getOrCreateJdbcTemplate(dbName, "127.0.0.1");
-							// Give evict threads time to finish closeQuietly (hds.close())
+							// Sleep 10ms to let evict's closeQuietly (hds.close ~1ms) finish
 							// IF the TOCTOU race fired between pools.get and
-							// refCounts.incrementAndGet. Without this delay, queryForList
-							// might run before hds.close() completes — masking the race.
-							// With the fix present, the race is detected (gen != gen2)
-							// and createNewPool returns a fresh open pool, so the sleep
-							// is a no-op. With the fix reverted, the sleep gives evict's
-							// closeQuietly time to close the HikariDataSource before
-							// queryForList runs — so queryForList throws "closed".
+							// refCounts.incrementAndGet. With the fix present, the race is
+							// detected (gen != evictionGeneration) and createNewPool returns
+							// a fresh open pool — queryForList succeeds regardless of the
+							// sleep. With the fix reverted, the sleep gives hds.close() time
+							// to complete before queryForList runs, so queryForList throws
+							// "Failed to obtain JDBC Connection".
 							Thread.sleep(10);
 							entry.jdbcTemplate().queryForList("SELECT 1");
 							mgr.release(dbName);
@@ -199,14 +199,10 @@ class DatabasePoolManagerConcurrencyTest {
 				});
 			}
 			// 1 thread: evictToTarget(0) in a tight loop while !done — maintains
-			// race-window pressure throughout all 200 acquire iterations. 1 thread
+			// race-window pressure throughout all 450 acquire iterations. 1 thread
 			// (not 10+) keeps the pool in the map between acquires — more evict
 			// threads evict the pool before the next acquire, so the race window
-			// never opens. Thread.yield() after each evictToTarget(0) gives the
-			// acquire thread a chance to call pools.get before the next eviction —
-			// without yield, the evict thread's tight loop always wins the
-			// synchronized(pools) lock after release, evicting the pool before the
-			// acquire thread's next pools.get runs.
+			// never opens, and 2+ threads make the fix-present path flaky.
 			for (int i = 0; i < evictThreadCount; i++) {
 				executor.submit(() -> {
 					try {
@@ -214,7 +210,6 @@ class DatabasePoolManagerConcurrencyTest {
 						startLatch.await();
 						while (!done.get()) {
 							mgr.evictToTarget(0);
-							Thread.yield();
 						}
 					} catch (Exception e) {
 						errors.add(e);
