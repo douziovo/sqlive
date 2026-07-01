@@ -11,6 +11,8 @@
       ref="inputRef"
       :disabled="indexError"
       @input="onInput"
+      @focus="onInputFocus"
+      :data-index-ready="indexReady ? 'true' : 'building'"
       :placeholder="indexError ? '搜索暂不可用' : '搜索文档... (Ctrl+K)'"
       :aria-label="'搜索文档'"
       class="w-full pl-8 pr-3 py-2 text-sm bg-background border border-border rounded-md outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed"
@@ -53,6 +55,12 @@ const results = computed(() => (query.value.trim() ? search(query.value) : []))
 function onInput() {
   // results is computed reactively; no-op handler for clarity (CLAUDE.md gotcha —
   // use handler functions, not inline ref assignment in template).
+}
+
+// D-07: first focus triggers ensureIndex (lazy index build). Also triggered by
+// Ctrl+K and `/` shortcuts, but @focus covers direct click/Tab focus too.
+function onInputFocus() {
+  void ensureIndex()
 }
 
 // Click result → navigate. NavigationFailure silenced per Pitfall 6.
