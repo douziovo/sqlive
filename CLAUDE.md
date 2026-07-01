@@ -1,5 +1,15 @@
 # CLAUDE.md
 
+## 当前焦点
+
+**Phase 13: 维护者审查报告修复** — 修复 2026-06-30 审查报告 22 项发现。
+
+当前 phase/plan 状态：
+
+```bash
+./scripts/current-focus.sh
+```
+
 ## Project overview
 
 Full-stack SQL playground: code editor → SQLite in-memory backend → table visualizer. Inline cell edits reverse-engineer SQL. Backend clears and re-executes full script per request (shared cache mode).
@@ -27,7 +37,7 @@ Full-stack SQL playground: code editor → SQLite in-memory backend → table vi
 
 ## Environment & tech stack
 
-Zulu JDK 21 (`C:\Program Files\Zulu\zulu-21\bin\`), Node LTS, backend port 8080. Vue 3 (`<script setup>`), Vite 8.x, Tailwind CSS 4, Spring Boot 4.0.6, JdbcTemplate (no JPA), SQLite JDBC, HikariCP. Key libs: vue-flow, dagre, monaco-editor, reka-ui, Vercel AI SDK, ECharts.
+Zulu JDK 21 (set `$JAVA_HOME`; verify with `java -version`), Node LTS, backend port 8080. Vue 3 (`<script setup>`), Vite 8.x, Tailwind CSS 4, Spring Boot 4.0.6, JdbcTemplate (no JPA), SQLite JDBC, HikariCP. Key libs: vue-flow, dagre, monaco-editor, reka-ui, Vercel AI SDK, ECharts.
 
 ## Principles
 
