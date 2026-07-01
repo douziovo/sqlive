@@ -163,6 +163,7 @@ import { Conversation, ConversationContent, ConversationEmptyState } from '@/com
 import { Loader } from '@/components/ai-elements/loader'
 import { Reasoning, ReasoningContent, ReasoningTrigger } from '@/components/ai-elements/reasoning'
 import { Suggestion } from '@/components/ai-elements/suggestion'
+import { sanitizeConfig } from '@/utils/sanitize'
 import type { AiMessage } from '../composables/useAiChat'
 
 const props = defineProps<{
@@ -258,12 +259,13 @@ function cancelEdit() {
 
 function renderMd(text: string): string {
   if (!text) return ''
-  const raw = marked.parse(text, { breaks: true, gfm: true }) as string
-  return DOMPurify.sanitize(raw, {
-    ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'p', 'ul', 'ol', 'li', 'pre', 'code', 'table', 'thead', 'tbody',
-                    'tr', 'th', 'td', 'blockquote', 'hr', 'img', 'a', 'strong', 'em', 'br', 'span', 'div'],
-    ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'target', 'rel']
-  })
+  try {
+    const raw = marked.parse(text, { breaks: true, gfm: true }) as string
+    return DOMPurify.sanitize(raw, sanitizeConfig)
+  } catch {
+    const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    return `<pre>${escaped}</pre>`
+  }
 }
 
 // ── Panel position & size ──────────────────────────────────────
