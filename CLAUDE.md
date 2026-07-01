@@ -31,7 +31,7 @@ Full-stack SQL playground: code editor → SQLite in-memory backend → table vi
 
 **Data flow:** Code edit → debounced 100ms → `POST /api/execute` → new `db.tables`. Cell edit → `updateRow()` replaces `VALUES` tuple → re-execute. Error → rollback to `lastValidCode`.
 
-**Backend:** `SqlController` → `SqlExecutionService` (parse, execute, collect via sqlite_master). AI: `AiController` → `AiService` → provider chain (`AiProvider` interface, DeepSeek/Ollama/LMStudio/openai-compatible). Knowledge: `KnowledgeGraphService`. DB: `jdbc:sqlite:file:playground?mode=memory&cache=shared` per `ConcurrentHashMap<String, JdbcTemplate>`. Parsing: `parseStatementsPrecise()` tracks quote state, `BEGIN`/`END` depth, `CASE`/`END` depth.
+**Backend:** `SqlController` → `SqlExecutionService` (parse, execute, collect via sqlite_master). AI: `AiController` → `AiService` → provider chain (`AiProvider` interface, DeepSeek/Ollama/LMStudio/openai-compatible). Knowledge: `KnowledgeGraphService`. DB: `jdbc:sqlite:file:{name}?mode=memory&busy_timeout=5000` per `synchronizedMap(LinkedHashMap)` in `DatabasePoolManager` (WR-06: 旧文档写 `cache=shared` + `ConcurrentHashMap`，但代码用 `busy_timeout=5000` 无 `cache=shared`，HikariCP `maximumPoolSize=1` 单连接即单内存库). Parsing: `parseStatementsPrecise()` tracks quote state, `BEGIN`/`END` depth, `CASE`/`END` depth.
 
 后端包结构：`controller/` (REST) · `service/` (核心逻辑) · `service/ai/` (`AiProvider` 接口 + 各 provider `Protocol`) · `service/database/` (`DatabasePoolManager`) · `service/knowledge/` · `service/metadata/` · `service/sql/` (parser) · `exception/` (`GlobalExceptionHandler`).
 

@@ -34,9 +34,9 @@ JDK 21（Zulu），设置 `$JAVA_HOME` 后用 `java -version` 验证。
 
 ## 调试
 
-### SQLite shared cache
+### SQLite in-memory pool
 
-连接串：`jdbc:sqlite:file:{name}?mode=memory&cache=shared`。`DatabasePoolManager` 用 `ConcurrentHashMap<String, JdbcTemplate>` per-db-name 隔离，每个 db-name 一个独立内存库。多 tab 打开同一 db-name 共享同一内存库；不同 db-name 完全隔离。
+连接串：`jdbc:sqlite:file:{name}?mode=memory&busy_timeout=5000`（WR-06：原文档写 `cache=shared`，但 `DatabasePoolManager.createJdbcTemplate` 实际使用 `busy_timeout=5000` 且无 `cache=shared`——HikariCP `maximumPoolSize=1`，单连接即单内存库，`cache=shared` 在此设计下不需要）。`DatabasePoolManager` 用 `synchronizedMap(LinkedHashMap)` per-db-name 隔离，每个 db-name 一个独立内存库。多 tab 打开同一 db-name 共享同一内存库；不同 db-name 完全隔离。
 
 `DatabasePoolManager` 用 LinkedHashMap access-order（LRU）+ synchronizedMap 线程安全；`evictionGeneration` volatile 防止 TOCTOU（fast-path get 后再 check generation，若变了说明期间发生过 evict，降级走 createNewPool）。
 
