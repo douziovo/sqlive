@@ -3,10 +3,10 @@ package com.douzi.sqlive.service.database;
 import com.douzi.sqlive.config.PoolProperties;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import jakarta.annotation.Nullable;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -200,15 +200,15 @@ public class DatabasePoolManager {
 			for (var entry : pools.entrySet()) {
 				String name = entry.getKey();
 				AtomicLong lastNanos = lastAccessNanos.get(name);
-				boolean isIdle = !isInUse(name);
+				boolean idle = isIdle(name);
 
-				if (isIdle && lastNanos != null && lastNanos.get() < idleCutoff) {
+				if (idle && lastNanos != null && lastNanos.get() < idleCutoff) {
 					toEvict.add(name);
 					continue;
 				}
 
 				// Force-evict pools held too long (ref count leak protection)
-				if (!isIdle) {
+				if (!idle) {
 					Long acquireStart = acquireStartNanos.get(name);
 					if (acquireStart != null && acquireStart < holdCutoff) {
 						log.warn("Force-evicting '{}': held for >{}min (possible ref leak)", name,
@@ -235,7 +235,7 @@ public class DatabasePoolManager {
 			while (it.hasNext() && pools.size() > target) {
 				var entry = it.next();
 				String name = entry.getKey();
-				if (isInUse(name)) {
+				if (!isIdle(name)) {
 					continue;
 				}
 				it.remove();
@@ -286,9 +286,9 @@ public class DatabasePoolManager {
 		}
 	}
 
-	private boolean isInUse(String dbName) {
+	private boolean isIdle(String dbName) {
 		AtomicInteger count = refCounts.get(dbName);
-		return count != null && count.get() > 0;
+		return count == null || count.get() == 0;
 	}
 
 	private void closeQuietly(String dbName, JdbcTemplate jdbc) {
