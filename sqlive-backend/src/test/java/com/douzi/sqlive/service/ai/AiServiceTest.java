@@ -1,5 +1,9 @@
 package com.douzi.sqlive.service.ai;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.douzi.sqlive.config.AiProperties;
 import com.douzi.sqlive.dto.ai.AiChatRequest;
 import com.douzi.sqlive.dto.ai.AiProviderConfig;
@@ -7,6 +11,7 @@ import com.douzi.sqlive.dto.ai.StreamChunk;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 
 import java.util.Map;
@@ -108,6 +113,69 @@ class AiServiceTest {
 		assertNotNull(chunks);
 		assertEquals(1, chunks.size());
 		assertEquals("error", chunks.getFirst().getType());
+	}
+
+	// ── streamChat error sanitization (D-R0-001 / SEC-02) ───
+
+	@Test
+	void streamChatErrorSanitizesAuthorizationHeader() {
+		props.getProviders().get("test").setApiKey("sk-test-key-12345");
+		when(mockProvider.streamChat(eq("system"), isNull(), eq("hello")))
+				.thenReturn(Flux.error(new RuntimeException(
+						"Request failed: Authorization: Bearer sk-test-key-12345 status=401")));
+		var chunks = service.streamChat("system", null, "hello").collectList().block();
+		assertNotNull(chunks);
+		assertEquals(1, chunks.size());
+		assertEquals("error", chunks.getFirst().getType());
+		String payload = chunks.getFirst().getContent();
+		assertFalse(payload.contains("sk-test-key-12345"),
+				"raw API key must not leak into StreamChunk.error payload");
+		assertFalse(payload.contains("Authorization: Bearer sk-test-key-12345"),
+				"Authorization header literal must not leak into StreamChunk.error payload");
+	}
+
+	@Test
+	void streamChatErrorSanitizesRawApiKey() {
+		props.getProviders().get("test").setApiKey("sk-raw-key-abc");
+		when(mockProvider.streamChat(eq("system"), isNull(), eq("hello")))
+				.thenReturn(Flux.error(new RuntimeException(
+						"upstream returned 401 for key=sk-raw-key-abc in URL")));
+		var chunks = service.streamChat("system", null, "hello").collectList().block();
+		assertNotNull(chunks);
+		assertEquals(1, chunks.size());
+		String payload = chunks.getFirst().getContent();
+		assertFalse(payload.contains("sk-raw-key-abc"),
+				"raw API key must be redacted in StreamChunk.error payload");
+	}
+
+	@Test
+	void streamChatErrorLogDoesNotContainFullStackTrace() {
+		props.getProviders().get("test").setApiKey("sk-log-key-xyz");
+		Logger logger = (Logger) LoggerFactory.getLogger(AiService.class);
+		ListAppender<ILoggingEvent> appender = new ListAppender<>();
+		appender.start();
+		logger.addAppender(appender);
+		try {
+			when(mockProvider.streamChat(eq("system"), isNull(), eq("hello")))
+					.thenReturn(Flux.error(new RuntimeException(
+							"Authorization: Bearer sk-log-key-xyz boom")));
+			service.streamChat("system", null, "hello").collectList().block();
+			var errorEvents = appender.list.stream()
+					.filter(e -> e.getLevel() == Level.ERROR)
+					.toList();
+			assertFalse(errorEvents.isEmpty(), "should emit at least one ERROR log from onErrorResume");
+			for (ILoggingEvent ev : errorEvents) {
+				assertNull(ev.getThrowableProxy(),
+						"log.error must not pass Throwable as last arg (avoids full stack trace in log file)");
+				String formatted = ev.getFormattedMessage();
+				assertFalse(formatted.contains("Authorization: Bearer sk-log-key-xyz"),
+						"Authorization header must be redacted in log output");
+				assertFalse(formatted.contains("sk-log-key-xyz"),
+						"raw API key must be redacted in log output");
+			}
+		} finally {
+			logger.detachAppender(appender);
+		}
 	}
 
 	// ── buildSystemPrompt ────────────────────────────────────
