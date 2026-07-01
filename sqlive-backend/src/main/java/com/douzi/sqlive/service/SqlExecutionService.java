@@ -7,6 +7,7 @@ import com.douzi.sqlive.dto.TableSchema;
 import com.douzi.sqlive.service.database.DatabasePoolManager;
 import com.douzi.sqlive.service.metadata.MetadataExtractor;
 import com.douzi.sqlive.service.sql.SqlParser;
+import jakarta.annotation.Nullable;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -67,7 +68,7 @@ public class SqlExecutionService {
 		return execute(sqlScript, dbName, reset, null);
 	}
 
-	public SqlResponse execute(String sqlScript, String dbName, boolean reset, @org.springframework.lang.Nullable String clientIp) {
+	public SqlResponse execute(String sqlScript, String dbName, boolean reset, @Nullable String clientIp) {
 		SqlResponse response = new SqlResponse();
 		var poolEntry = poolManager.getOrCreateJdbcTemplate(dbName, clientIp);
 		JdbcTemplate jdbc = poolEntry.jdbcTemplate();
