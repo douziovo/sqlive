@@ -2,7 +2,7 @@ import {useLocalStorage, watchDebounced} from '@vueuse/core'
 import {computed, type Ref, ref} from 'vue'
 import {useAiStreaming} from '../composables/useAiStreaming'
 import {API_BASE} from '../config'
-import type {DatabaseModel} from '../model/DatabaseTypes'
+import type {TableSchema} from '../model/DatabaseTypes'
 import type {DisplayHandler} from './useInlineActions'
 
 export interface AiMessage {
@@ -62,10 +62,13 @@ let msgCounter = 0
  * Core AI chat composable. Must be instantiated once in App.vue.
  * Handles SSE streaming chat, error auto-analysis, and learning suggestions.
  */
+// D-R2-004: previously received the whole DatabaseModel but only read db.tables.
+// Narrowed to a `tablesSource: () => TableSchema[]` getter (matches the
+// useErDiagram L92 范式) so this composable no longer couples to the whole DatabaseModel shape.
 export function useAiChat(ctx: {
     executionError: Ref<{ line: number; message: string } | null>
     code: Ref<string>
-    db: DatabaseModel
+    tablesSource: () => TableSchema[]
 }) {
     const messages = ref<AiMessage[]>([])
     const isLoading = ref(false)
@@ -81,7 +84,7 @@ export function useAiChat(ctx: {
     const {streamCall, cancelStream} = useAiStreaming(API_BASE, isLoading)
 
     const currentSchema = computed(() => {
-        return (ctx.db?.tables ?? []).map((t) => ({
+        return (ctx.tablesSource() ?? []).map((t) => ({
             table: t.name,
             columns: t.columns || [],
             columnTypes: t.columnTypes || {}

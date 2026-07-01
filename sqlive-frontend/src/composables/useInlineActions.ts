@@ -1,7 +1,7 @@
 import {computed, type Ref} from 'vue'
 import {API_BASE} from '../config'
 import type {AiSchemaInfo} from '../model/ApiTypes'
-import type {DatabaseModel} from '../model/DatabaseTypes'
+import type {TableSchema} from '../model/DatabaseTypes'
 import {
     formatErrorAnalysis,
     formatExplain,
@@ -25,15 +25,18 @@ export interface DisplayHandler {
     onError: (message: string) => void
 }
 
+// D-R2-004: previously received the whole DatabaseModel but only read db.tables.
+// Narrowed to a `tablesSource: () => TableSchema[]` getter (matches the
+// useErDiagram L92 范式) so this composable no longer couples to the whole DatabaseModel shape.
 export function useInlineActions(state: {
     isLoading: Ref<boolean>
     messages: Ref<AiMessage[]>
     code: Ref<string>
-    db: DatabaseModel
+    tablesSource: () => TableSchema[]
     error: Ref<{ line: number; message: string } | null>
 }) {
     const currentSchema = computed<AiSchemaInfo[]>(() =>
-        (state.db?.tables ?? []).map((t) => ({
+        (state.tablesSource() ?? []).map((t) => ({
             table: t.name,
             columns: t.columns || [],
             columnTypes: t.columnTypes || {}
