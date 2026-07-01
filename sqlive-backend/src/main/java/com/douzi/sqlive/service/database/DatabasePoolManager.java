@@ -180,7 +180,7 @@ public class DatabasePoolManager {
 		}
 	}
 
-	private void evictToTarget(int target) {
+	void evictToTarget(int target) {
 		int evicted = 0;
 		for (var entry : pools.entrySet()) {
 			if (pools.size() <= target) break;
