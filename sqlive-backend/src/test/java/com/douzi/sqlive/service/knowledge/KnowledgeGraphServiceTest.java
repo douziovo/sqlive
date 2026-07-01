@@ -1,7 +1,7 @@
 package com.douzi.sqlive.service.knowledge;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -38,7 +38,7 @@ class KnowledgeGraphServiceTest {
 	void shouldHandleMalformedJsonGracefully() throws Exception {
 		var mockMapper = mock(ObjectMapper.class);
 		when(mockMapper.readTree(any(java.io.InputStream.class)))
-				.thenThrow(new JsonProcessingException("bad json") {
+				.thenThrow(new JacksonException("bad json") {
 				});
 
 		var service = new KnowledgeGraphService(mockMapper);
