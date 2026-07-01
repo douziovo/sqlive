@@ -12,6 +12,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -76,6 +77,37 @@ class DatabasePoolManagerConcurrencyTest {
 	 * {@code queryForList("SELECT 1")} throws. The original test kept all 10
 	 * getOrCreate threads holding refCounts, so {@code evictToTarget(0)} always
 	 * skipped the pool (non-idle) and the race was never exercised.
+	 *
+	 * <p>UAT 2026-07-01 Test 2 found that the WR-07 rewrite still passed both WITH
+	 * and WITHOUT the TOCTOU fix. Root cause: 10 evict threads × 200 iterations of
+	 * empty {@code evictToTarget(0)} complete in ~10ms, while the acquire thread's
+	 * first {@code createNewPool} takes ~100ms (HikariDataSource startup). By the
+	 * time the pool exists in the {@code pools} map, all evict threads have exited.
+	 * The race window is never entered.
+	 *
+	 * <p>This rewrite closes the gap with three changes (all three are needed —
+	 * any one alone is insufficient):
+	 * <ol>
+	 *   <li><b>Pre-create the pool</b> before submitting any threads: call
+	 *       {@code getOrCreateJdbcTemplate + queryForList + release} so the pool
+	 *       sits idle in the {@code pools} map from the start. Evict threads see
+	 *       it on their very first iteration rather than waiting ~100ms for the
+	 *       acquire thread's first {@code createNewPool}.</li>
+	 *   <li><b>startLatch barrier</b>: all 11 threads call {@code startLatch.countDown()}
+	 *       followed by {@code startLatch.await()} before entering the main loop,
+	 *       so all threads begin spinning simultaneously. Without the barrier the
+	 *       executor may schedule the acquire thread first, letting it complete
+	 *       several iterations before evict threads start.</li>
+	 *   <li><b>AtomicBoolean done flag</b> (replaces fixed for-loop in evict threads):
+	 *       evict threads loop {@code while (!done.get()) { mgr.evictToTarget(0); }}
+	 *       for the entire duration of the acquire thread's 200 iterations. Fixed
+	 *       iteration counts fail because empty {@code evictToTarget(0)} calls
+	 *       (~0.01ms each) finish in ~2ms total, while the acquire thread's
+	 *       {@code createNewPool} takes ~100ms per slow-path iteration — evict
+	 *       threads exit before the pool is recreated, so iterations 1+ run
+	 *       unopposed. The flag-based loop keeps evict threads spinning when the
+	 *       pool reappears after each eviction.</li>
+	 * </ol>
 	 */
 	@Test
 	void shouldHandleConcurrentGetOrCreateAndEvict() throws Exception {
@@ -86,7 +118,28 @@ class DatabasePoolManagerConcurrencyTest {
 		String dbName = "concurrent_test";
 		var mgr = createManager();
 
+		// Change 1 — Pre-create the pool so evict threads see an idle pool from the
+		// very first iteration. Without this, the acquire thread's first
+		// getOrCreateJdbcTemplate goes through createNewPool (~100ms HikariDataSource
+		// startup) and all 10 evict threads finish their iterations before the pool
+		// exists in the pools map. (UAT 2026-07-01 Test 2 root cause.)
+		var preEntry = mgr.getOrCreateJdbcTemplate(dbName, "127.0.0.1");
+		preEntry.jdbcTemplate().queryForList("SELECT 1");
+		mgr.release(dbName);
+
 		CountDownLatch latch = new CountDownLatch(threadCount);
+		// Change 2 — startLatch barrier: all threads count down then await, so all
+		// begin spinning simultaneously. Without this the executor may schedule the
+		// acquire thread first and it could complete several iterations before evict
+		// threads start.
+		CountDownLatch startLatch = new CountDownLatch(threadCount);
+		// Change 3 — AtomicBoolean done flag: evict threads loop while (!done.get())
+		// for the entire duration of the acquire thread's iterations. Fixed iteration
+		// counts finish in ~2ms (empty evictToTarget(0) is ~0.01ms each) while the
+		// acquire thread's createNewPool takes ~100ms per slow-path iteration — evict
+		// threads would exit before the pool is recreated. The flag-based loop keeps
+		// evict threads spinning whenever the pool reappears after each eviction.
+		AtomicBoolean done = new AtomicBoolean(false);
 		AtomicInteger successCount = new AtomicInteger(0);
 		AtomicInteger closedPoolErrors = new AtomicInteger(0);
 		List<Throwable> errors = Collections.synchronizedList(new ArrayList<>());
@@ -99,6 +152,8 @@ class DatabasePoolManagerConcurrencyTest {
 			for (int i = 0; i < acquireThreadCount; i++) {
 				executor.submit(() -> {
 					try {
+						startLatch.countDown();
+						startLatch.await();
 						for (int j = 0; j < iterationsPerThread; j++) {
 							var entry = mgr.getOrCreateJdbcTemplate(dbName, "127.0.0.1");
 							entry.jdbcTemplate().queryForList("SELECT 1");
@@ -115,16 +170,20 @@ class DatabasePoolManagerConcurrencyTest {
 							closedPoolErrors.incrementAndGet();
 						}
 					} finally {
+						done.set(true);
 						latch.countDown();
 					}
 				});
 			}
-			// 10 threads: evictToTarget(0) × 200 iterations — evicts idle pools during
-			// the acquire thread's release window.
+			// 10 threads: evictToTarget(0) in a tight loop while !done — maintains
+			// race-window pressure throughout all 200 acquire iterations, not just a
+			// fixed 200-iteration batch that finishes in ~2ms.
 			for (int i = 0; i < evictThreadCount; i++) {
 				executor.submit(() -> {
 					try {
-						for (int j = 0; j < iterationsPerThread; j++) {
+						startLatch.countDown();
+						startLatch.await();
+						while (!done.get()) {
 							mgr.evictToTarget(0);
 						}
 					} catch (Exception e) {
@@ -134,7 +193,7 @@ class DatabasePoolManagerConcurrencyTest {
 					}
 				});
 			}
-			assertTrue(latch.await(30, TimeUnit.SECONDS), "latch timed out");
+			assertTrue(latch.await(60, TimeUnit.SECONDS), "latch timed out");
 		}
 
 		assertTrue(errors.isEmpty(),
