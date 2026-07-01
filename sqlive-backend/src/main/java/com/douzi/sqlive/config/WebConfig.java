@@ -16,7 +16,11 @@ public class WebConfig implements WebMvcConfigurer {
 		registry.addMapping("/api/**")
 				.allowedOriginPatterns("http://localhost:*", "http://127.0.0.1:*", "http://[::1]:*")
 				.allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-				.allowedHeaders("Content-Type", "Authorization", "Accept")
+				// WR-05: include X-API-Key so the frontend can send it (CR-02 wiring) and
+				// the browser CORS preflight accepts it. Without this, cross-origin requests
+				// (Vite dev :5173 → backend :8080) would be rejected at preflight even if
+				// the frontend set the header.
+				.allowedHeaders("Content-Type", "Authorization", "Accept", "X-API-Key")
 				.allowCredentials(false);
 	}
 

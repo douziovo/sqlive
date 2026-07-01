@@ -4,6 +4,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -38,13 +40,31 @@ import java.util.List;
 @Component
 public class ApiKeyFilter extends OncePerRequestFilter {
 
+	private static final Logger log = LoggerFactory.getLogger(ApiKeyFilter.class);
+
 	private static final String API_KEY_HEADER = "X-API-Key";
-	private static final String AI_PATH_PREFIX = "/api/ai/";
+	// WR-02: drop the trailing slash so the filter matches both "/api/ai" and
+	// "/api/ai/..." consistently with SecurityConfig's requestMatchers("/api/ai/**")
+	// (AntPathMatcher ** matches the bare path too). With the trailing slash, a
+	// request to "/api/ai" would bypass the filter while Spring Security still
+	// enforces authenticated() — breaking the dev-mode bypass for the bare path.
+	private static final String AI_PATH_PREFIX = "/api/ai";
 
 	private final String expectedKey;
 
-	public ApiKeyFilter(@Value("${AI_API_KEY:}") String apiKey) {
+	public ApiKeyFilter(@Value("${AI_API_KEY:}") String apiKey,
+	                    @Value("${spring.profiles.active:}") String activeProfiles) {
 		this.expectedKey = apiKey;
+		// WR-04: defense-in-depth — when AI_API_KEY is missing in a non-dev/test profile,
+		// /api/ai/** silently becomes publicly accessible (dev bypass below). A missing
+		// key in production (e.g. typo'd env var name on Render) would let anyone burn
+		// the DeepSeek quota. Log a loud warning at startup so operators catch this.
+		if (apiKey == null || apiKey.isBlank()) {
+			if (!activeProfiles.contains("dev") && !activeProfiles.contains("test")) {
+				log.warn("AI_API_KEY is not set — /api/ai/** endpoints are PUBLIC. "
+						+ "Set AI_API_KEY in production to prevent DeepSeek quota abuse.");
+			}
+		}
 	}
 
 	@Override

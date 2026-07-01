@@ -59,41 +59,74 @@ class DatabasePoolManagerConcurrencyTest {
 	}
 
 	/**
-	 * 20 threads: 10 concurrent getOrCreateJdbcTemplate + queryForList("SELECT 1"),
-	 * 10 concurrent evictToTarget(0). Without the TOCTOU fix, the fast path can
-	 * hand out a JdbcTemplate whose HikariDataSource was already closed by evict,
-	 * causing queryForList to throw.
+	 * WR-07: 1 acquire thread + 10 evict threads. The acquire thread loops
+	 * acquire → queryForList → release, so between release and the next acquire the
+	 * pool is idle (refCount=0) and evictToTarget(0) can target it. This is the
+	 * TOCTOU window the fast-path {@code evictionGeneration} check must handle:
+	 * <ol>
+	 *   <li>acquire thread: {@code gen = evictionGeneration} snapshot</li>
+	 *   <li>acquire thread: {@code pools.get(dbName)} returns existing JdbcTemplate</li>
+	 *   <li>evict thread: {@code evict()} removes the entry, closes the HikariDataSource,
+	 *       and increments {@code evictionGeneration}</li>
+	 *   <li>acquire thread: {@code refCounts.incrementAndGet} on a closed pool, then
+	 *       {@code gen != evictionGeneration} rolls back the refCount bump and falls
+	 *       through to {@code createNewPool} — handing out a fresh, open pool</li>
+	 * </ol>
+	 * Without the TOCTOU fix, step 4 returns the closed JdbcTemplate and
+	 * {@code queryForList("SELECT 1")} throws. The original test kept all 10
+	 * getOrCreate threads holding refCounts, so {@code evictToTarget(0)} always
+	 * skipped the pool (non-idle) and the race was never exercised.
 	 */
 	@Test
 	void shouldHandleConcurrentGetOrCreateAndEvict() throws Exception {
-		int threadCount = 20;
+		int evictThreadCount = 10;
+		int acquireThreadCount = 1;
+		int threadCount = evictThreadCount + acquireThreadCount;
+		int iterationsPerThread = 200;
 		String dbName = "concurrent_test";
 		var mgr = createManager();
 
 		CountDownLatch latch = new CountDownLatch(threadCount);
 		AtomicInteger successCount = new AtomicInteger(0);
+		AtomicInteger closedPoolErrors = new AtomicInteger(0);
 		List<Throwable> errors = Collections.synchronizedList(new ArrayList<>());
 
 		try (ExecutorService executor = Executors.newFixedThreadPool(threadCount)) {
-			// 10 threads: getOrCreateJdbcTemplate + queryForList
-			for (int i = 0; i < 10; i++) {
+			// 1 thread: acquire → queryForList → release, 200 iterations. Each release
+			// opens an idle window where evictToTarget(0) can target the pool. The next
+			// acquire races against evict — the TOCTOU gen check must catch any evict
+			// that lands between pools.get and refCounts.incrementAndGet.
+			for (int i = 0; i < acquireThreadCount; i++) {
 				executor.submit(() -> {
 					try {
-						var entry = mgr.getOrCreateJdbcTemplate(dbName, "127.0.0.1");
-						entry.jdbcTemplate().queryForList("SELECT 1");
+						for (int j = 0; j < iterationsPerThread; j++) {
+							var entry = mgr.getOrCreateJdbcTemplate(dbName, "127.0.0.1");
+							entry.jdbcTemplate().queryForList("SELECT 1");
+							mgr.release(dbName);
+						}
 						successCount.incrementAndGet();
 					} catch (Exception e) {
 						errors.add(e);
+						// Surface closed-pool errors specifically — these are the TOCTOU
+						// signature. HikariDataSource.close() makes subsequent queryForList
+						// throw "Connection is closed" or similar.
+						String msg = e.getMessage() == null ? "" : e.getMessage().toLowerCase();
+						if (msg.contains("closed") || msg.contains("has been closed")) {
+							closedPoolErrors.incrementAndGet();
+						}
 					} finally {
 						latch.countDown();
 					}
 				});
 			}
-			// 10 threads: evictToTarget(0) — evict all idle pools
-			for (int i = 0; i < 10; i++) {
+			// 10 threads: evictToTarget(0) × 200 iterations — evicts idle pools during
+			// the acquire thread's release window.
+			for (int i = 0; i < evictThreadCount; i++) {
 				executor.submit(() -> {
 					try {
-						mgr.evictToTarget(0);
+						for (int j = 0; j < iterationsPerThread; j++) {
+							mgr.evictToTarget(0);
+						}
 					} catch (Exception e) {
 						errors.add(e);
 					} finally {
@@ -105,9 +138,13 @@ class DatabasePoolManagerConcurrencyTest {
 		}
 
 		assertTrue(errors.isEmpty(),
-				"Concurrent errors (including closed JdbcTemplate): " + errors);
-		assertEquals(10, successCount.get(),
-				"All 10 getOrCreate threads should succeed");
+				"Concurrent errors (including closed JdbcTemplate from TOCTOU race): " + errors);
+		assertEquals(acquireThreadCount, successCount.get(),
+				"Acquire thread should complete all " + iterationsPerThread
+						+ " iterations without closed JdbcTemplate errors");
+		assertEquals(0, closedPoolErrors.get(),
+				"TOCTOU race detected: handed out a closed JdbcTemplate " + closedPoolErrors.get()
+						+ " time(s) — fast-path gen check failed to roll back");
 	}
 
 	/**

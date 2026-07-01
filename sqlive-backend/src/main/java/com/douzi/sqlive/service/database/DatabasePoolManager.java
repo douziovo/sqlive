@@ -135,8 +135,18 @@ public class DatabasePoolManager {
 		checkPerIpLimit(clientIp);
 
 		JdbcTemplate jt = createJdbcTemplate(dbName);
-		pools.put(dbName, jt);
+		// WR-01: increment refCount BEFORE pools.put so isIdle() returns false the
+		// instant the pool becomes visible to evictIdlePools/evictToTarget. The original
+		// ordering (pools.put → refCounts.incrementAndGet) left a window where a cleaner
+		// thread holding the `pools` lock could observe the new entry, see
+		// refCounts.get(dbName) == null (isIdle returns true), and close the
+		// HikariDataSource before this method incremented refCount — handing the caller
+		// a closed JdbcTemplate. createNewPool is `synchronized` on `this`, but evict*
+		// synchronize on `pools` (the synchronizedMap mutex), so the pools.put call
+		// inside createNewPool only holds the pools lock for the duration of the put,
+		// not for the subsequent refCount increment under the original ordering.
 		refCounts.computeIfAbsent(dbName, k -> new AtomicInteger()).incrementAndGet();
+		pools.put(dbName, jt);
 		lastAccessNanos.computeIfAbsent(dbName, k -> new AtomicLong()).set(System.nanoTime());
 		acquireStartNanos.put(dbName, System.nanoTime());
 		if (clientIp != null) {

@@ -137,7 +137,15 @@ public class OpenAiCompatibleProvider implements AiProvider {
 			String msg = e.getMessage();
 			String sanitized = sanitizeErrorMessage(msg);
 			if (msg != null) {
-				sanitized = sanitized.replace(config.getApiKey(), "[REDACTED]");
+				// CR-01: Ollama/LMStudio providers don't require an API key — config.getApiKey()
+				// returns null for them. String.replace((CharSequence) null, ...) throws NPE
+				// inside the catch block, masking the original error and propagating to
+				// AiService.executeNonStreaming which returns a generic "AI service error".
+				// Guard with the same null/blank check AiService.streamChat uses.
+				String apiKey = config.getApiKey();
+				if (apiKey != null && !apiKey.isBlank()) {
+					sanitized = sanitized.replace(apiKey, "[REDACTED]");
+				}
 			}
 			log.error("{} API call failed: model={}, elapsed={}ms, error={}", providerName, config.getModel(), elapsed, sanitized);
 			throw new AiProviderException("AI service call failed: " + sanitized);
