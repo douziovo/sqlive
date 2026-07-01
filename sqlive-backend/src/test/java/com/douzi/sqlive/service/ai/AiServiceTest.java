@@ -8,7 +8,7 @@ import com.douzi.sqlive.config.AiProperties;
 import com.douzi.sqlive.dto.ai.AiChatRequest;
 import com.douzi.sqlive.dto.ai.AiProviderConfig;
 import com.douzi.sqlive.dto.ai.StreamChunk;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;

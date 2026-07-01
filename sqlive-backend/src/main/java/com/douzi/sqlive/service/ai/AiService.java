@@ -5,9 +5,9 @@ import com.douzi.sqlive.dto.ai.AiChatRequest;
 import com.douzi.sqlive.dto.ai.AiChatResponse;
 import com.douzi.sqlive.dto.ai.StreamChunk;
 import com.douzi.sqlive.exception.AiProviderException;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -186,7 +186,7 @@ public class AiService {
 			} else {
 				data.setContent(raw);
 			}
-		} catch (JsonProcessingException e) {
+		} catch (JacksonException e) {
 			log.warn("AI response not valid JSON, using raw text (len={})", raw.length());
 			data.setContent(raw);
 		}

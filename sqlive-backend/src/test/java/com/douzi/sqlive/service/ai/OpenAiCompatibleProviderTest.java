@@ -3,7 +3,7 @@ package com.douzi.sqlive.service.ai;
 import com.douzi.sqlive.dto.ai.AiProviderConfig;
 import com.douzi.sqlive.dto.ai.StreamChunk;
 import com.douzi.sqlive.exception.AiProviderException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;

@@ -1,6 +1,6 @@
 package com.douzi.sqlive.service.ai;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 
