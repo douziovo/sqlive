@@ -83,7 +83,7 @@ import SessionRecoveryToast from './components/SessionRecoveryToast.vue'
 import { useAiChat } from './composables/useAiChat'
 import { useInlineActions } from './composables/useInlineActions'
 import { useSqlEngine } from './composables/useSqlEngine'
-import type { CellUpdateEvent, CreateTableEvent, RowDeleteEvent, RowInsertEvent } from './model/DatabaseTypes'
+import type { CellUpdateEvent, CreateTableEvent, RowDeleteEvent, RowInsertEvent, TableSchema } from './model/DatabaseTypes'
 import { AI_ACTIONS_KEY, SQL_CONTEXT_KEY } from './model/injectionKeys'
 import type { SchemaTableInfo } from './model/SchemaTypes'
 
@@ -124,8 +124,13 @@ const { analyzeError, fixCode, explain, optimize, generateSql } = useInlineActio
 })
 
 // ── Derived ─────────────────────────────────────────────────────
+// D-R2-005: schemaTables computed 显式声明依赖 via named tablesSource getter
+// (matches the useAiChat/useInlineActions callsite pattern + useErDiagram L92 范式).
+// Avoids implicit `engine.db?.tables` reads so adding/removing a DatabaseModel
+// field is caught at the getter callsite, not silently dropped in computed body.
+const tablesSource = (): TableSchema[] => engine.db.tables
 const schemaTables = computed<SchemaTableInfo[]>(() => {
-  return (engine.db?.tables ?? []).map((t) => ({
+  return (tablesSource() ?? []).map((t) => ({
     name: t.name,
     type: 'table' as const,
     columns: t.columns || []
