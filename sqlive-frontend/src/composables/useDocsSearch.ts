@@ -46,7 +46,7 @@ export function useDocsSearch() {
                 slug: pathToSlug(path),
                 title: extractH1(raw) ?? pathToSlug(path),
                 content: stripMarkdown(raw),
-                category: path.split('/').slice(-2, -1)[0],
+                category: pathToSlug(path).split('/')[0],
             }))
             index = new MiniSearch({
                 fields: ['title', 'content'],

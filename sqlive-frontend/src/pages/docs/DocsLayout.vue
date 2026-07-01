@@ -22,7 +22,7 @@
         class="fixed left-0 top-0 h-full w-[240px] max-w-none translate-x-0 translate-y-0 rounded-none rounded-r-lg p-0 gap-0 border-r bg-card"
         :show-close-button="false"
       >
-        <DocsSidebar @navigate="drawerOpen = false" />
+        <DocsSidebar @navigate="handleDrawerNavigate" />
       </DialogContent>
     </Dialog>
 
@@ -45,6 +45,10 @@ import {Dialog, DialogTrigger, DialogContent} from '@/components/ui/dialog'
 // Desktop sidebar / hamburger button visibility is CSS-driven (md:flex / md:hidden).
 const isMobile = useMediaQuery('(max-width: 767px)')
 const drawerOpen = ref(false)
+
+function handleDrawerNavigate() {
+  drawerOpen.value = false
+}
 
 watch(isMobile, (m) => {
   if (!m) drawerOpen.value = false
