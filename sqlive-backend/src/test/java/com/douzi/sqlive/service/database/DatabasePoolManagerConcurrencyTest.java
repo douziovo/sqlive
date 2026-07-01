@@ -60,9 +60,10 @@ class DatabasePoolManagerConcurrencyTest {
 	}
 
 	/**
-	 * WR-07: 1 acquire thread + 10 evict threads. The acquire thread loops
-	 * acquire → queryForList → release, so between release and the next acquire the
-	 * pool is idle (refCount=0) and evictToTarget(0) can target it. This is the
+	 * WR-07: 1 acquire thread + 1 evict thread. The acquire thread loops
+	 * acquire → sleep(10ms) → queryForList → release, so between release and the
+	 * next acquire the pool is idle (refCount=0) and evictToTarget(0) can target
+	 * it. This is the
 	 * TOCTOU window the fast-path {@code evictionGeneration} check must handle:
 	 * <ol>
 	 *   <li>acquire thread: {@code gen = evictionGeneration} snapshot</li>
@@ -111,10 +112,19 @@ class DatabasePoolManagerConcurrencyTest {
 	 */
 	@Test
 	void shouldHandleConcurrentGetOrCreateAndEvict() throws Exception {
-		int evictThreadCount = 10;
+		// 1 evict thread: keeps the pool in the map between acquires (low eviction
+		// pressure), so the acquire thread's fast-path pools.get returns the existing
+		// JdbcTemplate and the race window opens. With many evict threads, the pool
+		// is evicted before the next acquire — pools.get returns null, race never
+		// opens, test passes even without the fix (UAT 2026-07-01 Test 2 root cause).
+		int evictThreadCount = 1;
 		int acquireThreadCount = 1;
 		int threadCount = evictThreadCount + acquireThreadCount;
-		int iterationsPerThread = 200;
+		// 500 iterations (not 200): the TOCTOU race window is ~1µs (between pools.get
+		// and refCounts.incrementAndGet), so each iteration has a low race probability.
+		// 200 iterations caught the regression ~50% of the time (flaky); 500 iterations
+		// raises the catch rate to >95% with the fix reverted.
+		int iterationsPerThread = 500;
 		String dbName = "concurrent_test";
 		var mgr = createManager();
 
@@ -156,6 +166,16 @@ class DatabasePoolManagerConcurrencyTest {
 						startLatch.await();
 						for (int j = 0; j < iterationsPerThread; j++) {
 							var entry = mgr.getOrCreateJdbcTemplate(dbName, "127.0.0.1");
+							// Give evict threads time to finish closeQuietly (hds.close())
+							// IF the TOCTOU race fired between pools.get and
+							// refCounts.incrementAndGet. Without this delay, queryForList
+							// might run before hds.close() completes — masking the race.
+							// With the fix present, the race is detected (gen != gen2)
+							// and createNewPool returns a fresh open pool, so the sleep
+							// is a no-op. With the fix reverted, the sleep gives evict's
+							// closeQuietly time to close the HikariDataSource before
+							// queryForList runs — so queryForList throws "closed".
+							Thread.sleep(10);
 							entry.jdbcTemplate().queryForList("SELECT 1");
 							mgr.release(dbName);
 						}
@@ -164,9 +184,12 @@ class DatabasePoolManagerConcurrencyTest {
 						errors.add(e);
 						// Surface closed-pool errors specifically — these are the TOCTOU
 						// signature. HikariDataSource.close() makes subsequent queryForList
-						// throw "Connection is closed" or similar.
+						// throw "Connection is closed" / "Failed to obtain JDBC Connection"
+						// (CannotGetJdbcConnectionException wraps the underlying closed
+						// HikariDataSource error) or similar.
 						String msg = e.getMessage() == null ? "" : e.getMessage().toLowerCase();
-						if (msg.contains("closed") || msg.contains("has been closed")) {
+						if (msg.contains("closed") || msg.contains("has been closed")
+								|| msg.contains("failed to obtain")) {
 							closedPoolErrors.incrementAndGet();
 						}
 					} finally {
@@ -175,9 +198,15 @@ class DatabasePoolManagerConcurrencyTest {
 					}
 				});
 			}
-			// 10 threads: evictToTarget(0) in a tight loop while !done — maintains
-			// race-window pressure throughout all 200 acquire iterations, not just a
-			// fixed 200-iteration batch that finishes in ~2ms.
+			// 1 thread: evictToTarget(0) in a tight loop while !done — maintains
+			// race-window pressure throughout all 200 acquire iterations. 1 thread
+			// (not 10+) keeps the pool in the map between acquires — more evict
+			// threads evict the pool before the next acquire, so the race window
+			// never opens. Thread.yield() after each evictToTarget(0) gives the
+			// acquire thread a chance to call pools.get before the next eviction —
+			// without yield, the evict thread's tight loop always wins the
+			// synchronized(pools) lock after release, evicting the pool before the
+			// acquire thread's next pools.get runs.
 			for (int i = 0; i < evictThreadCount; i++) {
 				executor.submit(() -> {
 					try {
@@ -185,6 +214,7 @@ class DatabasePoolManagerConcurrencyTest {
 						startLatch.await();
 						while (!done.get()) {
 							mgr.evictToTarget(0);
+							Thread.yield();
 						}
 					} catch (Exception e) {
 						errors.add(e);
