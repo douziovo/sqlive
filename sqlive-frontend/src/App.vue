@@ -112,14 +112,14 @@ watch(
 const aiChat = useAiChat({
   executionError: engine.executionError,
   code: engine.code,
-  db: engine.db
+  tablesSource: () => engine.db.tables
 })
 
 const { analyzeError, fixCode, explain, optimize, generateSql } = useInlineActions({
   isLoading: aiChat.isLoading,
   messages: aiChat.messages,
   code: engine.code,
-  db: engine.db,
+  tablesSource: () => engine.db.tables,
   error: engine.executionError
 })
 

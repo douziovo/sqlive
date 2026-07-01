@@ -101,7 +101,7 @@ export function useSqlEngine() {
 
     let previousDataState = new Map<string, string>()
 
-    const {highlight, highlightedCodeChunk, flashCode, recalculateStaticHighlight} = useHighlight(code, db, canonicalStatements)
+    const {highlight, highlightedCodeChunk, flashCode, recalculateStaticHighlight} = useHighlight(code, () => db.tables, canonicalStatements)
     const {
         getLastValidCode,
         updateRow,
@@ -112,7 +112,7 @@ export function useSqlEngine() {
         lastTruncations
     } = useBidirectionalSync(
         code,
-        db,
+        () => db.tables,
         mode,
         flashCode,
         transition,
