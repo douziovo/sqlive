@@ -207,6 +207,15 @@ export function useMonacoEditor(
 
         applyHighlight(deps.highlightChunk.value)
         applyErrorMarkers(deps.error.value)
+
+        // Geist Mono loads async via CSS @import (display=swap). If Monaco measures
+        // before the web font is ready, the cached char-width (fallback font) drifts
+        // the caret left of the text. Always re-measure once fonts are ready.
+        if (document.fonts) {
+            document.fonts.ready.then(() => {
+                monaco.editor.remeasureFonts()
+            })
+        }
     }
 
     function syncCode(newVal: string) {
