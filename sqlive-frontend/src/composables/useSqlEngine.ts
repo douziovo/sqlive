@@ -32,7 +32,8 @@ function transition(from: EngineMode, to: EngineMode, context: string): EngineMo
     return to
 }
 
-const DEFAULT_CODE = DEFAULT_SQL
+// DEV=false in prod build → Rollup folds the dead branch, default-sql.ts gets tree-shaken.
+const DEFAULT_CODE = import.meta.env.DEV ? DEFAULT_SQL : ''
 
 export function useSqlEngine() {
     const db = reactive<DatabaseModel>({
