@@ -32,19 +32,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.6.0
+
       - uses: actions/setup-node@v4
         with:
           node-version: 'lts/*'
-          cache: 'npm'
-          cache-dependency-path: sqlive-frontend/package-lock.json
+          cache: 'pnpm'
+          cache-dependency-path: sqlive-frontend/pnpm-lock.yaml
 
       - name: Install frontend dependencies
         working-directory: sqlive-frontend
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Run frontend tests
         working-directory: sqlive-frontend
-        run: npm run test
+        run: pnpm run test
 
   e2e:
     runs-on: ubuntu-latest
@@ -64,60 +68,32 @@ jobs:
           build-root-directory: sqlive-backend
           cache-read-only: true
 
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.6.0
+
       - uses: actions/setup-node@v4
         with:
           node-version: 'lts/*'
-          cache: 'npm'
-          cache-dependency-path: sqlive-frontend/package-lock.json
+          cache: 'pnpm'
+          cache-dependency-path: sqlive-frontend/pnpm-lock.yaml
 
       - name: Install frontend dependencies
         working-directory: sqlive-frontend
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('sqlive-frontend/package-lock.json') }}
+          key: playwright-${{ runner.os }}-${{ hashFiles('sqlive-frontend/pnpm-lock.yaml') }}
           restore-keys: |
             playwright-${{ runner.os }}-
 
       - name: Install Playwright browsers
         working-directory: sqlive-frontend
-        run: npx playwright install --with-deps chromium
-
-      - name: Ensure gradlew is executable
-        run: chmod +x sqlive-backend/gradlew
-
-      - name: Start backend
-        working-directory: sqlive-backend
-        run: |
-          gradle bootRun &
-          echo "BACKEND_PID=$!" >> $GITHUB_ENV
-
-      - name: Start frontend
-        working-directory: sqlive-frontend
-        run: |
-          npm run dev &
-          echo "FRONTEND_PID=$!" >> $GITHUB_ENV
-
-      - name: Wait for services
-        run: |
-          for i in $(seq 1 30); do
-            curl -s http://localhost:8080/actuator/health && break
-            sleep 2
-          done
-          for i in $(seq 1 30); do
-            curl -s http://localhost:5173 && break
-            sleep 2
-          done
+        run: pnpm exec playwright install --with-deps chromium msedge
 
       - name: Run E2E tests
         working-directory: sqlive-frontend
-        run: npx playwright test --config tests/e2e/playwright.config.ts --project=chromium --workers=4
-
-      - name: Stop services
-        if: always()
-        run: |
-          kill $FRONTEND_PID 2>/dev/null || true
-          kill $BACKEND_PID 2>/dev/null || true
+        run: pnpm exec playwright test --config tests/e2e/playwright.config.ts --project=chromium --project=edge

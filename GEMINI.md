@@ -1,4 +1,4 @@
-# Claude 项目入口
+# Gemini 项目入口
 
 @docs/agents/README.md
 

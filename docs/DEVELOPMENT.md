@@ -1,97 +1,33 @@
-<!-- generated-by: gsd-doc-writer -->
+# 本地开发
 
-# Development
+环境：Node.js LTS（>= 22）、pnpm 12.6.0、JDK 21。版本细节以各模块 manifest 为准。
 
-## Local setup
+## 安装与启动
 
-Sqlive has two runtimes that must be set up independently.
+在 `sqlive-frontend` 执行：
 
-**Prerequisites:** Node.js LTS (>= 22), Java 21 JDK (Zulu JDK recommended), npm.
-
-### 1. Clone and install
-
-```bash
-git clone <repo-url>
-cd sqlive
+```sh
+pnpm install --frozen-lockfile
+pnpm run dev
 ```
 
-### 2. Frontend setup
+另一个终端在 `sqlive-backend` 执行：
 
-```bash
-cd sqlive-frontend
-npm install
-```
-
-### 3. Backend setup
-
-The backend is a Gradle project. The Gradle wrapper handles its own installation.
-
-```bash
-cd sqlive-backend
-./gradlew build
-```
-
-### 4. Start both runtimes
-
-In two separate terminals:
-
-```bash
-# Terminal 1: backend (port 8080)
-cd sqlive-backend
+```sh
 ./gradlew bootRun
 ```
 
-```bash
-# Terminal 2: frontend (Vite dev server, proxies /api to :8080)
-cd sqlive-frontend
-npm run dev
-```
+Windows 使用 `pwsh` 和 `.\gradlew.bat bootRun`，`JAVA_HOME` 指向 JDK。前端默认 5173，后端 8080；Vite 代理配置见 `sqlive-frontend/vite.config.ts`。
 
-Open the URL printed by Vite (typically `http://localhost:5173`).
+## 构建与检查
 
-## Build commands
+- 前端：`pnpm run build` 生成 `dist/`；`pnpm run typecheck` 单独检查类型；`pnpm run preview` 预览构建。
+- 后端：`./gradlew build` 编译、测试并打包。
+- 测试命令、CI 范围和覆盖率见 [TESTING.md](TESTING.md)。
+- 部署与排错见 [RUNBOOK.md](RUNBOOK.md)。
 
-All commands are run from `sqlive-frontend/` unless otherwise noted.
+## 修改约定
 
-| Command | Runtime | Description |
-|---|---|---|
-| `npm run dev` | Frontend | Start Vite dev server with hot reload |
-| `npm run build` | Frontend | Type-check with `vue-tsc` then production build with Vite |
-| `npm run preview` | Frontend | Preview the production build locally |
-| `npm run test` | Frontend | Run vitest unit tests once |
-| `npm run test:watch` | Frontend | Run vitest in watch mode |
-| `npm run test:e2e` | Frontend | Run Playwright end-to-end tests |
-| `npm run test:e2e:ui` | Frontend | Run Playwright end-to-end tests with UI |
-| `./gradlew bootRun` | Backend | Start Spring Boot application on port 8080 |
-| `./gradlew test` | Backend | Run JUnit 5 backend tests with JaCoCo coverage |
-| `./gradlew build` | Backend | Compile, test, and package the backend |
+共享项目规则见 [agents/README.md](agents/README.md)。保持相邻代码风格；`biome.json` 只是现存配置，项目未安装 Biome，也未接入 lint 命令，不宣称自动执行格式检查。
 
-## Code style
-
-A Biome configuration file exists at `sqlive-frontend/biome.json`, though Biome is not installed as an npm dependency.
-
-- **Formatter:** 2-space indentation, single quotes, no semicolons, trailing commas disabled, 120-character line width.
-- **Linter:** Recommended ruleset with additional strictness -- unused variables and unused imports are errors, `console.log` is explicitly allowed (exempted via `noConsole.allow`).
-
-Biome runs on all `.ts`, `.vue`, and `.json` files under `sqlive-frontend/src/`, excluding `node_modules` and `dist`.
-
-To run Biome manually (install it first with `npm install --save-dev @biomejs/biome`):
-
-```bash
-cd sqlive-frontend
-npx biome check --write src/
-```
-
-The backend has no configured linter or formatter (no Checkstyle or Spotless in `build.gradle`).
-
-## Branch conventions
-
-No branch naming convention is documented in the repository. The default branch is `master`.
-
-## PR process
-
-No pull request template or CI workflow is configured in this repository. When contributing:
-
-- Ensure all tests pass before submitting: `npm run test` (frontend) and `./gradlew test` (backend).
-- Follow the existing code style enforced by Biome for the frontend.
-- Keep changes minimal and focused -- address one concern per pull request.
+提交前核对 diff，按变更运行相关检查并说明既有失败和未验证范围。CI 的分支触发条件以 workflow 为准，不从部署分支推断 PR 目标。
