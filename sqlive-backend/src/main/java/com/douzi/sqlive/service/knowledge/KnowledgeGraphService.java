@@ -36,11 +36,11 @@ public class KnowledgeGraphService {
 				JsonNode root = objectMapper.readTree(is);
 				for (var node : root.path("nodes")) {
 					var kn = new KnowledgeNode();
-					kn.setId(node.path("id").asText());
-					kn.setLabel(node.path("label").asText());
-					kn.setDescription(node.path("description").asText());
+					kn.setId(node.path("id").asString());
+					kn.setLabel(node.path("label").asString());
+					kn.setDescription(node.path("description").asString());
 					kn.setDifficulty(node.path("difficulty").asInt(1));
-					kn.setCategory(node.path("category").asText());
+					kn.setCategory(node.path("category").asString());
 
 					kn.setKeywords(readStringList(node, "keywords"));
 					kn.setPatterns(readStringList(node, "patterns"));
@@ -62,7 +62,7 @@ public class KnowledgeGraphService {
 
 	private List<String> readStringList(JsonNode parent, String field) {
 		return StreamSupport.stream(parent.path(field).spliterator(), false)
-				.map(JsonNode::asText).collect(Collectors.toList());
+				.map(JsonNode::asString).collect(Collectors.toList());
 	}
 
 	/**

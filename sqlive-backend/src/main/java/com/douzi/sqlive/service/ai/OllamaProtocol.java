@@ -62,12 +62,12 @@ public class OllamaProtocol implements Protocol {
 
 			JsonNode message = root.path("message");
 
-			String thinking = message.path("thinking").asText("");
+			String thinking = message.path("thinking").asString("");
 			if (!thinking.isEmpty()) {
 				chunks.add(StreamChunk.reasoning(thinking));
 			}
 
-			String content = message.path("content").asText("");
+			String content = message.path("content").asString("");
 			if (!content.isEmpty()) {
 				chunks.add(StreamChunk.text(content));
 			}
@@ -91,7 +91,7 @@ public class OllamaProtocol implements Protocol {
 	public String extractContent(String responseJson) {
 		try {
 			JsonNode root = objectMapper.readTree(responseJson);
-			return root.path("message").path("content").asText();
+			return root.path("message").path("content").asString();
 		} catch (Exception e) {
 			throw new RuntimeException("Ollama response parse failed: " + e.getMessage());
 		}

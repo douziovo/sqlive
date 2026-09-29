@@ -11,6 +11,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.*;
 
+@SuppressWarnings("SqlNoDataSourceInspection")
 @Component
 @Slf4j
 public class MetadataExtractor {
@@ -20,14 +21,14 @@ public class MetadataExtractor {
 
 	private static boolean isInvalidIdentifier(String identifier) {
 		if (identifier == null || identifier.isEmpty()) return true;
-		return !identifier.matches("^[a-zA-Z_][a-zA-Z0-9_]*$");
+		return identifier.indexOf('\0') >= 0;
 	}
 
-	static String quoteIdentifier(String identifier) {
+	public static String quoteIdentifier(String identifier) {
 		if (isInvalidIdentifier(identifier)) {
 			throw new IllegalArgumentException("Invalid identifier: " + identifier);
 		}
-		return "\"" + identifier + "\"";
+		return "\"" + identifier.replace("\"", "\"\"") + "\"";
 	}
 
 	// ── Public API ───────────────────────────────────────────

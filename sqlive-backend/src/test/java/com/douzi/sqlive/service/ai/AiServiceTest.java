@@ -68,6 +68,21 @@ class AiServiceTest {
 		assertTrue(ex.getMessage().contains("test"));
 	}
 
+	@Test
+	void initWithoutProvidersLeavesServiceUnavailable() {
+		props.setProviders(Map.of());
+		var emptyService = new AiService(props, mapper);
+		emptyService.init();
+		assertThrows(RuntimeException.class, emptyService::getProvider);
+	}
+
+	@Test
+	void blankProviderNameDefaultsToDeepSeek() {
+		props.setProvider("");
+		ReflectionTestUtils.setField(service, "providers", Map.of("deepseek", mockProvider));
+		assertSame(mockProvider, service.getProvider());
+	}
+
 	// ── executeNonStreaming ──────────────────────────────────
 
 	@Test
@@ -97,6 +112,44 @@ class AiServiceTest {
 		assertEquals("Just plain text", resp.getData().getContent());
 	}
 
+	@Test
+	void executeNonStreamingRequestBuildsPromptAndParsesDetailedResponse() {
+		var request = new AiChatRequest();
+		request.setMode("explain");
+		request.setSelectedCode("SELECT 1");
+		when(mockProvider.complete(anyString(), anyString())).thenReturn("""
+				{"summary":"one row","detail":"details","fixedCode":"SELECT 2",
+				 "prevention":"check syntax","stepByStep":[{"step":1,"what":"select","why":"read"}],
+				 "tips":["use aliases"],"explanation":"extra"}
+				""");
+		var response = service.executeNonStreaming(request);
+		assertTrue(response.isSuccess());
+		assertEquals("one row", response.getData().getSummary());
+		assertEquals("SELECT 2", response.getData().getFixedCode());
+		assertEquals("details\n\n## 如何避免\ncheck syntax\n\nextra", response.getData().getContent());
+		assertEquals(1, response.getData().getStepByStep().getFirst().getStep());
+		assertEquals("select", response.getData().getStepByStep().getFirst().getWhat());
+		assertEquals("read", response.getData().getStepByStep().getFirst().getWhy());
+		assertEquals("use aliases", response.getData().getTips().getFirst());
+		verify(mockProvider).complete(contains("SELECT 1"), contains("SELECT 1"));
+	}
+
+	@Test
+	void malformedJsonFallsBackToRawText() {
+		when(mockProvider.complete(anyString(), anyString())).thenReturn("{broken");
+		var response = service.executeNonStreaming("chat", "system", "user");
+		assertTrue(response.isSuccess());
+		assertEquals("{broken", response.getData().getContent());
+	}
+
+	@Test
+	void jsonWithoutSummaryOrDetailKeepsRawFallback() {
+		when(mockProvider.complete(anyString(), anyString())).thenReturn("{\"fixedCode\":\"SELECT 1\"}");
+		var response = service.executeNonStreaming("chat", "system", "user");
+		assertEquals("{\"fixedCode\":\"SELECT 1\"}", response.getData().getSummary());
+		assertEquals("{\"fixedCode\":\"SELECT 1\"}", response.getData().getContent());
+	}
+
 	// ── streamChat ───────────────────────────────────────────
 
 	@Test
@@ -106,6 +159,27 @@ class AiServiceTest {
 		var chunks = service.streamChat("system", null, "hello").collectList().block();
 		assertNotNull(chunks);
 		assertEquals(2, chunks.size());
+	}
+
+	@Test
+	void streamChatRequestPassesHistoryAndMessage() {
+		var request = new AiChatRequest();
+		request.setMode("chat");
+		request.setMessage("hello");
+		request.setHistory(java.util.List.of(new AiChatRequest.ChatMessage()));
+		when(mockProvider.streamChat(anyString(), eq(request.getHistory()), eq("hello")))
+				.thenReturn(Flux.just(StreamChunk.done()));
+		assertEquals("done", service.streamChat(request).blockFirst().getType());
+		verify(mockProvider).streamChat(contains("SQL"), eq(request.getHistory()), eq("hello"));
+	}
+
+	@Test
+	void streamErrorWithoutMessageOrConfiguredKeyUsesSafeFallback() {
+		props.setProviders(Map.of());
+		when(mockProvider.streamChat(anyString(), isNull(), anyString()))
+				.thenReturn(Flux.error(new RuntimeException()));
+		assertEquals("AI 服务调用出错：unknown error",
+				service.streamChat("system", null, "hello").blockFirst().getContent());
 	}
 
 	@Test
@@ -230,6 +304,23 @@ class AiServiceTest {
 		var req = new AiChatRequest();
 		req.setMode("analyze-error");
 		assertEquals("", service.buildUserMessage(req));
+	}
+
+	@Test
+	void buildPromptsAndMessagesForRemainingModes() {
+		var request = new AiChatRequest();
+		request.setSelectedCode("SELECT 1");
+		request.setMode("analyze-error");
+		assertTrue(service.buildSystemPrompt(request).contains("错误分析"));
+		request.setMode("optimize");
+		assertTrue(service.buildSystemPrompt(request).contains("性能优化"));
+		assertTrue(service.buildUserMessage(request).contains("SELECT 1"));
+		request.setMode("explain");
+		assertTrue(service.buildUserMessage(request).contains("SELECT 1"));
+		request.setMode("other");
+		assertEquals("", service.buildUserMessage(request));
+		request.setMessage("fallback");
+		assertEquals("fallback", service.buildUserMessage(request));
 	}
 
 	// ── helpers ──────────────────────────────────────────────

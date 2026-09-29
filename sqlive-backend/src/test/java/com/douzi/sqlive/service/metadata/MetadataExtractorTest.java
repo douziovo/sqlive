@@ -130,11 +130,27 @@ class MetadataExtractorTest {
 
 	@Test
 	void shouldThrowForInvalidIdentifier() {
-		assertThrows(IllegalArgumentException.class,
-				() -> MetadataExtractor.quoteIdentifier("bad;name"));
+		assertEquals("\"bad;name\"", MetadataExtractor.quoteIdentifier("bad;name"));
+		assertThrows(IllegalArgumentException.class, () -> MetadataExtractor.quoteIdentifier("bad\0name"));
 		assertThrows(IllegalArgumentException.class,
 				() -> MetadataExtractor.quoteIdentifier(""));
 		assertThrows(IllegalArgumentException.class,
 				() -> MetadataExtractor.quoteIdentifier(null));
 	}
+	@Test
+	void shouldExtractUnicodeAndQuotedNamesSafely() {
+		String parent = "部门";
+		String child = "员\"工;--";
+		jdbc.execute("CREATE TABLE " + MetadataExtractor.quoteIdentifier(parent) + " (id INTEGER PRIMARY KEY)");
+		jdbc.execute("CREATE TABLE " + MetadataExtractor.quoteIdentifier(child)
+				+ " (id INTEGER, 部门编号 INTEGER REFERENCES 部门(id))");
+		jdbc.execute("CREATE INDEX \"中文索引\" ON " + MetadataExtractor.quoteIdentifier(child) + " (部门编号)");
+		var tables = extractor.extractAllTables(jdbc);
+		assertEquals(2, tables.size());
+		assertTrue(tables.stream().anyMatch(t -> child.equals(t.getName())));
+		assertEquals("中文索引", extractor.extractIndexes(jdbc).getFirst().getName());
+		assertEquals(child, extractor.extractForeignKeys(jdbc).getFirst().getFromTable());
+		assertEquals(parent, extractor.extractForeignKeys(jdbc).getFirst().getToTable());
+	}
+
 }
