@@ -1,5 +1,5 @@
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
-import {useMultiTabs} from '@/composables/useMultiTabs'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { useMultiTabs } from '@/composables/useMultiTabs'
 
 describe('useMultiTabs', () => {
     let defaultCode: string
@@ -14,7 +14,7 @@ describe('useMultiTabs', () => {
     })
 
     it('creates one initial tab with default name', () => {
-        const {tabs, activeTab} = useMultiTabs(defaultCode)
+        const { tabs, activeTab } = useMultiTabs(defaultCode)
         expect(tabs.value).toHaveLength(1)
         expect(tabs.value[0].name).toBe('查询 1')
         expect(tabs.value[0].code).toBe('-- SQL')
@@ -22,7 +22,7 @@ describe('useMultiTabs', () => {
     })
 
     it('addTab creates and activates new tab', () => {
-        const {tabs, activeTab, activeTabId, addTab} = useMultiTabs(defaultCode)
+        const { tabs, activeTab, activeTabId, addTab } = useMultiTabs(defaultCode)
         const tab = addTab()
 
         expect(tabs.value).toHaveLength(2)
@@ -31,7 +31,7 @@ describe('useMultiTabs', () => {
     })
 
     it('addTab accepts custom name, code, and dbName', () => {
-        const {tabs, addTab} = useMultiTabs(defaultCode)
+        const { tabs, addTab } = useMultiTabs(defaultCode)
         addTab('test', 'SELECT 1;', 'mydb')
 
         expect(tabs.value).toHaveLength(2)
@@ -42,7 +42,7 @@ describe('useMultiTabs', () => {
     })
 
     it('switchTab changes active tab', () => {
-        const {activeTabId, addTab, switchTab} = useMultiTabs(defaultCode)
+        const { activeTabId, addTab, switchTab } = useMultiTabs(defaultCode)
         const tab2 = addTab('tab2')
         addTab('tab3')
 
@@ -51,7 +51,7 @@ describe('useMultiTabs', () => {
     })
 
     it('closeTab removes tab and switches to adjacent', () => {
-        const {tabs, activeTabId, addTab, closeTab} = useMultiTabs(defaultCode)
+        const { tabs, activeTabId, addTab, closeTab } = useMultiTabs(defaultCode)
         const tab2 = addTab('tab2')
         const tab3 = addTab('tab3')
         // Active is tab3, close it → should switch to tab2
@@ -62,7 +62,7 @@ describe('useMultiTabs', () => {
     })
 
     it('closeTab on first tab when last is active switches to new last', () => {
-        const {tabs, activeTabId, addTab, closeTab} = useMultiTabs(defaultCode)
+        const { tabs, activeTabId, addTab, closeTab } = useMultiTabs(defaultCode)
         addTab('tab2')
         const tab3 = addTab('tab3')
         // Active is tab3, close the first tab
@@ -73,7 +73,7 @@ describe('useMultiTabs', () => {
     })
 
     it('cannot close the last remaining tab', () => {
-        const {tabs, closeTab} = useMultiTabs(defaultCode)
+        const { tabs, closeTab } = useMultiTabs(defaultCode)
         const result = closeTab(tabs.value[0].id)
 
         expect(result).toBe(false)
@@ -81,13 +81,13 @@ describe('useMultiTabs', () => {
     })
 
     it('renameTab changes tab name', () => {
-        const {tabs, renameTab} = useMultiTabs(defaultCode)
+        const { tabs, renameTab } = useMultiTabs(defaultCode)
         renameTab(tabs.value[0].id, '新名称')
         expect(tabs.value[0].name).toBe('新名称')
     })
 
     it('updateCode sets isModified to true when code differs', () => {
-        const {activeTab, updateCode} = useMultiTabs(defaultCode)
+        const { activeTab, updateCode } = useMultiTabs(defaultCode)
         expect(activeTab.value.isModified).toBe(false)
 
         updateCode('SELECT 2;')
@@ -96,13 +96,13 @@ describe('useMultiTabs', () => {
     })
 
     it('updateCode does not mark modified when code is unchanged', () => {
-        const {activeTab, updateCode} = useMultiTabs(defaultCode)
+        const { activeTab, updateCode } = useMultiTabs(defaultCode)
         updateCode(defaultCode)
         expect(activeTab.value.isModified).toBe(false)
     })
 
     it('markClean resets isModified', () => {
-        const {activeTab, updateCode, markClean} = useMultiTabs(defaultCode)
+        const { activeTab, updateCode, markClean } = useMultiTabs(defaultCode)
         updateCode('SELECT 2;')
         expect(activeTab.value.isModified).toBe(true)
 
@@ -111,13 +111,13 @@ describe('useMultiTabs', () => {
     })
 
     it('setTabDbName updates dbName', () => {
-        const {tabs, setTabDbName} = useMultiTabs(defaultCode)
+        const { tabs, setTabDbName } = useMultiTabs(defaultCode)
         setTabDbName(tabs.value[0].id, 'playground')
         expect(tabs.value[0].dbName).toBe('playground')
     })
 
     it('dbNames collects unique dbNames across tabs', () => {
-        const {dbNames, addTab} = useMultiTabs(defaultCode)
+        const { dbNames, addTab } = useMultiTabs(defaultCode)
         addTab('a', '', 'db1')
         addTab('b', '', 'db1')
         addTab('c', '', 'db2')
@@ -126,8 +126,8 @@ describe('useMultiTabs', () => {
     })
 
     it('importFile reads file text and creates new tab', async () => {
-        const {tabs, activeTab, importFile} = useMultiTabs(defaultCode)
-        const file = new File(['SELECT 1;'], 'query.sql', {type: 'text/sql'})
+        const { tabs, activeTab, importFile } = useMultiTabs(defaultCode)
+        const file = new File(['SELECT 1;'], 'query.sql', { type: 'text/sql' })
 
         const text = await importFile(file)
         expect(text).toBe('SELECT 1;')
@@ -140,7 +140,7 @@ describe('useMultiTabs', () => {
 
     it('exportTab calls download', () => {
         // Mock URL and anchor
-        const createObjectURLSpy = vi.fn(() => 'blob:xxx')
+        const createObjectURLSpy = vi.fn((_blob: Blob) => 'blob:xxx')
         const revokeObjectURLSpy = vi.fn()
         vi.stubGlobal('URL', {
             ...URL,
@@ -153,12 +153,12 @@ describe('useMultiTabs', () => {
         vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
             const el = originalCreateElement(tag)
             if (tag === 'a') {
-                Object.defineProperty(el, 'click', {value: clickSpy})
+                Object.defineProperty(el, 'click', { value: clickSpy })
             }
             return el
         })
 
-        const {tabs, exportTab} = useMultiTabs(defaultCode)
+        const { tabs, exportTab } = useMultiTabs(defaultCode)
         tabs.value[0].name = 'myquery'
 
         exportTab()
@@ -177,7 +177,7 @@ describe('useMultiTabs', () => {
     })
 
     it('tabs are reactive: modifying a tab property reflects in UI', () => {
-        const {tabs, addTab} = useMultiTabs(defaultCode)
+        const { tabs, addTab } = useMultiTabs(defaultCode)
         const firstTab = tabs.value[0]
         addTab('other')
         // The first tab should still be accessible with correct data
@@ -186,7 +186,7 @@ describe('useMultiTabs', () => {
     })
 
     it('handles 50 tabs without crashing', () => {
-        const {tabs, addTab, activeTabId} = useMultiTabs(defaultCode)
+        const { tabs, addTab, activeTabId } = useMultiTabs(defaultCode)
         for (let i = 0; i < 49; i++) {
             addTab(`tab ${i + 2}`, `-- query ${i + 2}`, `db${i % 5}`)
         }

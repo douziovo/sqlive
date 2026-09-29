@@ -1,13 +1,13 @@
-import {useDebounceFn} from '@vueuse/core'
-import {computed, reactive, ref, watch} from 'vue'
-import {DEFAULT_SQL} from '../assets/default-sql'
-import {useBidirectionalSync} from '../composables/useBidirectionalSync'
-import {useDatabaseLifecycle} from '../composables/useDatabaseLifecycle'
-import {useHighlight} from '../composables/useHighlight'
-import {useMultiTabs} from '../composables/useMultiTabs'
-import {API_URL, DEBOUNCE_MS} from '../config'
-import type {ExecuteRequest, ExecuteResponse} from '../model/ApiTypes'
-import type {CanonicalStatement, DatabaseModel, InsertResult, Row} from '../model/DatabaseTypes'
+import { useDebounceFn } from '@vueuse/core'
+import { computed, reactive, ref, watch } from 'vue'
+import { DEFAULT_SQL } from '../assets/default-sql'
+import { useBidirectionalSync } from '../composables/useBidirectionalSync'
+import { useDatabaseLifecycle } from '../composables/useDatabaseLifecycle'
+import { useHighlight } from '../composables/useHighlight'
+import { useMultiTabs } from '../composables/useMultiTabs'
+import { API_URL, DEBOUNCE_MS } from '../config'
+import type { ExecuteRequest, ExecuteResponse } from '../model/ApiTypes'
+import type { CanonicalStatement, DatabaseModel, InsertResult, Row } from '../model/DatabaseTypes'
 
 function hashString(s: string): number {
     let hash = 5381
@@ -57,7 +57,7 @@ export function useSqlEngine() {
     // requires updating DatabaseTypes + this single pair (previously 3 call sites:
     // init + clear + assign). The reactive literal init above stays — reactive()
     // requires an object literal and cannot be replaced by a function call.
-    function setDb(data: ExecuteResponse['data']) {
+    function setDb(data: NonNullable<ExecuteResponse['data']>) {
         db.tables = data.tables || []
         db.queryResults = data.queryResults || []
         db.indexes = data.indexes || []
@@ -102,7 +102,11 @@ export function useSqlEngine() {
 
     let previousDataState = new Map<string, string>()
 
-    const {highlight, highlightedCodeChunk, flashCode, recalculateStaticHighlight} = useHighlight(code, () => db.tables, canonicalStatements)
+    const { highlight, highlightedCodeChunk, flashCode, recalculateStaticHighlight } = useHighlight(
+        code,
+        () => db.tables,
+        canonicalStatements
+    )
     const {
         getLastValidCode,
         updateRow,
@@ -132,11 +136,6 @@ export function useSqlEngine() {
     let currentRequestId = 0
 
     const executeSqlRemote = async (forceReset = false) => {
-        if (mode.value === 'rollback') {
-            mode.value = transition(mode.value, 'user', 'execute rollback skip')
-            return
-        }
-
         abortController?.abort()
         abortController = new AbortController()
 
@@ -162,10 +161,10 @@ export function useSqlEngine() {
         try {
             const response = await fetch(API_URL, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     sql: code.value,
-                    dbName: activeTab.value.dbName || 'default',
+                    dbName: activeTab.value.dbName || activeTab.value.id,
                     reset: forceReset || shouldReset(code.value, activeTab.value.dbName)
                 } satisfies ExecuteRequest),
                 signal: abortController.signal
@@ -181,10 +180,14 @@ export function useSqlEngine() {
 
             if (!result.success) {
                 const errMsg = result.error?.message || '未知错误'
-                executionError.value = {line: result.error?.line || 1, message: errMsg}
+                executionError.value = { line: result.error?.line || 1, message: errMsg }
 
                 if (pendingInsertTable) {
-                    insertResult.value = {success: false, tableName: pendingInsertTable, error: errMsg}
+                    insertResult.value = {
+                        success: false,
+                        tableName: pendingInsertTable,
+                        error: errMsg
+                    }
                     pendingInsertTable = null
                 }
 
@@ -207,11 +210,16 @@ export function useSqlEngine() {
                     if (row.id === undefined && !row._highlightId) {
                         row._highlightId = table.columns.reduce((hash: number, col: string) => {
                             const v = row[col]
-                            return ((hash << 5) - hash + (v === null || v === undefined ? 0 : hashString(String(v)))) | 0
+                            return (
+                                ((hash << 5) -
+                                    hash +
+                                    (v === null || v === undefined ? 0 : hashString(String(v)))) |
+                                0
+                            )
                         }, rowIdx)
                     }
                     const key = `${table.name}:${row.id !== undefined ? row.id : row._highlightId}`
-                    const sig = JSON.stringify({...row, _highlightId: undefined})
+                    const sig = JSON.stringify({ ...row, _highlightId: undefined })
                     nextDataState.set(key, sig)
                     if (mode.value !== 'reconciling' && previousDataState.get(key) !== sig) {
                         newFlashingRows.push(key)
@@ -233,7 +241,7 @@ export function useSqlEngine() {
             mode.value = transition(mode.value, 'user', 'execute success')
 
             if (pendingInsertTable) {
-                insertResult.value = {success: true, tableName: pendingInsertTable}
+                insertResult.value = { success: true, tableName: pendingInsertTable }
                 pendingInsertTable = null
             }
 
@@ -243,7 +251,7 @@ export function useSqlEngine() {
             if (requestId !== currentRequestId) return
 
             console.error('执行 SQL 请求失败:', e instanceof Error ? e.message : e)
-            executionError.value = {line: 0, message: '无法连接到后端服务'}
+            executionError.value = { line: 0, message: '无法连接到后端服务' }
         } finally {
             // 仅在仍是当前请求时更新状态
             if (requestId === currentRequestId) {
@@ -255,7 +263,7 @@ export function useSqlEngine() {
         }
     }
 
-    const {shouldReset, submitNow, deleteDb, dbList} = useDatabaseLifecycle(
+    const { shouldReset, submitNow, deleteDb, dbList } = useDatabaseLifecycle(
         activeTab,
         tabs,
         setTabDbName,
@@ -268,16 +276,19 @@ export function useSqlEngine() {
     const debouncedExecuteSql = useDebounceFn(() => executeSqlRemote(), isE2E ? 50 : DEBOUNCE_MS)
 
     watch(
-        code,
+        [code, activeTabId],
         () => {
-            if (mode.value === 'rollback') return
+            if (mode.value === 'rollback') {
+                mode.value = transition(mode.value, 'user', 'rollback applied')
+                return
+            }
             if (mode.value === 'reconciling') {
                 void executeSqlRemote()
                 return
             }
             debouncedExecuteSql()
         },
-        {immediate: true}
+        { immediate: true }
     )
 
     return {
