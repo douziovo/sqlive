@@ -1,13 +1,13 @@
-import {describe, expect, it} from 'vitest'
-import {useInlineEdit} from '@/composables/useInlineEdit'
-import type {CellUpdateEvent} from '@/model/DatabaseTypes'
+import { describe, expect, it } from 'vitest'
+import { useInlineEdit } from '@/composables/useInlineEdit'
+import type { CellUpdateEvent } from '@/model/DatabaseTypes'
 
 function makeBlurEvent(value: string): FocusEvent {
     const textarea = document.createElement('textarea')
     textarea.value = value
     // Dispatch blur event on the textarea so e.target is set correctly
-    const event = new FocusEvent('blur', {bubbles: false, cancelable: true})
-    Object.defineProperty(event, 'target', {value: textarea, writable: false})
+    const event = new FocusEvent('blur', { bubbles: false, cancelable: true })
+    Object.defineProperty(event, 'target', { value: textarea, writable: false })
     return event
 }
 
@@ -18,16 +18,16 @@ describe('useInlineEdit', () => {
             emittedPayload = payload
         }
 
-        const {handleBlur} = useInlineEdit('users', {name: 'TEXT'}, mockEmit)
-        const row = {id: 1, name: 'OldName'}
+        const { handleBlur } = useInlineEdit('users', { name: 'TEXT' }, mockEmit)
+        const row = { id: 1, name: 'OldName' }
         const event = makeBlurEvent('NewName')
 
         handleBlur(event, row, 'name')
 
         expect(emittedPayload).not.toBeNull()
         expect(emittedPayload!.tableName).toBe('users')
-        expect(emittedPayload!.oldRow).toEqual({id: 1, name: 'OldName'})
-        expect(emittedPayload!.newRow).toEqual({id: 1, name: 'NewName'})
+        expect(emittedPayload!.oldRow).toEqual({ id: 1, name: 'OldName' })
+        expect(emittedPayload!.newRow).toEqual({ id: 1, name: 'NewName' })
     })
 
     it('handleBlur with same value does NOT call emit (no-op when oldVal === newVal)', () => {
@@ -36,8 +36,8 @@ describe('useInlineEdit', () => {
             emitCalled = true
         }
 
-        const {handleBlur} = useInlineEdit('users', {name: 'TEXT'}, mockEmit)
-        const row = {id: 1, name: 'Alice'}
+        const { handleBlur } = useInlineEdit('users', { name: 'TEXT' }, mockEmit)
+        const row = { id: 1, name: 'Alice' }
         const event = makeBlurEvent('Alice')
 
         handleBlur(event, row, 'name')
@@ -51,8 +51,8 @@ describe('useInlineEdit', () => {
             emitCalled = true
         }
 
-        const {handleBlur} = useInlineEdit('users', {name: 'TEXT NOT NULL'}, mockEmit)
-        const row = {id: 1, name: 'Alice'}
+        const { handleBlur } = useInlineEdit('users', { name: 'TEXT NOT NULL' }, mockEmit)
+        const row = { id: 1, name: 'Alice' }
         const event = makeBlurEvent('')
 
         handleBlur(event, row, 'name')
@@ -66,8 +66,8 @@ describe('useInlineEdit', () => {
             emitCalled = true
         }
 
-        const {handleBlur} = useInlineEdit('users', {id: 'INTEGER'}, mockEmit)
-        const row = {id: 1, name: 'Alice'}
+        const { handleBlur } = useInlineEdit('users', { id: 'INTEGER' }, mockEmit)
+        const row = { id: 1, name: 'Alice' }
         const event = makeBlurEvent('not-a-number')
 
         handleBlur(event, row, 'id')
@@ -81,8 +81,8 @@ describe('useInlineEdit', () => {
             emittedPayload = payload
         }
 
-        const {handleBlur} = useInlineEdit('users', {id: 'INTEGER'}, mockEmit)
-        const row = {id: 1, name: 'Alice'}
+        const { handleBlur } = useInlineEdit('users', { id: 'INTEGER' }, mockEmit)
+        const row = { id: 1, name: 'Alice' }
         const event = makeBlurEvent('42')
 
         handleBlur(event, row, 'id')
@@ -97,8 +97,8 @@ describe('useInlineEdit', () => {
             emitCalled = true
         }
 
-        const {handleBlur} = useInlineEdit('users', {name: 'TEXT NOT NULL'}, mockEmit)
-        const row = {id: 1, name: 'Alice'}
+        const { handleBlur } = useInlineEdit('users', { name: 'TEXT NOT NULL' }, mockEmit)
+        const row = { id: 1, name: 'Alice' }
         const event = makeBlurEvent('   ')
 
         handleBlur(event, row, 'name')

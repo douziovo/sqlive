@@ -1,7 +1,9 @@
-import {mount} from '@vue/test-utils'
-import {describe, expect, it, vi} from 'vitest'
-import {nextTick} from 'vue'
-import type {TableSchema} from '@/model/DatabaseTypes'
+import { mount } from '@vue/test-utils'
+import { describe, expect, it, vi } from 'vitest'
+import { h, nextTick } from 'vue'
+import * as echarts from 'echarts'
+import { useECharts } from '@/components/chart/useECharts'
+import type { TableSchema } from '@/model/DatabaseTypes'
 import ChartView from '../../components/ChartView.vue'
 
 // Mock echarts: jsdom has no canvas support, so prevent ECharts from trying to init
@@ -35,20 +37,69 @@ function makeResult(overrides: Partial<TableSchema> = {}): TableSchema {
     return {
         name: 'query_result',
         columns: ['name', 'salary', 'age'],
-        columnTypes: {name: 'TEXT', salary: 'REAL', age: 'INTEGER'},
+        columnTypes: { name: 'TEXT', salary: 'REAL', age: 'INTEGER' },
         data: [
-            {name: 'Alice', salary: 9000, age: 30},
-            {name: 'Bob', salary: 7000, age: 25},
-            {name: 'Cathy', salary: 5000, age: 28}
+            { name: 'Alice', salary: 9000, age: 30 },
+            { name: 'Bob', salary: 7000, age: 25 },
+            { name: 'Cathy', salary: 5000, age: 28 }
         ],
         ...overrides
     }
 }
 
 describe('ChartView', () => {
+    it('debounces resize and releases the observer and timer on unmount', async () => {
+        vi.useFakeTimers()
+        let notifyResize = () => {}
+        const disconnect = vi.fn()
+        vi.stubGlobal(
+            'ResizeObserver',
+            class {
+                constructor(callback: () => void) {
+                    notifyResize = callback
+                }
+                observe() {}
+                disconnect = disconnect
+            }
+        )
+        const wrapper = mount({
+            setup() {
+                const chart = useECharts()
+                chart.render({ series: [] })
+                return () => h('div', { ref: chart.containerRef })
+            }
+        })
+        try {
+            await nextTick()
+            const chart = vi.mocked(echarts.init).mock.results.at(-1)!.value
+            expect(chart.setOption).toHaveBeenCalledExactlyOnceWith(
+                { series: [] },
+                { notMerge: true }
+            )
+            Object.defineProperty(wrapper.element, 'clientWidth', { value: 200 })
+            notifyResize()
+            vi.advanceTimersByTime(50)
+            notifyResize()
+            vi.advanceTimersByTime(99)
+            expect(chart.resize).not.toHaveBeenCalled()
+            vi.advanceTimersByTime(1)
+            expect(chart.resize).toHaveBeenCalledOnce()
+            notifyResize()
+            wrapper.unmount()
+            vi.advanceTimersByTime(200)
+            expect(chart.resize).toHaveBeenCalledOnce()
+            expect(chart.dispose).toHaveBeenCalledOnce()
+            expect(disconnect).toHaveBeenCalled()
+        } finally {
+            wrapper.unmount()
+            vi.unstubAllGlobals()
+            vi.useRealTimers()
+        }
+    })
+
     it('renders chart type selector', () => {
         const wrapper = mount(ChartView, {
-            props: {result: makeResult()}
+            props: { result: makeResult() }
         })
         const select = wrapper.find('select')
         expect(select.exists()).toBe(true)
@@ -62,8 +113,8 @@ describe('ChartView', () => {
             props: {
                 result: makeResult({
                     columns: ['name'],
-                    columnTypes: {name: 'TEXT'},
-                    data: [{name: 'Alice'}]
+                    columnTypes: { name: 'TEXT' },
+                    data: [{ name: 'Alice' }]
                 })
             }
         })
@@ -75,8 +126,8 @@ describe('ChartView', () => {
             props: {
                 result: makeResult({
                     columns: ['a', 'b'],
-                    columnTypes: {a: 'TEXT', b: 'TEXT'},
-                    data: [{a: 'x', b: 'y'}]
+                    columnTypes: { a: 'TEXT', b: 'TEXT' },
+                    data: [{ a: 'x', b: 'y' }]
                 })
             }
         })
@@ -85,7 +136,7 @@ describe('ChartView', () => {
 
     it('renders chart container div when valid data present', () => {
         const wrapper = mount(ChartView, {
-            props: {result: makeResult()}
+            props: { result: makeResult() }
         })
         const chartContainer = wrapper.find('.chart-container')
         expect(chartContainer.exists()).toBe(true)
@@ -93,7 +144,7 @@ describe('ChartView', () => {
 
     it('renders label column select and numeric column checkboxes', async () => {
         const wrapper = mount(ChartView, {
-            props: {result: makeResult()}
+            props: { result: makeResult() }
         })
         await nextTick()
         // Should have at least 2 selects: chart type + label column
@@ -106,7 +157,7 @@ describe('ChartView', () => {
 
     it('auto-selects first non-numeric column as label', async () => {
         const wrapper = mount(ChartView, {
-            props: {result: makeResult()}
+            props: { result: makeResult() }
         })
         await nextTick()
         expect(wrapper.text()).toContain('标签列')
@@ -115,7 +166,7 @@ describe('ChartView', () => {
 
     it('changes chartType when pie is selected', async () => {
         const wrapper = mount(ChartView, {
-            props: {result: makeResult()}
+            props: { result: makeResult() }
         })
         await nextTick()
         // chart type select is the first select

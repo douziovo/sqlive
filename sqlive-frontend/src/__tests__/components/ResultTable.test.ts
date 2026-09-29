@@ -1,17 +1,17 @@
-import {mount} from '@vue/test-utils'
-import {describe, expect, it} from 'vitest'
-import type {TableSchema} from '@/model/DatabaseTypes'
+import { mount } from '@vue/test-utils'
+import { describe, expect, it } from 'vitest'
+import type { TableSchema } from '@/model/DatabaseTypes'
 import ResultTable from '../../components/ResultTable.vue'
 
 function makeResult(overrides: Partial<TableSchema> = {}): TableSchema {
     return {
         name: '查询结果 1',
         columns: ['id', 'name'],
-        columnTypes: {id: 'INTEGER', name: 'TEXT'},
+        columnTypes: { id: 'INTEGER', name: 'TEXT' },
         data: [
-            {id: 1, name: 'Alice'},
-            {id: 2, name: 'Bob'},
-            {id: 3, name: 'Cathy'}
+            { id: 1, name: 'Alice' },
+            { id: 2, name: 'Bob' },
+            { id: 3, name: 'Cathy' }
         ],
         ...overrides
     }
@@ -20,21 +20,21 @@ function makeResult(overrides: Partial<TableSchema> = {}): TableSchema {
 describe('ResultTable', () => {
     it('renders result name', () => {
         const wrapper = mount(ResultTable, {
-            props: {result: makeResult(), index: 0}
+            props: { result: makeResult(), index: 0 }
         })
         expect(wrapper.text()).toContain('查询结果')
     })
 
     it('renders column count', () => {
         const wrapper = mount(ResultTable, {
-            props: {result: makeResult(), index: 0}
+            props: { result: makeResult(), index: 0 }
         })
         expect(wrapper.text()).toContain('2 列')
     })
 
     it('renders row count', () => {
         const wrapper = mount(ResultTable, {
-            props: {result: makeResult(), index: 0}
+            props: { result: makeResult(), index: 0 }
         })
         expect(wrapper.text()).toContain('3 行')
     })
@@ -44,8 +44,8 @@ describe('ResultTable', () => {
             props: {
                 result: makeResult({
                     columns: ['id', 'name', 'salary'],
-                    columnTypes: {id: 'INTEGER', name: 'TEXT', salary: 'REAL'},
-                    data: [{id: 1, name: 'Alice', salary: 9000}]
+                    columnTypes: { id: 'INTEGER', name: 'TEXT', salary: 'REAL' },
+                    data: [{ id: 1, name: 'Alice', salary: 9000 }]
                 }),
                 index: 0
             }
@@ -58,12 +58,12 @@ describe('ResultTable', () => {
             props: {
                 result: makeResult({
                     columns: ['id', 'name', 'salary'],
-                    columnTypes: {id: 'INTEGER', name: 'TEXT', salary: 'REAL'},
-                    data: [{id: 1, name: 'Alice', salary: 9000}]
+                    columnTypes: { id: 'INTEGER', name: 'TEXT', salary: 'REAL' },
+                    data: [{ id: 1, name: 'Alice', salary: 9000 }]
                 }),
                 index: 0
             },
-            global: {stubs: {ChartView: true}}
+            global: { stubs: { ChartView: true } }
         })
 
         const buttons = wrapper.findAll('button')
@@ -81,7 +81,7 @@ describe('ResultTable', () => {
 
     it('renders filter input and table', () => {
         const wrapper = mount(ResultTable, {
-            props: {result: makeResult(), index: 0}
+            props: { result: makeResult(), index: 0 }
         })
         const filterInput = wrapper.find('input[placeholder="过滤..."]')
         expect(filterInput.exists()).toBe(true)
@@ -90,7 +90,7 @@ describe('ResultTable', () => {
 
     it('renders data rows', () => {
         const wrapper = mount(ResultTable, {
-            props: {result: makeResult(), index: 0}
+            props: { result: makeResult(), index: 0 }
         })
         // 3 data rows + 1 header row
         const rows = wrapper.findAll('tr')

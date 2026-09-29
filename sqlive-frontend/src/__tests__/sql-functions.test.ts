@@ -1,5 +1,11 @@
-import {afterEach, beforeEach, describe, expect, it, type vi} from 'vitest'
-import {mockSuccess, setupSqlEngine, type SqlEngineSetup, teardownSqlEngine, tick} from './test-utils'
+import { afterEach, beforeEach, describe, expect, it, type vi } from 'vitest'
+import {
+    mockSuccess,
+    setupSqlEngine,
+    type SqlEngineSetup,
+    teardownSqlEngine,
+    tick
+} from './test-utils'
 
 describe('SQL functions and triggers', () => {
     let useSqlEngine: SqlEngineSetup['useSqlEngine']
@@ -17,7 +23,7 @@ describe('SQL functions and triggers', () => {
     describe('Triggers', () => {
         it('should handle CREATE TRIGGER with BEGIN...END', async () => {
             mockSuccess(fetchSpy, {
-                tables: [{name: 'log', columns: ['msg'], columnTypes: {msg: 'TEXT'}, data: []}],
+                tables: [{ name: 'log', columns: ['msg'], columnTypes: { msg: 'TEXT' }, data: [] }],
                 triggers: [
                     {
                         name: 'trg_test',
@@ -40,8 +46,10 @@ END;`
 
         it('should handle trigger with nested CASE...END', async () => {
             mockSuccess(fetchSpy, {
-                tables: [{name: 't', columns: ['val'], columnTypes: {val: 'REAL'}, data: []}],
-                triggers: [{name: 'trg_complex', tableName: 't', sql: 'CREATE TRIGGER trg_complex...'}]
+                tables: [{ name: 't', columns: ['val'], columnTypes: { val: 'REAL' }, data: [] }],
+                triggers: [
+                    { name: 'trg_complex', tableName: 't', sql: 'CREATE TRIGGER trg_complex...' }
+                ]
             })
             const engine = useSqlEngine()
             engine.code.value = `CREATE TABLE t (val REAL);
@@ -59,8 +67,10 @@ END;`
 
         it('should handle trigger with WHEN condition', async () => {
             mockSuccess(fetchSpy, {
-                tables: [{name: 't', columns: ['salary'], columnTypes: {salary: 'REAL'}, data: []}],
-                triggers: [{name: 'trg_high', tableName: 't', sql: 'CREATE TRIGGER...'}]
+                tables: [
+                    { name: 't', columns: ['salary'], columnTypes: { salary: 'REAL' }, data: [] }
+                ],
+                triggers: [{ name: 'trg_high', tableName: 't', sql: 'CREATE TRIGGER...' }]
             })
             const engine = useSqlEngine()
             engine.code.value = `CREATE TABLE t (salary REAL);
@@ -76,13 +86,15 @@ END;`
 
         it('should handle UPDATE OF specific columns trigger', async () => {
             mockSuccess(fetchSpy, {
-                tables: [{
-                    name: 't',
-                    columns: ['name', 'salary'],
-                    columnTypes: {name: 'TEXT', salary: 'REAL'},
-                    data: []
-                }],
-                triggers: [{name: 'trg_salary_change', tableName: 't', sql: 'CREATE TRIGGER...'}]
+                tables: [
+                    {
+                        name: 't',
+                        columns: ['name', 'salary'],
+                        columnTypes: { name: 'TEXT', salary: 'REAL' },
+                        data: []
+                    }
+                ],
+                triggers: [{ name: 'trg_salary_change', tableName: 't', sql: 'CREATE TRIGGER...' }]
             })
             const engine = useSqlEngine()
             engine.code.value = `CREATE TABLE t (name TEXT, salary REAL);
@@ -98,13 +110,13 @@ END;`
         it('should handle multiple triggers on same table', async () => {
             mockSuccess(fetchSpy, {
                 tables: [
-                    {name: 't', columns: ['x'], columnTypes: {x: 'INTEGER'}, data: []},
-                    {name: 'audit', columns: ['msg'], columnTypes: {msg: 'TEXT'}, data: []}
+                    { name: 't', columns: ['x'], columnTypes: { x: 'INTEGER' }, data: [] },
+                    { name: 'audit', columns: ['msg'], columnTypes: { msg: 'TEXT' }, data: [] }
                 ],
                 triggers: [
-                    {name: 'trg_ins', tableName: 't', sql: '...'},
-                    {name: 'trg_upd', tableName: 't', sql: '...'},
-                    {name: 'trg_del', tableName: 't', sql: '...'}
+                    { name: 'trg_ins', tableName: 't', sql: '...' },
+                    { name: 'trg_upd', tableName: 't', sql: '...' },
+                    { name: 'trg_del', tableName: 't', sql: '...' }
                 ]
             })
             const engine = useSqlEngine()
@@ -130,7 +142,12 @@ BEGIN INSERT INTO audit (msg) VALUES ('delete'); END;`
         it('should handle COALESCE', async () => {
             mockSuccess(fetchSpy, {
                 queryResults: [
-                    {name: '查询结果', columns: ['val'], columnTypes: {val: 'TEXT'}, data: [{val: 'fallback'}]}
+                    {
+                        name: '查询结果',
+                        columns: ['val'],
+                        columnTypes: { val: 'TEXT' },
+                        data: [{ val: 'fallback' }]
+                    }
                 ]
             })
             const engine = useSqlEngine()
@@ -141,12 +158,14 @@ BEGIN INSERT INTO audit (msg) VALUES ('delete'); END;`
 
         it('should handle IFNULL', async () => {
             mockSuccess(fetchSpy, {
-                queryResults: [{
-                    name: '查询结果',
-                    columns: ['val'],
-                    columnTypes: {val: 'TEXT'},
-                    data: [{val: 'default'}]
-                }]
+                queryResults: [
+                    {
+                        name: '查询结果',
+                        columns: ['val'],
+                        columnTypes: { val: 'TEXT' },
+                        data: [{ val: 'default' }]
+                    }
+                ]
             })
             const engine = useSqlEngine()
             engine.code.value = `SELECT IFNULL(NULL, 'default') AS val;`
@@ -160,8 +179,8 @@ BEGIN INSERT INTO audit (msg) VALUES ('delete'); END;`
                     {
                         name: '查询结果',
                         columns: ['same', 'diff'],
-                        columnTypes: {same: 'INTEGER', diff: 'INTEGER'},
-                        data: [{same: null, diff: 10}]
+                        columnTypes: { same: 'INTEGER', diff: 'INTEGER' },
+                        data: [{ same: null, diff: 10 }]
                     }
                 ]
             })
@@ -192,7 +211,7 @@ BEGIN INSERT INTO audit (msg) VALUES ('delete'); END;`
                             dr: 'INTEGER',
                             nt: 'INTEGER'
                         },
-                        data: [{name: 'Alice', salary: 9000, rn: 1, rk: 1, dr: 1, nt: 1}]
+                        data: [{ name: 'Alice', salary: 9000, rn: 1, rk: 1, dr: 1, nt: 1 }]
                     }
                 ]
             })
@@ -213,8 +232,8 @@ FROM employees;`
                     {
                         name: '查询结果',
                         columns: ['name', 'salary', 'prev', 'next'],
-                        columnTypes: {name: 'TEXT', salary: 'REAL', prev: 'REAL', next: 'REAL'},
-                        data: [{name: 'Bob', salary: 7000, prev: 5000, next: 9000}]
+                        columnTypes: { name: 'TEXT', salary: 'REAL', prev: 'REAL', next: 'REAL' },
+                        data: [{ name: 'Bob', salary: 7000, prev: 5000, next: 9000 }]
                     }
                 ]
             })
@@ -233,8 +252,13 @@ FROM employees;`
                     {
                         name: '查询结果',
                         columns: ['name', 'salary', 'highest', 'lowest'],
-                        columnTypes: {name: 'TEXT', salary: 'REAL', highest: 'TEXT', lowest: 'TEXT'},
-                        data: [{name: 'Alice', salary: 9000, highest: 'Alice', lowest: 'Bob'}]
+                        columnTypes: {
+                            name: 'TEXT',
+                            salary: 'REAL',
+                            highest: 'TEXT',
+                            lowest: 'TEXT'
+                        },
+                        data: [{ name: 'Alice', salary: 9000, highest: 'Alice', lowest: 'Bob' }]
                     }
                 ]
             })
@@ -254,8 +278,8 @@ FROM employees;`
                     {
                         name: '查询结果',
                         columns: ['name', 'salary', 'cd', 'pr'],
-                        columnTypes: {name: 'TEXT', salary: 'REAL', cd: 'REAL', pr: 'REAL'},
-                        data: [{name: 'Alice', salary: 9000, cd: 1.0, pr: 1.0}]
+                        columnTypes: { name: 'TEXT', salary: 'REAL', cd: 'REAL', pr: 'REAL' },
+                        data: [{ name: 'Alice', salary: 9000, cd: 1.0, pr: 1.0 }]
                     }
                 ]
             })
@@ -280,7 +304,18 @@ FROM employees;`
                 queryResults: [
                     {
                         name: '查询结果',
-                        columns: ['u', 'l', 'len', 'sub', 'rep', 'tr', 'ltr', 'rtr', 'pos', 'concat'],
+                        columns: [
+                            'u',
+                            'l',
+                            'len',
+                            'sub',
+                            'rep',
+                            'tr',
+                            'ltr',
+                            'rtr',
+                            'pos',
+                            'concat'
+                        ],
                         columnTypes: {
                             u: 'TEXT',
                             l: 'TEXT',
@@ -322,12 +357,14 @@ FROM employees;`
 
         it('should handle LIKE operator', async () => {
             mockSuccess(fetchSpy, {
-                queryResults: [{
-                    name: '查询结果',
-                    columns: ['name'],
-                    columnTypes: {name: 'TEXT'},
-                    data: [{name: '张三'}]
-                }]
+                queryResults: [
+                    {
+                        name: '查询结果',
+                        columns: ['name'],
+                        columnTypes: { name: 'TEXT' },
+                        data: [{ name: '张三' }]
+                    }
+                ]
             })
             const engine = useSqlEngine()
             engine.code.value = `SELECT * FROM t WHERE name LIKE '张%' OR name LIKE '李_';`
@@ -337,12 +374,14 @@ FROM employees;`
 
         it('should handle GLOB operator', async () => {
             mockSuccess(fetchSpy, {
-                queryResults: [{
-                    name: '查询结果',
-                    columns: ['name'],
-                    columnTypes: {name: 'TEXT'},
-                    data: [{name: '张三'}]
-                }]
+                queryResults: [
+                    {
+                        name: '查询结果',
+                        columns: ['name'],
+                        columnTypes: { name: 'TEXT' },
+                        data: [{ name: '张三' }]
+                    }
+                ]
             })
             const engine = useSqlEngine()
             engine.code.value = `SELECT * FROM t WHERE name GLOB '[张李]*';`
@@ -405,8 +444,8 @@ FROM employees;`
                     {
                         name: '查询结果',
                         columns: ['hire_date', 'days_employed'],
-                        columnTypes: {hire_date: 'TEXT', days_employed: 'REAL'},
-                        data: [{hire_date: '2020-01-01', days_employed: 2000}]
+                        columnTypes: { hire_date: 'TEXT', days_employed: 'REAL' },
+                        data: [{ hire_date: '2020-01-01', days_employed: 2000 }]
                     }
                 ]
             })
@@ -431,8 +470,8 @@ FROM employees;`
                     {
                         name: '查询结果',
                         columns: ['dept_count'],
-                        columnTypes: {dept_count: 'INTEGER'},
-                        data: [{dept_count: 3}]
+                        columnTypes: { dept_count: 'INTEGER' },
+                        data: [{ dept_count: 3 }]
                     }
                 ]
             })
@@ -448,8 +487,8 @@ FROM employees;`
                     {
                         name: '查询结果',
                         columns: ['dept_id', 'members'],
-                        columnTypes: {dept_id: 'INTEGER', members: 'TEXT'},
-                        data: [{dept_id: 1, members: 'Alice, Bob'}]
+                        columnTypes: { dept_id: 'INTEGER', members: 'TEXT' },
+                        data: [{ dept_id: 1, members: 'Alice, Bob' }]
                     }
                 ]
             })
@@ -463,7 +502,12 @@ FROM employees GROUP BY dept_id;`
         it('should handle TOTAL', async () => {
             mockSuccess(fetchSpy, {
                 queryResults: [
-                    {name: '查询结果', columns: ['total'], columnTypes: {total: 'REAL'}, data: [{total: 50000}]}
+                    {
+                        name: '查询结果',
+                        columns: ['total'],
+                        columnTypes: { total: 'REAL' },
+                        data: [{ total: 50000 }]
+                    }
                 ]
             })
             const engine = useSqlEngine()
@@ -478,8 +522,8 @@ FROM employees GROUP BY dept_id;`
                     {
                         name: '查询结果',
                         columns: ['a', 'r', 'rand'],
-                        columnTypes: {a: 'INTEGER', r: 'REAL', rand: 'INTEGER'},
-                        data: [{a: 42, r: Math.PI, rand: 73}]
+                        columnTypes: { a: 'INTEGER', r: 'REAL', rand: 'INTEGER' },
+                        data: [{ a: 42, r: Math.PI, rand: 73 }]
                     }
                 ]
             })
@@ -493,5 +537,4 @@ FROM employees GROUP BY dept_id;`
     // ============================================================
     //  DML extras
     // ============================================================
-
 })

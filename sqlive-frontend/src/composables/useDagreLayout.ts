@@ -1,4 +1,3 @@
-import type {Edge, Node} from '@vue-flow/core'
 import dagre from 'dagre'
 
 export interface DagreLayoutOptions {
@@ -9,12 +8,12 @@ export interface DagreLayoutOptions {
     marginy?: number
 }
 
-export function layoutNodes<TNodeData extends Record<string, unknown>>(
-    nodes: Node<TNodeData>[],
-    edges: Edge[],
+export function layoutNodes<TNode extends { id: string; position: { x: number; y: number } }>(
+    nodes: TNode[],
+    edges: { source: string; target: string }[],
     containerEl?: HTMLElement | null,
     options?: DagreLayoutOptions
-): Node<TNodeData>[] {
+): TNode[] {
     const g = new dagre.graphlib.Graph()
     g.setGraph({
         rankdir: options?.rankdir ?? 'TB',
@@ -35,7 +34,7 @@ export function layoutNodes<TNodeData extends Record<string, unknown>>(
         const el = elMap.get(node.id)
         const w = el?.offsetWidth || 200
         const h = el?.offsetHeight || 120
-        g.setNode(node.id, {width: w, height: h})
+        g.setNode(node.id, { width: w, height: h })
     }
 
     for (const edge of edges) {
@@ -49,7 +48,7 @@ export function layoutNodes<TNodeData extends Record<string, unknown>>(
         if (!pos) return node
         return {
             ...node,
-            position: {x: pos.x - pos.width / 2, y: pos.y - pos.height / 2}
-        }
+            position: { x: pos.x - pos.width / 2, y: pos.y - pos.height / 2 }
+        } as TNode
     })
 }

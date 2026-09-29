@@ -1,6 +1,6 @@
-import {reactive, ref} from 'vue'
-import type {CanonicalStatement, HighlightState, TableSchema} from '../model/DatabaseTypes'
-import {compareValuesForHighlight, extractSqlStatements} from '../utils/sqlStatements'
+import { reactive, ref } from 'vue'
+import type { CanonicalStatement, HighlightState, TableSchema } from '../model/DatabaseTypes'
+import { compareValuesForHighlight, extractSqlStatements } from '../utils/sqlStatements'
 
 // D-R2-004: previously received the whole DatabaseModel but only read db.tables.
 // Narrowed to a `tablesSource: () => TableSchema[]` getter (matches the
@@ -39,13 +39,14 @@ export function useHighlight(
         // D-03c (Pitfall 7): prefer backend canonicalStatements for consistency with
         // useBidirectionalSync — single source of truth per Phase 2 CORE-01.
         const canonical = canonicalStatements?.value
-        const statements = (canonical && canonical.length > 0)
-            ? canonical.map((cs) => ({
-                text: code.value.substring(cs.start, cs.end),
-                start: cs.start,
-                end: cs.end
-            }))
-            : extractSqlStatements(code.value)
+        const statements =
+            canonical && canonical.length > 0
+                ? canonical.map((cs) => ({
+                      text: code.value.substring(cs.start, cs.end),
+                      start: cs.start,
+                      end: cs.end
+                  }))
+                : extractSqlStatements(code.value)
         for (const stmt of statements) {
             const sqlClean = stmt.text.replace(/--.*$/gm, '').replace(/\s+/g, ' ').trim()
             if (!sqlClean) continue
@@ -97,12 +98,18 @@ export function useHighlight(
     }
 
     function parseWhereConditions(sqlClean: string, tableAliasMap: Map<string, string>) {
-        const whereRegex = /(?:WHERE|AND)\s+(?:(\w+)\.)?(\w+)\s*(=|!=|<>|>=|<=|>|<|LIKE)\s*((?:'[^']*')|[^\s;]+)/gi
+        const whereRegex =
+            /(?:WHERE|AND)\s+(?:(\w+)\.)?(\w+)\s*(=|!=|<>|>=|<=|>|<|LIKE)\s*((?:'[^']*')|[^\s;]+)/gi
         const conditions: { table: string | null; col: string; op: string; val: string }[] = []
         let wMatch
         while ((wMatch = whereRegex.exec(sqlClean)) !== null) {
             const tName = wMatch[1] ? (tableAliasMap.get(wMatch[1]) ?? null) : null
-            conditions.push({table: tName, col: wMatch[2].toLowerCase(), op: wMatch[3], val: wMatch[4]})
+            conditions.push({
+                table: tName,
+                col: wMatch[2].toLowerCase(),
+                op: wMatch[3],
+                val: wMatch[4]
+            })
         }
         return conditions
     }
@@ -123,7 +130,9 @@ export function useHighlight(
                     return compareValuesForHighlight(row[colKey], cond.op, cond.val)
                 })
             )
-            matchedRows.forEach((r) => highlight.activeRows.push(`${tName}:${r.id !== undefined ? r.id : r._highlightId}`))
+            matchedRows.forEach((r) =>
+                highlight.activeRows.push(`${tName}:${r.id !== undefined ? r.id : r._highlightId}`)
+            )
         })
     }
 
@@ -133,7 +142,9 @@ export function useHighlight(
         selectCols.forEach((colDef) => {
             if (colDef === '*') {
                 involvedTables.forEach((t) =>
-                    tablesSource().find((tt) => tt.name === t)?.columns.forEach((c) => highlight.activeColumns.push(c))
+                    tablesSource()
+                        .find((tt) => tt.name === t)
+                        ?.columns.forEach((c) => highlight.activeColumns.push(c))
                 )
             } else {
                 const colName = colDef.split('.').pop() || ''
@@ -147,5 +158,5 @@ export function useHighlight(
         })
     }
 
-    return {highlight, highlightedCodeChunk, flashCode, recalculateStaticHighlight}
+    return { highlight, highlightedCodeChunk, flashCode, recalculateStaticHighlight }
 }

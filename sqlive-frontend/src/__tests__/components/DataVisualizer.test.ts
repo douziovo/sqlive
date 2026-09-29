@@ -1,25 +1,39 @@
-import {mount} from '@vue/test-utils'
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
-import {nextTick} from 'vue'
-import type {DatabaseModel, HighlightState, IndexInfo, TriggerInfo, ViewInfo} from '@/model/DatabaseTypes'
+import { mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
+import type {
+    DatabaseModel,
+    HighlightState,
+    IndexInfo,
+    TriggerInfo,
+    ViewInfo
+} from '@/model/DatabaseTypes'
 import DataVisualizer from '../../components/DataVisualizer.vue'
-import {SQL_CONTEXT_KEY} from '../../model/injectionKeys'
+import { SQL_CONTEXT_KEY } from '../../model/injectionKeys'
 
 const mockDb: DatabaseModel = {
     tables: [
         {
             name: 'users',
             columns: ['id', 'name'],
-            columnTypes: {id: 'INTEGER', name: 'TEXT'},
-            data: [{id: 1, name: 'Alice'}]
+            columnTypes: { id: 'INTEGER', name: 'TEXT' },
+            data: [{ id: 1, name: 'Alice' }]
         }
     ],
     queryResults: [],
-    indexes: [{name: 'idx_users_name', tableName: 'users', columns: ['name'], unique: false, sql: 'CREATE INDEX ...'}],
+    indexes: [
+        {
+            name: 'idx_users_name',
+            tableName: 'users',
+            columns: ['name'],
+            unique: false,
+            sql: 'CREATE INDEX ...'
+        }
+    ],
     views: [],
     triggers: [],
     foreignKeys: [],
-    metadata: {durationMs: 42, statementCount: 3}
+    metadata: { durationMs: 42, statementCount: 3 }
 }
 
 const defaultHighlight: HighlightState = {
@@ -32,7 +46,7 @@ const defaultHighlight: HighlightState = {
 }
 
 function provideContext(db: DatabaseModel, highlight: HighlightState) {
-    return {[SQL_CONTEXT_KEY as symbol]: {db, highlight}}
+    return { [SQL_CONTEXT_KEY as symbol]: { db, highlight } }
 }
 
 const minimalStubs = {
@@ -80,8 +94,11 @@ const mockIndexes: IndexInfo[] = [
 ]
 
 const mockViews: ViewInfo[] = [
-    {name: 'v_active_users', sql: 'CREATE VIEW v_active_users AS SELECT * FROM users WHERE status = 1'},
-    {name: 'v_user_stats', sql: 'CREATE VIEW v_user_stats AS SELECT COUNT(*) AS cnt FROM users'}
+    {
+        name: 'v_active_users',
+        sql: 'CREATE VIEW v_active_users AS SELECT * FROM users WHERE status = 1'
+    },
+    { name: 'v_user_stats', sql: 'CREATE VIEW v_user_stats AS SELECT COUNT(*) AS cnt FROM users' }
 ]
 
 const mockTriggers: TriggerInfo[] = [
@@ -98,7 +115,7 @@ const mockTriggers: TriggerInfo[] = [
 ]
 
 function makeDb(overrides: Partial<DatabaseModel> = {}): DatabaseModel {
-    return {...mockDb, ...overrides}
+    return { ...mockDb, ...overrides }
 }
 
 describe('DataVisualizer', () => {
@@ -118,7 +135,13 @@ describe('DataVisualizer', () => {
     it('D-R2-003: computed-wrapped db fields remain present on DatabaseModel (compile-time guard)', () => {
         type ExpectedFields = Pick<
             DatabaseModel,
-            'tables' | 'indexes' | 'views' | 'triggers' | 'foreignKeys' | 'metadata' | 'queryResults'
+            | 'tables'
+            | 'indexes'
+            | 'views'
+            | 'triggers'
+            | 'foreignKeys'
+            | 'metadata'
+            | 'queryResults'
         >
         const sample: ExpectedFields = {
             tables: [],
@@ -178,7 +201,7 @@ describe('DataVisualizer', () => {
     it('shows empty table state when no tables', () => {
         const wrapper = mount(DataVisualizer, {
             global: {
-                provide: provideContext({...mockDb, tables: []}, defaultHighlight),
+                provide: provideContext({ ...mockDb, tables: [] }, defaultHighlight),
                 stubs: minimalStubs
             }
         })
@@ -188,13 +211,16 @@ describe('DataVisualizer', () => {
     it('shows index data on the indexes tab', () => {
         const wrapper = mount(DataVisualizer, {
             global: {
-                provide: provideContext({
-                    ...mockDb,
-                    tables: [],
-                    queryResults: [],
-                    views: [],
-                    triggers: []
-                }, defaultHighlight),
+                provide: provideContext(
+                    {
+                        ...mockDb,
+                        tables: [],
+                        queryResults: [],
+                        views: [],
+                        triggers: []
+                    },
+                    defaultHighlight
+                ),
                 stubs: minimalStubs
             }
         })
@@ -245,7 +271,7 @@ describe('DataVisualizer', () => {
     // --- New: Indexes tab tests ---
 
     it('索引 tab 渲染索引卡片和 SortFilterToolbar', async () => {
-        const db = makeDb({indexes: mockIndexes})
+        const db = makeDb({ indexes: mockIndexes })
         const wrapper = mount(DataVisualizer, {
             global: {
                 provide: provideContext(db, defaultHighlight),
@@ -274,7 +300,7 @@ describe('DataVisualizer', () => {
     })
 
     it('索引 filter 返回空状态 "无匹配的索引"', async () => {
-        const db = makeDb({indexes: mockIndexes})
+        const db = makeDb({ indexes: mockIndexes })
         const wrapper = mount(DataVisualizer, {
             global: {
                 provide: provideContext(db, defaultHighlight),
@@ -287,7 +313,9 @@ describe('DataVisualizer', () => {
 
         // Find the SortFilterToolbar input and set filter to no-match
         const inputs = wrapper.findAll('input')
-        const filterInput = inputs.find(i => (i.attributes('placeholder') || '').includes('搜索索引'))
+        const filterInput = inputs.find((i) =>
+            (i.attributes('placeholder') || '').includes('搜索索引')
+        )
         expect(filterInput).toBeTruthy()
 
         await filterInput!.setValue('zzz_no_match')
@@ -300,7 +328,7 @@ describe('DataVisualizer', () => {
     })
 
     it('索引 "表达式" 和 "部分" badge', async () => {
-        const db = makeDb({indexes: mockIndexes})
+        const db = makeDb({ indexes: mockIndexes })
         const wrapper = mount(DataVisualizer, {
             global: {
                 provide: provideContext(db, defaultHighlight),
@@ -320,7 +348,7 @@ describe('DataVisualizer', () => {
     // --- New: Views tab tests ---
 
     it('视图 tab 渲染视图卡片并点击导航', async () => {
-        const db = makeDb({views: mockViews})
+        const db = makeDb({ views: mockViews })
         const wrapper = mount(DataVisualizer, {
             global: {
                 provide: provideContext(db, defaultHighlight),
@@ -357,7 +385,7 @@ describe('DataVisualizer', () => {
     // --- New: Triggers tab tests ---
 
     it('触发器 tab 渲染触发器卡片', async () => {
-        const db = makeDb({triggers: mockTriggers})
+        const db = makeDb({ triggers: mockTriggers })
         const wrapper = mount(DataVisualizer, {
             global: {
                 provide: provideContext(db, defaultHighlight),
@@ -395,7 +423,7 @@ describe('DataVisualizer', () => {
     // --- New: Empty state tests ---
 
     it('索引 tab 空状态显示提示', async () => {
-        const db = makeDb({indexes: []})
+        const db = makeDb({ indexes: [] })
         const wrapper = mount(DataVisualizer, {
             global: {
                 provide: provideContext(db, defaultHighlight),
@@ -410,7 +438,7 @@ describe('DataVisualizer', () => {
     })
 
     it('视图 tab 空状态显示提示', async () => {
-        const db = makeDb({views: []})
+        const db = makeDb({ views: [] })
         const wrapper = mount(DataVisualizer, {
             global: {
                 provide: provideContext(db, defaultHighlight),
@@ -425,7 +453,7 @@ describe('DataVisualizer', () => {
     })
 
     it('触发器 tab 空状态显示提示', async () => {
-        const db = makeDb({triggers: []})
+        const db = makeDb({ triggers: [] })
         const wrapper = mount(DataVisualizer, {
             global: {
                 provide: provideContext(db, defaultHighlight),
@@ -442,7 +470,7 @@ describe('DataVisualizer', () => {
     // --- New: handleNavigate scroll + flash ---
 
     it('handleNavigate 切换 tab 并触发 flash', async () => {
-        const db = makeDb({indexes: mockIndexes})
+        const db = makeDb({ indexes: mockIndexes })
         const wrapper = mount(DataVisualizer, {
             global: {
                 provide: provideContext(db, defaultHighlight),
@@ -469,7 +497,7 @@ describe('DataVisualizer', () => {
     })
 
     it('navigateToViewTable 匹配表名导航', async () => {
-        const db = makeDb({views: mockViews})
+        const db = makeDb({ views: mockViews })
         const wrapper = mount(DataVisualizer, {
             global: {
                 provide: provideContext(db, defaultHighlight),

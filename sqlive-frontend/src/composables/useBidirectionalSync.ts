@@ -1,14 +1,14 @@
-import type {Ref, WritableComputedRef} from 'vue'
-import {ref} from 'vue'
-import type {CanonicalStatement, Row, TableSchema, TruncationInfo} from '../model/DatabaseTypes'
-import {parsePrimaryType, toSqlLiteral} from '../utils/sql'
+import type { Ref, WritableComputedRef } from 'vue'
+import { ref } from 'vue'
+import type { CanonicalStatement, Row, TableSchema, TruncationInfo } from '../model/DatabaseTypes'
+import { parsePrimaryType, toSqlLiteral } from '../utils/sql'
 import {
     enforceTypeConstraints,
     extractSqlStatements,
     normalizeAndCompare,
     parseExplicitColumns
 } from '../utils/sqlStatements'
-import {extractTuplesWithDepth, splitTupleContent} from '../utils/tupleParser'
+import { extractTuplesWithDepth, splitTupleContent } from '../utils/tupleParser'
 
 type EngineMode = 'user' | 'reconciling' | 'rollback'
 
@@ -54,18 +54,21 @@ export function useBidirectionalSync(
             const rawType = tableInfo?.columnTypes[colName] || ''
             const constraintResult = enforceTypeConstraints(val, rawType)
             if (constraintResult.wasTruncated) {
-                truncations.push({...constraintResult, column: colName})
+                truncations.push({ ...constraintResult, column: colName })
             }
             val = constraintResult.value
             const type = parsePrimaryType(rawType)
             return toSqlLiteral(val, type)
         })
-        return {sql: `(${values.join(', ')})`, truncations}
+        return { sql: `(${values.join(', ')})`, truncations }
     }
 
     const findTupleInBatch = (stmtText: string, tableName: string, rowData: Row) => {
         const cleanStmt = stmtText.replace(/--.*$/gm, '')
-        const insertRegex = new RegExp(`INSERT\\s+INTO\\s+(?:[\`"']?)${tableName}(?:[\`"']?)\\b`, 'i')
+        const insertRegex = new RegExp(
+            `INSERT\\s+INTO\\s+(?:[\`"']?)${tableName}(?:[\`"']?)\\b`,
+            'i'
+        )
         if (!insertRegex.test(cleanStmt)) return null
 
         let compareCols: string[] = []
@@ -95,7 +98,11 @@ export function useBidirectionalSync(
                 const realStart = stmtText.indexOf(`(${tuple.content})`)
                 if (realStart !== -1) {
                     const originalTupleStr = `(${tuple.content})`
-                    return {start: realStart, end: realStart + originalTupleStr.length, explicitCols: compareCols}
+                    return {
+                        start: realStart,
+                        end: realStart + originalTupleStr.length,
+                        explicitCols: compareCols
+                    }
                 }
             }
         }
@@ -111,9 +118,16 @@ export function useBidirectionalSync(
             if (match) {
                 const absoluteStart = stmt.start + match.start
                 const absoluteEnd = stmt.start + match.end
-                const {sql: newTupleSql, truncations} = generateValuesTuple(tableName, newRowData, match.explicitCols)
+                const { sql: newTupleSql, truncations } = generateValuesTuple(
+                    tableName,
+                    newRowData,
+                    match.explicitCols
+                )
                 if (truncations.length > 0) lastTruncations.value = truncations
-                code.value = code.value.substring(0, absoluteStart) + newTupleSql + code.value.substring(absoluteEnd)
+                code.value =
+                    code.value.substring(0, absoluteStart) +
+                    newTupleSql +
+                    code.value.substring(absoluteEnd)
                 flashCode(newTupleSql)
                 return
             }
@@ -149,10 +163,9 @@ export function useBidirectionalSync(
                 else {
                     const contentAfter = stmt.text.substring(match.end).trim()
                     if (contentAfter === ';' || contentAfter === '') {
-                        code.value = (code.value.substring(0, stmt.start) + code.value.substring(stmt.end)).replace(
-                            /\n{3,}/g,
-                            '\n\n'
-                        )
+                        code.value = (
+                            code.value.substring(0, stmt.start) + code.value.substring(stmt.end)
+                        ).replace(/\n{3,}/g, '\n\n')
                         return
                     }
                 }
@@ -166,8 +179,14 @@ export function useBidirectionalSync(
         beginReconcile()
         const table = tablesSource().find((t) => t.name === tableName)
         if (!table) return
-        const physicalColumns = table.columns.filter((c) => !table.columnTypes[c].includes('VIRTUAL'))
-        const {sql: valuesSql, truncations} = generateValuesTuple(tableName, newRowData, physicalColumns)
+        const physicalColumns = table.columns.filter(
+            (c) => !table.columnTypes[c].includes('VIRTUAL')
+        )
+        const { sql: valuesSql, truncations } = generateValuesTuple(
+            tableName,
+            newRowData,
+            physicalColumns
+        )
         if (truncations.length > 0) lastTruncations.value = truncations
         const newSql = `INSERT INTO ${tableName} (${physicalColumns.join(', ')}) VALUES ${valuesSql};`
         let currentCode = code.value.trimEnd()

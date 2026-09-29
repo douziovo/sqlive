@@ -1,12 +1,13 @@
-import {mount} from '@vue/test-utils'
-import {describe, expect, it, vi} from 'vitest'
+import { mount } from '@vue/test-utils'
+import { describe, expect, it, vi } from 'vitest'
 import KnowledgeGraph from '@/components/knowledge/KnowledgeGraph.vue'
+import type { KnowledgeNode } from '@/composables/useKnowledgeGraph'
 
-const mockNodes = [
+const mockNodes: KnowledgeNode[] = [
     {
         id: 'topic-sql-basics',
         type: 'knowledge-node',
-        position: {x: 0, y: 100},
+        position: { x: 0, y: 100 },
         data: {
             topicId: 'sql-basics',
             label: 'SQL 基础查询',
@@ -20,7 +21,7 @@ const mockNodes = [
     {
         id: 'topic-filtering',
         type: 'knowledge-node',
-        position: {x: 200, y: 100},
+        position: { x: 200, y: 100 },
         data: {
             topicId: 'filtering',
             label: '条件过滤',
@@ -34,7 +35,7 @@ const mockNodes = [
     {
         id: 'topic-joins',
         type: 'knowledge-node',
-        position: {x: 400, y: 100},
+        position: { x: 400, y: 100 },
         data: {
             topicId: 'joins',
             label: 'JOIN 查询',
@@ -53,19 +54,19 @@ const mockEdges = [
         source: 'topic-sql-basics',
         target: 'topic-filtering',
         type: 'smoothstep',
-        style: {stroke: '#94a3b8', strokeWidth: 1.5}
+        style: { stroke: '#94a3b8', strokeWidth: 1.5 }
     },
     {
         id: 'edge-sql-basics-joins',
         source: 'topic-sql-basics',
         target: 'topic-joins',
         type: 'smoothstep',
-        style: {stroke: '#94a3b8', strokeWidth: 1.5}
+        style: { stroke: '#94a3b8', strokeWidth: 1.5 }
     }
 ]
 
 const stubs = {
-    VueFlow: {template: '<div class="vue-flow-stub"><slot /></div>'},
+    VueFlow: { template: '<div class="vue-flow-stub"><slot /></div>' },
     Background: true,
     MiniMap: true,
     KnowledgeNode: true,
@@ -76,34 +77,58 @@ const stubs = {
 describe('KnowledgeGraph', () => {
     it('shows empty state when no nodes', () => {
         const wrapper = mount(KnowledgeGraph, {
-            props: {nodes: [], edges: [], searchQuery: '', selectedTopic: null, masteredTopics: []},
-            global: {stubs}
+            props: {
+                nodes: [],
+                edges: [],
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: []
+            },
+            global: { stubs }
         })
         expect(wrapper.text()).toContain('暂无知识图谱数据')
     })
 
     it('renders VueFlow area when nodes exist', () => {
         const wrapper = mount(KnowledgeGraph, {
-            props: {nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: []},
-            global: {stubs}
+            props: {
+                nodes: mockNodes,
+                edges: mockEdges,
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: []
+            },
+            global: { stubs }
         })
         expect(wrapper.text()).not.toContain('暂无知识图谱数据')
     })
 
     it('renders ErSearchBar component', () => {
         const wrapper = mount(KnowledgeGraph, {
-            props: {nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: []},
-            global: {stubs}
+            props: {
+                nodes: mockNodes,
+                edges: mockEdges,
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: []
+            },
+            global: { stubs }
         })
-        expect(wrapper.findComponent({name: 'ErSearchBar'}).exists()).toBe(true)
+        expect(wrapper.findComponent({ name: 'ErSearchBar' }).exists()).toBe(true)
     })
 
     // ── Edge opacity (Task 1) ──────────────────────────────────
 
     it('默认所有边 opacity 为 0.12 (at zoom 0.8, compact tier)', () => {
         const wrapper = mount(KnowledgeGraph, {
-            props: {nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: []},
-            global: {stubs}
+            props: {
+                nodes: mockNodes,
+                edges: mockEdges,
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: []
+            },
+            global: { stubs }
         })
 
         const edges = wrapper.vm.getStyledEdges() as any[]
@@ -117,8 +142,14 @@ describe('KnowledgeGraph', () => {
 
     it('hover 节点时关联边高亮 (opacity 1, solid, no dash)', async () => {
         const wrapper = mount(KnowledgeGraph, {
-            props: {nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: []},
-            global: {stubs}
+            props: {
+                nodes: mockNodes,
+                edges: mockEdges,
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: []
+            },
+            global: { stubs }
         })
 
         await wrapper.vm.setHoveredNode('sql-basics')
@@ -134,8 +165,14 @@ describe('KnowledgeGraph', () => {
 
     it('hover 节点时非关联边保持 zoom-tiered opacity (not hidden)', async () => {
         const wrapper = mount(KnowledgeGraph, {
-            props: {nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: []},
-            global: {stubs}
+            props: {
+                nodes: mockNodes,
+                edges: mockEdges,
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: []
+            },
+            global: { stubs }
         })
 
         // When hovering 'filtering', edge-sql-basics-filtering is connected (target=filtering),
@@ -154,8 +191,14 @@ describe('KnowledgeGraph', () => {
 
     it('hover 节点时关联节点 highlighted，无关节点 dimmed (opacity 0.12)', async () => {
         const wrapper = mount(KnowledgeGraph, {
-            props: {nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: []},
-            global: {stubs}
+            props: {
+                nodes: mockNodes,
+                edges: mockEdges,
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: []
+            },
+            global: { stubs }
         })
 
         await wrapper.vm.setHoveredNode('sql-basics')
@@ -182,8 +225,14 @@ describe('KnowledgeGraph', () => {
 
     it('移开鼠标后所有节点恢复默认样式', async () => {
         const wrapper = mount(KnowledgeGraph, {
-            props: {nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: []},
-            global: {stubs}
+            props: {
+                nodes: mockNodes,
+                edges: mockEdges,
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: []
+            },
+            global: { stubs }
         })
 
         await wrapper.vm.setHoveredNode('sql-basics')
@@ -202,8 +251,14 @@ describe('KnowledgeGraph', () => {
 
     it('双击画布重置 hover 状态', async () => {
         const wrapper = mount(KnowledgeGraph, {
-            props: {nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: []},
-            global: {stubs}
+            props: {
+                nodes: mockNodes,
+                edges: mockEdges,
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: []
+            },
+            global: { stubs }
         })
 
         await wrapper.vm.setHoveredNode('sql-basics')
@@ -221,19 +276,33 @@ describe('KnowledgeGraph', () => {
 
     it('默认 showSearch 为 false', () => {
         const wrapper = mount(KnowledgeGraph, {
-            props: {nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: []},
-            global: {stubs}
+            props: {
+                nodes: mockNodes,
+                edges: mockEdges,
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: []
+            },
+            global: { stubs }
         })
         expect(wrapper.vm.showSearch).toBe(false)
     })
 
     it('Ctrl+F 触发后 showSearch 变为 true', async () => {
         const wrapper = mount(KnowledgeGraph, {
-            props: {nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: []},
-            global: {stubs}
+            props: {
+                nodes: mockNodes,
+                edges: mockEdges,
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: []
+            },
+            global: { stubs }
         })
 
-        document.dispatchEvent(new KeyboardEvent('keydown', {key: 'f', ctrlKey: true, bubbles: true}))
+        document.dispatchEvent(
+            new KeyboardEvent('keydown', { key: 'f', ctrlKey: true, bubbles: true })
+        )
         await wrapper.vm.$nextTick()
 
         expect(wrapper.vm.showSearch).toBe(true)
@@ -241,36 +310,56 @@ describe('KnowledgeGraph', () => {
 
     it('Ctrl+0 重置视图（关闭已打开的搜索框，与双击行为一致）', async () => {
         const wrapper = mount(KnowledgeGraph, {
-            props: {nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: []},
-            global: {stubs}
+            props: {
+                nodes: mockNodes,
+                edges: mockEdges,
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: []
+            },
+            global: { stubs }
         })
 
         // Open search first via Ctrl+F (proves baseline state)
-        document.dispatchEvent(new KeyboardEvent('keydown', {key: 'f', ctrlKey: true, bubbles: true}))
+        document.dispatchEvent(
+            new KeyboardEvent('keydown', { key: 'f', ctrlKey: true, bubbles: true })
+        )
         await wrapper.vm.$nextTick()
         expect(wrapper.vm.showSearch).toBe(true)
 
         // Ctrl+0 should invoke onPaneDblClick which closes search
-        document.dispatchEvent(new KeyboardEvent('keydown', {key: '0', ctrlKey: true, bubbles: true}))
+        document.dispatchEvent(
+            new KeyboardEvent('keydown', { key: '0', ctrlKey: true, bubbles: true })
+        )
         await wrapper.vm.$nextTick()
         expect(wrapper.vm.showSearch).toBe(false)
     })
 
     it('Ctrl+0 在 input focus 时不拦截（与 Ctrl+F 相同守卫）', async () => {
         const wrapper = mount(KnowledgeGraph, {
-            props: {nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: []},
-            global: {stubs}
+            props: {
+                nodes: mockNodes,
+                edges: mockEdges,
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: []
+            },
+            global: { stubs }
         })
 
         // Open search first from non-input context
-        document.dispatchEvent(new KeyboardEvent('keydown', {key: 'f', ctrlKey: true, bubbles: true}))
+        document.dispatchEvent(
+            new KeyboardEvent('keydown', { key: 'f', ctrlKey: true, bubbles: true })
+        )
         await wrapper.vm.$nextTick()
         expect(wrapper.vm.showSearch).toBe(true)
 
         // Dispatch Ctrl+0 from within an input — guard should ignore it
         const input = document.createElement('input')
         document.body.appendChild(input)
-        input.dispatchEvent(new KeyboardEvent('keydown', {key: '0', ctrlKey: true, bubbles: true}))
+        input.dispatchEvent(
+            new KeyboardEvent('keydown', { key: '0', ctrlKey: true, bubbles: true })
+        )
         await wrapper.vm.$nextTick()
         expect(wrapper.vm.showSearch).toBe(true) // Still open — Ctrl+0 was ignored
         document.body.removeChild(input)
@@ -278,15 +367,21 @@ describe('KnowledgeGraph', () => {
 
     it('Escape 关闭搜索框并清空搜索词', async () => {
         const wrapper = mount(KnowledgeGraph, {
-            props: {nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: []},
-            global: {stubs}
+            props: {
+                nodes: mockNodes,
+                edges: mockEdges,
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: []
+            },
+            global: { stubs }
         })
 
         wrapper.vm.showSearch = true
         wrapper.vm.searchQuery = 'SQL'
         await wrapper.vm.$nextTick()
 
-        document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}))
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
         await wrapper.vm.$nextTick()
 
         expect(wrapper.vm.showSearch).toBe(false)
@@ -295,8 +390,14 @@ describe('KnowledgeGraph', () => {
 
     it('搜索匹配的节点有 isSearchMatch 标记', async () => {
         const wrapper = mount(KnowledgeGraph, {
-            props: {nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: []},
-            global: {stubs}
+            props: {
+                nodes: mockNodes,
+                edges: mockEdges,
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: []
+            },
+            global: { stubs }
         })
 
         wrapper.vm.searchQuery = 'SQL 基础'
@@ -310,8 +411,14 @@ describe('KnowledgeGraph', () => {
 
     it('搜索匹配 active 节点有 isActiveMatch 标记', async () => {
         const wrapper = mount(KnowledgeGraph, {
-            props: {nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: []},
-            global: {stubs}
+            props: {
+                nodes: mockNodes,
+                edges: mockEdges,
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: []
+            },
+            global: { stubs }
         })
 
         wrapper.vm.searchQuery = '条件'
@@ -325,8 +432,14 @@ describe('KnowledgeGraph', () => {
 
     it('matchCount 反映搜索匹配节点数量', async () => {
         const wrapper = mount(KnowledgeGraph, {
-            props: {nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: []},
-            global: {stubs}
+            props: {
+                nodes: mockNodes,
+                edges: mockEdges,
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: []
+            },
+            global: { stubs }
         })
 
         wrapper.vm.searchQuery = 'SQL'
@@ -340,8 +453,14 @@ describe('KnowledgeGraph', () => {
 
     it('搜索词清空后 matchCount 为 0', async () => {
         const wrapper = mount(KnowledgeGraph, {
-            props: {nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: []},
-            global: {stubs}
+            props: {
+                nodes: mockNodes,
+                edges: mockEdges,
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: []
+            },
+            global: { stubs }
         })
 
         wrapper.vm.searchQuery = 'SQL'
@@ -355,8 +474,14 @@ describe('KnowledgeGraph', () => {
 
     it('navigateMatch 循环切换匹配节点', async () => {
         const wrapper = mount(KnowledgeGraph, {
-            props: {nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: []},
-            global: {stubs}
+            props: {
+                nodes: mockNodes,
+                edges: mockEdges,
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: []
+            },
+            global: { stubs }
         })
 
         wrapper.vm.searchQuery = '查'
@@ -379,26 +504,44 @@ describe('KnowledgeGraph', () => {
 
     it('MiniMap 组件已渲染', () => {
         const wrapper = mount(KnowledgeGraph, {
-            props: {nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: []},
-            global: {stubs}
+            props: {
+                nodes: mockNodes,
+                edges: mockEdges,
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: []
+            },
+            global: { stubs }
         })
-        expect(wrapper.findComponent({name: 'MiniMap'}).exists()).toBe(true)
+        expect(wrapper.findComponent({ name: 'MiniMap' }).exists()).toBe(true)
     })
 
     it('miniMapNodeColor 返回默认颜色 #94a3b8', () => {
         const wrapper = mount(KnowledgeGraph, {
-            props: {nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: []},
-            global: {stubs}
+            props: {
+                nodes: mockNodes,
+                edges: mockEdges,
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: []
+            },
+            global: { stubs }
         })
-        expect((wrapper.vm as any).miniMapNodeColor?.({id: 'topic-sql-basics'})).toBe('#94a3b8')
+        expect((wrapper.vm as any).miniMapNodeColor?.({ id: 'topic-sql-basics' })).toBe('#94a3b8')
     })
 
     // ── SparkBurst / UnlockGlow (Phase 05-03) ────────────────────
 
     it('triggerSparkBurst sets node.data.triggerSparkBurst', async () => {
         const wrapper = mount(KnowledgeGraph, {
-            props: {nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: []},
-            global: {stubs}
+            props: {
+                nodes: mockNodes,
+                edges: mockEdges,
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: []
+            },
+            global: { stubs }
         })
 
         // Reset displayNodes data to simulate real state
@@ -413,28 +556,44 @@ describe('KnowledgeGraph', () => {
     it('triggerSparkBurst auto-resets after 700ms', async () => {
         vi.useFakeTimers()
         const wrapper = mount(KnowledgeGraph, {
-            props: {nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: []},
-            global: {stubs}
+            props: {
+                nodes: mockNodes,
+                edges: mockEdges,
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: []
+            },
+            global: { stubs }
         })
 
         wrapper.vm.triggerSparkBurst('sql-basics')
         await wrapper.vm.$nextTick()
 
         let nodes = wrapper.vm.getStyledNodes() as any[]
-        expect(nodes.find((n: any) => n.data.topicId === 'sql-basics').data.triggerSparkBurst).toBe(true)
+        expect(nodes.find((n: any) => n.data.topicId === 'sql-basics').data.triggerSparkBurst).toBe(
+            true
+        )
 
         vi.advanceTimersByTime(700)
         await wrapper.vm.$nextTick()
 
         nodes = wrapper.vm.getStyledNodes() as any[]
-        expect(nodes.find((n: any) => n.data.topicId === 'sql-basics').data.triggerSparkBurst).toBe(false)
+        expect(nodes.find((n: any) => n.data.topicId === 'sql-basics').data.triggerSparkBurst).toBe(
+            false
+        )
         vi.useRealTimers()
     })
 
     it('triggerUnlockGlow sets triggerUnlockGlow on nextTopics nodes', async () => {
         const wrapper = mount(KnowledgeGraph, {
-            props: {nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: []},
-            global: {stubs}
+            props: {
+                nodes: mockNodes,
+                edges: mockEdges,
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: []
+            },
+            global: { stubs }
         })
 
         wrapper.vm.triggerUnlockGlow('sql-basics')
@@ -449,21 +608,31 @@ describe('KnowledgeGraph', () => {
     it('triggerUnlockGlow auto-resets after 800ms', async () => {
         vi.useFakeTimers()
         const wrapper = mount(KnowledgeGraph, {
-            props: {nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: []},
-            global: {stubs}
+            props: {
+                nodes: mockNodes,
+                edges: mockEdges,
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: []
+            },
+            global: { stubs }
         })
 
         wrapper.vm.triggerUnlockGlow('sql-basics')
         await wrapper.vm.$nextTick()
 
         let nodes = wrapper.vm.getStyledNodes() as any[]
-        expect(nodes.find((n: any) => n.data.topicId === 'filtering').data.triggerUnlockGlow).toBe(true)
+        expect(nodes.find((n: any) => n.data.topicId === 'filtering').data.triggerUnlockGlow).toBe(
+            true
+        )
 
         vi.advanceTimersByTime(800)
         await wrapper.vm.$nextTick()
 
         nodes = wrapper.vm.getStyledNodes() as any[]
-        expect(nodes.find((n: any) => n.data.topicId === 'filtering').data.triggerUnlockGlow).toBe(false)
+        expect(nodes.find((n: any) => n.data.topicId === 'filtering').data.triggerUnlockGlow).toBe(
+            false
+        )
         vi.useRealTimers()
     })
 
@@ -471,15 +640,21 @@ describe('KnowledgeGraph', () => {
 
     it('styledEdges reflects updated props.edges after nextTick (no stale cache)', async () => {
         const wrapper = mount(KnowledgeGraph, {
-            props: {nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: []},
-            global: {stubs}
+            props: {
+                nodes: mockNodes,
+                edges: mockEdges,
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: []
+            },
+            global: { stubs }
         })
 
         // Initial: 2 edges
         expect(wrapper.vm.getStyledEdges()).toHaveLength(2)
 
         // Filter to 1 edge — styledEdges should reflect new edge set within nextTick
-        await wrapper.setProps({edges: [mockEdges[0]]})
+        await wrapper.setProps({ edges: [mockEdges[0]] })
         await wrapper.vm.$nextTick()
 
         expect(wrapper.vm.getStyledEdges()).toHaveLength(1)
@@ -487,8 +662,14 @@ describe('KnowledgeGraph', () => {
 
     it('styledEdges updates on hoveredNodeId change', async () => {
         const wrapper = mount(KnowledgeGraph, {
-            props: {nodes: mockNodes, edges: mockEdges, searchQuery: '', selectedTopic: null, masteredTopics: []},
-            global: {stubs}
+            props: {
+                nodes: mockNodes,
+                edges: mockEdges,
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: []
+            },
+            global: { stubs }
         })
 
         // No hover initially — no highlighted (opacity=1) edges

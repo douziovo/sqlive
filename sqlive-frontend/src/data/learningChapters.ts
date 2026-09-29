@@ -69,9 +69,9 @@ export const CHAPTERS: LearningChapter[] = [
         categoryKey: 'performance',
         taskCategories: ['core'],
         topicCount: 2
-    },
+    }
 ]
 
 export function getChapterById(id: string): LearningChapter | undefined {
-    return CHAPTERS.find(c => c.id === id)
+    return CHAPTERS.find((c) => c.id === id)
 }

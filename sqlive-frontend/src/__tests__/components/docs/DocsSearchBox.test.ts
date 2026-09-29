@@ -1,5 +1,5 @@
-import {mount} from '@vue/test-utils'
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
+import { mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
  * DocsSearchBox test suite (D-13 — Ctrl+K global + `/` docs-scoped + Esc).
@@ -12,11 +12,11 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
  * DocsSidebar.test.ts (mutable mockRoute for per-test route variation).
  */
 const push = vi.fn().mockResolvedValue(undefined)
-const mockRoute = {path: '/docs/intro'}
+const mockRoute = { path: '/docs/intro' }
 
 vi.mock('vue-router', () => ({
     useRoute: () => mockRoute,
-    useRouter: () => ({push}),
+    useRouter: () => ({ push })
 }))
 
 vi.mock('@/composables/useDocsSearch', () => ({
@@ -24,12 +24,12 @@ vi.mock('@/composables/useDocsSearch', () => ({
         ensureIndex: vi.fn().mockResolvedValue(undefined),
         search: vi.fn((q: string) =>
             q.includes('edit')
-                ? [{slug: 'usage/editor', title: '编辑器', category: 'usage', score: 1}]
-                : [],
+                ? [{ slug: 'usage/editor', title: '编辑器', category: 'usage', score: 1 }]
+                : []
         ),
-        indexReady: {value: true},
-        indexError: {value: false},
-    }),
+        indexReady: { value: true },
+        indexError: { value: false }
+    })
 }))
 
 import DocsSearchBox from '@/components/docs/DocsSearchBox.vue'
@@ -49,7 +49,7 @@ describe('DocsSearchBox', () => {
         const w = mount(DocsSearchBox)
         const input = w.find('[data-testid="docs-search-input"]').element as HTMLInputElement
         const focusSpy = vi.spyOn(input, 'focus')
-        window.dispatchEvent(new KeyboardEvent('keydown', {key: 'k', ctrlKey: true}))
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))
         expect(focusSpy).toHaveBeenCalled()
     })
 
@@ -59,7 +59,7 @@ describe('DocsSearchBox', () => {
         const w = mount(DocsSearchBox)
         const input = w.find('[data-testid="docs-search-input"]').element as HTMLInputElement
         const focusSpy = vi.spyOn(input, 'focus')
-        window.dispatchEvent(new KeyboardEvent('keydown', {key: '/', bubbles: true}))
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: '/', bubbles: true }))
         expect(focusSpy).not.toHaveBeenCalled()
     })
 
@@ -70,7 +70,7 @@ describe('DocsSearchBox', () => {
         const input = w.find('[data-testid="docs-search-input"]').element as HTMLInputElement
         const focusSpy = vi.spyOn(input, 'focus')
         // Target is document.body (not input/textarea) → slash should trigger
-        window.dispatchEvent(new KeyboardEvent('keydown', {key: '/', bubbles: true}))
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: '/', bubbles: true }))
         expect(focusSpy).toHaveBeenCalled()
     })
 
@@ -81,7 +81,7 @@ describe('DocsSearchBox', () => {
         const blurSpy = vi.spyOn(input, 'blur')
         // Focus first so blur has something to blur
         input.focus()
-        window.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape'}))
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
         expect(blurSpy).toHaveBeenCalled()
     })
 })

@@ -1,24 +1,24 @@
-import {describe, expect, it} from 'vitest'
-import {buildEChartsOption, decideDualAxis} from '../../../components/chart/chartOptionBuilder'
+import { describe, expect, it } from 'vitest'
+import { buildEChartsOption, decideDualAxis } from '../../../components/chart/chartOptionBuilder'
 
 describe('decideDualAxis', () => {
     it('returns disabled for single dataset', () => {
-        const result = decideDualAxis([{name: 'a', data: [1, 2, 3]}])
+        const result = decideDualAxis([{ name: 'a', data: [1, 2, 3] }])
         expect(result.enabled).toBe(false)
     })
 
     it('returns disabled when magnitude gap < 2', () => {
         const result = decideDualAxis([
-            {name: 'salary', data: [5000, 6000, 7000]},
-            {name: 'bonus', data: [1000, 2000, 3000]}
+            { name: 'salary', data: [5000, 6000, 7000] },
+            { name: 'bonus', data: [1000, 2000, 3000] }
         ])
         expect(result.enabled).toBe(false)
     })
 
     it('enables dual axis when magnitude gap >= 2', () => {
         const result = decideDualAxis([
-            {name: 'age', data: [25, 30, 35]},
-            {name: 'revenue', data: [1000000, 2000000, 3000000]}
+            { name: 'age', data: [25, 30, 35] },
+            { name: 'revenue', data: [1000000, 2000000, 3000000] }
         ])
         expect(result.enabled).toBe(true)
         expect(result.leftIndices).toContain(0)
@@ -27,16 +27,16 @@ describe('decideDualAxis', () => {
 
     it('handles zero values safely', () => {
         const result = decideDualAxis([
-            {name: 'all_zero', data: [0, 0, 0]},
-            {name: 'revenue', data: [1000000, 2000000, 3000000]}
+            { name: 'all_zero', data: [0, 0, 0] },
+            { name: 'revenue', data: [1000000, 2000000, 3000000] }
         ])
         expect(result.enabled).toBe(true)
     })
 
     it('handles null values in data', () => {
         const result = decideDualAxis([
-            {name: 'age', data: [25, null, 35]},
-            {name: 'revenue', data: [1000000, 2000000, null]}
+            { name: 'age', data: [25, null, 35] },
+            { name: 'revenue', data: [1000000, 2000000, null] }
         ])
         expect(result.enabled).toBe(true)
     })
@@ -47,20 +47,20 @@ describe('buildEChartsOption', () => {
         const option = buildEChartsOption({
             chartType: 'bar',
             labels: ['Alice', 'Bob'],
-            datasets: [{name: 'salary', data: [100, 200]}],
+            datasets: [{ name: 'salary', data: [100, 200] }],
             stacked: false
         })
         expect(option.xAxis).toBeDefined()
         expect(option.yAxis).toBeDefined()
         expect(option.series).toHaveLength(1)
-        expect((option.series?.[0] as Record<string, unknown>).type).toBe('bar')
+        expect((option.series?.[0] as Record<string, unknown> | undefined)?.type).toBe('bar')
     })
 
     it('maps area to line type with areaStyle', () => {
         const option = buildEChartsOption({
             chartType: 'area',
             labels: ['A', 'B'],
-            datasets: [{name: 'x', data: [1, 2]}],
+            datasets: [{ name: 'x', data: [1, 2] }],
             stacked: false
         })
         const s = option.series?.[0] as Record<string, unknown>
@@ -72,7 +72,7 @@ describe('buildEChartsOption', () => {
         const option = buildEChartsOption({
             chartType: 'doughnut',
             labels: ['A', 'B'],
-            datasets: [{name: 'x', data: [30, 70]}],
+            datasets: [{ name: 'x', data: [30, 70] }],
             stacked: false
         })
         const s = option.series?.[0] as Record<string, unknown>
@@ -84,7 +84,7 @@ describe('buildEChartsOption', () => {
         const option = buildEChartsOption({
             chartType: 'radar',
             labels: ['Jan', 'Feb'],
-            datasets: [{name: 'revenue', data: [100, 200]}],
+            datasets: [{ name: 'revenue', data: [100, 200] }],
             stacked: false
         })
         expect(option.radar).toBeDefined()
@@ -97,8 +97,8 @@ describe('buildEChartsOption', () => {
             chartType: 'bar',
             labels: ['A', 'B'],
             datasets: [
-                {name: 'age', data: [25, 30]},
-                {name: 'revenue', data: [1000000, 2000000]}
+                { name: 'age', data: [25, 30] },
+                { name: 'revenue', data: [1000000, 2000000] }
             ],
             stacked: false
         })
@@ -113,11 +113,13 @@ describe('buildEChartsOption', () => {
         const option = buildEChartsOption({
             chartType: 'line',
             labels: ['A', 'B', 'C'],
-            datasets: [{name: 'x', data: [1, null, 3]}],
+            datasets: [{ name: 'x', data: [1, null, 3] }],
             stacked: false
         })
-        const data = (option.series?.[0] as Record<string, unknown>).data as (number | string)[]
-        expect(data[1]).toBe('-')
+        const data = (option.series?.[0] as Record<string, unknown> | undefined)?.data as
+            | (number | string)[]
+            | undefined
+        expect(data?.[1]).toBe('-')
     })
 
     it('adds stack name when stacked is true', () => {
@@ -125,8 +127,8 @@ describe('buildEChartsOption', () => {
             chartType: 'bar',
             labels: ['A', 'B'],
             datasets: [
-                {name: 'x', data: [1, 2]},
-                {name: 'y', data: [3, 4]}
+                { name: 'x', data: [1, 2] },
+                { name: 'y', data: [3, 4] }
             ],
             stacked: true
         })
@@ -139,8 +141,8 @@ describe('buildEChartsOption', () => {
             chartType: 'bar',
             labels: ['A', 'B'],
             datasets: [
-                {name: 'age', data: [25, 30]},
-                {name: 'revenue', data: [1000000, 2000000]}
+                { name: 'age', data: [25, 30] },
+                { name: 'revenue', data: [1000000, 2000000] }
             ],
             stacked: false
         })

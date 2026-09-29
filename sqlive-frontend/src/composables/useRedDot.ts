@@ -1,23 +1,20 @@
-import {useLocalStorage} from '@vueuse/core'
-import {computed} from 'vue'
+import { useLocalStorage } from '@vueuse/core'
+import { computed } from 'vue'
 
 export function useRedDot() {
     const redDots = useLocalStorage<Record<string, boolean>>('ai-knowledge-reddot', {})
     // D-03: keyParents stores key → parent chain so clear() can propagate upward
     // when the last child of a parent is cleared.
-    const keyParents = useLocalStorage<Record<string, string[]>>(
-        'ai-knowledge-reddot-parents',
-        {}
-    )
+    const keyParents = useLocalStorage<Record<string, string[]>>('ai-knowledge-reddot-parents', {})
 
     function show(key: string, parents?: string[]): void {
-        redDots.value = {...redDots.value, [key]: true}
+        redDots.value = { ...redDots.value, [key]: true }
         if (parents && parents.length > 0) {
-            keyParents.value = {...keyParents.value, [key]: parents}
+            keyParents.value = { ...keyParents.value, [key]: parents }
             // Mark each parent visible so callers that read parent state directly
             // see the dot immediately (backward compatible with the old "explicit
             // show parent" call pattern).
-            const updated = {...redDots.value}
+            const updated = { ...redDots.value }
             for (const p of parents) {
                 updated[p] = true
             }
@@ -26,13 +23,13 @@ export function useRedDot() {
     }
 
     function clear(key: string): void {
-        redDots.value = {...redDots.value, [key]: false}
+        redDots.value = { ...redDots.value, [key]: false }
         const parents = keyParents.value[key]
         if (!parents || parents.length === 0) return
 
         // Remove this key's parent registration so future clear() calls don't
         // treat it as an active child.
-        const updatedParents = {...keyParents.value}
+        const updatedParents = { ...keyParents.value }
         delete updatedParents[key]
         keyParents.value = updatedParents
 
@@ -70,16 +67,12 @@ export function useRedDot() {
     }
 
     // Hierarchical red dot: any child visible → parent also visible
-    const hasAnyDot = computed(() =>
-        Object.values(redDots.value).some(v => v === true)
-    )
+    const hasAnyDot = computed(() => Object.values(redDots.value).some((v) => v === true))
 
     // D-03: prefix query for parent-level visibility checks
     function hasDotInPrefix(prefix: string): boolean {
-        return Object.entries(redDots.value).some(
-            ([k, v]) => v === true && k.startsWith(prefix)
-        )
+        return Object.entries(redDots.value).some(([k, v]) => v === true && k.startsWith(prefix))
     }
 
-    return {redDots, keyParents, show, clear, isVisible, clearAll, hasAnyDot, hasDotInPrefix}
+    return { redDots, keyParents, show, clear, isVisible, clearAll, hasAnyDot, hasDotInPrefix }
 }

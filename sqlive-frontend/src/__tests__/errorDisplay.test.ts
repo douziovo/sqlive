@@ -1,5 +1,12 @@
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
-import {mockError, mockSuccess, setupSqlEngine, type SqlEngineSetup, teardownSqlEngine, tick} from './test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+    mockError,
+    mockSuccess,
+    setupSqlEngine,
+    type SqlEngineSetup,
+    teardownSqlEngine,
+    tick
+} from './test-utils'
 
 describe('Error display with multiple statements', () => {
     let useSqlEngine: SqlEngineSetup['useSqlEngine']
@@ -16,7 +23,9 @@ describe('Error display with multiple statements', () => {
     })
 
     it('should show error from 2nd CREATE TABLE', async () => {
-        mockSuccess(fetchSpy, {tables: [{name: 't', columns: ['x'], columnTypes: {x: 'INTEGER'}, data: []}]})
+        mockSuccess(fetchSpy, {
+            tables: [{ name: 't', columns: ['x'], columnTypes: { x: 'INTEGER' }, data: [] }]
+        })
         const engine = useSqlEngine()
         await tick()
 
@@ -29,11 +38,13 @@ CREATE TABLE c (id BAD_TYPE);
         await tick()
 
         expect(engine.executionError.value).toBeTruthy()
-        expect(engine.executionError.value.line).toBe(5)
+        expect(engine.executionError.value?.line).toBe(5)
     })
 
     it('should show error from middle statement in multi-CREATE script', async () => {
-        mockSuccess(fetchSpy, {tables: [{name: 't', columns: ['x'], columnTypes: {x: 'INTEGER'}, data: []}]})
+        mockSuccess(fetchSpy, {
+            tables: [{ name: 't', columns: ['x'], columnTypes: { x: 'INTEGER' }, data: [] }]
+        })
         const engine = useSqlEngine()
         await tick()
 
@@ -44,11 +55,13 @@ CREATE TABLE u (z INTEGER);`
         await tick()
 
         expect(engine.executionError.value).toBeTruthy()
-        expect(engine.executionError.value.message).toContain('table')
+        expect(engine.executionError.value?.message).toContain('table')
     })
 
     it('should keep error visible while user continues typing', async () => {
-        mockSuccess(fetchSpy, {tables: [{name: 't', columns: ['x'], columnTypes: {x: 'INTEGER'}, data: []}]})
+        mockSuccess(fetchSpy, {
+            tables: [{ name: 't', columns: ['x'], columnTypes: { x: 'INTEGER' }, data: [] }]
+        })
         const engine = useSqlEngine()
         await tick()
 
@@ -63,7 +76,9 @@ CREATE TABLE u (z INTEGER);`
     })
 
     it('should clear error only after successful re-execution', async () => {
-        mockSuccess(fetchSpy, {tables: [{name: 't', columns: ['x'], columnTypes: {x: 'INTEGER'}, data: []}]})
+        mockSuccess(fetchSpy, {
+            tables: [{ name: 't', columns: ['x'], columnTypes: { x: 'INTEGER' }, data: [] }]
+        })
         const engine = useSqlEngine()
         await tick()
 
@@ -72,7 +87,9 @@ CREATE TABLE u (z INTEGER);`
         await tick()
         expect(engine.executionError.value).toBeTruthy()
 
-        mockSuccess(fetchSpy, {tables: [{name: 't', columns: ['x'], columnTypes: {x: 'INTEGER'}, data: []}]})
+        mockSuccess(fetchSpy, {
+            tables: [{ name: 't', columns: ['x'], columnTypes: { x: 'INTEGER' }, data: [] }]
+        })
         engine.code.value = 'CREATE TABLE t (x INTEGER); SELECT * FROM t;'
         await tick()
         expect(engine.executionError.value).toBeNull()
@@ -84,8 +101,8 @@ CREATE TABLE u (z INTEGER);`
                 {
                     name: 't',
                     columns: ['id', 'name'],
-                    columnTypes: {id: 'INTEGER', name: 'TEXT'},
-                    data: [{id: 1, name: 'Alice'}]
+                    columnTypes: { id: 'INTEGER', name: 'TEXT' },
+                    data: [{ id: 1, name: 'Alice' }]
                 }
             ]
         })
@@ -95,12 +112,12 @@ CREATE TABLE u (z INTEGER);`
         const savedCode = engine.code.value
 
         mockError(fetchSpy, 'CHECK constraint failed', 2)
-        engine.insertRowUI('t', {id: 3, name: null})
+        engine.insertRowUI('t', { id: 3, name: null })
 
         await tick()
 
         expect(engine.code.value).toBe(savedCode)
         expect(engine.executionError.value).not.toBeNull()
-        expect(engine.executionError.value.message).toContain('CHECK')
+        expect(engine.executionError.value?.message).toContain('CHECK')
     })
 })

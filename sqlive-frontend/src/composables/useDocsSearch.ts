@@ -1,6 +1,6 @@
 import type MiniSearchType from 'minisearch'
-import {ref} from 'vue'
-import {extractH1, stripMarkdown, pathToSlug} from '@/utils/markdown'
+import { ref } from 'vue'
+import { extractH1, stripMarkdown, pathToSlug } from '@/utils/markdown'
 
 /**
  * useDocsSearch — MiniSearch lazy index + search + error fallback (D-07).
@@ -23,7 +23,7 @@ import {extractH1, stripMarkdown, pathToSlug} from '@/utils/markdown'
 const articles = import.meta.glob('/src/content/docs/**/*.md', {
     query: '?raw',
     import: 'default',
-    eager: true,
+    eager: true
 }) as Record<string, string>
 
 // Module-level singleton state — survives component unmount.
@@ -46,12 +46,12 @@ export function useDocsSearch() {
                 slug: pathToSlug(path),
                 title: extractH1(raw) ?? pathToSlug(path),
                 content: stripMarkdown(raw),
-                category: pathToSlug(path).split('/')[0],
+                category: pathToSlug(path).split('/')[0]
             }))
             index = new MiniSearch({
                 fields: ['title', 'content'],
                 storeFields: ['title', 'slug', 'category'],
-                searchOptions: {prefix: true, fuzzy: 0.2, boost: { title: 2 }},
+                searchOptions: { prefix: true, fuzzy: 0.2, boost: { title: 2 } }
             })
             index.addAll(docs)
             indexReady.value = true
@@ -76,9 +76,9 @@ export function useDocsSearch() {
             slug: r.slug,
             title: r.title,
             category: r.category,
-            score: r.score,
+            score: r.score
         }))
     }
 
-    return {ensureIndex, search, indexReady, indexError}
+    return { ensureIndex, search, indexReady, indexError }
 }

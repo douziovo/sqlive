@@ -1,10 +1,10 @@
-import {afterEach, describe, expect, it, vi} from 'vitest'
-import type {Ref} from 'vue'
-import {ref} from 'vue'
-import type {DatabaseModel} from '@/model/DatabaseTypes'
-import type {AiMessage} from '@/composables/useAiChat'
-import type {DisplayHandler} from '@/composables/useInlineActions'
-import {useInlineActions} from '@/composables/useInlineActions'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { Ref } from 'vue'
+import { ref } from 'vue'
+import type { DatabaseModel } from '@/model/DatabaseTypes'
+import type { AiMessage } from '@/composables/useAiChat'
+import type { DisplayHandler } from '@/composables/useInlineActions'
+import { useInlineActions } from '@/composables/useInlineActions'
 
 vi.mock('@/utils/aiFormatter', () => ({
     formatErrorAnalysis: vi.fn((data: any) => `formatted-error: ${data.summary || data.content}`),
@@ -20,8 +20,8 @@ function makeDb(): DatabaseModel {
             {
                 name: 'users',
                 columns: ['id', 'name'],
-                columnTypes: {id: 'INTEGER', name: 'TEXT'},
-                data: [{id: 1, name: 'Alice'}]
+                columnTypes: { id: 'INTEGER', name: 'TEXT' },
+                data: [{ id: 1, name: 'Alice' }]
             }
         ],
         queryResults: [],
@@ -37,9 +37,10 @@ function makeDisplay(): DisplayHandler & { calls: any[] } {
     const calls: any[] = []
     return {
         calls,
-        onLoading: (mode: string) => calls.push({type: 'loading', mode}),
-        onResult: (content: string, actions: any[]) => calls.push({type: 'result', content, actions}),
-        onError: (message: string) => calls.push({type: 'error', message})
+        onLoading: (mode: string) => calls.push({ type: 'loading', mode }),
+        onResult: (content: string, actions: any[]) =>
+            calls.push({ type: 'result', content, actions }),
+        onError: (message: string) => calls.push({ type: 'error', message })
     }
 }
 
@@ -47,7 +48,7 @@ function mockFetchSuccess(data: any) {
     globalThis.fetch = vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
-        json: () => Promise.resolve({success: true, data})
+        json: () => Promise.resolve({ success: true, data })
     }) as any
 }
 
@@ -55,7 +56,7 @@ function mockFetchFailure(error: string) {
     globalThis.fetch = vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
-        json: () => Promise.resolve({success: false, error})
+        json: () => Promise.resolve({ success: false, error })
     }) as any
 }
 
@@ -63,10 +64,12 @@ function mockFetchNetworkError(err: Error) {
     globalThis.fetch = vi.fn().mockRejectedValue(err) as any
 }
 
-function makeState(overrides?: Partial<{
-    code: string
-    error: { line: number; message: string } | null
-}>) {
+function makeState(
+    overrides?: Partial<{
+        code: string
+        error: { line: number; message: string } | null
+    }>
+) {
     // D-R2-004: composable now takes tablesSource getter instead of whole DatabaseModel
     const db = makeDb()
     return {
@@ -94,9 +97,9 @@ describe('useInlineActions', () => {
 
             const state = makeState()
             const display = makeDisplay()
-            const {analyzeError} = useInlineActions(state)
+            const { analyzeError } = useInlineActions(state)
 
-            await analyzeError({line: 3, message: 'syntax error'}, display)
+            await analyzeError({ line: 3, message: 'syntax error' }, display)
 
             expect(state.isLoading.value).toBe(false)
             expect(display.calls.some((c) => c.type === 'loading')).toBe(true)
@@ -110,9 +113,9 @@ describe('useInlineActions', () => {
 
             const state = makeState()
             const display = makeDisplay()
-            const {analyzeError} = useInlineActions(state)
+            const { analyzeError } = useInlineActions(state)
 
-            await analyzeError({line: 1, message: 'error'}, display)
+            await analyzeError({ line: 1, message: 'error' }, display)
 
             expect(display.calls.some((c) => c.type === 'error')).toBe(true)
             expect(state.isLoading.value).toBe(false)
@@ -123,9 +126,9 @@ describe('useInlineActions', () => {
 
             const state = makeState()
             const display = makeDisplay()
-            const {analyzeError} = useInlineActions(state)
+            const { analyzeError } = useInlineActions(state)
 
-            await analyzeError({line: 1, message: 'error'}, display)
+            await analyzeError({ line: 1, message: 'error' }, display)
 
             expect(display.calls.some((c) => c.type === 'error')).toBe(true)
             expect(state.isLoading.value).toBe(false)
@@ -141,14 +144,14 @@ describe('useInlineActions', () => {
 
             const state = makeState()
             const display = makeDisplay()
-            const {analyzeError} = useInlineActions(state)
+            const { analyzeError } = useInlineActions(state)
 
-            const promise = analyzeError({line: 1, message: 'err'}, display)
+            const promise = analyzeError({ line: 1, message: 'err' }, display)
             expect(state.isLoading.value).toBe(true)
 
             resolveFetch!({
                 ok: true,
-                json: () => Promise.resolve({success: true, data: {summary: 'ok'}})
+                json: () => Promise.resolve({ success: true, data: { summary: 'ok' } })
             })
             await promise
 
@@ -164,9 +167,9 @@ describe('useInlineActions', () => {
                 summary: 'Fixed the query'
             })
 
-            const state = makeState({error: {line: 1, message: 'error'}})
+            const state = makeState({ error: { line: 1, message: 'error' } })
             const display = makeDisplay()
-            const {fixCode} = useInlineActions(state)
+            const { fixCode } = useInlineActions(state)
 
             const result = await fixCode(display)
 
@@ -179,7 +182,7 @@ describe('useInlineActions', () => {
 
             const state = makeState()
             const display = makeDisplay()
-            const {fixCode} = useInlineActions(state)
+            const { fixCode } = useInlineActions(state)
 
             const result = await fixCode(display)
 
@@ -192,7 +195,7 @@ describe('useInlineActions', () => {
 
             const state = makeState()
             const display = makeDisplay()
-            const {fixCode} = useInlineActions(state)
+            const { fixCode } = useInlineActions(state)
 
             const result = await fixCode(display)
 
@@ -206,13 +209,13 @@ describe('useInlineActions', () => {
             mockFetchSuccess({
                 summary: 'This query selects all users',
                 content: 'Detailed explanation',
-                stepByStep: [{step: 1, what: 'FROM clause', why: 'Specifies table'}],
+                stepByStep: [{ step: 1, what: 'FROM clause', why: 'Specifies table' }],
                 tips: ['Use indexes']
             })
 
             const state = makeState()
             const display = makeDisplay()
-            const {explain} = useInlineActions(state)
+            const { explain } = useInlineActions(state)
 
             await explain('SELECT * FROM users', display)
 
@@ -225,7 +228,7 @@ describe('useInlineActions', () => {
 
             const state = makeState()
             const display = makeDisplay()
-            const {explain} = useInlineActions(state)
+            const { explain } = useInlineActions(state)
 
             await explain('SELECT 1', display)
 
@@ -243,7 +246,7 @@ describe('useInlineActions', () => {
 
             const state = makeState()
             const display = makeDisplay()
-            const {optimize} = useInlineActions(state)
+            const { optimize } = useInlineActions(state)
 
             const result = await optimize('SELECT * FROM users', display)
 
@@ -256,7 +259,7 @@ describe('useInlineActions', () => {
 
             const state = makeState()
             const display = makeDisplay()
-            const {optimize} = useInlineActions(state)
+            const { optimize } = useInlineActions(state)
 
             const result = await optimize('SELECT 1', display)
 
@@ -273,7 +276,7 @@ describe('useInlineActions', () => {
 
             const state = makeState()
             const display = makeDisplay()
-            const {generateSql} = useInlineActions(state)
+            const { generateSql } = useInlineActions(state)
 
             const result = await generateSql('create a table', display)
 
@@ -289,7 +292,7 @@ describe('useInlineActions', () => {
 
             const state = makeState()
             const display = makeDisplay()
-            const {generateSql} = useInlineActions(state)
+            const { generateSql } = useInlineActions(state)
 
             const result = await generateSql('create a table', display)
 
@@ -304,7 +307,7 @@ describe('useInlineActions', () => {
 
             const state = makeState()
             const display = makeDisplay()
-            const {generateSql} = useInlineActions(state)
+            const { generateSql } = useInlineActions(state)
 
             const result = await generateSql('create a table', display)
 
@@ -321,7 +324,7 @@ describe('useInlineActions', () => {
 
             const state = makeState()
             const display = makeDisplay()
-            const {generateSql} = useInlineActions(state)
+            const { generateSql } = useInlineActions(state)
 
             const result = await generateSql('create a table', display)
 

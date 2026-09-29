@@ -1,8 +1,8 @@
-import type {Edge, Node} from '@vue-flow/core'
-import {useLocalStorage} from '@vueuse/core'
-import {computed, ref, watch} from 'vue'
-import {KNOWLEDGE_API_BASE} from '@/config'
-import {getChapterById} from '@/data/learningChapters'
+import type { Edge, Node } from '@vue-flow/core'
+import { useLocalStorage } from '@vueuse/core'
+import { computed, ref, watch } from 'vue'
+import { KNOWLEDGE_API_BASE } from '@/config'
+import { getChapterById } from '@/data/learningChapters'
 
 export interface KnowledgeTopic {
     id: string
@@ -47,6 +47,8 @@ export interface KnowledgeNodeData {
     triggerUnlockGlow?: boolean
 }
 
+export type KnowledgeNode = Node<KnowledgeNodeData> & { data: KnowledgeNodeData }
+
 // ── D-02: Module-level singletons ─────────────────────────────
 // graphData and selectedNode are hoisted to module scope so all useKnowledgeGraph()
 // calls share the same ref instances. This lets LearningCompanion read graphData
@@ -73,7 +75,7 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
 
     // ── XP/Level/Combo system (Phase 05-03) ──────────────────────
 
-    const XP_PER_DIFFICULTY: Record<number, number> = {1: 30, 2: 50, 3: 80}
+    const XP_PER_DIFFICULTY: Record<number, number> = { 1: 30, 2: 50, 3: 80 }
     const XP_PER_LEVEL = 750
 
     const xpData = useLocalStorage('ai-knowledge-xp', {
@@ -93,7 +95,7 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
             const clamped = Math.max(0, Math.min(lvl, LEVEL_NAMES.length - 1))
             if (clamped !== lvl) xpData.value.level = clamped
         },
-        {immediate: true}
+        { immediate: true }
     )
 
     // sessionStreak is module-level (D-08) — see declaration above.
@@ -111,19 +113,27 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
     })
 
     const progress = computed(() => {
-        if (!graphData.value) return {
-            count: 0, total: 0, percentage: 0,
-            level: xpData.value.level, levelName: LEVEL_NAMES[xpData.value.level] || '初级学者',
-            xp: xpData.value.totalXp, xpForNext: XP_PER_LEVEL,
-            nextLevelXp: (xpData.value.level + 1) * XP_PER_LEVEL,
-            streak: sessionStreak.value, allTimeStreak: xpData.value.streak
-        }
+        if (!graphData.value)
+            return {
+                count: 0,
+                total: 0,
+                percentage: 0,
+                level: xpData.value.level,
+                levelName: LEVEL_NAMES[xpData.value.level] || '初级学者',
+                xp: xpData.value.totalXp,
+                xpForNext: XP_PER_LEVEL,
+                nextLevelXp: (xpData.value.level + 1) * XP_PER_LEVEL,
+                streak: sessionStreak.value,
+                allTimeStreak: xpData.value.streak
+            }
         const total = graphData.value.topics.length
         const mastered = new Set(masteredTopics.value)
         const count = graphData.value.topics.filter((t) => mastered.has(t.id)).length
         const percentage = total > 0 ? Math.round((count / total) * 100) : 0
         return {
-            count, total, percentage,
+            count,
+            total,
+            percentage,
             level: xpData.value.level,
             levelName: LEVEL_NAMES[xpData.value.level] || '初级学者',
             xp: xpData.value.totalXp,
@@ -144,7 +154,9 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
             if (mastered.has(topic.id)) continue
 
             const upperSql = sql.toUpperCase()
-            const keywordMatch = (topic.keywords || []).some((kw) => upperSql.includes(kw.toUpperCase()))
+            const keywordMatch = (topic.keywords || []).some((kw) =>
+                upperSql.includes(kw.toUpperCase())
+            )
             if (keywordMatch) {
                 result.add(topic.id)
                 continue
@@ -173,13 +185,13 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
     // count with chapter-defined topicCount, producing >100% or understated progress.
     function getChapterProgress(chapterId: string): { completed: number; total: number } {
         const chapter = getChapterById(chapterId)
-        if (!chapter) return {completed: 0, total: 0}
-        if (!graphData.value) return {completed: 0, total: chapter.topicCount}
+        if (!chapter) return { completed: 0, total: 0 }
+        if (!graphData.value) return { completed: 0, total: chapter.topicCount }
         const mastered = new Set(masteredTopics.value)
         const completed = graphData.value.topics.filter(
             (t) => t.category === chapter.categoryKey && mastered.has(t.id)
         ).length
-        return {completed, total: chapter.topicCount}
+        return { completed, total: chapter.topicCount }
     }
 
     function getNodeStatus(topicId: string): 'mastered' | 'in-progress' | 'unlearned' {
@@ -188,11 +200,11 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
         return 'unlearned'
     }
 
-    function topicToNode(topic: KnowledgeTopic): Node<KnowledgeNodeData> {
+    function topicToNode(topic: KnowledgeTopic): KnowledgeNode {
         return {
             id: `topic-${topic.id}`,
             type: 'knowledge-node',
-            position: {x: 0, y: 0},
+            position: { x: 0, y: 0 },
             data: {
                 topicId: topic.id,
                 label: topic.label,
@@ -222,7 +234,7 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
                         type: 'smoothstep',
                         source: `topic-${topic.id}`,
                         target: `topic-${nextId}`,
-                        style: {stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '3 6'}
+                        style: { stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '3 6' }
                     })
                 }
             }
@@ -236,8 +248,13 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
                         type: 'smoothstep',
                         source: `topic-${prereqId}`,
                         target: `topic-${topic.id}`,
-                        data: {isPrereq: true},
-                        style: {stroke: '#e2e8f0', strokeWidth: 1, strokeDasharray: '1 8', opacity: 0.06}
+                        data: { isPrereq: true },
+                        style: {
+                            stroke: '#e2e8f0',
+                            strokeWidth: 1,
+                            strokeDasharray: '1 8',
+                            opacity: 0.06
+                        }
                     })
                 }
             }
@@ -245,7 +262,7 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
         return edges
     }
 
-    const nodes = computed<Node<KnowledgeNodeData>[]>(() => {
+    const nodes = computed<KnowledgeNode[]>(() => {
         if (!graphData.value) return []
         return graphData.value.topics.map((t) => topicToNode(t))
     })
@@ -274,9 +291,9 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
     }
 
     function toggleMastered(topicId: string): {
-        action: 'master' | 'unmaster',
-        xpGained: number,
-        leveledUp: boolean,
+        action: 'master' | 'unmaster'
+        xpGained: number
+        leveledUp: boolean
         streak: number
     } {
         const current = new Set(masteredTopics.value)
@@ -287,7 +304,7 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
             masteredTopics.value = [...current]
 
             // Calculate XP
-            const topic = graphData.value?.topics.find(t => t.id === topicId)
+            const topic = graphData.value?.topics.find((t) => t.id === topicId)
             const difficulty = topic?.difficulty ?? 1
             const xpGained = XP_PER_DIFFICULTY[difficulty] ?? 30
 
@@ -318,13 +335,13 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
                 }, 1000)
             }
 
-            return {action: 'master', xpGained: awardedXp, leveledUp, streak: sessionStreak.value}
+            return { action: 'master', xpGained: awardedXp, leveledUp, streak: sessionStreak.value }
         } else {
             current.delete(topicId)
             masteredTopics.value = [...current]
             sessionStreak.value = 0
 
-            return {action: 'unmaster', xpGained: 0, leveledUp: false, streak: 0}
+            return { action: 'unmaster', xpGained: 0, leveledUp: false, streak: 0 }
         }
     }
 
@@ -337,7 +354,10 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
     // mutating xpData. logKey uses task: prefix to namespace apart from
     // toggleMastered's topicId keys in the same masteredLog array.
 
-    function addTaskXp(topicId: string, xpGained: number): { xpGained: number; leveledUp: boolean } {
+    function addTaskXp(
+        topicId: string,
+        xpGained: number
+    ): { xpGained: number; leveledUp: boolean } {
         const logKey = `task:${topicId}`
         let awardedXp = 0
 
@@ -364,7 +384,7 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
         }
 
         // NOTE: does not modify masteredTopics — task completion ≠ topic mastery
-        return {xpGained: awardedXp, leveledUp}
+        return { xpGained: awardedXp, leveledUp }
     }
 
     function focusNode(topicId: string): void {

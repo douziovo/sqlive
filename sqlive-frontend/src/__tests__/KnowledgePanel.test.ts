@@ -1,14 +1,14 @@
-import {mount} from '@vue/test-utils'
-import {beforeEach, describe, expect, it, vi} from 'vitest'
-import {nextTick} from 'vue'
+import { mount } from '@vue/test-utils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
 import KnowledgePanel from '@/components/knowledge/KnowledgePanel.vue'
-import {SQL_CONTEXT_KEY} from '@/model/injectionKeys'
+import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
 
 const mockFetch = vi.fn()
-global.fetch = mockFetch
+globalThis.fetch = mockFetch
 
 const mockProvide = {
-    [SQL_CONTEXT_KEY as symbol]: {tabs: {value: []}, activeTabId: {value: '1'}}
+    [SQL_CONTEXT_KEY as symbol]: { tabs: { value: [] }, activeTabId: { value: '1' } }
 }
 
 const mockTopics = [
@@ -50,17 +50,17 @@ const mockTopics = [
 const mockResolve = (topics = mockTopics) => {
     mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({topics})
+        json: () => Promise.resolve({ topics })
     })
 }
 
 async function mountWithData(topics = mockTopics) {
     mockResolve(topics)
     const w = mount(KnowledgePanel, {
-        props: {isOpen: true},
-        global: {provide: mockProvide, stubs: {teleport: true}}
+        props: { isOpen: true },
+        global: { provide: mockProvide, stubs: { teleport: true, VueFlow: true } }
     })
-    await vi.waitFor(() => (w.vm.filteredNodes as any[]).length > 0, {timeout: 2000})
+    await vi.waitFor(() => (w.vm.filteredNodes as any[]).length > 0, { timeout: 2000 })
     return w
 }
 
@@ -74,10 +74,10 @@ describe('KnowledgePanel', () => {
     it('renders when isOpen is true', async () => {
         mockResolve()
         const w = mount(KnowledgePanel, {
-            props: {isOpen: true},
-            global: {provide: mockProvide, stubs: {teleport: true}}
+            props: { isOpen: true },
+            global: { provide: mockProvide, stubs: { teleport: true, VueFlow: true } }
         })
-        await vi.waitFor(() => w.find('.knowledge-panel__topbar').exists(), {timeout: 2000})
+        await vi.waitFor(() => w.find('.knowledge-panel__topbar').exists(), { timeout: 2000 })
 
         expect(w.find('.knowledge-panel__title').text()).toBe('知识图谱')
         expect(w.find('.knowledge-panel__search').exists()).toBe(true)
@@ -86,8 +86,8 @@ describe('KnowledgePanel', () => {
 
     it('does not render when isOpen is false', () => {
         const w = mount(KnowledgePanel, {
-            props: {isOpen: false},
-            global: {provide: mockProvide, stubs: {teleport: true}}
+            props: { isOpen: false },
+            global: { provide: mockProvide, stubs: { teleport: true, VueFlow: true } }
         })
         expect(w.find('.knowledge-panel__topbar').exists()).toBe(false)
     })
@@ -95,10 +95,10 @@ describe('KnowledgePanel', () => {
     it('emits close on backdrop click', async () => {
         mockResolve()
         const w = mount(KnowledgePanel, {
-            props: {isOpen: true},
-            global: {provide: mockProvide, stubs: {teleport: true}}
+            props: { isOpen: true },
+            global: { provide: mockProvide, stubs: { teleport: true, VueFlow: true } }
         })
-        await vi.waitFor(() => w.find('.knowledge-panel__backdrop').exists(), {timeout: 2000})
+        await vi.waitFor(() => w.find('.knowledge-panel__backdrop').exists(), { timeout: 2000 })
         await w.find('.knowledge-panel__backdrop').trigger('click')
         expect(w.emitted('close')).toBeTruthy()
     })
@@ -106,10 +106,10 @@ describe('KnowledgePanel', () => {
     it('shows 全部 button as active by default (no filter selected)', async () => {
         mockResolve()
         const w = mount(KnowledgePanel, {
-            props: {isOpen: true},
-            global: {provide: mockProvide, stubs: {teleport: true}}
+            props: { isOpen: true },
+            global: { provide: mockProvide, stubs: { teleport: true, VueFlow: true } }
         })
-        await vi.waitFor(() => w.find('.knowledge-panel__filter-btn').exists(), {timeout: 2000})
+        await vi.waitFor(() => w.find('.knowledge-panel__filter-btn').exists(), { timeout: 2000 })
 
         const allBtn = w.findAll('.knowledge-panel__filter-btn')[0]
         expect(allBtn.text()).toBe('全部')
@@ -119,10 +119,10 @@ describe('KnowledgePanel', () => {
     it('difficulty chips toggle activeDifficulty on click', async () => {
         mockResolve()
         const w = mount(KnowledgePanel, {
-            props: {isOpen: true},
-            global: {provide: mockProvide, stubs: {teleport: true}}
+            props: { isOpen: true },
+            global: { provide: mockProvide, stubs: { teleport: true, VueFlow: true } }
         })
-        await vi.waitFor(() => w.find('.knowledge-panel__filter-btn').exists(), {timeout: 2000})
+        await vi.waitFor(() => w.find('.knowledge-panel__filter-btn').exists(), { timeout: 2000 })
 
         const diffBtn = w.findAll('.knowledge-panel__filter-btn')[1] // 入门 L1
         expect(diffBtn.text()).toBe('入门 L1')
@@ -142,10 +142,10 @@ describe('KnowledgePanel', () => {
     it('category chips toggle activeCategory on click', async () => {
         mockResolve()
         const w = mount(KnowledgePanel, {
-            props: {isOpen: true},
-            global: {provide: mockProvide, stubs: {teleport: true}}
+            props: { isOpen: true },
+            global: { provide: mockProvide, stubs: { teleport: true, VueFlow: true } }
         })
-        await vi.waitFor(() => w.find('.knowledge-panel__filter-btn').exists(), {timeout: 2000})
+        await vi.waitFor(() => w.find('.knowledge-panel__filter-btn').exists(), { timeout: 2000 })
 
         const catBtn = w.findAll('.knowledge-panel__filter-btn')[4] // 查询类
         expect(catBtn.text()).toBe('查询类')
@@ -160,10 +160,10 @@ describe('KnowledgePanel', () => {
     it('difficulty + category filters can be combined', async () => {
         mockResolve()
         const w = mount(KnowledgePanel, {
-            props: {isOpen: true},
-            global: {provide: mockProvide, stubs: {teleport: true}}
+            props: { isOpen: true },
+            global: { provide: mockProvide, stubs: { teleport: true, VueFlow: true } }
         })
-        await vi.waitFor(() => w.find('.knowledge-panel__filter-btn').exists(), {timeout: 2000})
+        await vi.waitFor(() => w.find('.knowledge-panel__filter-btn').exists(), { timeout: 2000 })
 
         const btns = w.findAll('.knowledge-panel__filter-btn')
         const diffBtn = btns[2] // 进阶 L2
@@ -182,10 +182,10 @@ describe('KnowledgePanel', () => {
     it('全部 button resets all filters', async () => {
         mockResolve()
         const w = mount(KnowledgePanel, {
-            props: {isOpen: true},
-            global: {provide: mockProvide, stubs: {teleport: true}}
+            props: { isOpen: true },
+            global: { provide: mockProvide, stubs: { teleport: true, VueFlow: true } }
         })
-        await vi.waitFor(() => w.find('.knowledge-panel__filter-btn').exists(), {timeout: 2000})
+        await vi.waitFor(() => w.find('.knowledge-panel__filter-btn').exists(), { timeout: 2000 })
 
         const btns = w.findAll('.knowledge-panel__filter-btn')
         const allBtn = btns[0]
@@ -285,15 +285,21 @@ describe('KnowledgePanel', () => {
         // With D-10 guards (xpData.level clamp + Math.max on xpInLevel):
         //   level clamps to 3 → currentLevelXp = 2250 → xpInLevel = 100-2250 = -2150
         //   Math.max(0, -2150) = 0 → xpBarPercent = 0
-        localStorage.setItem('ai-knowledge-xp', JSON.stringify({
-            totalXp: 100, level: 99, streak: 0, masteredLog: []
-        }))
+        localStorage.setItem(
+            'ai-knowledge-xp',
+            JSON.stringify({
+                totalXp: 100,
+                level: 99,
+                streak: 0,
+                masteredLog: []
+            })
+        )
         mockResolve()
         const w = mount(KnowledgePanel, {
-            props: {isOpen: true},
-            global: {provide: mockProvide, stubs: {teleport: true}}
+            props: { isOpen: true },
+            global: { provide: mockProvide, stubs: { teleport: true, VueFlow: true } }
         })
-        await vi.waitFor(() => (w.vm as any).xpBarPercent !== undefined, {timeout: 2000})
+        await vi.waitFor(() => (w.vm as any).xpBarPercent !== undefined, { timeout: 2000 })
         await nextTick() // let immediate watch clamp level
         expect((w.vm as any).xpBarPercent).toBe(0)
     })

@@ -1,7 +1,7 @@
-import {mount} from '@vue/test-utils'
-import {beforeEach, describe, expect, it} from 'vitest'
+import { mount } from '@vue/test-utils'
+import { beforeEach, describe, expect, it } from 'vitest'
 import ActiveTaskTracker from '@/components/knowledge/ActiveTaskTracker.vue'
-import type {KnowledgeTask} from '@/composables/useKnowledgeTasks'
+import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'
 
 const mockPinnedTask: KnowledgeTask = {
     id: 'task-1',
@@ -14,11 +14,11 @@ const mockPinnedTask: KnowledgeTask = {
     category: 'core',
     isPinned: true,
     substeps: [
-        {id: 's1', label: '了解 INNER JOIN', status: 'done'},
-        {id: 's2', label: '了解 LEFT JOIN', status: 'done'},
-        {id: 's3', label: '练习多表查询', status: 'active'},
-        {id: 's4', label: '掌握自连接', status: 'locked'},
-    ],
+        { id: 's1', label: '了解 INNER JOIN', status: 'done' },
+        { id: 's2', label: '了解 LEFT JOIN', status: 'done' },
+        { id: 's3', label: '练习多表查询', status: 'active' },
+        { id: 's4', label: '掌握自连接', status: 'locked' }
+    ]
 }
 
 describe('ActiveTaskTracker', () => {
@@ -31,8 +31,8 @@ describe('ActiveTaskTracker', () => {
             props: {
                 pinnedTask: mockPinnedTask,
                 topicLabel: 'JOIN 查询',
-                currentStepLabel: '练习多表查询',
-            },
+                currentStepLabel: '练习多表查询'
+            }
         })
         expect(w.text()).toContain('练习 JOIN 查询')
         expect(w.text()).toContain('2/4')
@@ -43,8 +43,8 @@ describe('ActiveTaskTracker', () => {
             props: {
                 pinnedTask: mockPinnedTask,
                 topicLabel: 'JOIN 查询',
-                currentStepLabel: '练习多表查询',
-            },
+                currentStepLabel: '练习多表查询'
+            }
         })
         expect(w.text()).toContain('练习多表查询')
     })
@@ -54,8 +54,8 @@ describe('ActiveTaskTracker', () => {
             props: {
                 pinnedTask: null,
                 topicLabel: '',
-                currentStepLabel: '',
-            },
+                currentStepLabel: ''
+            }
         })
         expect(w.find('.active-tracker').exists()).toBe(false)
     })
@@ -65,8 +65,8 @@ describe('ActiveTaskTracker', () => {
             props: {
                 pinnedTask: mockPinnedTask,
                 topicLabel: 'JOIN 查询',
-                currentStepLabel: '练习多表查询',
-            },
+                currentStepLabel: '练习多表查询'
+            }
         })
         const cancelBtn = w.find('.active-tracker__btn--ghost')
         expect(cancelBtn.text()).toBe('取消追踪')
@@ -79,8 +79,8 @@ describe('ActiveTaskTracker', () => {
             props: {
                 pinnedTask: mockPinnedTask,
                 topicLabel: 'JOIN 查询',
-                currentStepLabel: '练习多表查询',
-            },
+                currentStepLabel: '练习多表查询'
+            }
         })
         const continueBtn = w.find('.active-tracker__btn--primary')
         expect(continueBtn.text()).toBe('继续学习')
@@ -94,8 +94,8 @@ describe('ActiveTaskTracker', () => {
             props: {
                 pinnedTask: mockPinnedTask,
                 topicLabel: 'JOIN 查询',
-                currentStepLabel: '练习多表查询',
-            },
+                currentStepLabel: '练习多表查询'
+            }
         })
         expect(w.text()).toContain('2/4 步骤')
     })

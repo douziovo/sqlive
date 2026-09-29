@@ -1,12 +1,14 @@
-import {describe, expect, it, vi} from 'vitest'
-import {ref} from 'vue'
-import type {Node} from '@vue-flow/core'
-import type {KnowledgeNodeData} from '@/composables/useKnowledgeGraph'
-import {useGraphViewport} from '@/composables/useGraphViewport'
+import { describe, expect, it, vi } from 'vitest'
+import { effectScope, ref, shallowRef } from 'vue'
+import type { KnowledgeNode } from '@/composables/useKnowledgeGraph'
+import { useGraphViewport } from '@/composables/useGraphViewport'
 
 // ── Test fixtures ──────────────────────────────────────────────
 
-function makeNode(topicId: string, position: { x: number; y: number } = {x: 0, y: 0}): Node<KnowledgeNodeData> {
+function makeNode(
+    topicId: string,
+    position: { x: number; y: number } = { x: 0, y: 0 }
+): KnowledgeNode {
     return {
         id: `topic-${topicId}`,
         type: 'knowledge-node',
@@ -27,11 +29,39 @@ function makeNode(topicId: string, position: { x: number; y: number } = {x: 0, y
 // ── Tests ──────────────────────────────────────────────────────
 
 describe('useGraphViewport', () => {
+    it('debounces persistence and cancels pending timers when its scope stops', () => {
+        vi.useFakeTimers()
+        const scope = effectScope()
+        const storage = vi.spyOn(Storage.prototype, 'setItem')
+        try {
+            const viewport = scope.run(() => useGraphViewport(ref(null), ref([])))!
+            viewport.onMove({ event: null, flowTransform: { x: 1, y: 2, zoom: 1 } })
+            vi.advanceTimersByTime(100)
+            viewport.onMove({ event: null, flowTransform: { x: 3, y: 4, zoom: 2 } })
+            vi.advanceTimersByTime(150)
+            expect(viewport.isSettling.value).toBe(false)
+            expect(storage).not.toHaveBeenCalled()
+            vi.advanceTimersByTime(150)
+            expect(storage).toHaveBeenCalledExactlyOnceWith(
+                'kg-viewport',
+                JSON.stringify({ x: 3, y: 4, zoom: 2 })
+            )
+            viewport.onMove({ event: null, flowTransform: { x: 5, y: 6, zoom: 3 } })
+            scope.stop()
+            vi.advanceTimersByTime(500)
+            expect(storage).toHaveBeenCalledTimes(1)
+        } finally {
+            scope.stop()
+            storage.mockRestore()
+            vi.useRealTimers()
+        }
+    })
+
     it('fitView calls flowRef.fitView when available', () => {
         const fitViewMock = vi.fn()
-        const flowRef = ref<any>({fitView: fitViewMock})
-        const displayNodes = ref<Node<KnowledgeNodeData[]>>([])
-        const {fitView} = useGraphViewport(flowRef, displayNodes as any)
+        const flowRef = ref<any>({ fitView: fitViewMock })
+        const displayNodes = shallowRef<KnowledgeNode[]>([])
+        const { fitView } = useGraphViewport(flowRef, displayNodes)
 
         fitView()
         expect(fitViewMock).toHaveBeenCalled()
@@ -39,8 +69,8 @@ describe('useGraphViewport', () => {
 
     it('fitView no-op when flowRef null', () => {
         const flowRef = ref<any>(null)
-        const displayNodes = ref<Node<KnowledgeNodeData[]>>([])
-        const {fitView} = useGraphViewport(flowRef, displayNodes as any)
+        const displayNodes = shallowRef<KnowledgeNode[]>([])
+        const { fitView } = useGraphViewport(flowRef, displayNodes)
 
         // Must not throw
         expect(() => fitView()).not.toThrow()
@@ -48,9 +78,9 @@ describe('useGraphViewport', () => {
 
     it('flyToNode calls flowRef.setCenter', () => {
         const setCenterMock = vi.fn()
-        const flowRef = ref<any>({setCenter: setCenterMock})
-        const displayNodes = ref<Node<KnowledgeNodeData[]>>([makeNode('X', {x: 100, y: 50})])
-        const {flyToNode} = useGraphViewport(flowRef, displayNodes as any)
+        const flowRef = ref<any>({ setCenter: setCenterMock })
+        const displayNodes = shallowRef<KnowledgeNode[]>([makeNode('X', { x: 100, y: 50 })])
+        const { flyToNode } = useGraphViewport(flowRef, displayNodes)
 
         flyToNode('X')
         expect(setCenterMock).toHaveBeenCalled()
@@ -62,9 +92,9 @@ describe('useGraphViewport', () => {
 
     it('flyToNode no-op when topic not found', () => {
         const setCenterMock = vi.fn()
-        const flowRef = ref<any>({setCenter: setCenterMock})
-        const displayNodes = ref<Node<KnowledgeNodeData[]>>([makeNode('X')])
-        const {flyToNode} = useGraphViewport(flowRef, displayNodes as any)
+        const flowRef = ref<any>({ setCenter: setCenterMock })
+        const displayNodes = shallowRef<KnowledgeNode[]>([makeNode('X')])
+        const { flyToNode } = useGraphViewport(flowRef, displayNodes)
 
         flyToNode('nonexistent')
         expect(setCenterMock).not.toHaveBeenCalled()
@@ -72,10 +102,10 @@ describe('useGraphViewport', () => {
 
     it('onMove updates zoomLevel and viewportPos', () => {
         const flowRef = ref<any>(null)
-        const displayNodes = ref<Node<KnowledgeNodeData[]>>([])
-        const {onMove, zoomLevel, viewportPos} = useGraphViewport(flowRef, displayNodes as any)
+        const displayNodes = shallowRef<KnowledgeNode[]>([])
+        const { onMove, zoomLevel, viewportPos } = useGraphViewport(flowRef, displayNodes)
 
-        onMove({event: {}, flowTransform: {x: 10, y: 20, zoom: 0.8}})
+        onMove({ event: {}, flowTransform: { x: 10, y: 20, zoom: 0.8 } })
 
         expect(zoomLevel.value).toBe(0.8)
         expect(viewportPos.x).toBe(10)
@@ -84,22 +114,11 @@ describe('useGraphViewport', () => {
 
     // ── IN-08 (D-19): NODE_HALF_W/H constants extracted ──
 
-    it('IN-08 focusNode uses NODE_HALF_W/H constants (60/30) for centering', () => {
-        // Structural regression guard: verifies constants are named and used in focusNode.
-        // If NODE_HALF_W is renamed or focusNode reverts to magic number, this fails.
-        const fs = require('fs')
-        const source = fs.readFileSync('src/composables/useGraphViewport.ts', 'utf-8')
-        expect(source).toContain('NODE_HALF_W = 60')
-        expect(source).toContain('NODE_HALF_H = 30')
-        expect(source).toContain('node.position.x + NODE_HALF_W')
-        expect(source).toContain('node.position.y + NODE_HALF_H')
-    })
-
     it('IN-08 focusNode centers on node.position + 60/30 via constants', () => {
         const setCenterMock = vi.fn()
-        const flowRef = ref<any>({setCenter: setCenterMock})
-        const displayNodes = ref<Node<KnowledgeNodeData[]>>([makeNode('X', {x: 100, y: 50})])
-        const {focusNode} = useGraphViewport(flowRef, displayNodes as any)
+        const flowRef = ref<any>({ setCenter: setCenterMock })
+        const displayNodes = shallowRef<KnowledgeNode[]>([makeNode('X', { x: 100, y: 50 })])
+        const { focusNode } = useGraphViewport(flowRef, displayNodes)
 
         focusNode('X')
         expect(setCenterMock).toHaveBeenCalled()

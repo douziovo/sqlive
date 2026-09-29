@@ -1,5 +1,5 @@
-import {afterEach, describe, expect, it, vi} from 'vitest'
-import {downloadFile} from '@/utils/file'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { downloadFile } from '@/utils/file'
 
 describe('downloadFile', () => {
     let createObjectURLSpy: ReturnType<typeof vi.fn>
@@ -25,7 +25,7 @@ describe('downloadFile', () => {
         vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
             const el = originalCreateElement(tag)
             if (tag === 'a') {
-                Object.defineProperty(el, 'click', {value: clickSpy})
+                Object.defineProperty(el, 'click', { value: clickSpy })
             }
             return el
         })
@@ -57,7 +57,7 @@ describe('downloadFile', () => {
         vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
             const el = originalCreateElement(tag)
             if (tag === 'a') {
-                Object.defineProperty(el, 'click', {value: clickSpy})
+                Object.defineProperty(el, 'click', { value: clickSpy })
             }
             return el
         })
@@ -82,7 +82,7 @@ describe('downloadFile', () => {
         vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
             const el = originalCreateElement(tag)
             if (tag === 'a') {
-                Object.defineProperty(el, 'click', {value: clickSpy})
+                Object.defineProperty(el, 'click', { value: clickSpy })
             }
             return el
         })
@@ -110,7 +110,7 @@ describe('downloadFile', () => {
             const el = originalCreateElement(tag)
             if (tag === 'a') {
                 createdAnchor = el
-                Object.defineProperty(el, 'click', {value: clickSpy})
+                Object.defineProperty(el, 'click', { value: clickSpy })
             }
             return el
         })
