@@ -3,6 +3,7 @@ package com.douzi.sqlive.exception;
 import com.douzi.sqlive.dto.SqlResponse;
 import com.douzi.sqlive.dto.ai.AiChatResponse;
 import com.douzi.sqlive.service.database.TooManyDatabasesException;
+import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -43,10 +44,10 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
 	@Override
 	protected ResponseEntity<Object> handleMethodArgumentNotValid(
-			MethodArgumentNotValidException ex,
+			@Nonnull MethodArgumentNotValidException ex,
 			@Nullable HttpHeaders headers,
 			@Nullable HttpStatusCode status,
-			@Nullable WebRequest request) {
+			@Nonnull WebRequest request) {
 		String message = ex.getBindingResult().getFieldErrors().stream()
 				.map(f -> f.getField() + ": " + f.getDefaultMessage())
 				.reduce((a, b) -> a + "; " + b)
@@ -81,14 +82,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	 */
 	@Override
 	protected @Nullable ResponseEntity<Object> handleNoResourceFoundException(
-			NoResourceFoundException ex,
+			@Nonnull NoResourceFoundException ex,
 			@Nullable HttpHeaders headers,
 			@Nullable HttpStatusCode status,
-			WebRequest webRequest) {
+			@Nonnull WebRequest webRequest) {
 		if (webRequest instanceof ServletWebRequest servletWebRequest) {
 			HttpServletRequest request = servletWebRequest.getRequest();
 			HttpServletResponse response = servletWebRequest.getResponse();
-			if (request != null && response != null) {
+			if (response != null) {
 				String accept = request.getHeader("Accept");
 				String path = request.getRequestURI();
 				boolean isHtmlRequest = accept != null && accept.contains("text/html");
@@ -108,7 +109,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 			}
 		}
 		// Non-SPA paths fall through to the default 404 ProblemDetail JSON response.
-		return super.handleNoResourceFoundException(ex, headers, status, webRequest);
+		return super.handleNoResourceFoundException(ex,
+				headers != null ? headers : new HttpHeaders(),
+				status != null ? status : HttpStatus.NOT_FOUND, webRequest);
 	}
 
 	@ExceptionHandler(Exception.class)

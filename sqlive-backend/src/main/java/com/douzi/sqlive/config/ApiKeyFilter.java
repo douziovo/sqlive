@@ -1,5 +1,6 @@
 package com.douzi.sqlive.config;
 
+import jakarta.annotation.Nonnull;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -68,7 +69,8 @@ public class ApiKeyFilter extends OncePerRequestFilter {
 	}
 
 	@Override
-	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+	protected void doFilterInternal(@Nonnull HttpServletRequest request, @Nonnull HttpServletResponse response,
+	                                @Nonnull FilterChain chain)
 			throws ServletException, IOException {
 		// Only enforce X-API-Key on AI endpoints; non-AI endpoints (/api/execute,
 		// /api/knowledge/*, etc.) are intentionally public per playground semantics.

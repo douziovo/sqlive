@@ -13,6 +13,30 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class DatabasePoolManagerTest {
 
+	@Test
+	void shouldKeepEveryAcquiredReferenceAliveUntilRelease() {
+		var mgr = createManager();
+		var first = mgr.getOrCreateJdbcTemplate("leased");
+		mgr.getOrCreateJdbcTemplate("leased");
+		mgr.release("leased");
+		mgr.evictToTarget(0);
+		assertEquals(1, first.jdbcTemplate().queryForObject("SELECT 1", Integer.class));
+		assertEquals(1, mgr.getPoolSize());
+		mgr.release("leased");
+		mgr.evictToTarget(0);
+		assertEquals(0, mgr.getPoolSize());
+	}
+
+	@Test
+	void shouldInitializeSafeConnectionsIncludingNativeAttachLimit() {
+		var mgr = createManager();
+		var jdbc = mgr.getOrCreateJdbcTemplate("safe").jdbcTemplate();
+		assertEquals(1, jdbc.queryForObject("PRAGMA foreign_keys", Integer.class));
+		assertEquals(0, jdbc.queryForObject("PRAGMA trusted_schema", Integer.class));
+		assertThrows(org.springframework.dao.DataAccessException.class,
+				() -> jdbc.execute("ATTACH (':memory:') AS aux"));
+	}
+
 	private final List<DatabasePoolManager> managers = new ArrayList<>();
 
 	@AfterEach
