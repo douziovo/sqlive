@@ -1,9 +1,9 @@
-import {useLocalStorage, watchDebounced} from '@vueuse/core'
-import {computed, type Ref, ref} from 'vue'
-import {useAiStreaming} from '../composables/useAiStreaming'
-import {API_BASE} from '../config'
-import type {TableSchema} from '../model/DatabaseTypes'
-import type {DisplayHandler} from './useInlineActions'
+import { useLocalStorage, watchDebounced } from '@vueuse/core'
+import { computed, type Ref, ref } from 'vue'
+import { useAiStreaming } from '../composables/useAiStreaming'
+import { API_BASE } from '../config'
+import type { TableSchema } from '../model/DatabaseTypes'
+import type { DisplayHandler } from './useInlineActions'
 
 export interface AiMessage {
     id: string
@@ -16,7 +16,14 @@ export interface AiMessage {
     firstTokenTime?: number
     endTime?: number
     metadata?: {
-        type?: 'error-analysis' | 'fix-code' | 'explain' | 'optimize' | 'generate-sql' | 'general-chat' | 'chat'
+        type?:
+            | 'error-analysis'
+            | 'fix-code'
+            | 'explain'
+            | 'optimize'
+            | 'generate-sql'
+            | 'general-chat'
+            | 'chat'
         context?: {
             sql?: string
             error?: { line: number; message: string }
@@ -27,7 +34,10 @@ export interface AiMessage {
 
 export interface AiActions {
     isLoading: Ref<boolean>
-    analyzeError: (error: { line: number; message: string }, display: DisplayHandler) => Promise<void>
+    analyzeError: (
+        error: { line: number; message: string },
+        display: DisplayHandler
+    ) => Promise<void>
     fixCode: (display: DisplayHandler) => Promise<string | null>
     explain: (code: string, display: DisplayHandler) => Promise<void>
     optimize: (code: string, display: DisplayHandler) => Promise<string | null>
@@ -81,7 +91,7 @@ export function useAiChat(ctx: {
         }
     })
     const autoAnalysisEnabled = ref(true)
-    const {streamCall, cancelStream} = useAiStreaming(API_BASE, isLoading)
+    const { streamCall, cancelStream } = useAiStreaming(API_BASE, isLoading)
 
     const currentSchema = computed(() => {
         return (ctx.tablesSource() ?? []).map((t) => ({
@@ -101,11 +111,14 @@ export function useAiChat(ctx: {
                     role: 'system',
                     content: `SQL 执行出错（第 ${err.line} 行）：${err.message}`,
                     timestamp: Date.now(),
-                    metadata: {type: 'error-analysis', context: {error: {line: err.line, message: err.message}}}
+                    metadata: {
+                        type: 'error-analysis',
+                        context: { error: { line: err.line, message: err.message } }
+                    }
                 })
             }
         },
-        {debounce: 500}
+        { debounce: 500 }
     )
 
     // ── Streaming SSE ─────────────────────────────────────────────
@@ -119,7 +132,7 @@ export function useAiChat(ctx: {
             timestamp: Date.now(),
             isStreaming: true,
             isReasoning: false,
-            metadata: {type}
+            metadata: { type }
         }
         messages.value.push(msg)
         return messages.value[messages.value.length - 1]
@@ -134,7 +147,7 @@ export function useAiChat(ctx: {
             role: 'user',
             content: text,
             timestamp: Date.now(),
-            metadata: {type: 'general-chat'}
+            metadata: { type: 'general-chat' }
         }
         messages.value.push(userMsg)
 
@@ -147,16 +160,18 @@ export function useAiChat(ctx: {
                 {
                     mode: 'chat',
                     message: text,
-                    history: messages.value.slice(0, -1).map((m) => ({role: m.role, content: m.content})),
+                    history: messages.value
+                        .slice(0, -1)
+                        .map((m) => ({ role: m.role, content: m.content })),
                     currentSql: ctx.code.value,
                     schema: currentSchema.value
                 },
                 (chunk) => {
                     let parsed: {
-                        type?: string;
-                        content?: string;
-                        prompt?: number;
-                        completion?: number;
+                        type?: string
+                        content?: string
+                        prompt?: number
+                        completion?: number
                         total?: number
                     }
                     try {
@@ -188,7 +203,8 @@ export function useAiChat(ctx: {
                         default:
                             aiMsg.isReasoning = false
                             aiMsg.content += parsed.content || ''
-                            if (!aiMsg.firstTokenTime && (parsed.content || '').trim()) aiMsg.firstTokenTime = Date.now()
+                            if (!aiMsg.firstTokenTime && (parsed.content || '').trim())
+                                aiMsg.firstTokenTime = Date.now()
                     }
                 }
             )

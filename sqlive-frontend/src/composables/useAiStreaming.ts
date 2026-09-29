@@ -1,11 +1,15 @@
-import {type Ref, ref} from 'vue'
-import {readSseStream} from '../utils/sse'
+import { type Ref, ref } from 'vue'
+import { readSseStream } from '../utils/sse'
 
 export function useAiStreaming(apiBase: string, isLoading: Ref<boolean>) {
     const streamAbortController = ref<AbortController | null>(null)
 
-    function streamCall(endpoint: string, body: unknown, onChunk: (text: string) => void): Promise<void> {
-        return new Promise((resolve, reject) => {
+    async function streamCall(
+        endpoint: string,
+        body: unknown,
+        onChunk: (text: string) => void
+    ): Promise<void> {
+        try {
             const controller = new AbortController()
             streamAbortController.value = controller
 
@@ -17,39 +21,25 @@ export function useAiStreaming(apiBase: string, isLoading: Ref<boolean>) {
                 'Content-Type': 'application/json',
                 Accept: 'text/event-stream'
             }
-            const apiKey = import.meta.env.VITE_AI_API_KEY
-                || (typeof localStorage !== 'undefined' ? localStorage.getItem('ai_api_key') : null)
+            const apiKey =
+                import.meta.env.VITE_AI_API_KEY ||
+                (typeof localStorage !== 'undefined' ? localStorage.getItem('ai_api_key') : null)
             if (apiKey) headers['X-API-Key'] = apiKey
 
-            fetch(`${apiBase}${endpoint}`, {
+            const response = await fetch(`${apiBase}${endpoint}`, {
                 method: 'POST',
                 headers,
-                body: JSON.stringify({...(body as Record<string, unknown>), stream: true}),
+                body: JSON.stringify({ ...(body as Record<string, unknown>), stream: true }),
                 signal: controller.signal
             })
-                .then(async (response) => {
-                    if (!response.ok) {
-                        throw new Error(`SSE error: ${response.status} ${response.statusText}`)
-                    }
-
-                    await readSseStream(
-                        response,
-                        (data) => {
-                            onChunk(data)
-                        },
-                        controller.signal
-                    )
-
-                    resolve()
-                })
-                .catch((err) => {
-                    if (err.name === 'AbortError') {
-                        resolve()
-                    } else {
-                        reject(err)
-                    }
-                })
-        })
+            if (!response.ok) {
+                throw new Error(`SSE error: ${response.status} ${response.statusText}`)
+            }
+            await readSseStream(response, onChunk, controller.signal)
+        } catch (err) {
+            if (!(err instanceof Error || err instanceof DOMException) || err.name !== 'AbortError')
+                throw err
+        }
     }
 
     function cancelStream(): void {
@@ -57,5 +47,5 @@ export function useAiStreaming(apiBase: string, isLoading: Ref<boolean>) {
         isLoading.value = false
     }
 
-    return {streamCall, cancelStream, streamAbortController}
+    return { streamCall, cancelStream, streamAbortController }
 }
