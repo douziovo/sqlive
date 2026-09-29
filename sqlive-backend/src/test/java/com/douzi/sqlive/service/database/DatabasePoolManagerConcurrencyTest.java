@@ -12,6 +12,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -59,107 +60,63 @@ class DatabasePoolManagerConcurrencyTest {
 		return mgr;
 	}
 
-	/**
-	 * WR-07: 1 acquire thread + 1 evict thread. The acquire thread loops
-	 * acquire → sleep(10ms) → queryForList → release, so between release and the
-	 * next acquire the pool is idle (refCount=0) and evictToTarget(0) can target
-	 * it. This is the
-	 * TOCTOU window the fast-path {@code evictionGeneration} check must handle:
-	 * <ol>
-	 *   <li>acquire thread: {@code gen = evictionGeneration} snapshot</li>
-	 *   <li>acquire thread: {@code pools.get(dbName)} returns existing JdbcTemplate</li>
-	 *   <li>evict thread: {@code evict()} removes the entry, closes the HikariDataSource,
-	 *       and increments {@code evictionGeneration}</li>
-	 *   <li>acquire thread: {@code refCounts.incrementAndGet} on a closed pool, then
-	 *       {@code gen != evictionGeneration} rolls back the refCount bump and falls
-	 *       through to {@code createNewPool} — handing out a fresh, open pool</li>
-	 * </ol>
-	 * Without the TOCTOU fix, step 4 returns the closed JdbcTemplate and
-	 * {@code queryForList("SELECT 1")} throws. The original test kept all 10
-	 * getOrCreate threads holding refCounts, so {@code evictToTarget(0)} always
-	 * skipped the pool (non-idle) and the race was never exercised.
-	 *
-	 * <p>UAT 2026-07-01 Test 2 found that the WR-07 rewrite still passed both WITH
-	 * and WITHOUT the TOCTOU fix. Root cause: 10 evict threads × 200 iterations of
-	 * empty {@code evictToTarget(0)} complete in ~10ms, while the acquire thread's
-	 * first {@code createNewPool} takes ~100ms (HikariDataSource startup). By the
-	 * time the pool exists in the {@code pools} map, all evict threads have exited.
-	 * The race window is never entered.
-	 *
-	 * <p>This rewrite closes the gap with three changes (all three are needed —
-	 * any one alone is insufficient):
-	 * <ol>
-	 *   <li><b>Pre-create the pool</b> before submitting any threads: call
-	 *       {@code getOrCreateJdbcTemplate + queryForList + release} so the pool
-	 *       sits idle in the {@code pools} map from the start. Evict threads see
-	 *       it on their very first iteration rather than waiting ~100ms for the
-	 *       acquire thread's first {@code createNewPool}.</li>
-	 *   <li><b>startLatch barrier</b>: all 11 threads call {@code startLatch.countDown()}
-	 *       followed by {@code startLatch.await()} before entering the main loop,
-	 *       so all threads begin spinning simultaneously. Without the barrier the
-	 *       executor may schedule the acquire thread first, letting it complete
-	 *       several iterations before evict threads start.</li>
-	 *   <li><b>AtomicBoolean done flag</b> (replaces fixed for-loop in evict threads):
-	 *       evict threads loop {@code while (!done.get()) { mgr.evictToTarget(0); }}
-	 *       for the entire duration of the acquire thread's 200 iterations. Fixed
-	 *       iteration counts fail because empty {@code evictToTarget(0)} calls
-	 *       (~0.01ms each) finish in ~2ms total, while the acquire thread's
-	 *       {@code createNewPool} takes ~100ms per slow-path iteration — evict
-	 *       threads exit before the pool is recreated, so iterations 1+ run
-	 *       unopposed. The flag-based loop keeps evict threads spinning when the
-	 *       pool reappears after each eviction.</li>
-	 * </ol>
-	 */
+	@Test
+	void shouldNotLoseReferencesDuringConcurrentAcquireReleaseAndEviction() throws Exception {
+		var mgr = createManager();
+		var start = new CountDownLatch(1);
+		var finished = new CountDownLatch(4);
+		try (var workers = Executors.newFixedThreadPool(5)) {
+			List<Future<?>> jobs = new ArrayList<>();
+			for (int i = 0; i < 4; i++) {
+				jobs.add(workers.submit(() -> {
+					start.await();
+					try {
+						for (int j = 0; j < 500; j++) {
+							var lease = mgr.getOrCreateJdbcTemplate("shared");
+							try {
+								assertEquals(1, lease.jdbcTemplate().queryForObject("SELECT 1", Integer.class));
+							} finally {
+								mgr.release("shared");
+							}
+						}
+					} finally {
+						finished.countDown();
+					}
+					return null;
+				}));
+			}
+			jobs.add(workers.submit(() -> {
+				start.await();
+				while (finished.getCount() > 0) mgr.evictToTarget(0);
+				return null;
+			}));
+			start.countDown();
+			for (var job : jobs) job.get(30, TimeUnit.SECONDS);
+		}
+		mgr.evictToTarget(0);
+		assertEquals(0, mgr.getPoolSize());
+	}
+
 	@Test
 	void shouldHandleConcurrentGetOrCreateAndEvict() throws Exception {
-		// 1 evict thread: keeps the pool in the map between acquires (low eviction
-		// pressure), so the acquire thread's fast-path pools.get returns the existing
-		// JdbcTemplate and the race window opens. With many evict threads (2+), the
-		// pool is evicted before the next acquire AND the fix-present path becomes
-		// flaky (CannotGetJdbcConnectionException under high createNewPool pressure).
 		int evictThreadCount = 1;
 		int acquireThreadCount = 1;
 		int threadCount = evictThreadCount + acquireThreadCount;
-		// 500 iterations: the TOCTOU race window is ~1µs (between pools.get and
-		// refCounts.incrementAndGet), so each iteration has a low race probability.
-		// 200 iterations never caught the regression; 500 iterations catches it
-		// reliably with the fix reverted (closedPoolErrors > 0 or errors list
-		// non-empty) while passing with the fix present.
 		int iterationsPerThread = 500;
 		String dbName = "concurrent_test";
 		var mgr = createManager();
-
-		// Change 1 — Pre-create the pool so evict threads see an idle pool from the
-		// very first iteration. Without this, the acquire thread's first
-		// getOrCreateJdbcTemplate goes through createNewPool (~100ms HikariDataSource
-		// startup) and all 10 evict threads finish their iterations before the pool
-		// exists in the pools map. (UAT 2026-07-01 Test 2 root cause.)
 		var preEntry = mgr.getOrCreateJdbcTemplate(dbName, "127.0.0.1");
 		preEntry.jdbcTemplate().queryForList("SELECT 1");
 		mgr.release(dbName);
 
 		CountDownLatch latch = new CountDownLatch(threadCount);
-		// Change 2 — startLatch barrier: all threads count down then await, so all
-		// begin spinning simultaneously. Without this the executor may schedule the
-		// acquire thread first and it could complete several iterations before evict
-		// threads start.
 		CountDownLatch startLatch = new CountDownLatch(threadCount);
-		// Change 3 — AtomicBoolean done flag: evict threads loop while (!done.get())
-		// for the entire duration of the acquire thread's iterations. Fixed iteration
-		// counts finish in ~2ms (empty evictToTarget(0) is ~0.01ms each) while the
-		// acquire thread's createNewPool takes ~100ms per slow-path iteration — evict
-		// threads would exit before the pool is recreated. The flag-based loop keeps
-		// evict threads spinning whenever the pool reappears after each eviction.
 		AtomicBoolean done = new AtomicBoolean(false);
 		AtomicInteger successCount = new AtomicInteger(0);
 		AtomicInteger closedPoolErrors = new AtomicInteger(0);
 		List<Throwable> errors = Collections.synchronizedList(new ArrayList<>());
 
 		try (ExecutorService executor = Executors.newFixedThreadPool(threadCount)) {
-			// 1 thread: acquire → queryForList → release, 200 iterations. Each release
-			// opens an idle window where evictToTarget(0) can target the pool. The next
-			// acquire races against evict — the TOCTOU gen check must catch any evict
-			// that lands between pools.get and refCounts.incrementAndGet.
 			for (int i = 0; i < acquireThreadCount; i++) {
 				executor.submit(() -> {
 					try {
@@ -167,14 +124,6 @@ class DatabasePoolManagerConcurrencyTest {
 						startLatch.await();
 						for (int j = 0; j < iterationsPerThread; j++) {
 							var entry = mgr.getOrCreateJdbcTemplate(dbName, "127.0.0.1");
-							// Sleep 10ms to let evict's closeQuietly (hds.close ~1ms) finish
-							// IF the TOCTOU race fired between pools.get and
-							// refCounts.incrementAndGet. With the fix present, the race is
-							// detected (gen != evictionGeneration) and createNewPool returns
-							// a fresh open pool — queryForList succeeds regardless of the
-							// sleep. With the fix reverted, the sleep gives hds.close() time
-							// to complete before queryForList runs, so queryForList throws
-							// "Failed to obtain JDBC Connection".
 							Thread.sleep(10);
 							entry.jdbcTemplate().queryForList("SELECT 1");
 							mgr.release(dbName);
@@ -182,11 +131,6 @@ class DatabasePoolManagerConcurrencyTest {
 						successCount.incrementAndGet();
 					} catch (Exception e) {
 						errors.add(e);
-						// Surface closed-pool errors specifically — these are the TOCTOU
-						// signature. HikariDataSource.close() makes subsequent queryForList
-						// throw "Connection is closed" / "Failed to obtain JDBC Connection"
-						// (CannotGetJdbcConnectionException wraps the underlying closed
-						// HikariDataSource error) or similar.
 						String msg = e.getMessage() == null ? "" : e.getMessage().toLowerCase();
 						if (msg.contains("closed") || msg.contains("has been closed")
 								|| msg.contains("failed to obtain")) {
@@ -198,11 +142,6 @@ class DatabasePoolManagerConcurrencyTest {
 					}
 				});
 			}
-			// 1 thread: evictToTarget(0) in a tight loop while !done — maintains
-			// race-window pressure throughout all 450 acquire iterations. 1 thread
-			// (not 10+) keeps the pool in the map between acquires — more evict
-			// threads evict the pool before the next acquire, so the race window
-			// never opens, and 2+ threads make the fix-present path flaky.
 			for (int i = 0; i < evictThreadCount; i++) {
 				executor.submit(() -> {
 					try {
@@ -228,7 +167,7 @@ class DatabasePoolManagerConcurrencyTest {
 						+ " iterations without closed JdbcTemplate errors");
 		assertEquals(0, closedPoolErrors.get(),
 				"TOCTOU race detected: handed out a closed JdbcTemplate " + closedPoolErrors.get()
-						+ " time(s) — fast-path gen check failed to roll back");
+						+ " time(s)");
 	}
 
 	/**

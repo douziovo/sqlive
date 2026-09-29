@@ -6,6 +6,10 @@ import com.douzi.sqlive.service.database.DatabasePoolManager;
 import com.douzi.sqlive.service.metadata.MetadataExtractor;
 import com.douzi.sqlive.service.sql.SqlParser;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.io.TempDir;
+import java.nio.file.Path;
+import java.nio.file.Files;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -27,9 +31,13 @@ import static org.junit.jupiter.api.Assertions.*;
 class SqlExecutionServiceTest {
 
 	private static String fullScript;
+	private final DatabasePoolManager poolManager = createPoolManager();
 	private final SqlExecutionService service = new SqlExecutionService(
-			createPoolManager(), new SqlParser(), new MetadataExtractor());
+			poolManager, new SqlParser(), new MetadataExtractor());
 	private String dbSuffix;
+
+	@AfterEach
+	void cleanupPools() { poolManager.cleanup(); }
 
 	private static DatabasePoolManager createPoolManager() {
 		var props = new PoolProperties();
@@ -797,22 +805,22 @@ class SqlExecutionServiceTest {
 	}
 
 	// ============================================================
-	//  D-06/D-07/D-08: clearDatabase FK-safe topological drop (no PRAGMA toggle)
+	//  D-06/D-07/D-08: clearDatabase with foreign key enforcement
 	// ============================================================
 
 	@Test
-	void shouldDropTablesInFkDependencyOrderWithoutPragmaToggle() {
+	void shouldResetRelatedTables() {
 		// Setup: parent + child with FK (child.pid REFERENCES parent(id))
 		String setup = "CREATE TABLE parent (id INTEGER PRIMARY KEY); " +
 				"CREATE TABLE child (id INTEGER PRIMARY KEY, pid INTEGER REFERENCES parent(id));";
 		SqlResponse r1 = service.execute(setup, db("fksort"), true);
 		assertTrue(r1.isSuccess(), "setup should succeed");
 
-		// Trigger clearDatabase via reset=true — must drop both tables without PRAGMA foreign_keys toggle (D-08).
+		// Trigger clearDatabase via reset=true — must drop both tables.
 		SqlResponse r2 = service.execute("SELECT 1;", db("fksort"), true);
-		assertTrue(r2.isSuccess(), "clearDatabase should succeed without PRAGMA foreign_keys toggle");
+		assertTrue(r2.isSuccess(), "clearDatabase should succeed");
 
-		// Verify both tables are gone (clearDatabase dropped them in FK-safe order: child first, parent last).
+		// Verify both tables are gone (clearDatabase dropped all objects).
 		SqlResponse r3 = service.execute(
 				"SELECT name FROM sqlite_master WHERE type='table' AND name IN ('parent','child');",
 				db("fksort"), false);
@@ -822,22 +830,20 @@ class SqlExecutionServiceTest {
 	}
 
 	@Test
-	void shouldHandleFkCycleInClearDatabase() {
-		// Synthetic FK cycle: a → b, b → a — Kahn's queue empties after 0 iterations,
-		// cycle fallback must append both unvisited tables in arbitrary order (D-07).
-		ForeignKeyInfo fk1 = new ForeignKeyInfo();
-		fk1.setFromTable("a");
-		fk1.setToTable("b");
-		ForeignKeyInfo fk2 = new ForeignKeyInfo();
-		fk2.setFromTable("b");
-		fk2.setToTable("a");
-		List<ForeignKeyInfo> cycleFks = List.of(fk1, fk2);
-
-		List<String> dropOrder = service.topologicalSortTables(List.of("a", "b"), cycleFks);
-
-		assertEquals(2, dropOrder.size(), "cycle fallback must append all unvisited tables");
-		assertTrue(dropOrder.contains("a"), "table 'a' must be in drop order");
-		assertTrue(dropOrder.contains("b"), "table 'b' must be in drop order");
+	void shouldResetPopulatedForeignKeyCyclesAndRestoreEnforcement() {
+		String name = db("fk_cycle");
+		String setup = """
+				CREATE TABLE a (id INTEGER PRIMARY KEY, bid INTEGER REFERENCES b(id));
+				CREATE TABLE b (id INTEGER PRIMARY KEY, aid INTEGER REFERENCES a(id));
+				INSERT INTO a VALUES (1, NULL);
+				INSERT INTO b VALUES (1, 1);
+				UPDATE a SET bid = 1;
+				""";
+		assertTrue(service.execute(setup, name, true).isSuccess());
+		assertTrue(service.execute(setup, name, true).isSuccess(), "reset must handle populated FK cycles");
+		var invalid = service.execute("INSERT INTO a VALUES (2, 999);", name, false);
+		assertFalse(invalid.isSuccess());
+		assertTrue(invalid.getError().getMessage().contains("FOREIGN KEY"));
 	}
 
 	// ============================================================
@@ -1234,4 +1240,47 @@ class SqlExecutionServiceTest {
 		assertEquals(19, r.getData().getCanonicalStatements().get(1).getEnd(),
 				"end == script.length() for the trailing statement");
 	}
+	@Test
+	void shouldBlockAttachExpressionsAndCommentVariants() {
+		for (String sql : List.of(
+				"ATTACH (':memory:') AS aux;", "ATTACH \":memory:\" AS aux;",
+				"ATTACH/**/DATABASE ':memory:' AS aux;",
+				"/* lead */ ATTACH(':memory:') AS aux;",
+				"EXPLAIN ATTACH ':memory:' AS aux;", "\uFEFFATTACH ':memory:' AS aux;")) {
+			var result = service.execute(sql, db("attach_variants"), true);
+			assertFalse(result.isSuccess(), sql);
+			assertEquals(SqlExecutionService.DEFAULT_ATTACH_ERROR, result.getError().getMessage(), sql);
+		}
+	}
+
+	@Test
+	void shouldBlockFileOperationsWithoutCreatingFiles(@TempDir Path dir) {
+		Path target = dir.resolve("export.db");
+		String filename = target.toString().replace("'", "''");
+		for (String sql : List.of("VACUUM INTO '" + filename + "';",
+				"VACUUM/**/main/**/INTO ('" + filename + "');",
+				"EXPLAIN VACUUM INTO '" + filename + "';",
+				"backup to '" + filename + "'", "restore from '" + filename + "'")) {
+			var result = service.execute(sql, db("file_ops"), true);
+			assertFalse(result.isSuccess(), sql);
+			assertTrue(result.getError().getMessage().contains("not allowed"), sql);
+			assertFalse(Files.exists(target), "blocked SQL must not create a file");
+		}
+	}
+
+	@Test
+	void shouldAllowDangerousWordsInStringValues() {
+		assertTrue(service.execute("SELECT 'ATTACH DATABASE', 'VACUUM INTO', 'PRAGMA foreign_keys';",
+				db("literal"), true).isSuccess());
+	}
+
+	@Test
+	void shouldRejectForeignKeyViolations() {
+		var result = service.execute("CREATE TABLE p (id INTEGER PRIMARY KEY);"
+				+ "CREATE TABLE c (pid INTEGER REFERENCES p(id)); INSERT INTO c VALUES (999);",
+				db("invalid_fk"), true);
+		assertFalse(result.isSuccess());
+		assertTrue(result.getError().getMessage().contains("FOREIGN KEY"));
+	}
+
 }
