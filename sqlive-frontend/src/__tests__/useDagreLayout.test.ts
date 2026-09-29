@@ -1,6 +1,6 @@
-import type {Edge, Node} from '@vue-flow/core'
-import {describe, expect, it} from 'vitest'
-import {layoutNodes} from '@/composables/useDagreLayout'
+import type { Edge, Node } from '@vue-flow/core'
+import { describe, expect, it } from 'vitest'
+import { layoutNodes } from '@/composables/useDagreLayout'
 
 describe('useDagreLayout', () => {
     // ============================================================
@@ -9,10 +9,10 @@ describe('useDagreLayout', () => {
 
     it('layouts nodes using dagre', () => {
         const nodes: Node[] = [
-            {id: 'a', type: 'test', position: {x: 0, y: 0}, data: {}},
-            {id: 'b', type: 'test', position: {x: 0, y: 0}, data: {}}
+            { id: 'a', type: 'test', position: { x: 0, y: 0 }, data: {} },
+            { id: 'b', type: 'test', position: { x: 0, y: 0 }, data: {} }
         ]
-        const edges: Edge[] = [{id: 'e1', source: 'a', target: 'b'}]
+        const edges: Edge[] = [{ id: 'e1', source: 'a', target: 'b' }]
 
         const result = layoutNodes(nodes, edges)
 
@@ -22,8 +22,8 @@ describe('useDagreLayout', () => {
     })
 
     it('respects custom options', () => {
-        const nodes: Node[] = [{id: 'a', type: 't', position: {x: 0, y: 0}, data: {}}]
-        const result = layoutNodes(nodes, [], null, {rankdir: 'TB'})
+        const nodes: Node[] = [{ id: 'a', type: 't', position: { x: 0, y: 0 }, data: {} }]
+        const result = layoutNodes(nodes, [], null, { rankdir: 'TB' })
         expect(result).toHaveLength(1)
     })
 
@@ -37,7 +37,9 @@ describe('useDagreLayout', () => {
     })
 
     it('handles single node with no edges', () => {
-        const nodes: Node[] = [{id: 'solo', type: 't', position: {x: 0, y: 0}, data: {label: 'alone'}}]
+        const nodes: Node[] = [
+            { id: 'solo', type: 't', position: { x: 0, y: 0 }, data: { label: 'alone' } }
+        ]
         const result = layoutNodes(nodes, [])
         expect(result).toHaveLength(1)
         expect(result[0].id).toBe('solo')
@@ -48,9 +50,9 @@ describe('useDagreLayout', () => {
 
     it('handles disconnected nodes (no edges between them)', () => {
         const nodes: Node[] = [
-            {id: 'a', type: 't', position: {x: 0, y: 0}, data: {}},
-            {id: 'b', type: 't', position: {x: 0, y: 0}, data: {}},
-            {id: 'c', type: 't', position: {x: 0, y: 0}, data: {}}
+            { id: 'a', type: 't', position: { x: 0, y: 0 }, data: {} },
+            { id: 'b', type: 't', position: { x: 0, y: 0 }, data: {} },
+            { id: 'c', type: 't', position: { x: 0, y: 0 }, data: {} }
         ]
         const result = layoutNodes(nodes, [])
         expect(result).toHaveLength(3)
@@ -66,13 +68,13 @@ describe('useDagreLayout', () => {
 
     it('positions connected nodes apart (not stacked at origin)', () => {
         const nodes: Node[] = [
-            {id: 'a', type: 't', position: {x: 0, y: 0}, data: {}},
-            {id: 'b', type: 't', position: {x: 0, y: 0}, data: {}},
-            {id: 'c', type: 't', position: {x: 0, y: 0}, data: {}}
+            { id: 'a', type: 't', position: { x: 0, y: 0 }, data: {} },
+            { id: 'b', type: 't', position: { x: 0, y: 0 }, data: {} },
+            { id: 'c', type: 't', position: { x: 0, y: 0 }, data: {} }
         ]
         const edges: Edge[] = [
-            {id: 'e1', source: 'a', target: 'b'},
-            {id: 'e2', source: 'b', target: 'c'}
+            { id: 'e1', source: 'a', target: 'b' },
+            { id: 'e2', source: 'b', target: 'c' }
         ]
         const result = layoutNodes(nodes, edges)
 
@@ -83,10 +85,20 @@ describe('useDagreLayout', () => {
 
     it('preserves node properties after layout', () => {
         const nodes: Node[] = [
-            {id: 'a', type: 'custom', position: {x: 0, y: 0}, data: {tableName: 'users', columns: ['id', 'name']}},
-            {id: 'b', type: 'custom', position: {x: 0, y: 0}, data: {tableName: 'posts', columns: ['id', 'user_id']}}
+            {
+                id: 'a',
+                type: 'custom',
+                position: { x: 0, y: 0 },
+                data: { tableName: 'users', columns: ['id', 'name'] }
+            },
+            {
+                id: 'b',
+                type: 'custom',
+                position: { x: 0, y: 0 },
+                data: { tableName: 'posts', columns: ['id', 'user_id'] }
+            }
         ]
-        const edges: Edge[] = [{id: 'e1', source: 'a', target: 'b'}]
+        const edges: Edge[] = [{ id: 'e1', source: 'a', target: 'b' }]
         const result = layoutNodes(nodes, edges)
 
         // Preserve id, type, data
@@ -103,10 +115,10 @@ describe('useDagreLayout', () => {
 
     it('produces consistent positions on re-layout with same input', () => {
         const nodes: Node[] = [
-            {id: 'a', type: 't', position: {x: 0, y: 0}, data: {}},
-            {id: 'b', type: 't', position: {x: 0, y: 0}, data: {}}
+            { id: 'a', type: 't', position: { x: 0, y: 0 }, data: {} },
+            { id: 'b', type: 't', position: { x: 0, y: 0 }, data: {} }
         ]
-        const edges: Edge[] = [{id: 'e1', source: 'a', target: 'b'}]
+        const edges: Edge[] = [{ id: 'e1', source: 'a', target: 'b' }]
 
         const first = layoutNodes(nodes, edges)
         // Simulate re-layout: pass nodes with current positions (as would happen on panel reopen)
@@ -125,10 +137,10 @@ describe('useDagreLayout', () => {
 
     it('layouts top-to-bottom by default', () => {
         const nodes: Node[] = [
-            {id: 'a', type: 't', position: {x: 0, y: 0}, data: {}},
-            {id: 'b', type: 't', position: {x: 0, y: 0}, data: {}}
+            { id: 'a', type: 't', position: { x: 0, y: 0 }, data: {} },
+            { id: 'b', type: 't', position: { x: 0, y: 0 }, data: {} }
         ]
-        const edges: Edge[] = [{id: 'e1', source: 'a', target: 'b'}]
+        const edges: Edge[] = [{ id: 'e1', source: 'a', target: 'b' }]
         const result = layoutNodes(nodes, edges)
 
         // TB layout: target should be below source
@@ -137,11 +149,11 @@ describe('useDagreLayout', () => {
 
     it('layouts top-to-bottom when rankdir is TB', () => {
         const nodes: Node[] = [
-            {id: 'a', type: 't', position: {x: 0, y: 0}, data: {}},
-            {id: 'b', type: 't', position: {x: 0, y: 0}, data: {}}
+            { id: 'a', type: 't', position: { x: 0, y: 0 }, data: {} },
+            { id: 'b', type: 't', position: { x: 0, y: 0 }, data: {} }
         ]
-        const edges: Edge[] = [{id: 'e1', source: 'a', target: 'b'}]
-        const result = layoutNodes(nodes, edges, null, {rankdir: 'TB'})
+        const edges: Edge[] = [{ id: 'e1', source: 'a', target: 'b' }]
+        const result = layoutNodes(nodes, edges, null, { rankdir: 'TB' })
 
         // TB layout: target should be below source
         expect(result[1].position.y).toBeGreaterThan(result[0].position.y)

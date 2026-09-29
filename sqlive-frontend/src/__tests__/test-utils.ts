@@ -1,23 +1,23 @@
-import {vi} from 'vitest'
-import type {useAiChat} from '../composables/useAiChat'
-import type {useSqlEngine} from '../composables/useSqlEngine'
-import {API_URL} from '../config'
+import { vi } from 'vitest'
+import type { useAiChat } from '../composables/useAiChat'
+import type { useSqlEngine } from '../composables/useSqlEngine'
+import { API_URL } from '../config'
 
 export function jsonOk(data: any) {
     return Promise.resolve({
         status: 200,
         ok: true,
         json: () => Promise.resolve(data),
-        headers: {get: () => null}
+        headers: { get: () => null }
     })
 }
 
 export function mockSuccess(fetchSpy: ReturnType<typeof vi.fn>, data: any) {
-    fetchSpy.mockResolvedValue(jsonOk({success: true, data}))
+    fetchSpy.mockResolvedValue(jsonOk({ success: true, data }))
 }
 
 export function mockError(fetchSpy: ReturnType<typeof vi.fn>, message: string, line: number) {
-    fetchSpy.mockResolvedValue(jsonOk({success: false, error: {message, line}}))
+    fetchSpy.mockResolvedValue(jsonOk({ success: false, error: { message, line } }))
 }
 
 export function mockReject(fetchSpy: ReturnType<typeof vi.fn>, err: Error) {
@@ -40,7 +40,7 @@ export async function setupSqlEngine(): Promise<SqlEngineSetup> {
     vi.resetModules()
     const mod = await import('../composables/useSqlEngine')
     const useSqlEngine = mod.useSqlEngine
-    return {useSqlEngine, fetchSpy}
+    return { useSqlEngine, fetchSpy }
 }
 
 export interface AiChatSetup {
@@ -74,7 +74,7 @@ export async function setupAiChat(): Promise<AiChatSetup> {
     vi.resetModules()
     const mod = await import('../composables/useAiChat')
     const useAiChat = mod.useAiChat
-    return {useAiChat, fetchSpy}
+    return { useAiChat, fetchSpy }
 }
 
 export function teardownSqlEngine() {
@@ -82,4 +82,4 @@ export function teardownSqlEngine() {
     vi.restoreAllMocks()
 }
 
-export {API_URL}
+export { API_URL }

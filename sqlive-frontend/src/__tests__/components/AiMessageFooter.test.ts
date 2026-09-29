@@ -1,18 +1,18 @@
-import {mount} from '@vue/test-utils'
-import {describe, expect, it} from 'vitest'
+import { mount } from '@vue/test-utils'
+import { describe, expect, it } from 'vitest'
 import AiMessageFooter from '../../components/AiMessageFooter.vue'
 
 describe('AiMessageFooter', () => {
     it('does not render when endTime is not provided', () => {
         const wrapper = mount(AiMessageFooter, {
-            props: {startTime: 1000}
+            props: { startTime: 1000 }
         })
         expect(wrapper.text()).toBe('')
     })
 
     it('renders time in seconds', () => {
         const wrapper = mount(AiMessageFooter, {
-            props: {startTime: 1000, endTime: 5000}
+            props: { startTime: 1000, endTime: 5000 }
         })
         expect(wrapper.text()).toContain('4.0s')
     })
@@ -22,7 +22,7 @@ describe('AiMessageFooter', () => {
             props: {
                 startTime: 1000,
                 endTime: 5000,
-                usage: {promptTokens: 100, completionTokens: 50, totalTokens: 150}
+                usage: { promptTokens: 100, completionTokens: 50, totalTokens: 150 }
             }
         })
         expect(wrapper.text()).toContain('150 tokens')
@@ -34,7 +34,7 @@ describe('AiMessageFooter', () => {
                 startTime: 1000,
                 endTime: 5000,
                 firstTokenTime: 1200,
-                usage: {promptTokens: 100, completionTokens: 76, totalTokens: 176}
+                usage: { promptTokens: 100, completionTokens: 76, totalTokens: 176 }
             }
         })
         // completionTokens (76) / (endTime - firstTokenTime) (3.8s) = 20.0
@@ -46,7 +46,7 @@ describe('AiMessageFooter', () => {
             props: {
                 startTime: 1000,
                 endTime: 5000,
-                usage: {promptTokens: 100, completionTokens: 50, totalTokens: 150}
+                usage: { promptTokens: 100, completionTokens: 50, totalTokens: 150 }
             }
         })
         expect(wrapper.text()).toContain('— token/s')
@@ -54,7 +54,7 @@ describe('AiMessageFooter', () => {
 
     it('renders placeholder tokens when usage is not provided', () => {
         const wrapper = mount(AiMessageFooter, {
-            props: {startTime: 1000, endTime: 5000}
+            props: { startTime: 1000, endTime: 5000 }
         })
         expect(wrapper.text()).toContain('— tokens')
     })
@@ -65,7 +65,7 @@ describe('AiMessageFooter', () => {
                 startTime: 1000,
                 endTime: 5000,
                 firstTokenTime: 5000,
-                usage: {promptTokens: 10, completionTokens: 100, totalTokens: 110}
+                usage: { promptTokens: 10, completionTokens: 100, totalTokens: 110 }
             }
         })
         // genTime = 0, so tps should be null → shows placeholder

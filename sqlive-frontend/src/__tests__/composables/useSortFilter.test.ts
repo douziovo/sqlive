@@ -1,5 +1,5 @@
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
-import {type SortField, useSortFilter} from '@/composables/useSortFilter'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { type SortField, useSortFilter } from '@/composables/useSortFilter'
 
 interface Item {
     id: number
@@ -9,16 +9,16 @@ interface Item {
 
 function makeItems(): Item[] {
     return [
-        {id: 1, name: 'Alice', count: 10},
-        {id: 2, name: 'Bob', count: 30},
-        {id: 3, name: 'Cathy', count: 20}
+        { id: 1, name: 'Alice', count: 10 },
+        { id: 2, name: 'Bob', count: 30 },
+        { id: 3, name: 'Cathy', count: 20 }
     ]
 }
 
 function makeFields(): SortField<Item>[] {
     return [
-        {key: 'name', label: '名称', compare: (a, b) => a.name.localeCompare(b.name)},
-        {key: 'count', label: '数量', compare: (a, b) => a.count - b.count}
+        { key: 'name', label: '名称', compare: (a, b) => a.name.localeCompare(b.name) },
+        { key: 'count', label: '数量', compare: (a, b) => a.count - b.count }
     ]
 }
 
@@ -41,12 +41,12 @@ describe('useSortFilter', () => {
 
     it('returns all items initially with no filter or sort', () => {
         const items = vi.fn(makeItems)
-        const {result} = useSortFilter(items, makeFields(), nameFilter)
+        const { result } = useSortFilter(items, makeFields(), nameFilter)
         expect(result.value).toHaveLength(3)
     })
 
     it('filters items by name', async () => {
-        const {result, filterText} = useSortFilter(() => makeItems(), makeFields(), nameFilter)
+        const { result, filterText } = useSortFilter(() => makeItems(), makeFields(), nameFilter)
         filterText.value = 'ali'
         await advanceDebounce()
         expect(result.value).toHaveLength(1)
@@ -54,7 +54,7 @@ describe('useSortFilter', () => {
     })
 
     it('filters items by numeric field', async () => {
-        const {result, filterText} = useSortFilter(() => makeItems(), makeFields(), nameFilter)
+        const { result, filterText } = useSortFilter(() => makeItems(), makeFields(), nameFilter)
         filterText.value = '20'
         await advanceDebounce()
         expect(result.value).toHaveLength(1)
@@ -62,14 +62,14 @@ describe('useSortFilter', () => {
     })
 
     it('returns all items when filter is empty', async () => {
-        const {result, filterText} = useSortFilter(() => makeItems(), makeFields(), nameFilter)
+        const { result, filterText } = useSortFilter(() => makeItems(), makeFields(), nameFilter)
         filterText.value = ''
         await advanceDebounce()
         expect(result.value).toHaveLength(3)
     })
 
     it('filters case-insensitively', async () => {
-        const {result, filterText} = useSortFilter(() => makeItems(), makeFields(), nameFilter)
+        const { result, filterText } = useSortFilter(() => makeItems(), makeFields(), nameFilter)
         filterText.value = 'BOB'
         await advanceDebounce()
         expect(result.value).toHaveLength(1)
@@ -77,27 +77,27 @@ describe('useSortFilter', () => {
     })
 
     it('returns empty when no items match filter', async () => {
-        const {result, filterText} = useSortFilter(() => makeItems(), makeFields(), nameFilter)
+        const { result, filterText } = useSortFilter(() => makeItems(), makeFields(), nameFilter)
         filterText.value = 'zzz'
         await advanceDebounce()
         expect(result.value).toHaveLength(0)
     })
 
     it('sorts by name ascending', () => {
-        const {result, toggleSort} = useSortFilter(() => makeItems(), makeFields(), nameFilter)
+        const { result, toggleSort } = useSortFilter(() => makeItems(), makeFields(), nameFilter)
         toggleSort('name')
         expect(result.value.map((i) => i.name)).toEqual(['Alice', 'Bob', 'Cathy'])
     })
 
     it('sorts by name descending on second toggle', () => {
-        const {result, toggleSort} = useSortFilter(() => makeItems(), makeFields(), nameFilter)
+        const { result, toggleSort } = useSortFilter(() => makeItems(), makeFields(), nameFilter)
         toggleSort('name')
         toggleSort('name')
         expect(result.value.map((i) => i.name)).toEqual(['Cathy', 'Bob', 'Alice'])
     })
 
     it('cancels sort on third toggle', () => {
-        const {result, toggleSort} = useSortFilter(() => makeItems(), makeFields(), nameFilter)
+        const { result, toggleSort } = useSortFilter(() => makeItems(), makeFields(), nameFilter)
         toggleSort('name')
         toggleSort('name')
         toggleSort('name')
@@ -105,14 +105,18 @@ describe('useSortFilter', () => {
     })
 
     it('switches sort column on different key', () => {
-        const {result, toggleSort} = useSortFilter(() => makeItems(), makeFields(), nameFilter)
+        const { result, toggleSort } = useSortFilter(() => makeItems(), makeFields(), nameFilter)
         toggleSort('name')
         toggleSort('count')
         expect(result.value.map((i) => i.count)).toEqual([10, 20, 30])
     })
 
     it('chains filter then sort', async () => {
-        const {result, filterText, toggleSort} = useSortFilter(() => makeItems(), makeFields(), nameFilter)
+        const { result, filterText, toggleSort } = useSortFilter(
+            () => makeItems(),
+            makeFields(),
+            nameFilter
+        )
         filterText.value = '1'
         await advanceDebounce()
         // Alice count=10 includes '1', Bob count=30 (no '1'), Cathy count=20 (no '1')
@@ -127,7 +131,7 @@ describe('useSortFilter', () => {
     })
 
     it('debounces filter by 200ms', async () => {
-        const {result, filterText} = useSortFilter(() => makeItems(), makeFields(), nameFilter)
+        const { result, filterText } = useSortFilter(() => makeItems(), makeFields(), nameFilter)
 
         filterText.value = 'ali'
         // Immediately after setting, debounce hasn't fired yet
@@ -139,7 +143,11 @@ describe('useSortFilter', () => {
     })
 
     it('totalCount reflects all items, filteredCount reflects current result', async () => {
-        const {totalCount, filteredCount, filterText} = useSortFilter(() => makeItems(), makeFields(), nameFilter)
+        const { totalCount, filteredCount, filterText } = useSortFilter(
+            () => makeItems(),
+            makeFields(),
+            nameFilter
+        )
         expect(totalCount.value).toBe(3)
         expect(filteredCount.value).toBe(3)
 
@@ -150,7 +158,11 @@ describe('useSortFilter', () => {
     })
 
     it('handles empty items array', () => {
-        const {result, totalCount, filteredCount} = useSortFilter(() => [], makeFields(), nameFilter)
+        const { result, totalCount, filteredCount } = useSortFilter(
+            () => [],
+            makeFields(),
+            nameFilter
+        )
         expect(result.value).toHaveLength(0)
         expect(totalCount.value).toBe(0)
         expect(filteredCount.value).toBe(0)

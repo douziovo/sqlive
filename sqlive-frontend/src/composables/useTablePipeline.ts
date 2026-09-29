@@ -1,7 +1,7 @@
-import {computed, ref} from 'vue'
-import type {Row} from '../model/DatabaseTypes'
-import {isNumericType} from '../utils/sql'
-import {useSortFilter} from './useSortFilter'
+import { computed, ref } from 'vue'
+import type { Row } from '../model/DatabaseTypes'
+import { isNumericType } from '../utils/sql'
+import { useSortFilter } from './useSortFilter'
 
 export function useTablePipeline(data: () => Row[], columnTypes: () => Record<string, string>) {
     const filterColumns = ref<string[]>([])
@@ -9,7 +9,8 @@ export function useTablePipeline(data: () => Row[], columnTypes: () => Record<st
 
     // Build dynamic sort fields from current data columns
     const sortFields = computed(() => {
-        const cols = filterColumns.value.length > 0 ? filterColumns.value : Object.keys(data()[0] || {})
+        const cols =
+            filterColumns.value.length > 0 ? filterColumns.value : Object.keys(data()[0] || {})
         const types = columnTypes()
         return cols.map((col) => ({
             key: col,
@@ -19,7 +20,11 @@ export function useTablePipeline(data: () => Row[], columnTypes: () => Record<st
                     bv = b[col]
                 if (av === null || av === undefined) return 1
                 if (bv === null || bv === undefined) return -1
-                if (isNumericType(types[col] || '') && !Number.isNaN(Number(av)) && !Number.isNaN(Number(bv))) {
+                if (
+                    isNumericType(types[col] || '') &&
+                    !Number.isNaN(Number(av)) &&
+                    !Number.isNaN(Number(bv))
+                ) {
                     return Number(av) - Number(bv)
                 }
                 return String(av).localeCompare(String(bv))
@@ -35,7 +40,7 @@ export function useTablePipeline(data: () => Row[], columnTypes: () => Record<st
         })
     }
 
-    const pipeline = useSortFilter(data, sortFields, filterFn, {pageSize})
+    const pipeline = useSortFilter(data, sortFields, filterFn, { pageSize })
 
     return {
         sortColumn: pipeline.sortKey,

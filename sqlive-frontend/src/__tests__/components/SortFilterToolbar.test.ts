@@ -1,11 +1,11 @@
-import {mount} from '@vue/test-utils'
-import {describe, expect, it} from 'vitest'
-import type {SortFieldDef} from '../../components/SortFilterToolbar.vue'
+import { mount } from '@vue/test-utils'
+import { describe, expect, it } from 'vitest'
+import type { SortFieldDef } from '../../components/SortFilterToolbar.vue'
 import SortFilterToolbar from '../../components/SortFilterToolbar.vue'
 
 const fields: SortFieldDef[] = [
-    {key: 'name', label: '名称'},
-    {key: 'count', label: '数量'}
+    { key: 'name', label: '名称' },
+    { key: 'count', label: '数量' }
 ]
 
 function mountToolbar(overrides: Record<string, any> = {}) {

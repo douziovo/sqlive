@@ -1,4 +1,4 @@
-import {describe, expect, it} from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
     extractSqlFromMarkdown,
     formatErrorAnalysis,
@@ -28,7 +28,7 @@ describe('formatErrorAnalysis', () => {
     })
 
     it('handles summary only', () => {
-        const result = formatErrorAnalysis({summary: 'Syntax error'})
+        const result = formatErrorAnalysis({ summary: 'Syntax error' })
         expect(result).toContain('Syntax error')
         expect(result).not.toContain('详细分析')
         expect(result).not.toContain('如何避免')
@@ -40,13 +40,17 @@ describe('formatErrorAnalysis', () => {
     })
 
     it('handles undefined tips', () => {
-        const result = formatErrorAnalysis({summary: 'Error', content: 'Details', fixedCode: 'SELECT 1'})
+        const result = formatErrorAnalysis({
+            summary: 'Error',
+            content: 'Details',
+            fixedCode: 'SELECT 1'
+        })
         expect(result).toContain('Error')
         expect(result).not.toContain('如何避免')
     })
 
     it('handles fixedCode with SQL formatting', () => {
-        const result = formatErrorAnalysis({fixedCode: 'CREATE TABLE t (id INT);'})
+        const result = formatErrorAnalysis({ fixedCode: 'CREATE TABLE t (id INT);' })
         expect(result).toContain('```sql')
         expect(result).toContain('CREATE TABLE t (id INT);')
     })
@@ -57,8 +61,12 @@ describe('formatFixCode', () => {
 
     it('formats with all fields', () => {
         const result = formatFixCode(
-            {summary: 'Fixed typo', fixedCode: 'SELECT 1;', explanation: 'SELEKT should be SELECT'},
-            {originalCode}
+            {
+                summary: 'Fixed typo',
+                fixedCode: 'SELECT 1;',
+                explanation: 'SELEKT should be SELECT'
+            },
+            { originalCode }
         )
         expect(result).toContain('修复方案')
         expect(result).toContain('Fixed typo')
@@ -70,13 +78,16 @@ describe('formatFixCode', () => {
     })
 
     it('handles fixedCode only', () => {
-        const result = formatFixCode({fixedCode: 'SELECT 1;'}, {originalCode})
+        const result = formatFixCode({ fixedCode: 'SELECT 1;' }, { originalCode })
         expect(result).toContain('SELECT 1;')
         expect(result).toContain('SELEKT 1;')
     })
 
     it('includes original code in markdown block', () => {
-        const result = formatFixCode({fixedCode: 'SELECT 1;'}, {originalCode: 'SELECT *\nFROM t'})
+        const result = formatFixCode(
+            { fixedCode: 'SELECT 1;' },
+            { originalCode: 'SELECT *\nFROM t' }
+        )
         expect(result).toContain('```sql')
         expect(result).toContain('SELECT *')
         expect(result).toContain('FROM t')
@@ -88,8 +99,8 @@ describe('formatExplain', () => {
         const result = formatExplain({
             summary: 'Simple SELECT',
             stepByStep: [
-                {step: 1, what: 'SELECT', why: 'Selects columns'},
-                {step: 2, what: 'FROM', why: 'Specifies table'}
+                { step: 1, what: 'SELECT', why: 'Selects columns' },
+                { step: 2, what: 'FROM', why: 'Specifies table' }
             ],
             tips: ['Use aliases']
         })
@@ -104,12 +115,12 @@ describe('formatExplain', () => {
     })
 
     it('formats with content field', () => {
-        const result = formatExplain({content: 'Additional details here'})
+        const result = formatExplain({ content: 'Additional details here' })
         expect(result).toContain('Additional details here')
     })
 
     it('handles summary only', () => {
-        const result = formatExplain({summary: 'Just a summary'})
+        const result = formatExplain({ summary: 'Just a summary' })
         expect(result).toContain('Just a summary')
         expect(result).not.toContain('逐句拆解')
     })
@@ -120,7 +131,7 @@ describe('formatExplain', () => {
     })
 
     it('still formats content when stepByStep is empty array', () => {
-        const result = formatExplain({summary: 'S', stepByStep: [], tips: []})
+        const result = formatExplain({ summary: 'S', stepByStep: [], tips: [] })
         expect(result).toContain('S')
         expect(result).not.toContain('0.')
     })
@@ -136,7 +147,7 @@ describe('formatOptimize', () => {
                 fixedCode: 'SELECT * FROM t WITH (INDEX(idx))',
                 explanation: 'Using index improves performance'
             },
-            {selectedCode}
+            { selectedCode }
         )
         expect(result).toContain('优化建议')
         expect(result).toContain('Use index hint')
@@ -148,24 +159,27 @@ describe('formatOptimize', () => {
     })
 
     it('reads fixedCode directly', () => {
-        const result = formatOptimize({fixedCode: 'SELECT * FROM t WHERE 1=1'}, {selectedCode})
+        const result = formatOptimize({ fixedCode: 'SELECT * FROM t WHERE 1=1' }, { selectedCode })
         expect(result).toContain('SELECT * FROM t WHERE 1=1')
     })
 
     it('includes content field', () => {
-        const result = formatOptimize({content: 'Extra info', fixedCode: 'SELECT 1'}, {selectedCode})
+        const result = formatOptimize(
+            { content: 'Extra info', fixedCode: 'SELECT 1' },
+            { selectedCode }
+        )
         expect(result).toContain('Extra info')
         expect(result).toContain('SELECT 1')
     })
 
     it('handles summary only', () => {
-        const result = formatOptimize({summary: 'Small improvement'}, {selectedCode})
+        const result = formatOptimize({ summary: 'Small improvement' }, { selectedCode })
         expect(result).toContain('Small improvement')
         expect(result).not.toContain('原始代码')
     })
 
     it('handles empty data', () => {
-        const result = formatOptimize({}, {selectedCode})
+        const result = formatOptimize({}, { selectedCode })
         expect(result).toBe('')
     })
 })

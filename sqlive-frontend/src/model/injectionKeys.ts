@@ -1,7 +1,7 @@
-import type {ComputedRef, InjectionKey, Ref} from 'vue'
-import type {AiActions} from '../composables/useAiChat'
-import type {DatabaseModel, HighlightState, InsertResult, TruncationInfo} from './DatabaseTypes'
-import type {SchemaTableInfo} from './SchemaTypes'
+import type { ComputedRef, InjectionKey, Ref } from 'vue'
+import type { AiActions } from '../composables/useAiChat'
+import type { DatabaseModel, HighlightState, InsertResult, TruncationInfo } from './DatabaseTypes'
+import type { SchemaTableInfo } from './SchemaTypes'
 
 export interface SqlContext {
     tabs: Ref<{ id: string; name: string; code: string; dbName: string; isModified: boolean }[]>

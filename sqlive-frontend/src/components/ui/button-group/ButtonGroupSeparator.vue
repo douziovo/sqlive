@@ -6,19 +6,21 @@ import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 
 const props = withDefaults(defineProps<SeparatorProps & { class?: HTMLAttributes['class'] }>(), {
-  orientation: 'vertical'
+    orientation: 'vertical'
 })
 const delegatedProps = reactiveOmit(props, 'class')
 </script>
 
 <template>
-  <Separator
-    data-slot="button-group-separator"
-    v-bind="delegatedProps"
-    :orientation="props.orientation"
-    :class="cn(
-      'bg-input relative !m-0 self-stretch data-[orientation=vertical]:h-auto',
-      props.class,
-    )"
-  />
+    <Separator
+        data-slot="button-group-separator"
+        v-bind="delegatedProps"
+        :orientation="props.orientation"
+        :class="
+            cn(
+                'bg-input relative !m-0 self-stretch data-[orientation=vertical]:h-auto',
+                props.class
+            )
+        "
+    />
 </template>

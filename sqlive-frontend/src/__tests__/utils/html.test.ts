@@ -1,5 +1,5 @@
-import {describe, expect, it} from 'vitest'
-import {escapeHtml} from '@/utils/html'
+import { describe, expect, it } from 'vitest'
+import { escapeHtml } from '@/utils/html'
 
 describe('escapeHtml', () => {
     it('returns empty string for empty input', () => {

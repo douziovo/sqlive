@@ -1,4 +1,8 @@
-import type {EChartsOption} from 'echarts'
+import type { EChartsOption } from 'echarts'
+
+type ChartOption = EChartsOption & {
+    series: Extract<NonNullable<EChartsOption['series']>, unknown[]>
+}
 
 export interface ChartConfig {
     chartType: string
@@ -27,14 +31,22 @@ function getMedian(vals: number[]): number {
     return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
 }
 
-export function decideDualAxis(datasets: { name: string; data: (number | null)[] }[]): DualAxisDecision {
+export function decideDualAxis(
+    datasets: { name: string; data: (number | null)[] }[]
+): DualAxisDecision {
     if (datasets.length < 2) {
-        return {enabled: false, leftIndices: [], rightIndices: [], leftAxisName: '', rightAxisName: ''}
+        return {
+            enabled: false,
+            leftIndices: [],
+            rightIndices: [],
+            leftAxisName: '',
+            rightAxisName: ''
+        }
     }
 
     const mags = datasets.map((ds, i) => {
         const nums = ds.data.filter((v) => v != null && !Number.isNaN(v)) as number[]
-        return {index: i, name: ds.name, mag: getMagnitude(getMedian(nums))}
+        return { index: i, name: ds.name, mag: getMagnitude(getMedian(nums)) }
     })
     mags.sort((a, b) => a.mag - b.mag)
 
@@ -45,7 +57,13 @@ export function decideDualAxis(datasets: { name: string; data: (number | null)[]
 
     const maxGap = Math.max(...gaps)
     if (maxGap < 2) {
-        return {enabled: false, leftIndices: [], rightIndices: [], leftAxisName: '', rightAxisName: ''}
+        return {
+            enabled: false,
+            leftIndices: [],
+            rightIndices: [],
+            leftAxisName: '',
+            rightAxisName: ''
+        }
     }
 
     // Tie-breaker: first occurrence of max gap
@@ -54,7 +72,13 @@ export function decideDualAxis(datasets: { name: string; data: (number | null)[]
     const rightMags = mags.slice(cutIdx)
 
     if (leftMags.length === 0 || rightMags.length === 0) {
-        return {enabled: false, leftIndices: [], rightIndices: [], leftAxisName: '', rightAxisName: ''}
+        return {
+            enabled: false,
+            leftIndices: [],
+            rightIndices: [],
+            leftAxisName: '',
+            rightAxisName: ''
+        }
     }
 
     function axisName(entries: typeof leftMags): string {
@@ -88,10 +112,12 @@ function toEChartsData(data: (number | null)[]): (number | string)[] {
 
 const IS_CARTESIAN = new Set(['bar', 'line', 'area'])
 
-export function buildEChartsOption(config: ChartConfig): EChartsOption {
-    const {chartType, labels, datasets, stacked} = config
+export function buildEChartsOption(config: ChartConfig): ChartOption {
+    const { chartType, labels, datasets, stacked } = config
     const eType = echartType(chartType)
-    const dualAxis = IS_CARTESIAN.has(chartType) ? decideDualAxis(datasets) : ({enabled: false} as DualAxisDecision)
+    const dualAxis = IS_CARTESIAN.has(chartType)
+        ? decideDualAxis(datasets)
+        : ({ enabled: false } as DualAxisDecision)
 
     if (chartType === 'radar') {
         const allVals: number[] = []
@@ -104,7 +130,7 @@ export function buildEChartsOption(config: ChartConfig): EChartsOption {
         const globalMin = allVals.length > 0 ? Math.min(...allVals) : 0
 
         const indicators = labels.map((label) => {
-            const ind: Record<string, unknown> = {name: label, max: globalMax}
+            const ind: Record<string, unknown> = { name: label, max: globalMax }
             if (globalMin < 0) {
                 ind.min = globalMin * 1.1
             } else {
@@ -123,7 +149,7 @@ export function buildEChartsOption(config: ChartConfig): EChartsOption {
             series: datasets.map((ds) => ({
                 type: 'radar',
                 name: ds.name,
-                data: [{value: ds.data.map((v) => (v == null || Number.isNaN(v) ? 0 : v))}]
+                data: [{ value: ds.data.map((v) => (v == null || Number.isNaN(v) ? 0 : v)) }]
             }))
         }
     }
@@ -131,7 +157,7 @@ export function buildEChartsOption(config: ChartConfig): EChartsOption {
     if (chartType === 'pie' || chartType === 'doughnut') {
         const ds = datasets[0]
         return {
-            tooltip: {trigger: 'item'},
+            tooltip: { trigger: 'item' },
             series: [
                 {
                     type: 'pie',
@@ -145,7 +171,7 @@ export function buildEChartsOption(config: ChartConfig): EChartsOption {
                         position: 'outside',
                         formatter: '{b}  {d}%'
                     },
-                    labelLine: {show: true, length: 15, length2: 25}
+                    labelLine: { show: true, length: 15, length2: 25 }
                 }
             ]
         }
@@ -154,15 +180,21 @@ export function buildEChartsOption(config: ChartConfig): EChartsOption {
     // Cartesian charts: bar, line, area
     const yAxis: EChartsOption['yAxis'] = dualAxis.enabled
         ? [
-            {type: 'value', name: dualAxis.leftAxisName, alignTicks: true},
-            {type: 'value', name: dualAxis.rightAxisName, alignTicks: true}
-        ]
-        : {type: 'value'}
+              { type: 'value', name: dualAxis.leftAxisName, alignTicks: true },
+              { type: 'value', name: dualAxis.rightAxisName, alignTicks: true }
+          ]
+        : { type: 'value' }
 
     const series = datasets.map((ds, i) => {
         const isLeft = !dualAxis.enabled || dualAxis.leftIndices.includes(i)
         const isRight = dualAxis.enabled && dualAxis.rightIndices.includes(i)
-        const stackName = stacked ? (dualAxis.enabled ? (isLeft ? 'stack-left' : 'stack-right') : 'stack-all') : undefined
+        const stackName = stacked
+            ? dualAxis.enabled
+                ? isLeft
+                    ? 'stack-left'
+                    : 'stack-right'
+                : 'stack-all'
+            : undefined
 
         const s: Record<string, unknown> = {
             type: eType,
@@ -176,10 +208,10 @@ export function buildEChartsOption(config: ChartConfig): EChartsOption {
     })
 
     return {
-        xAxis: {type: 'category', data: labels},
+        xAxis: { type: 'category', data: labels },
         yAxis,
-        series: series as EChartsOption['series'],
-        tooltip: {trigger: 'axis'},
-        grid: {left: '3%', right: dualAxis.enabled ? '8%' : '4%', containLabel: true}
+        series: series as ChartOption['series'],
+        tooltip: { trigger: 'axis' },
+        grid: { left: '3%', right: dualAxis.enabled ? '8%' : '4%', containLabel: true }
     }
 }

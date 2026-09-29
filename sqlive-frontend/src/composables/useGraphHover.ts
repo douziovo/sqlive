@@ -1,7 +1,7 @@
-import type {ComputedRef, Ref} from 'vue'
-import {computed, ref} from 'vue'
-import type {Edge, Node} from '@vue-flow/core'
-import type {KnowledgeNodeData} from '@/composables/useKnowledgeGraph'
+import type { ComputedRef, Ref } from 'vue'
+import { computed, ref } from 'vue'
+import type { Edge } from '@vue-flow/core'
+import type { KnowledgeNode, KnowledgeNodeData } from '@/composables/useKnowledgeGraph'
 
 /**
  * useGraphHover — hover-driven adjacency highlight for the knowledge graph.
@@ -18,14 +18,19 @@ import type {KnowledgeNodeData} from '@/composables/useKnowledgeGraph'
  */
 export function useGraphHover(
     edgesGetter: () => Edge[],
-    displayNodes: Ref<Node<KnowledgeNodeData>[]>
+    displayNodes: Ref<KnowledgeNode[]>
 ): {
     hoveredNodeId: Ref<string | null>
     adjacencyMap: ComputedRef<Map<string, Set<string>>>
     nodeDataMap: ComputedRef<Map<string, KnowledgeNodeData>>
     hubCount: ComputedRef<Map<string, number>>
     edgeWeight: (fromId: string, toId: string) => number
-    topKneighbors: (topicId: string, neighborIds: string[], k: number, fromSource: boolean) => Set<string>
+    topKneighbors: (
+        topicId: string,
+        neighborIds: string[],
+        k: number,
+        fromSource: boolean
+    ) => Set<string>
     immediatePredecessors: (topicId: string) => Set<string>
     immediateSuccessors: (topicId: string) => Set<string>
     setHoveredNode: (topicId: string) => void
@@ -56,7 +61,7 @@ export function useGraphHover(
     const nodeDataMap = computed(() => {
         const map = new Map<string, KnowledgeNodeData>()
         for (const node of displayNodes.value) {
-            map.set(node.data.topicId, node.data as KnowledgeNodeData)
+            map.set(node.data.topicId, node.data)
         }
         return map
     })

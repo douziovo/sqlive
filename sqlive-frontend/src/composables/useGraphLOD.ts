@@ -22,5 +22,5 @@ export function useGraphLOD() {
         return 0.18
     }
 
-    return {edgeOpacityForZoom}
+    return { edgeOpacityForZoom }
 }

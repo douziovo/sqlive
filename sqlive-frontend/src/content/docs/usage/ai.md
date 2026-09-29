@@ -13,12 +13,12 @@ AI 后端基于策略模式设计，核心抽象两层：
 
 4 种 AI 提供商各有一个 Protocol 实现，处理各自协议格式差异：
 
-| 提供商 | 协议类 | 格式差异 |
-|--------|--------|----------|
-| DeepSeek | DeepSeekProtocol | 自有 chat API 格式 |
-| Ollama | OllamaProtocol | 无 data: 前缀、JSON 流式响应 |
-| LMStudio | LmStudioProtocol | 兼容 OpenAI 格式但端口和路径不同 |
-| OpenAI 兼容 | OpenAiProtocol | 标准 openai chat completions API |
+| 提供商      | 协议类           | 格式差异                         |
+| ----------- | ---------------- | -------------------------------- |
+| DeepSeek    | DeepSeekProtocol | 自有 chat API 格式               |
+| Ollama      | OllamaProtocol   | 无 data: 前缀、JSON 流式响应     |
+| LMStudio    | LmStudioProtocol | 兼容 OpenAI 格式但端口和路径不同 |
+| OpenAI 兼容 | OpenAiProtocol   | 标准 openai chat completions API |
 
 新增提供商只需实现 Protocol 接口，AiService 和 OpenAiCompatibleProvider 零修改。
 

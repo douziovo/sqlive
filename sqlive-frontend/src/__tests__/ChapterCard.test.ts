@@ -1,9 +1,9 @@
 // ── imports ────────────────────────────────────────────────────────
 
-import {mount} from '@vue/test-utils'
-import {beforeEach, describe, expect, it, vi} from 'vitest'
+import { mount } from '@vue/test-utils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import ChapterCard from '@/components/knowledge/ChapterCard.vue'
-import type {LearningChapter} from '@/data/learningChapters'
+import type { LearningChapter } from '@/data/learningChapters'
 
 // ── mock data ─────────────────────────────────────────────────────
 
@@ -14,11 +14,12 @@ const mockChapter: LearningChapter = {
     rankRequired: 0,
     rewardXp: 100,
     categoryKey: 'basics',
+    taskCategories: ['core'],
     topicCount: 6
 }
 
-const unlockedProgress = {completed: 3, total: 6}
-const lockedProgress = {completed: 0, total: 0}
+const unlockedProgress = { completed: 3, total: 6 }
+const lockedProgress = { completed: 0, total: 0 }
 
 // ── ChapterCard ────────────────────────────────────────────────────
 
@@ -56,7 +57,7 @@ describe('ChapterCard', () => {
         const w = mount(ChapterCard, {
             props: {
                 chapter: mockChapter,
-                progress: {completed: 3, total: 6},
+                progress: { completed: 3, total: 6 },
                 unlocked: true,
                 currentLevel: 0
             }
@@ -124,7 +125,7 @@ describe('ChapterCard', () => {
         const w = mount(ChapterCard, {
             props: {
                 chapter: mockChapter,
-                progress: {completed: 0, total: 6},
+                progress: { completed: 0, total: 6 },
                 unlocked: true,
                 currentLevel: 0
             }

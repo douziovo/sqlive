@@ -1,5 +1,5 @@
-import {computed, type Ref, ref} from 'vue'
-import type {Tab} from './useMultiTabs'
+import { computed, type Ref, ref } from 'vue'
+import type { Tab } from './useMultiTabs'
 
 type EngineMode = 'user' | 'reconciling' | 'rollback'
 
@@ -39,5 +39,5 @@ export function useDatabaseLifecycle(
         return list
     })
 
-    return {committedDbNames, shouldReset, submitNow, deleteDb, dbList}
+    return { committedDbNames, shouldReset, submitNow, deleteDb, dbList }
 }

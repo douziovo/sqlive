@@ -1,5 +1,5 @@
-import {parsePrimaryType} from './sql'
-import type {TruncationInfo} from '../model/DatabaseTypes'
+import { parsePrimaryType } from './sql'
+import type { TruncationInfo } from '../model/DatabaseTypes'
 
 /**
  * Utility functions for SQL statement parsing, type enforcement, and value comparison.
@@ -61,19 +61,19 @@ export const extractSqlStatements = (script: string) => {
 
         // 处理语句分隔符
         if (!inString && c === ';') {
-            statements.push({text: script.substring(start, i + 1), start, end: i + 1})
+            statements.push({ text: script.substring(start, i + 1), start, end: i + 1 })
             start = i + 1
         }
     }
 
     if (start < script.length && script.substring(start).trim()) {
-        statements.push({text: script.substring(start), start, end: script.length})
+        statements.push({ text: script.substring(start), start, end: script.length })
     }
     return statements
 }
 
 export const enforceTypeConstraints = (val: any, rawType: string): TruncationInfo => {
-    if (val === null || val === undefined) return {value: val, wasTruncated: false}
+    if (val === null || val === undefined) return { value: val, wasTruncated: false }
     const strVal = String(val)
     const typeUpper = parsePrimaryType(rawType).toUpperCase()
     const charMatch = typeUpper.match(/(?:VARCHAR|CHAR)\s*\((\d+)\)/)
@@ -88,24 +88,32 @@ export const enforceTypeConstraints = (val: any, rawType: string): TruncationInf
             }
         }
     }
-    return {value: val, wasTruncated: false}
+    return { value: val, wasTruncated: false }
 }
 
 export const isApproxEqual = (a: number, b: number) => Math.abs(a - b) < 0.000001
 
 export const normalizeAndCompare = (dbVal: any, sqlValRaw: string): boolean => {
     const sqlVal = sqlValRaw ? sqlValRaw.trim() : ''
-    if (sqlVal.toUpperCase() === 'NULL' || sqlVal === '') return dbVal === null || dbVal === undefined || dbVal === ''
+    if (sqlVal.toUpperCase() === 'NULL' || sqlVal === '')
+        return dbVal === null || dbVal === undefined || dbVal === ''
     if (dbVal === null || dbVal === undefined) return false
 
-    const isQuoted = (sqlVal.startsWith("'") && sqlVal.endsWith("'")) || (sqlVal.startsWith('"') && sqlVal.endsWith('"'))
+    const isQuoted =
+        (sqlVal.startsWith("'") && sqlVal.endsWith("'")) ||
+        (sqlVal.startsWith('"') && sqlVal.endsWith('"'))
     if (isQuoted) {
         let unquoted = sqlVal.slice(1, -1).replace(/''/g, "'")
         unquoted = unquoted.replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\\\/g, '\\')
         return String(dbVal) === unquoted || String(dbVal).trim() === unquoted.trim()
     }
 
-    if (!Number.isNaN(Number(dbVal)) && !Number.isNaN(Number(sqlVal)) && dbVal !== '' && sqlVal !== '') {
+    if (
+        !Number.isNaN(Number(dbVal)) &&
+        !Number.isNaN(Number(sqlVal)) &&
+        dbVal !== '' &&
+        sqlVal !== ''
+    ) {
         return isApproxEqual(Number(dbVal), Number(sqlVal))
     }
     return String(dbVal) === sqlVal

@@ -1,5 +1,5 @@
-import type {KnowledgeTask, TaskSubstep} from '@/composables/useKnowledgeTasks'
-import {nanoid} from 'nanoid'
+import type { KnowledgeTask, TaskSubstep } from '@/composables/useKnowledgeTasks'
+import { nanoid } from 'nanoid'
 
 // ── Preset substep helper ─────────────────────────────────────────
 // Seeds substeps so the first one is active, the rest are locked.
@@ -296,11 +296,7 @@ export const PRESET_TASKS: PresetTaskSeed[] = [
         priority: 'low',
         category: 'daily',
         dueDate: daysFromNow(1),
-        substeps: [
-            '复习 WHERE 运算符清单',
-            '写 3 个不同运算符的过滤查询',
-            '自我评估掌握程度'
-        ]
+        substeps: ['复习 WHERE 运算符清单', '写 3 个不同运算符的过滤查询', '自我评估掌握程度']
     },
     {
         topicId: 'sorting',
@@ -411,4 +407,3 @@ export function buildPresetTasks(): KnowledgeTask[] {
         completedAt: undefined
     }))
 }
-

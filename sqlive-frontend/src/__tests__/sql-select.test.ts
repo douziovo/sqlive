@@ -1,5 +1,11 @@
-import {afterEach, beforeEach, describe, expect, it, type vi} from 'vitest'
-import {mockSuccess, setupSqlEngine, type SqlEngineSetup, teardownSqlEngine, tick} from './test-utils'
+import { afterEach, beforeEach, describe, expect, it, type vi } from 'vitest'
+import {
+    mockSuccess,
+    setupSqlEngine,
+    type SqlEngineSetup,
+    teardownSqlEngine,
+    tick
+} from './test-utils'
 
 describe('SQL SELECT and query features', () => {
     let useSqlEngine: SqlEngineSetup['useSqlEngine']
@@ -17,8 +23,17 @@ describe('SQL SELECT and query features', () => {
     describe('DQL — SELECT', () => {
         it('should handle basic SELECT', async () => {
             mockSuccess(fetchSpy, {
-                tables: [{name: 't', columns: ['x'], columnTypes: {x: 'INTEGER'}, data: [{x: 1}]}],
-                queryResults: [{name: '查询结果', columns: ['x'], columnTypes: {x: 'INTEGER'}, data: [{x: 1}]}]
+                tables: [
+                    { name: 't', columns: ['x'], columnTypes: { x: 'INTEGER' }, data: [{ x: 1 }] }
+                ],
+                queryResults: [
+                    {
+                        name: '查询结果',
+                        columns: ['x'],
+                        columnTypes: { x: 'INTEGER' },
+                        data: [{ x: 1 }]
+                    }
+                ]
             })
             const engine = useSqlEngine()
             engine.code.value = 'SELECT * FROM t;'
@@ -29,7 +44,14 @@ describe('SQL SELECT and query features', () => {
 
         it('should handle SELECT with WHERE and multiple conditions', async () => {
             mockSuccess(fetchSpy, {
-                queryResults: [{name: '查询结果', columns: ['x'], columnTypes: {x: 'INTEGER'}, data: [{x: 5}]}]
+                queryResults: [
+                    {
+                        name: '查询结果',
+                        columns: ['x'],
+                        columnTypes: { x: 'INTEGER' },
+                        data: [{ x: 5 }]
+                    }
+                ]
             })
             const engine = useSqlEngine()
             engine.code.value = "SELECT * FROM t WHERE x > 0 AND y < 100 OR z = 'test';"
@@ -44,8 +66,8 @@ describe('SQL SELECT and query features', () => {
                     {
                         name: '查询结果',
                         columns: ['name'],
-                        columnTypes: {name: 'TEXT'},
-                        data: [{name: 'Alice'}, {name: 'Bob'}]
+                        columnTypes: { name: 'TEXT' },
+                        data: [{ name: 'Alice' }, { name: 'Bob' }]
                     }
                 ]
             })
@@ -61,8 +83,8 @@ describe('SQL SELECT and query features', () => {
                     {
                         name: '查询结果',
                         columns: ['name'],
-                        columnTypes: {name: 'TEXT'},
-                        data: [{name: 'Alice'}, {name: 'Bob'}]
+                        columnTypes: { name: 'TEXT' },
+                        data: [{ name: 'Alice' }, { name: 'Bob' }]
                     }
                 ]
             })
@@ -76,7 +98,12 @@ describe('SQL SELECT and query features', () => {
         it('should handle SELECT with LIMIT and OFFSET', async () => {
             mockSuccess(fetchSpy, {
                 queryResults: [
-                    {name: '查询结果', columns: ['x'], columnTypes: {x: 'INTEGER'}, data: [{x: 11}, {x: 12}]}
+                    {
+                        name: '查询结果',
+                        columns: ['x'],
+                        columnTypes: { x: 'INTEGER' },
+                        data: [{ x: 11 }, { x: 12 }]
+                    }
                 ]
             })
             const engine = useSqlEngine()
@@ -91,13 +118,14 @@ describe('SQL SELECT and query features', () => {
                     {
                         name: '查询结果',
                         columns: ['dept', 'cnt'],
-                        columnTypes: {dept: 'TEXT', cnt: 'INTEGER'},
-                        data: [{dept: 'IT', cnt: 10}]
+                        columnTypes: { dept: 'TEXT', cnt: 'INTEGER' },
+                        data: [{ dept: 'IT', cnt: 10 }]
                     }
                 ]
             })
             const engine = useSqlEngine()
-            engine.code.value = 'SELECT dept, COUNT(*) FROM employees GROUP BY dept HAVING COUNT(*) > 5;'
+            engine.code.value =
+                'SELECT dept, COUNT(*) FROM employees GROUP BY dept HAVING COUNT(*) > 5;'
             await tick()
             expect(engine.db.queryResults[0].data.length).toBe(1)
         })
@@ -108,13 +136,20 @@ describe('SQL SELECT and query features', () => {
                     {
                         name: '查询结果',
                         columns: ['cnt', 'sum', 'avg', 'max', 'min'],
-                        columnTypes: {cnt: 'INTEGER', sum: 'REAL', avg: 'REAL', max: 'INTEGER', min: 'INTEGER'},
-                        data: [{cnt: 100, sum: 5000, avg: 50, max: 99, min: 1}]
+                        columnTypes: {
+                            cnt: 'INTEGER',
+                            sum: 'REAL',
+                            avg: 'REAL',
+                            max: 'INTEGER',
+                            min: 'INTEGER'
+                        },
+                        data: [{ cnt: 100, sum: 5000, avg: 50, max: 99, min: 1 }]
                     }
                 ]
             })
             const engine = useSqlEngine()
-            engine.code.value = 'SELECT COUNT(*), SUM(salary), AVG(age), MAX(score), MIN(score) FROM t;'
+            engine.code.value =
+                'SELECT COUNT(*), SUM(salary), AVG(age), MAX(score), MIN(score) FROM t;'
             await tick()
             expect(engine.executionError.value).toBeNull()
             expect(engine.db.queryResults[0].data[0].cnt).toBe(100)
@@ -126,8 +161,8 @@ describe('SQL SELECT and query features', () => {
                     {
                         name: '查询结果',
                         columns: ['id', 'a_id'],
-                        columnTypes: {id: 'INTEGER', a_id: 'INTEGER'},
-                        data: [{id: 1, a_id: 1}]
+                        columnTypes: { id: 'INTEGER', a_id: 'INTEGER' },
+                        data: [{ id: 1, a_id: 1 }]
                     }
                 ]
             })
@@ -143,8 +178,8 @@ describe('SQL SELECT and query features', () => {
                     {
                         name: '查询结果',
                         columns: ['id', 'a_id'],
-                        columnTypes: {id: 'INTEGER', a_id: 'INTEGER'},
-                        data: [{id: 1, a_id: 1}]
+                        columnTypes: { id: 'INTEGER', a_id: 'INTEGER' },
+                        data: [{ id: 1, a_id: 1 }]
                     }
                 ]
             })
@@ -160,8 +195,8 @@ describe('SQL SELECT and query features', () => {
                     {
                         name: '查询结果',
                         columns: ['id'],
-                        columnTypes: {id: 'INTEGER'},
-                        data: [{id: 1}, {id: 2}, {id: 3}, {id: 4}]
+                        columnTypes: { id: 'INTEGER' },
+                        data: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }]
                     }
                 ]
             })
@@ -174,7 +209,12 @@ describe('SQL SELECT and query features', () => {
         it('should handle table alias with AS', async () => {
             mockSuccess(fetchSpy, {
                 queryResults: [
-                    {name: '查询结果', columns: ['name'], columnTypes: {name: 'TEXT'}, data: [{name: 'Alice'}]}
+                    {
+                        name: '查询结果',
+                        columns: ['name'],
+                        columnTypes: { name: 'TEXT' },
+                        data: [{ name: 'Alice' }]
+                    }
                 ]
             })
             const engine = useSqlEngine()
@@ -190,13 +230,14 @@ describe('SQL SELECT and query features', () => {
                     {
                         name: '查询结果',
                         columns: ['name', 'dept'],
-                        columnTypes: {name: 'TEXT', dept: 'TEXT'},
-                        data: [{name: 'Alice', dept: 'IT'}]
+                        columnTypes: { name: 'TEXT', dept: 'TEXT' },
+                        data: [{ name: 'Alice', dept: 'IT' }]
                     }
                 ]
             })
             const engine = useSqlEngine()
-            engine.code.value = 'SELECT e.name, d.name FROM employees e JOIN departments d ON e.dept_id = d.id;'
+            engine.code.value =
+                'SELECT e.name, d.name FROM employees e JOIN departments d ON e.dept_id = d.id;'
             await tick()
             expect(engine.executionError.value).toBeNull()
         })
@@ -207,20 +248,28 @@ describe('SQL SELECT and query features', () => {
                     {
                         name: '查询结果',
                         columns: ['id', 'name'],
-                        columnTypes: {id: 'INTEGER', name: 'TEXT'},
-                        data: [{id: 1, name: 'Alice'}]
+                        columnTypes: { id: 'INTEGER', name: 'TEXT' },
+                        data: [{ id: 1, name: 'Alice' }]
                     }
                 ]
             })
             const engine = useSqlEngine()
-            engine.code.value = 'SELECT * FROM (SELECT id, name FROM users WHERE age > 18) AS adults;'
+            engine.code.value =
+                'SELECT * FROM (SELECT id, name FROM users WHERE age > 18) AS adults;'
             await tick()
             expect(engine.db.queryResults[0].data).toHaveLength(1)
         })
 
         it('should handle subquery in WHERE', async () => {
             mockSuccess(fetchSpy, {
-                queryResults: [{name: '查询结果', columns: ['id'], columnTypes: {id: 'INTEGER'}, data: [{id: 1}]}]
+                queryResults: [
+                    {
+                        name: '查询结果',
+                        columns: ['id'],
+                        columnTypes: { id: 'INTEGER' },
+                        data: [{ id: 1 }]
+                    }
+                ]
             })
             const engine = useSqlEngine()
             engine.code.value = 'SELECT * FROM t WHERE id IN (SELECT id FROM other WHERE x > 0);'
@@ -234,8 +283,8 @@ describe('SQL SELECT and query features', () => {
                     {
                         name: '查询结果',
                         columns: ['name'],
-                        columnTypes: {name: 'TEXT'},
-                        data: [{name: 'Alice'}, {name: 'Bob'}]
+                        columnTypes: { name: 'TEXT' },
+                        data: [{ name: 'Alice' }, { name: 'Bob' }]
                     }
                 ]
             })
@@ -251,8 +300,8 @@ describe('SQL SELECT and query features', () => {
                     {
                         name: '查询结果',
                         columns: ['name'],
-                        columnTypes: {name: 'TEXT'},
-                        data: [{name: 'Alice'}, {name: 'Bob'}]
+                        columnTypes: { name: 'TEXT' },
+                        data: [{ name: 'Alice' }, { name: 'Bob' }]
                     }
                 ]
             })
@@ -268,8 +317,8 @@ describe('SQL SELECT and query features', () => {
                     {
                         name: '查询结果',
                         columns: ['name', 'level'],
-                        columnTypes: {name: 'TEXT', level: 'TEXT'},
-                        data: [{name: 'Alice', level: 'High'}]
+                        columnTypes: { name: 'TEXT', level: 'TEXT' },
+                        data: [{ name: 'Alice', level: 'High' }]
                     }
                 ]
             })
@@ -287,7 +336,12 @@ describe('SQL SELECT and query features', () => {
         it('should handle LIKE operator', async () => {
             mockSuccess(fetchSpy, {
                 queryResults: [
-                    {name: '查询结果', columns: ['name'], columnTypes: {name: 'TEXT'}, data: [{name: 'Alice'}]}
+                    {
+                        name: '查询结果',
+                        columns: ['name'],
+                        columnTypes: { name: 'TEXT' },
+                        data: [{ name: 'Alice' }]
+                    }
                 ]
             })
             const engine = useSqlEngine()
@@ -298,7 +352,14 @@ describe('SQL SELECT and query features', () => {
 
         it('should handle BETWEEN operator', async () => {
             mockSuccess(fetchSpy, {
-                queryResults: [{name: '查询结果', columns: ['age'], columnTypes: {age: 'INTEGER'}, data: [{age: 30}]}]
+                queryResults: [
+                    {
+                        name: '查询结果',
+                        columns: ['age'],
+                        columnTypes: { age: 'INTEGER' },
+                        data: [{ age: 30 }]
+                    }
+                ]
             })
             const engine = useSqlEngine()
             engine.code.value = 'SELECT * FROM t WHERE age BETWEEN 18 AND 65;'
@@ -309,7 +370,12 @@ describe('SQL SELECT and query features', () => {
         it('should handle IS NULL / IS NOT NULL', async () => {
             mockSuccess(fetchSpy, {
                 queryResults: [
-                    {name: '查询结果', columns: ['name'], columnTypes: {name: 'TEXT'}, data: [{name: 'Alice'}]}
+                    {
+                        name: '查询结果',
+                        columns: ['name'],
+                        columnTypes: { name: 'TEXT' },
+                        data: [{ name: 'Alice' }]
+                    }
                 ]
             })
             const engine = useSqlEngine()
@@ -320,10 +386,18 @@ describe('SQL SELECT and query features', () => {
 
         it('should handle EXISTS subquery', async () => {
             mockSuccess(fetchSpy, {
-                queryResults: [{name: '查询结果', columns: ['id'], columnTypes: {id: 'INTEGER'}, data: [{id: 1}]}]
+                queryResults: [
+                    {
+                        name: '查询结果',
+                        columns: ['id'],
+                        columnTypes: { id: 'INTEGER' },
+                        data: [{ id: 1 }]
+                    }
+                ]
             })
             const engine = useSqlEngine()
-            engine.code.value = 'SELECT * FROM a WHERE EXISTS (SELECT 1 FROM b WHERE b.a_id = a.id);'
+            engine.code.value =
+                'SELECT * FROM a WHERE EXISTS (SELECT 1 FROM b WHERE b.a_id = a.id);'
             await tick()
             expect(engine.db.queryResults[0].data.length).toBe(1)
         })
@@ -336,7 +410,14 @@ describe('SQL SELECT and query features', () => {
     describe('Set operations', () => {
         it('should handle INTERSECT', async () => {
             mockSuccess(fetchSpy, {
-                queryResults: [{name: '查询结果', columns: ['x'], columnTypes: {x: 'INTEGER'}, data: [{x: 1}]}]
+                queryResults: [
+                    {
+                        name: '查询结果',
+                        columns: ['x'],
+                        columnTypes: { x: 'INTEGER' },
+                        data: [{ x: 1 }]
+                    }
+                ]
             })
             const engine = useSqlEngine()
             engine.code.value = `SELECT 1 AS x INTERSECT SELECT 1 AS x;`
@@ -346,7 +427,14 @@ describe('SQL SELECT and query features', () => {
 
         it('should handle EXCEPT', async () => {
             mockSuccess(fetchSpy, {
-                queryResults: [{name: '查询结果', columns: ['x'], columnTypes: {x: 'INTEGER'}, data: [{x: 1}]}]
+                queryResults: [
+                    {
+                        name: '查询结果',
+                        columns: ['x'],
+                        columnTypes: { x: 'INTEGER' },
+                        data: [{ x: 1 }]
+                    }
+                ]
             })
             const engine = useSqlEngine()
             engine.code.value = `SELECT 1 AS x EXCEPT SELECT 2 AS x;`
@@ -366,8 +454,8 @@ describe('SQL SELECT and query features', () => {
                     {
                         name: '查询结果',
                         columns: ['name', 'colleague'],
-                        columnTypes: {name: 'TEXT', colleague: 'TEXT'},
-                        data: [{name: 'Alice', colleague: 'Bob'}]
+                        columnTypes: { name: 'TEXT', colleague: 'TEXT' },
+                        data: [{ name: 'Alice', colleague: 'Bob' }]
                     }
                 ]
             })
@@ -381,7 +469,14 @@ WHERE e1.id != e2.id;`
 
         it('should handle NATURAL JOIN', async () => {
             mockSuccess(fetchSpy, {
-                queryResults: [{name: '查询结果', columns: ['id'], columnTypes: {id: 'INTEGER'}, data: [{id: 1}]}]
+                queryResults: [
+                    {
+                        name: '查询结果',
+                        columns: ['id'],
+                        columnTypes: { id: 'INTEGER' },
+                        data: [{ id: 1 }]
+                    }
+                ]
             })
             const engine = useSqlEngine()
             engine.code.value = `SELECT * FROM a NATURAL JOIN b;`
@@ -401,8 +496,8 @@ WHERE e1.id != e2.id;`
                     {
                         name: '查询结果',
                         columns: ['name', 'salary', 'avg_all'],
-                        columnTypes: {name: 'TEXT', salary: 'REAL', avg_all: 'REAL'},
-                        data: [{name: 'Alice', salary: 9000, avg_all: 7500}]
+                        columnTypes: { name: 'TEXT', salary: 'REAL', avg_all: 'REAL' },
+                        data: [{ name: 'Alice', salary: 9000, avg_all: 7500 }]
                     }
                 ]
             })
@@ -417,7 +512,12 @@ FROM employees;`
         it('should handle NOT IN subquery', async () => {
             mockSuccess(fetchSpy, {
                 queryResults: [
-                    {name: '查询结果', columns: ['name'], columnTypes: {name: 'TEXT'}, data: [{name: 'Alice'}]}
+                    {
+                        name: '查询结果',
+                        columns: ['name'],
+                        columnTypes: { name: 'TEXT' },
+                        data: [{ name: 'Alice' }]
+                    }
                 ]
             })
             const engine = useSqlEngine()
@@ -433,8 +533,8 @@ WHERE id NOT IN (SELECT emp_id FROM projects);`
                     {
                         name: '查询结果',
                         columns: ['name', 'salary'],
-                        columnTypes: {name: 'TEXT', salary: 'REAL'},
-                        data: [{name: 'Alice', salary: 9000}]
+                        columnTypes: { name: 'TEXT', salary: 'REAL' },
+                        data: [{ name: 'Alice', salary: 9000 }]
                     }
                 ]
             })
@@ -451,8 +551,8 @@ WHERE salary > (SELECT MAX(salary) FROM employees WHERE dept_id = 2);`
                     {
                         name: '查询结果',
                         columns: ['name', 'dept_id', 'salary'],
-                        columnTypes: {name: 'TEXT', dept_id: 'INTEGER', salary: 'REAL'},
-                        data: [{name: 'Alice', dept_id: 1, salary: 9000}]
+                        columnTypes: { name: 'TEXT', dept_id: 'INTEGER', salary: 'REAL' },
+                        data: [{ name: 'Alice', dept_id: 1, salary: 9000 }]
                     }
                 ]
             })

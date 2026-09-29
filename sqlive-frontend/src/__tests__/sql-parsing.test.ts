@@ -1,5 +1,11 @@
-import {afterEach, beforeEach, describe, expect, it, type vi} from 'vitest'
-import {mockSuccess, setupSqlEngine, type SqlEngineSetup, teardownSqlEngine, tick} from './test-utils'
+import { afterEach, beforeEach, describe, expect, it, type vi } from 'vitest'
+import {
+    mockSuccess,
+    setupSqlEngine,
+    type SqlEngineSetup,
+    teardownSqlEngine,
+    tick
+} from './test-utils'
 
 describe('SQL parsing and CTE features', () => {
     let useSqlEngine: SqlEngineSetup['useSqlEngine']
@@ -17,16 +23,26 @@ describe('SQL parsing and CTE features', () => {
     describe('Parsing edge cases', () => {
         it('should handle semicolons inside single-quoted strings', async () => {
             mockSuccess(fetchSpy, {
-                tables: [{name: 't', columns: ['x'], columnTypes: {x: 'TEXT'}, data: [{x: 'hello; world'}]}]
+                tables: [
+                    {
+                        name: 't',
+                        columns: ['x'],
+                        columnTypes: { x: 'TEXT' },
+                        data: [{ x: 'hello; world' }]
+                    }
+                ]
             })
             const engine = useSqlEngine()
-            engine.code.value = "CREATE TABLE t (x TEXT);\nINSERT INTO t VALUES ('hello; world');\nSELECT * FROM t;"
+            engine.code.value =
+                "CREATE TABLE t (x TEXT);\nINSERT INTO t VALUES ('hello; world');\nSELECT * FROM t;"
             await tick()
             expect(engine.db.tables[0].data[0].x).toBe('hello; world')
         })
 
         it('should handle semicolons inside double-quoted identifiers', async () => {
-            mockSuccess(fetchSpy, {tables: [{name: 't;est', columns: ['x'], columnTypes: {x: 'INTEGER'}, data: []}]})
+            mockSuccess(fetchSpy, {
+                tables: [{ name: 't;est', columns: ['x'], columnTypes: { x: 'INTEGER' }, data: [] }]
+            })
             const engine = useSqlEngine()
             engine.code.value = 'CREATE TABLE "t;est" (x INTEGER);'
             await tick()
@@ -35,17 +51,22 @@ describe('SQL parsing and CTE features', () => {
 
         it('should handle escaped single quotes', async () => {
             mockSuccess(fetchSpy, {
-                tables: [{name: 't', columns: ['x'], columnTypes: {x: 'TEXT'}, data: [{x: "it's"}]}]
+                tables: [
+                    { name: 't', columns: ['x'], columnTypes: { x: 'TEXT' }, data: [{ x: "it's" }] }
+                ]
             })
             const engine = useSqlEngine()
-            engine.code.value = "CREATE TABLE t (x TEXT);\nINSERT INTO t VALUES ('it''s');\nSELECT * FROM t;"
+            engine.code.value =
+                "CREATE TABLE t (x TEXT);\nINSERT INTO t VALUES ('it''s');\nSELECT * FROM t;"
             await tick()
             expect(engine.db.tables[0].data[0].x).toBe("it's")
         })
 
         it('should handle -- line comments', async () => {
             mockSuccess(fetchSpy, {
-                tables: [{name: 't', columns: ['x'], columnTypes: {x: 'INTEGER'}, data: [{x: 1}]}]
+                tables: [
+                    { name: 't', columns: ['x'], columnTypes: { x: 'INTEGER' }, data: [{ x: 1 }] }
+                ]
             })
             const engine = useSqlEngine()
             engine.code.value = `-- This is a comment
@@ -60,7 +81,9 @@ SELECT * FROM t; -- trailing comment`
 
         it('should handle /* block comments */', async () => {
             mockSuccess(fetchSpy, {
-                tables: [{name: 't', columns: ['x'], columnTypes: {x: 'INTEGER'}, data: [{x: 1}]}]
+                tables: [
+                    { name: 't', columns: ['x'], columnTypes: { x: 'INTEGER' }, data: [{ x: 1 }] }
+                ]
             })
             const engine = useSqlEngine()
             engine.code.value = `/* multi-line
@@ -73,7 +96,7 @@ SELECT * FROM t;`
         })
 
         it('should handle empty script', async () => {
-            mockSuccess(fetchSpy, {tables: []})
+            mockSuccess(fetchSpy, { tables: [] })
             const engine = useSqlEngine()
             engine.code.value = ''
             await tick()
@@ -82,7 +105,7 @@ SELECT * FROM t;`
         })
 
         it('should handle whitespace-only script', async () => {
-            mockSuccess(fetchSpy, {tables: []})
+            mockSuccess(fetchSpy, { tables: [] })
             const engine = useSqlEngine()
             engine.code.value = '   \n  \n  '
             await tick()
@@ -90,7 +113,9 @@ SELECT * FROM t;`
         })
 
         it('should handle trailing semicolon', async () => {
-            mockSuccess(fetchSpy, {tables: [{name: 't', columns: ['x'], columnTypes: {x: 'INTEGER'}, data: []}]})
+            mockSuccess(fetchSpy, {
+                tables: [{ name: 't', columns: ['x'], columnTypes: { x: 'INTEGER' }, data: [] }]
+            })
             const engine = useSqlEngine()
             engine.code.value = 'CREATE TABLE t (x INTEGER);\n'
             await tick()
@@ -98,7 +123,9 @@ SELECT * FROM t;`
         })
 
         it('should handle statement without trailing semicolon', async () => {
-            mockSuccess(fetchSpy, {tables: [{name: 't', columns: ['x'], columnTypes: {x: 'INTEGER'}, data: []}]})
+            mockSuccess(fetchSpy, {
+                tables: [{ name: 't', columns: ['x'], columnTypes: { x: 'INTEGER' }, data: [] }]
+            })
             const engine = useSqlEngine()
             engine.code.value = 'CREATE TABLE t (x INTEGER)'
             await tick()
@@ -117,22 +144,22 @@ SELECT * FROM t;`
                     {
                         name: 'employees',
                         columns: ['id', 'name', 'salary'],
-                        columnTypes: {id: 'INTEGER', name: 'TEXT', salary: 'REAL'},
-                        data: [{id: 1, name: 'Alice', salary: 7500}]
+                        columnTypes: { id: 'INTEGER', name: 'TEXT', salary: 'REAL' },
+                        data: [{ id: 1, name: 'Alice', salary: 7500 }]
                     },
                     {
                         name: 'departments',
                         columns: ['id', 'name'],
-                        columnTypes: {id: 'INTEGER', name: 'TEXT'},
-                        data: [{id: 1, name: 'IT'}]
+                        columnTypes: { id: 'INTEGER', name: 'TEXT' },
+                        data: [{ id: 1, name: 'IT' }]
                     }
                 ],
                 queryResults: [
                     {
                         name: '查询结果',
                         columns: ['name', 'total'],
-                        columnTypes: {name: 'TEXT', total: 'INTEGER'},
-                        data: [{name: 'Alice', total: 7500}]
+                        columnTypes: { name: 'TEXT', total: 'INTEGER' },
+                        data: [{ name: 'Alice', total: 7500 }]
                     }
                 ]
             })
@@ -170,7 +197,9 @@ ORDER BY e.salary DESC;`
 
         it('should handle script with mixed comment styles', async () => {
             mockSuccess(fetchSpy, {
-                tables: [{name: 't', columns: ['x'], columnTypes: {x: 'INTEGER'}, data: [{x: 1}]}]
+                tables: [
+                    { name: 't', columns: ['x'], columnTypes: { x: 'INTEGER' }, data: [{ x: 1 }] }
+                ]
             })
             const engine = useSqlEngine()
             engine.code.value = `/*
@@ -202,7 +231,14 @@ SELECT * FROM t;
     describe('CTE and Recursive CTE', () => {
         it('should handle simple WITH clause', async () => {
             mockSuccess(fetchSpy, {
-                queryResults: [{name: '查询结果', columns: ['n'], columnTypes: {n: 'INTEGER'}, data: [{n: 1}]}]
+                queryResults: [
+                    {
+                        name: '查询结果',
+                        columns: ['n'],
+                        columnTypes: { n: 'INTEGER' },
+                        data: [{ n: 1 }]
+                    }
+                ]
             })
             const engine = useSqlEngine()
             engine.code.value = `WITH cte AS (SELECT 1 AS n)
@@ -213,7 +249,14 @@ SELECT n FROM cte;`
 
         it('should handle chained CTEs', async () => {
             mockSuccess(fetchSpy, {
-                queryResults: [{name: '查询结果', columns: ['y'], columnTypes: {y: 'INTEGER'}, data: [{y: 2}]}]
+                queryResults: [
+                    {
+                        name: '查询结果',
+                        columns: ['y'],
+                        columnTypes: { y: 'INTEGER' },
+                        data: [{ y: 2 }]
+                    }
+                ]
             })
             const engine = useSqlEngine()
             engine.code.value = `WITH
@@ -230,8 +273,8 @@ SELECT y FROM b;`
                     {
                         name: '查询结果',
                         columns: ['name', 'salary', 'avg_sal'],
-                        columnTypes: {name: 'TEXT', salary: 'REAL', avg_sal: 'REAL'},
-                        data: [{name: 'Alice', salary: 9000, avg_sal: 7000}]
+                        columnTypes: { name: 'TEXT', salary: 'REAL', avg_sal: 'REAL' },
+                        data: [{ name: 'Alice', salary: 9000, avg_sal: 7000 }]
                     }
                 ]
             })
@@ -252,8 +295,11 @@ WHERE e.salary > d.avg_sal;`
                     {
                         name: '查询结果',
                         columns: ['n', 'square'],
-                        columnTypes: {n: 'INTEGER', square: 'INTEGER'},
-                        data: Array.from({length: 10}, (_, i) => ({n: i + 1, square: (i + 1) ** 2}))
+                        columnTypes: { n: 'INTEGER', square: 'INTEGER' },
+                        data: Array.from({ length: 10 }, (_, i) => ({
+                            n: i + 1,
+                            square: (i + 1) ** 2
+                        }))
                     }
                 ]
             })
@@ -272,8 +318,8 @@ SELECT n, n * n AS square FROM seq;`
                     {
                         name: '查询结果',
                         columns: ['n', 'fib_value'],
-                        columnTypes: {n: 'INTEGER', fib_value: 'INTEGER'},
-                        data: Array.from({length: 11}, (_, i) => ({n: i, fib_value: i}))
+                        columnTypes: { n: 'INTEGER', fib_value: 'INTEGER' },
+                        data: Array.from({ length: 11 }, (_, i) => ({ n: i, fib_value: i }))
                     }
                 ]
             })
@@ -295,7 +341,12 @@ SELECT n, a AS fib_value FROM fib;`
                     {
                         name: '查询结果',
                         columns: ['id', 'name', 'path', 'level'],
-                        columnTypes: {id: 'INTEGER', name: 'TEXT', path: 'TEXT', level: 'INTEGER'},
+                        columnTypes: {
+                            id: 'INTEGER',
+                            name: 'TEXT',
+                            path: 'TEXT',
+                            level: 'INTEGER'
+                        },
                         data: []
                     }
                 ]
@@ -317,5 +368,4 @@ SELECT * FROM org_path;`
     // ============================================================
     //  Set operations
     // ============================================================
-
 })

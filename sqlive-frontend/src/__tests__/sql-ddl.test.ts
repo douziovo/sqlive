@@ -1,5 +1,11 @@
-import {afterEach, beforeEach, describe, expect, it, type vi} from 'vitest'
-import {mockSuccess, setupSqlEngine, type SqlEngineSetup, teardownSqlEngine, tick} from './test-utils'
+import { afterEach, beforeEach, describe, expect, it, type vi } from 'vitest'
+import {
+    mockSuccess,
+    setupSqlEngine,
+    type SqlEngineSetup,
+    teardownSqlEngine,
+    tick
+} from './test-utils'
 
 describe('SQL DDL statements', () => {
     let useSqlEngine: SqlEngineSetup['useSqlEngine']
@@ -16,7 +22,9 @@ describe('SQL DDL statements', () => {
     })
     describe('DDL — CREATE TABLE', () => {
         it('should handle basic CREATE TABLE', async () => {
-            mockSuccess(fetchSpy, {tables: [{name: 't', columns: ['id'], columnTypes: {id: 'INTEGER'}, data: []}]})
+            mockSuccess(fetchSpy, {
+                tables: [{ name: 't', columns: ['id'], columnTypes: { id: 'INTEGER' }, data: [] }]
+            })
             const engine = useSqlEngine()
             engine.code.value = 'CREATE TABLE t (id INTEGER);'
             await tick()
@@ -24,7 +32,11 @@ describe('SQL DDL statements', () => {
         })
 
         it('should handle quoted table name', async () => {
-            mockSuccess(fetchSpy, {tables: [{name: 'My Table', columns: ['x'], columnTypes: {x: 'INTEGER'}, data: []}]})
+            mockSuccess(fetchSpy, {
+                tables: [
+                    { name: 'My Table', columns: ['x'], columnTypes: { x: 'INTEGER' }, data: [] }
+                ]
+            })
             const engine = useSqlEngine()
             engine.code.value = 'CREATE TABLE "My Table" (x INTEGER);'
             await tick()
@@ -32,7 +44,9 @@ describe('SQL DDL statements', () => {
         })
 
         it('should handle IF NOT EXISTS', async () => {
-            mockSuccess(fetchSpy, {tables: [{name: 't', columns: ['x'], columnTypes: {x: 'INTEGER'}, data: []}]})
+            mockSuccess(fetchSpy, {
+                tables: [{ name: 't', columns: ['x'], columnTypes: { x: 'INTEGER' }, data: [] }]
+            })
             const engine = useSqlEngine()
             engine.code.value = 'CREATE TABLE IF NOT EXISTS t (x INTEGER);'
             await tick()
@@ -73,7 +87,11 @@ describe('SQL DDL statements', () => {
         })
 
         it('should handle TEMP TABLE', async () => {
-            mockSuccess(fetchSpy, {tables: [{name: 'tmp_data', columns: ['x'], columnTypes: {x: 'INTEGER'}, data: []}]})
+            mockSuccess(fetchSpy, {
+                tables: [
+                    { name: 'tmp_data', columns: ['x'], columnTypes: { x: 'INTEGER' }, data: [] }
+                ]
+            })
             const engine = useSqlEngine()
             engine.code.value = 'CREATE TEMP TABLE tmp_data (x INTEGER);'
             await tick()
@@ -81,7 +99,11 @@ describe('SQL DDL statements', () => {
         })
 
         it('should handle CREATE TABLE AS SELECT', async () => {
-            mockSuccess(fetchSpy, {tables: [{name: 'backup', columns: ['id'], columnTypes: {id: 'INTEGER'}, data: []}]})
+            mockSuccess(fetchSpy, {
+                tables: [
+                    { name: 'backup', columns: ['id'], columnTypes: { id: 'INTEGER' }, data: [] }
+                ]
+            })
             const engine = useSqlEngine()
             engine.code.value = 'CREATE TABLE backup AS SELECT id FROM users;'
             await tick()
@@ -96,7 +118,14 @@ describe('SQL DDL statements', () => {
     describe('DDL — ALTER, DROP, INDEX, VIEW', () => {
         it('should handle ALTER TABLE RENAME TO', async () => {
             mockSuccess(fetchSpy, {
-                tables: [{name: 'employees', columns: ['id'], columnTypes: {id: 'INTEGER'}, data: [{id: 1}]}]
+                tables: [
+                    {
+                        name: 'employees',
+                        columns: ['id'],
+                        columnTypes: { id: 'INTEGER' },
+                        data: [{ id: 1 }]
+                    }
+                ]
             })
             const engine = useSqlEngine()
             engine.code.value = 'ALTER TABLE users RENAME TO employees;'
@@ -111,8 +140,8 @@ describe('SQL DDL statements', () => {
                     {
                         name: 'users',
                         columns: ['id', 'email'],
-                        columnTypes: {id: 'INTEGER', email: 'TEXT | NOT NULL DEFAULT'},
-                        data: [{id: 1, email: ''}]
+                        columnTypes: { id: 'INTEGER', email: 'TEXT | NOT NULL DEFAULT' },
+                        data: [{ id: 1, email: '' }]
                     }
                 ]
             })
@@ -124,7 +153,7 @@ describe('SQL DDL statements', () => {
         })
 
         it('should handle DROP TABLE', async () => {
-            mockSuccess(fetchSpy, {tables: []})
+            mockSuccess(fetchSpy, { tables: [] })
             const engine = useSqlEngine()
             engine.code.value = 'DROP TABLE users;'
             await tick()
@@ -133,7 +162,7 @@ describe('SQL DDL statements', () => {
         })
 
         it('should handle DROP TABLE IF EXISTS', async () => {
-            mockSuccess(fetchSpy, {tables: []})
+            mockSuccess(fetchSpy, { tables: [] })
             const engine = useSqlEngine()
             engine.code.value = 'DROP TABLE IF EXISTS users;'
             await tick()
@@ -142,7 +171,9 @@ describe('SQL DDL statements', () => {
 
         it('should handle CREATE INDEX', async () => {
             mockSuccess(fetchSpy, {
-                tables: [{name: 'users', columns: ['name'], columnTypes: {name: 'TEXT'}, data: []}],
+                tables: [
+                    { name: 'users', columns: ['name'], columnTypes: { name: 'TEXT' }, data: [] }
+                ],
                 indexes: [
                     {
                         name: 'idx_name',
@@ -163,7 +194,9 @@ describe('SQL DDL statements', () => {
 
         it('should handle CREATE UNIQUE INDEX', async () => {
             mockSuccess(fetchSpy, {
-                tables: [{name: 'users', columns: ['email'], columnTypes: {email: 'TEXT'}, data: []}],
+                tables: [
+                    { name: 'users', columns: ['email'], columnTypes: { email: 'TEXT' }, data: [] }
+                ],
                 indexes: [
                     {
                         name: 'idx_email',
@@ -183,7 +216,7 @@ describe('SQL DDL statements', () => {
 
         it('should handle CREATE INDEX IF NOT EXISTS', async () => {
             mockSuccess(fetchSpy, {
-                tables: [{name: 't', columns: ['a'], columnTypes: {a: 'INTEGER'}, data: []}],
+                tables: [{ name: 't', columns: ['a'], columnTypes: { a: 'INTEGER' }, data: [] }],
                 indexes: [
                     {
                         name: 'idx_a',
@@ -207,13 +240,13 @@ describe('SQL DDL statements', () => {
                     {
                         name: 'employees',
                         columns: ['name', 'salary'],
-                        columnTypes: {name: 'TEXT', salary: 'REAL'},
+                        columnTypes: { name: 'TEXT', salary: 'REAL' },
                         data: []
                     },
                     {
                         name: 'high_earners',
                         columns: ['name', 'salary'],
-                        columnTypes: {name: 'TEXT', salary: 'REAL'},
+                        columnTypes: { name: 'TEXT', salary: 'REAL' },
                         data: []
                     }
                 ],
@@ -235,7 +268,7 @@ SELECT * FROM high_earners;`
         })
 
         it('should handle DROP VIEW', async () => {
-            mockSuccess(fetchSpy, {tables: [], views: []})
+            mockSuccess(fetchSpy, { tables: [], views: [] })
             const engine = useSqlEngine()
             engine.code.value = 'DROP VIEW IF EXISTS high_earners;'
             await tick()
@@ -250,12 +283,14 @@ SELECT * FROM high_earners;`
     describe('SQLite-specific features', () => {
         it('should handle AUTOINCREMENT', async () => {
             mockSuccess(fetchSpy, {
-                tables: [{
-                    name: 't',
-                    columns: ['id'],
-                    columnTypes: {id: 'INTEGER | PRIMARY KEY AUTOINCREMENT'},
-                    data: []
-                }]
+                tables: [
+                    {
+                        name: 't',
+                        columns: ['id'],
+                        columnTypes: { id: 'INTEGER | PRIMARY KEY AUTOINCREMENT' },
+                        data: []
+                    }
+                ]
             })
             const engine = useSqlEngine()
             engine.code.value = 'CREATE TABLE t (id INTEGER PRIMARY KEY AUTOINCREMENT);'
@@ -266,7 +301,14 @@ SELECT * FROM high_earners;`
 
         it('should handle CHECK constraint', async () => {
             mockSuccess(fetchSpy, {
-                tables: [{name: 't', columns: ['age'], columnTypes: {age: 'INTEGER | CHECK'}, data: []}]
+                tables: [
+                    {
+                        name: 't',
+                        columns: ['age'],
+                        columnTypes: { age: 'INTEGER | CHECK' },
+                        data: []
+                    }
+                ]
             })
             const engine = useSqlEngine()
             engine.code.value = 'CREATE TABLE t (age INTEGER CHECK(age > 0 AND age < 150));'
@@ -277,7 +319,14 @@ SELECT * FROM high_earners;`
 
         it('should handle DEFAULT with expressions', async () => {
             mockSuccess(fetchSpy, {
-                tables: [{name: 't', columns: ['created'], columnTypes: {created: 'TEXT | DEFAULT'}, data: []}]
+                tables: [
+                    {
+                        name: 't',
+                        columns: ['created'],
+                        columnTypes: { created: 'TEXT | DEFAULT' },
+                        data: []
+                    }
+                ]
             })
             const engine = useSqlEngine()
             engine.code.value = "CREATE TABLE t (created TEXT DEFAULT (datetime('now')));"
@@ -288,7 +337,14 @@ SELECT * FROM high_earners;`
 
         it('should handle UNIQUE constraint', async () => {
             mockSuccess(fetchSpy, {
-                tables: [{name: 't', columns: ['email'], columnTypes: {email: 'TEXT | UNIQUE'}, data: []}]
+                tables: [
+                    {
+                        name: 't',
+                        columns: ['email'],
+                        columnTypes: { email: 'TEXT | UNIQUE' },
+                        data: []
+                    }
+                ]
             })
             const engine = useSqlEngine()
             engine.code.value = 'CREATE TABLE t (email TEXT UNIQUE);'
@@ -299,8 +355,18 @@ SELECT * FROM high_earners;`
 
         it('should handle FOREIGN KEY', async () => {
             mockSuccess(fetchSpy, {
-                tables: [{name: 't', columns: ['ref_id'], columnTypes: {ref_id: 'INTEGER'}, data: []}],
-                foreignKeys: [{name: '', fromTable: 't', fromColumn: 'ref_id', toTable: 'parent', toColumn: 'id'}]
+                tables: [
+                    { name: 't', columns: ['ref_id'], columnTypes: { ref_id: 'INTEGER' }, data: [] }
+                ],
+                foreignKeys: [
+                    {
+                        name: '',
+                        fromTable: 't',
+                        fromColumn: 'ref_id',
+                        toTable: 'parent',
+                        toColumn: 'id'
+                    }
+                ]
             })
             const engine = useSqlEngine()
             engine.code.value = `CREATE TABLE t (
@@ -314,7 +380,7 @@ SELECT * FROM high_earners;`
         })
 
         it('should handle PRAGMA statements', async () => {
-            mockSuccess(fetchSpy, {tables: []})
+            mockSuccess(fetchSpy, { tables: [] })
             const engine = useSqlEngine()
             engine.code.value = 'PRAGMA foreign_keys = ON;'
             await tick()
@@ -322,7 +388,7 @@ SELECT * FROM high_earners;`
         })
 
         it('should handle VACUUM', async () => {
-            mockSuccess(fetchSpy, {tables: []})
+            mockSuccess(fetchSpy, { tables: [] })
             const engine = useSqlEngine()
             engine.code.value = 'VACUUM;'
             await tick()
@@ -332,7 +398,14 @@ SELECT * FROM high_earners;`
         it('should handle sqlite_master query', async () => {
             mockSuccess(fetchSpy, {
                 tables: [],
-                queryResults: [{name: '查询结果', columns: ['name'], columnTypes: {name: 'TEXT'}, data: [{name: 't'}]}]
+                queryResults: [
+                    {
+                        name: '查询结果',
+                        columns: ['name'],
+                        columnTypes: { name: 'TEXT' },
+                        data: [{ name: 't' }]
+                    }
+                ]
             })
             const engine = useSqlEngine()
             engine.code.value = "SELECT name FROM sqlite_master WHERE type='table';"
@@ -347,7 +420,12 @@ SELECT * FROM high_earners;`
                     {
                         name: 'events',
                         columns: ['id', 'created_at', 'event_date', 'event_time'],
-                        columnTypes: {id: 'INTEGER', created_at: 'TEXT', event_date: 'DATE', event_time: 'TIME'},
+                        columnTypes: {
+                            id: 'INTEGER',
+                            created_at: 'TEXT',
+                            event_date: 'DATE',
+                            event_time: 'TIME'
+                        },
                         data: []
                     }
                 ]
@@ -371,7 +449,15 @@ SELECT * FROM high_earners;`
                 queryResults: [
                     {
                         name: '查询结果',
-                        columns: ['upper', 'lower', 'len', 'substr', 'replace', 'trim', 'full_title'],
+                        columns: [
+                            'upper',
+                            'lower',
+                            'len',
+                            'substr',
+                            'replace',
+                            'trim',
+                            'full_title'
+                        ],
                         columnTypes: {
                             upper: 'TEXT',
                             lower: 'TEXT',
@@ -406,8 +492,14 @@ SELECT * FROM high_earners;`
                     {
                         name: '查询结果',
                         columns: ['abs', 'round', 'random', 'max', 'min'],
-                        columnTypes: {abs: 'INTEGER', round: 'REAL', random: 'INTEGER', max: 'INTEGER', min: 'INTEGER'},
-                        data: [{abs: 42, round: 3.14, random: 123, max: 10, min: 1}]
+                        columnTypes: {
+                            abs: 'INTEGER',
+                            round: 'REAL',
+                            random: 'INTEGER',
+                            max: 'INTEGER',
+                            min: 'INTEGER'
+                        },
+                        data: [{ abs: 42, round: 3.14, random: 123, max: 10, min: 1 }]
                     }
                 ]
             })
@@ -424,7 +516,7 @@ SELECT * FROM high_earners;`
                     {
                         name: 't',
                         columns: ['id', 'name'],
-                        columnTypes: {id: 'INTEGER | PRIMARY KEY', name: 'TEXT'},
+                        columnTypes: { id: 'INTEGER | PRIMARY KEY', name: 'TEXT' },
                         data: []
                     }
                 ]
@@ -445,8 +537,8 @@ SELECT * FROM high_earners;`
                     {
                         name: '查询结果',
                         columns: ['name', 'salary', 'avg_sal'],
-                        columnTypes: {name: 'TEXT', salary: 'REAL', avg_sal: 'REAL'},
-                        data: [{name: 'Alice', salary: 9000, avg_sal: 7000}]
+                        columnTypes: { name: 'TEXT', salary: 'REAL', avg_sal: 'REAL' },
+                        data: [{ name: 'Alice', salary: 9000, avg_sal: 7000 }]
                     }
                 ]
             })
@@ -468,8 +560,13 @@ SELECT * FROM high_earners;`
                     {
                         name: '查询结果',
                         columns: ['name', 'salary', 'rank', 'dept_rank'],
-                        columnTypes: {name: 'TEXT', salary: 'REAL', rank: 'INTEGER', dept_rank: 'INTEGER'},
-                        data: [{name: 'Alice', salary: 9000, rank: 1, dept_rank: 1}]
+                        columnTypes: {
+                            name: 'TEXT',
+                            salary: 'REAL',
+                            rank: 'INTEGER',
+                            dept_rank: 'INTEGER'
+                        },
+                        data: [{ name: 'Alice', salary: 9000, rank: 1, dept_rank: 1 }]
                     }
                 ]
             })
@@ -489,5 +586,4 @@ SELECT * FROM high_earners;`
     // ============================================================
     //  Triggers (complex parsing)
     // ============================================================
-
 })

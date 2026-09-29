@@ -5,32 +5,32 @@ import { StickToBottom } from 'vue-stick-to-bottom'
 import { cn } from '@/lib/utils'
 
 interface Props {
-  ariaLabel?: string
-  class?: HTMLAttributes['class']
-  initial?: boolean | 'instant' | { damping?: number; stiffness?: number; mass?: number }
-  resize?: 'instant' | { damping?: number; stiffness?: number; mass?: number }
-  damping?: number
-  stiffness?: number
-  mass?: number
-  anchor?: 'auto' | 'none'
+    ariaLabel?: string
+    class?: HTMLAttributes['class']
+    initial?: boolean | 'instant' | { damping?: number; stiffness?: number; mass?: number }
+    resize?: 'instant' | { damping?: number; stiffness?: number; mass?: number }
+    damping?: number
+    stiffness?: number
+    mass?: number
+    anchor?: 'auto' | 'none'
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  ariaLabel: 'Conversation',
-  initial: true,
-  damping: 0.7,
-  stiffness: 0.05,
-  mass: 1.25,
-  anchor: 'none'
+    ariaLabel: 'Conversation',
+    initial: true,
+    damping: 0.7,
+    stiffness: 0.05,
+    mass: 1.25,
+    anchor: 'none'
 })
 const delegatedProps = reactiveOmit(props, 'class')
 </script>
 
 <template>
-  <StickToBottom
-    v-bind="delegatedProps"
-    :class="cn('relative flex-1 overflow-y-hidden', props.class)"
-  >
-    <slot />
-  </StickToBottom>
+    <StickToBottom
+        v-bind="delegatedProps"
+        :class="cn('relative flex-1 overflow-y-hidden', props.class)"
+    >
+        <slot />
+    </StickToBottom>
 </template>

@@ -1,5 +1,11 @@
-import {afterEach, beforeEach, describe, expect, it, type vi} from 'vitest'
-import {mockSuccess, setupSqlEngine, type SqlEngineSetup, teardownSqlEngine, tick} from './test-utils'
+import { afterEach, beforeEach, describe, expect, it, type vi } from 'vitest'
+import {
+    mockSuccess,
+    setupSqlEngine,
+    type SqlEngineSetup,
+    teardownSqlEngine,
+    tick
+} from './test-utils'
 
 describe('SQL DML statements', () => {
     let useSqlEngine: SqlEngineSetup['useSqlEngine']
@@ -21,8 +27,8 @@ describe('SQL DML statements', () => {
                     {
                         name: 't',
                         columns: ['id', 'name', 'val'],
-                        columnTypes: {id: 'INTEGER', name: 'TEXT', val: 'REAL'},
-                        data: [{id: 1, name: 'Alice', val: 100.5}]
+                        columnTypes: { id: 'INTEGER', name: 'TEXT', val: 'REAL' },
+                        data: [{ id: 1, name: 'Alice', val: 100.5 }]
                     }
                 ]
             })
@@ -39,13 +45,14 @@ describe('SQL DML statements', () => {
                     {
                         name: 't',
                         columns: ['id', 'name'],
-                        columnTypes: {id: 'INTEGER', name: 'TEXT'},
-                        data: [{id: 1, name: 'Alice'}]
+                        columnTypes: { id: 'INTEGER', name: 'TEXT' },
+                        data: [{ id: 1, name: 'Alice' }]
                     }
                 ]
             })
             const engine = useSqlEngine()
-            engine.code.value = "CREATE TABLE t (id INTEGER, name TEXT);\nINSERT INTO t VALUES (1, 'Alice');"
+            engine.code.value =
+                "CREATE TABLE t (id INTEGER, name TEXT);\nINSERT INTO t VALUES (1, 'Alice');"
             await tick()
             expect(engine.db.tables[0].data[0].name).toBe('Alice')
         })
@@ -56,11 +63,11 @@ describe('SQL DML statements', () => {
                     {
                         name: 't',
                         columns: ['x', 'y'],
-                        columnTypes: {x: 'INTEGER', y: 'TEXT'},
+                        columnTypes: { x: 'INTEGER', y: 'TEXT' },
                         data: [
-                            {x: 1, y: 'a'},
-                            {x: 2, y: 'b'},
-                            {x: 3, y: 'c'}
+                            { x: 1, y: 'a' },
+                            { x: 2, y: 'b' },
+                            { x: 3, y: 'c' }
                         ]
                     }
                 ]
@@ -78,8 +85,8 @@ describe('SQL DML statements', () => {
                     {
                         name: 't',
                         columns: ['a', 'b', 'c'],
-                        columnTypes: {a: 'INTEGER', b: 'TEXT', c: 'REAL'},
-                        data: [{a: null, b: 'hello', c: 3.14}]
+                        columnTypes: { a: 'INTEGER', b: 'TEXT', c: 'REAL' },
+                        data: [{ a: null, b: 'hello', c: 3.14 }]
                     }
                 ]
             })
@@ -97,8 +104,8 @@ describe('SQL DML statements', () => {
                     {
                         name: 't',
                         columns: ['id', 'name'],
-                        columnTypes: {id: 'INTEGER', name: 'TEXT'},
-                        data: [{id: 1, name: 'Alice'}]
+                        columnTypes: { id: 'INTEGER', name: 'TEXT' },
+                        data: [{ id: 1, name: 'Alice' }]
                     }
                 ]
             })
@@ -115,8 +122,8 @@ describe('SQL DML statements', () => {
                     {
                         name: 't',
                         columns: ['id', 'name'],
-                        columnTypes: {id: 'INTEGER', name: 'TEXT'},
-                        data: [{id: 1, name: 'Alice'}]
+                        columnTypes: { id: 'INTEGER', name: 'TEXT' },
+                        data: [{ id: 1, name: 'Alice' }]
                     }
                 ]
             })
@@ -133,8 +140,8 @@ describe('SQL DML statements', () => {
                     {
                         name: 't',
                         columns: ['select', 'from'],
-                        columnTypes: {select: 'INTEGER', from: 'TEXT'},
-                        data: [{select: 1, from: 'x'}]
+                        columnTypes: { select: 'INTEGER', from: 'TEXT' },
+                        data: [{ select: 1, from: 'x' }]
                     }
                 ]
             })
@@ -157,8 +164,8 @@ describe('SQL DML statements', () => {
                     {
                         name: 't',
                         columns: ['id', 'name'],
-                        columnTypes: {id: 'INTEGER', name: 'TEXT'},
-                        data: [{id: 1, name: 'Bob'}]
+                        columnTypes: { id: 'INTEGER', name: 'TEXT' },
+                        data: [{ id: 1, name: 'Bob' }]
                     }
                 ]
             })
@@ -175,8 +182,8 @@ describe('SQL DML statements', () => {
                     {
                         name: 't',
                         columns: ['id', 'name', 'age'],
-                        columnTypes: {id: 'INTEGER', name: 'TEXT', age: 'INTEGER'},
-                        data: [{id: 1, name: 'Bob', age: 30}]
+                        columnTypes: { id: 'INTEGER', name: 'TEXT', age: 'INTEGER' },
+                        data: [{ id: 1, name: 'Bob', age: 30 }]
                     }
                 ]
             })
@@ -190,7 +197,12 @@ describe('SQL DML statements', () => {
         it('should handle UPDATE without WHERE', async () => {
             mockSuccess(fetchSpy, {
                 tables: [
-                    {name: 't', columns: ['active'], columnTypes: {active: 'INTEGER'}, data: [{active: 1}, {active: 1}]}
+                    {
+                        name: 't',
+                        columns: ['active'],
+                        columnTypes: { active: 'INTEGER' },
+                        data: [{ active: 1 }, { active: 1 }]
+                    }
                 ]
             })
             const engine = useSqlEngine()
@@ -202,7 +214,7 @@ describe('SQL DML statements', () => {
 
         it('should handle DELETE with WHERE', async () => {
             mockSuccess(fetchSpy, {
-                tables: [{name: 't', columns: ['id'], columnTypes: {id: 'INTEGER'}, data: []}]
+                tables: [{ name: 't', columns: ['id'], columnTypes: { id: 'INTEGER' }, data: [] }]
             })
             const engine = useSqlEngine()
             engine.code.value = 'DELETE FROM t WHERE id = 1;'
@@ -213,7 +225,7 @@ describe('SQL DML statements', () => {
 
         it('should handle DELETE without WHERE', async () => {
             mockSuccess(fetchSpy, {
-                tables: [{name: 't', columns: ['id'], columnTypes: {id: 'INTEGER'}, data: []}]
+                tables: [{ name: 't', columns: ['id'], columnTypes: { id: 'INTEGER' }, data: [] }]
             })
             const engine = useSqlEngine()
             engine.code.value = 'DELETE FROM t;'
@@ -233,8 +245,8 @@ describe('SQL DML statements', () => {
                     {
                         name: 't',
                         columns: ['id', 'name'],
-                        columnTypes: {id: 'INTEGER', name: 'TEXT'},
-                        data: [{id: 1, name: 'Alice'}]
+                        columnTypes: { id: 'INTEGER', name: 'TEXT' },
+                        data: [{ id: 1, name: 'Alice' }]
                     }
                 ]
             })
@@ -252,8 +264,8 @@ ON CONFLICT(id) DO UPDATE SET name = excluded.name;`
                     {
                         name: 't',
                         columns: ['id', 'name'],
-                        columnTypes: {id: 'INTEGER', name: 'TEXT'},
-                        data: [{id: 1, name: 'Alice'}]
+                        columnTypes: { id: 'INTEGER', name: 'TEXT' },
+                        data: [{ id: 1, name: 'Alice' }]
                     }
                 ]
             })
@@ -270,8 +282,8 @@ ON CONFLICT DO NOTHING;`
                     {
                         name: 't',
                         columns: ['id', 'name'],
-                        columnTypes: {id: 'INTEGER', name: 'TEXT'},
-                        data: [{id: 1, name: 'Alice'}]
+                        columnTypes: { id: 'INTEGER', name: 'TEXT' },
+                        data: [{ id: 1, name: 'Alice' }]
                     }
                 ]
             })
@@ -293,8 +305,8 @@ ON CONFLICT DO NOTHING;`
                     {
                         name: 'backup',
                         columns: ['name', 'salary'],
-                        columnTypes: {name: 'TEXT', salary: 'REAL'},
-                        data: [{name: 'Alice', salary: 12000}]
+                        columnTypes: { name: 'TEXT', salary: 'REAL' },
+                        data: [{ name: 'Alice', salary: 12000 }]
                     }
                 ]
             })
@@ -307,7 +319,7 @@ INSERT INTO backup SELECT name, salary FROM employees WHERE salary > 10000;`
 
         it('should handle DELETE with subquery', async () => {
             mockSuccess(fetchSpy, {
-                tables: [{name: 't', columns: ['id'], columnTypes: {id: 'INTEGER'}, data: []}]
+                tables: [{ name: 't', columns: ['id'], columnTypes: { id: 'INTEGER' }, data: [] }]
             })
             const engine = useSqlEngine()
             engine.code.value = `DELETE FROM t WHERE id IN (SELECT id FROM other WHERE status = 'inactive');`
@@ -321,8 +333,8 @@ INSERT INTO backup SELECT name, salary FROM employees WHERE salary > 10000;`
                     {
                         name: 'employees',
                         columns: ['id', 'salary'],
-                        columnTypes: {id: 'INTEGER', salary: 'REAL'},
-                        data: [{id: 1, salary: 7000}]
+                        columnTypes: { id: 'INTEGER', salary: 'REAL' },
+                        data: [{ id: 1, salary: 7000 }]
                     }
                 ]
             })
@@ -336,5 +348,4 @@ INSERT INTO backup SELECT name, salary FROM employees WHERE salary > 10000;`
     // ============================================================
     //  Subquery extras
     // ============================================================
-
 })

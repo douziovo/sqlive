@@ -1,4 +1,4 @@
-import {computed, type Ref, ref, watch} from 'vue'
+import { computed, type Ref, ref, watch } from 'vue'
 
 export interface PreviewItem {
     id: string
@@ -39,13 +39,17 @@ export function useFilteredList(items: Ref<PreviewItem[]>, filterText: Ref<strin
 
     function navigateDown() {
         keyboardIndex.value =
-            keyboardIndex.value === null ? 0 : Math.min(keyboardIndex.value + 1, filteredItems.value.length - 1)
+            keyboardIndex.value === null
+                ? 0
+                : Math.min(keyboardIndex.value + 1, filteredItems.value.length - 1)
         hoveredIndex.value = keyboardIndex.value
     }
 
     function navigateUp() {
         keyboardIndex.value =
-            keyboardIndex.value === null ? filteredItems.value.length - 1 : Math.max(keyboardIndex.value - 1, 0)
+            keyboardIndex.value === null
+                ? filteredItems.value.length - 1
+                : Math.max(keyboardIndex.value - 1, 0)
         hoveredIndex.value = keyboardIndex.value
     }
 

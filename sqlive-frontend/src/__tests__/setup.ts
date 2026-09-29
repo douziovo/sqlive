@@ -13,21 +13,17 @@ if (!('queryCommandSupported' in document)) {
 // Polyfill ResizeObserver for VueFlow/jsdom compatibility
 if (typeof globalThis.ResizeObserver === 'undefined') {
     globalThis.ResizeObserver = class ResizeObserver {
-        observe() {
-        }
+        observe() {}
 
-        unobserve() {
-        }
+        unobserve() {}
 
-        disconnect() {
-        }
+        disconnect() {}
     }
 }
 
 // Polyfill scrollIntoView for jsdom (not implemented)
 if (!('scrollIntoView' in Element.prototype)) {
-    Element.prototype.scrollIntoView = () => {
-    }
+    Object.defineProperty(Element.prototype, 'scrollIntoView', { value: () => {} })
 }
 
 // No default fetch mock — tests that need fetch must explicitly mock it

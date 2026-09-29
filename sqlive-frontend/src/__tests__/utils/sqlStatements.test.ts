@@ -1,4 +1,4 @@
-import {describe, expect, it} from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
     compareValuesForHighlight,
     enforceTypeConstraints,
@@ -28,16 +28,18 @@ describe('extractSqlStatements', () => {
     })
 
     it('handles multiple statements', () => {
-        const stmts = extractSqlStatements('CREATE TABLE t (x INTEGER);\nINSERT INTO t VALUES (1);\nSELECT * FROM t;')
+        const stmts = extractSqlStatements(
+            'CREATE TABLE t (x INTEGER);\nINSERT INTO t VALUES (1);\nSELECT * FROM t;'
+        )
         expect(stmts).toHaveLength(3)
         expect(stmts[1].text).toBe('\nINSERT INTO t VALUES (1);')
     })
 
     it('tracks start and end positions', () => {
         const stmts = extractSqlStatements('A;B;C;')
-        expect(stmts[0]).toEqual({text: 'A;', start: 0, end: 2})
-        expect(stmts[1]).toEqual({text: 'B;', start: 2, end: 4})
-        expect(stmts[2]).toEqual({text: 'C;', start: 4, end: 6})
+        expect(stmts[0]).toEqual({ text: 'A;', start: 0, end: 2 })
+        expect(stmts[1]).toEqual({ text: 'B;', start: 2, end: 4 })
+        expect(stmts[2]).toEqual({ text: 'C;', start: 4, end: 6 })
     })
 
     it('ignores semicolons inside single-quoted strings', () => {
@@ -289,7 +291,9 @@ describe('normalizeAndCompare', () => {
 
 describe('parseExplicitColumns', () => {
     it('extracts column list from INSERT with explicit columns', () => {
-        const cols = parseExplicitColumns("INSERT INTO t (id, name, val) VALUES (1, 'Alice', 100.5);")
+        const cols = parseExplicitColumns(
+            "INSERT INTO t (id, name, val) VALUES (1, 'Alice', 100.5);"
+        )
         expect(cols).toEqual(['id', 'name', 'val'])
     })
 

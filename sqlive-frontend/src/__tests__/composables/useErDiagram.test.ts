@@ -1,6 +1,6 @@
-import {describe, expect, it} from 'vitest'
-import {determineCardinality, foreignKeysToEdges, tablesToNodes} from '@/composables/useErDiagram'
-import type {ForeignKeyInfo, TableSchema} from '@/model/DatabaseTypes'
+import { describe, expect, it } from 'vitest'
+import { determineCardinality, foreignKeysToEdges, tablesToNodes } from '@/composables/useErDiagram'
+import type { ForeignKeyInfo, TableSchema } from '@/model/DatabaseTypes'
 
 // ── Test Data ──
 
@@ -8,7 +8,7 @@ function makeUsersTable(): TableSchema {
     return {
         name: 'users',
         columns: ['id', 'name', 'dept_id'],
-        columnTypes: {id: 'INTEGER | PRIMARY KEY', name: 'TEXT | NOT NULL', dept_id: 'INTEGER'},
+        columnTypes: { id: 'INTEGER | PRIMARY KEY', name: 'TEXT | NOT NULL', dept_id: 'INTEGER' },
         data: []
     }
 }
@@ -17,7 +17,7 @@ function makeDeptsTable(): TableSchema {
     return {
         name: 'departments',
         columns: ['id', 'name'],
-        columnTypes: {id: 'INTEGER | PRIMARY KEY', name: 'TEXT | UNIQUE'},
+        columnTypes: { id: 'INTEGER | PRIMARY KEY', name: 'TEXT | UNIQUE' },
         data: []
     }
 }
@@ -26,7 +26,7 @@ function makeOrdersTable(): TableSchema {
     return {
         name: 'orders',
         columns: ['id', 'user_id', 'total'],
-        columnTypes: {id: 'INTEGER | PRIMARY KEY', user_id: 'INTEGER', total: 'REAL'},
+        columnTypes: { id: 'INTEGER | PRIMARY KEY', user_id: 'INTEGER', total: 'REAL' },
         data: []
     }
 }
@@ -52,7 +52,13 @@ describe('tablesToNodes', () => {
 
     it('marks FOREIGN KEY column with reference info', () => {
         const fks: ForeignKeyInfo[] = [
-            {name: 'fk_dept', fromTable: 'users', fromColumn: 'dept_id', toTable: 'departments', toColumn: 'id'}
+            {
+                name: 'fk_dept',
+                fromTable: 'users',
+                fromColumn: 'dept_id',
+                toTable: 'departments',
+                toColumn: 'id'
+            }
         ]
         const nodes = tablesToNodes([makeUsersTable(), makeDeptsTable()], fks)
         const cols = nodes[0].data.columns
@@ -102,7 +108,13 @@ describe('determineCardinality', () => {
 describe('foreignKeysToEdges', () => {
     it('creates one edge per foreign key', () => {
         const fks: ForeignKeyInfo[] = [
-            {name: 'fk_dept', fromTable: 'users', fromColumn: 'dept_id', toTable: 'departments', toColumn: 'id'}
+            {
+                name: 'fk_dept',
+                fromTable: 'users',
+                fromColumn: 'dept_id',
+                toTable: 'departments',
+                toColumn: 'id'
+            }
         ]
         const edges = foreignKeysToEdges(fks, [makeUsersTable(), makeDeptsTable()])
         expect(edges).toHaveLength(1)
@@ -113,7 +125,13 @@ describe('foreignKeysToEdges', () => {
 
     it('includes FK name in label when present', () => {
         const fks: ForeignKeyInfo[] = [
-            {name: 'fk_dept', fromTable: 'users', fromColumn: 'dept_id', toTable: 'departments', toColumn: 'id'}
+            {
+                name: 'fk_dept',
+                fromTable: 'users',
+                fromColumn: 'dept_id',
+                toTable: 'departments',
+                toColumn: 'id'
+            }
         ]
         const edges = foreignKeysToEdges(fks, [makeUsersTable(), makeDeptsTable()])
         expect(edges[0].label).toBe('fk_dept: 多对一')
@@ -121,7 +139,13 @@ describe('foreignKeysToEdges', () => {
 
     it('uses cardinality-only label when FK has no name', () => {
         const fks: ForeignKeyInfo[] = [
-            {name: '', fromTable: 'orders', fromColumn: 'user_id', toTable: 'users', toColumn: 'id'}
+            {
+                name: '',
+                fromTable: 'orders',
+                fromColumn: 'user_id',
+                toTable: 'users',
+                toColumn: 'id'
+            }
         ]
         const edges = foreignKeysToEdges(fks, [makeOrdersTable(), makeUsersTable()])
         expect(edges[0].label).toBe('多对一')
@@ -143,7 +167,13 @@ describe('foreignKeysToEdges', () => {
 
     it('filters out FK when target table is not in the schema', () => {
         const fks: ForeignKeyInfo[] = [
-            {name: 'fk_orphan', fromTable: 'users', fromColumn: 'dept_id', toTable: 'nonexistent', toColumn: 'id'}
+            {
+                name: 'fk_orphan',
+                fromTable: 'users',
+                fromColumn: 'dept_id',
+                toTable: 'nonexistent',
+                toColumn: 'id'
+            }
         ]
         const edges = foreignKeysToEdges(fks, [makeUsersTable()])
         expect(edges).toHaveLength(0)
@@ -151,7 +181,13 @@ describe('foreignKeysToEdges', () => {
 
     it('filters out FK when source table is not in the schema', () => {
         const fks: ForeignKeyInfo[] = [
-            {name: 'fk_orphan', fromTable: 'ghost', fromColumn: 'x', toTable: 'users', toColumn: 'id'}
+            {
+                name: 'fk_orphan',
+                fromTable: 'ghost',
+                fromColumn: 'x',
+                toTable: 'users',
+                toColumn: 'id'
+            }
         ]
         const edges = foreignKeysToEdges(fks, [makeUsersTable()])
         expect(edges).toHaveLength(0)
@@ -172,7 +208,8 @@ describe('search filtering', () => {
             data: {
                 ...n.data,
                 isFiltered:
-                    !n.data.tableName.toLowerCase().includes(q) && !n.data.columns.some((c) => c.name.toLowerCase().includes(q))
+                    !n.data.tableName.toLowerCase().includes(q) &&
+                    !n.data.columns.some((c) => c.name.toLowerCase().includes(q))
             }
         }))
 
@@ -188,7 +225,8 @@ describe('search filtering', () => {
             data: {
                 ...n.data,
                 isFiltered:
-                    !n.data.tableName.toLowerCase().includes(q) && !n.data.columns.some((c) => c.name.toLowerCase().includes(q))
+                    !n.data.tableName.toLowerCase().includes(q) &&
+                    !n.data.columns.some((c) => c.name.toLowerCase().includes(q))
             }
         }))
 

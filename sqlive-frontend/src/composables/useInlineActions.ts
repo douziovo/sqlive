@@ -1,7 +1,7 @@
-import {computed, type Ref} from 'vue'
-import {API_BASE} from '../config'
-import type {AiSchemaInfo} from '../model/ApiTypes'
-import type {TableSchema} from '../model/DatabaseTypes'
+import { computed, type Ref } from 'vue'
+import { API_BASE } from '../config'
+import type { AiSchemaInfo } from '../model/ApiTypes'
+import type { TableSchema } from '../model/DatabaseTypes'
 import {
     formatErrorAnalysis,
     formatExplain,
@@ -9,15 +9,9 @@ import {
     formatGenerateSql,
     formatOptimize
 } from '../utils/aiFormatter'
-import type {AiMessage, AiPanelMode} from './useAiChat'
+import type { AiMessage, AiPanelMode } from './useAiChat'
 
 let msgCounter = 0
-
-interface ApiResponse<T> {
-    success: boolean
-    data?: T
-    error?: string
-}
 
 export interface DisplayHandler {
     onLoading: (mode: AiPanelMode) => void
@@ -48,9 +42,10 @@ export function useInlineActions(state: {
         // production (AI_API_KEY set). Build-time env var takes precedence; fall back
         // to localStorage so end users can paste a key without rebuilding. typeof
         // guard keeps the composable testable in non-browser contexts.
-        const headers: Record<string, string> = {'Content-Type': 'application/json'}
-        const apiKey = import.meta.env.VITE_AI_API_KEY
-            || (typeof localStorage !== 'undefined' ? localStorage.getItem('ai_api_key') : null)
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+        const apiKey =
+            import.meta.env.VITE_AI_API_KEY ||
+            (typeof localStorage !== 'undefined' ? localStorage.getItem('ai_api_key') : null)
         if (apiKey) headers['X-API-Key'] = apiKey
 
         const resp = await fetch(`${API_BASE}${endpoint}`, {
@@ -62,7 +57,10 @@ export function useInlineActions(state: {
         return resp.json()
     }
 
-    async function analyzeError(error: { line: number; message: string }, display: DisplayHandler): Promise<void> {
+    async function analyzeError(
+        error: { line: number; message: string },
+        display: DisplayHandler
+    ): Promise<void> {
         state.isLoading.value = true
         display.onLoading('error-analysis')
 
@@ -78,7 +76,7 @@ export function useInlineActions(state: {
                 }
                 error?: string
             }>('/analyze-error', {
-                error: {message: error.message, line: error.line},
+                error: { message: error.message, line: error.line },
                 currentSql: state.code.value,
                 schema: currentSchema.value
             })
@@ -86,8 +84,8 @@ export function useInlineActions(state: {
             if (resp.success && resp.data) {
                 const content = formatErrorAnalysis(resp.data)
                 const actions = [
-                    ...(resp.data.fixedCode ? [{label: '✏️ 应用修复', action: 'apply-fix'}] : []),
-                    {label: '💬 追问', action: 'follow-up'}
+                    ...(resp.data.fixedCode ? [{ label: '✏️ 应用修复', action: 'apply-fix' }] : []),
+                    { label: '💬 追问', action: 'follow-up' }
                 ]
                 display.onResult(content, actions)
 
@@ -96,7 +94,7 @@ export function useInlineActions(state: {
                     role: 'assistant',
                     content: `## SQL 错误分析\n\n${resp.data.summary ?? resp.data.content}`,
                     timestamp: Date.now(),
-                    metadata: {type: 'error-analysis', context: {sql: state.code.value, error}}
+                    metadata: { type: 'error-analysis', context: { sql: state.code.value, error } }
                 })
             } else {
                 display.onError(`AI 分析失败：${resp.error || '未知错误'}`)
@@ -118,19 +116,24 @@ export function useInlineActions(state: {
         try {
             const resp = await apiCall<{
                 success: boolean
-                data?: { content?: string; fixedCode?: string; summary?: string; explanation?: string }
+                data?: {
+                    content?: string
+                    fixedCode?: string
+                    summary?: string
+                    explanation?: string
+                }
                 error?: string
             }>('/fix-code', {
-                error: error ? {message: error.message, line: error.line} : undefined,
+                error: error ? { message: error.message, line: error.line } : undefined,
                 currentSql: state.code.value,
                 schema: currentSchema.value
             })
 
             if (resp.success && resp.data) {
-                const content = formatFixCode(resp.data, {originalCode: state.code.value})
+                const content = formatFixCode(resp.data, { originalCode: state.code.value })
                 const actions = [
-                    {label: '✅ 确认应用', action: 'apply-fix'},
-                    {label: '📋 复制', action: 'copy'}
+                    { label: '✅ 确认应用', action: 'apply-fix' },
+                    { label: '📋 复制', action: 'copy' }
                 ]
                 display.onResult(content, actions)
                 result = resp.data.fixedCode ?? null
@@ -160,11 +163,11 @@ export function useInlineActions(state: {
                     tips?: string[]
                 }
                 error?: string
-            }>('/explain', {selectedCode, schema: currentSchema.value})
+            }>('/explain', { selectedCode, schema: currentSchema.value })
 
             if (resp.success && resp.data) {
                 const content = formatExplain(resp.data)
-                const actions = [{label: '💬 追问', action: 'follow-up'}]
+                const actions = [{ label: '💬 追问', action: 'follow-up' }]
                 display.onResult(content, actions)
 
                 state.messages.value.push({
@@ -172,7 +175,7 @@ export function useInlineActions(state: {
                     role: 'assistant',
                     content: resp.data.summary || content,
                     timestamp: Date.now(),
-                    metadata: {type: 'explain', context: {sql: selectedCode}}
+                    metadata: { type: 'explain', context: { sql: selectedCode } }
                 })
             } else {
                 display.onError(`解释失败：${resp.error || '未知错误'}`)
@@ -194,20 +197,20 @@ export function useInlineActions(state: {
             const resp = await apiCall<{
                 success: boolean
                 data?: {
-                    content?: string;
-                    summary?: string;
-                    explanation?: string;
+                    content?: string
+                    summary?: string
+                    explanation?: string
                     fixedCode?: string
                 }
                 error?: string
-            }>('/optimize', {selectedCode, schema: currentSchema.value})
+            }>('/optimize', { selectedCode, schema: currentSchema.value })
 
             if (resp.success && resp.data) {
                 const optimizedCode = resp.data.fixedCode || ''
-                const content = formatOptimize(resp.data, {selectedCode})
+                const content = formatOptimize(resp.data, { selectedCode })
                 const actions = [
-                    ...(optimizedCode ? [{label: '✏️ 替换', action: 'apply-fix'}] : []),
-                    {label: '💬 追问', action: 'follow-up'}
+                    ...(optimizedCode ? [{ label: '✏️ 替换', action: 'apply-fix' }] : []),
+                    { label: '💬 追问', action: 'follow-up' }
                 ]
                 display.onResult(content, actions)
                 result = optimizedCode || null
@@ -223,7 +226,10 @@ export function useInlineActions(state: {
         return result
     }
 
-    async function generateSql(description: string, display: DisplayHandler): Promise<string | null> {
+    async function generateSql(
+        description: string,
+        display: DisplayHandler
+    ): Promise<string | null> {
         let result: string | null = null
         state.isLoading.value = true
         display.onLoading('generate-sql')
@@ -251,9 +257,9 @@ export function useInlineActions(state: {
                     const finalCode = generatedCode.trim()
                     const content = formatGenerateSql(finalCode)
                     const actions = [
-                        {label: '✏️ 插入编辑器', action: 'apply-fix'},
-                        {label: '📋 复制', action: 'copy'},
-                        {label: '🔄 重新生成', action: 'retry'}
+                        { label: '✏️ 插入编辑器', action: 'apply-fix' },
+                        { label: '📋 复制', action: 'copy' },
+                        { label: '🔄 重新生成', action: 'retry' }
                     ]
                     display.onResult(content, actions)
                     result = finalCode
@@ -272,5 +278,5 @@ export function useInlineActions(state: {
         return result
     }
 
-    return {analyzeError, fixCode, explain, optimize, generateSql}
+    return { analyzeError, fixCode, explain, optimize, generateSql }
 }

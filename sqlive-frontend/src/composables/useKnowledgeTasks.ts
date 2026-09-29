@@ -1,8 +1,8 @@
-import {useLocalStorage} from '@vueuse/core'
-import {computed} from 'vue'
-import {nanoid} from 'nanoid'
-import {useRedDot} from './useRedDot'
-import {buildPresetTasks} from '@/data/presetTasks'
+import { useLocalStorage } from '@vueuse/core'
+import { computed } from 'vue'
+import { nanoid } from 'nanoid'
+import { useRedDot } from './useRedDot'
+import { buildPresetTasks } from '@/data/presetTasks'
 
 // ── TaskSubstep interface ────────────────────────────────────────
 
@@ -70,7 +70,7 @@ export function useKnowledgeTasks() {
             }
         }
 
-        const {category, isPinned, substeps: _, ...rest} = input
+        const { category, isPinned, substeps: _, ...rest } = input
         const newTask: KnowledgeTask = {
             ...rest,
             category: category ?? 'core',
@@ -93,7 +93,7 @@ export function useKnowledgeTasks() {
     function updateTask(id: string, updates: Partial<KnowledgeTask>): void {
         const idx = tasks.value.findIndex((t) => t.id === id)
         if (idx !== -1) {
-            tasks.value[idx] = {...tasks.value[idx], ...updates}
+            tasks.value[idx] = { ...tasks.value[idx], ...updates }
             tasks.value = [...tasks.value]
         }
     }
@@ -106,9 +106,7 @@ export function useKnowledgeTasks() {
         tasks.value = tasks.value.filter((t) => t.id !== id)
     }
 
-    function completeTask(
-        id: string
-    ): { task: KnowledgeTask; xpGained: number } | null {
+    function completeTask(id: string): { task: KnowledgeTask; xpGained: number } | null {
         const idx = tasks.value.findIndex((t) => t.id === id)
         if (idx === -1 || tasks.value[idx].status === 'done') return null
 
@@ -119,16 +117,12 @@ export function useKnowledgeTasks() {
         }
         tasks.value[idx] = task
         tasks.value = [...tasks.value]
-        return {task, xpGained: 0}
+        return { task, xpGained: 0 }
     }
 
     // ── Substep operations ──────────────
 
-    function updateSubstep(
-        taskId: string,
-        substepId: string,
-        status: TaskSubstep['status']
-    ): void {
+    function updateSubstep(taskId: string, substepId: string, status: TaskSubstep['status']): void {
         const taskIdx = tasks.value.findIndex((t) => t.id === taskId)
         if (taskIdx === -1) return
 
@@ -139,7 +133,7 @@ export function useKnowledgeTasks() {
         const oldStatus = task.substeps[substepIdx].status
 
         const newSubsteps = [...task.substeps]
-        newSubsteps[substepIdx] = {...newSubsteps[substepIdx], status}
+        newSubsteps[substepIdx] = { ...newSubsteps[substepIdx], status }
 
         // Mark red dots when substep transitions from locked → active
         if (oldStatus === 'locked' && status === 'active') {
@@ -152,13 +146,13 @@ export function useKnowledgeTasks() {
         }
 
         const allDone = newSubsteps.every((s) => s.status === 'done')
-        const updates: Partial<KnowledgeTask> = {substeps: newSubsteps}
+        const updates: Partial<KnowledgeTask> = { substeps: newSubsteps }
         if (allDone && task.status !== 'done') {
             updates.status = 'done'
             updates.completedAt = new Date().toISOString()
         }
 
-        tasks.value[taskIdx] = {...task, ...updates}
+        tasks.value[taskIdx] = { ...task, ...updates }
         tasks.value = [...tasks.value]
     }
 
@@ -195,20 +189,13 @@ export function useKnowledgeTasks() {
         return tasks.value.filter((t) => t.topicId === topicId)
     }
 
-    const pendingCount = computed(
-        () => tasks.value.filter((t) => t.status === 'todo').length
-    )
+    const pendingCount = computed(() => tasks.value.filter((t) => t.status === 'todo').length)
 
-    const getPinnedTask = computed(() =>
-        tasks.value.find((t) => t.isPinned) ?? null
-    )
+    const getPinnedTask = computed(() => tasks.value.find((t) => t.isPinned) ?? null)
 
     function isOverdue(task: KnowledgeTask): boolean {
         if (!task.dueDate || task.status === 'done') return false
-        return (
-            new Date(task.dueDate).setHours(0, 0, 0, 0) <
-            new Date().setHours(0, 0, 0, 0)
-        )
+        return new Date(task.dueDate).setHours(0, 0, 0, 0) < new Date().setHours(0, 0, 0, 0)
     }
 
     // ── Preset task seeding (first run only) ──────────────

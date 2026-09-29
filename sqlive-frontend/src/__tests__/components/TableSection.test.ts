@@ -1,18 +1,23 @@
-import {mount} from '@vue/test-utils'
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
-import {nextTick, reactive, ref} from 'vue'
-import type {HighlightState, InsertResult, TableSchema, TruncationInfo} from '@/model/DatabaseTypes'
+import { mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick, reactive, ref } from 'vue'
+import type {
+    HighlightState,
+    InsertResult,
+    TableSchema,
+    TruncationInfo
+} from '@/model/DatabaseTypes'
 import TableSection from '../../components/TableSection.vue'
-import {SQL_CONTEXT_KEY} from '../../model/injectionKeys'
+import { SQL_CONTEXT_KEY } from '../../model/injectionKeys'
 
 const mockTable: TableSchema = {
     name: 'users',
     columns: ['id', 'name', 'salary'],
-    columnTypes: {id: 'INTEGER | PRIMARY KEY', name: 'TEXT | NOT NULL', salary: 'REAL'},
+    columnTypes: { id: 'INTEGER | PRIMARY KEY', name: 'TEXT | NOT NULL', salary: 'REAL' },
     data: [
-        {id: 1, name: 'Alice', salary: 9000},
-        {id: 2, name: 'Bob', salary: 7000},
-        {id: 3, name: 'Charlie', salary: 5000}
+        { id: 1, name: 'Alice', salary: 9000 },
+        { id: 2, name: 'Bob', salary: 7000 },
+        { id: 3, name: 'Charlie', salary: 5000 }
     ]
 }
 
@@ -26,7 +31,7 @@ const defaultHighlight: HighlightState = {
 }
 
 function mountTable(overrides: Record<string, any> = {}) {
-    const {highlight, lastTruncations, insertResult, ...propOverrides} = overrides
+    const { highlight, lastTruncations, insertResult, ...propOverrides } = overrides
     return mount(TableSection, {
         props: {
             table: mockTable,
@@ -122,8 +127,8 @@ describe('TableSection', () => {
             expect(updateCellEvents).toBeTruthy()
             expect(updateCellEvents?.[0][0]).toMatchObject({
                 tableName: 'users',
-                oldRow: expect.objectContaining({name: 'Alice'}),
-                newRow: expect.objectContaining({name: 'UpdatedName'})
+                oldRow: expect.objectContaining({ name: 'Alice' }),
+                newRow: expect.objectContaining({ name: 'UpdatedName' })
             })
         }
     })
@@ -150,7 +155,7 @@ describe('TableSection', () => {
             expect(deleteRowEvents).toBeTruthy()
             expect(deleteRowEvents?.[0][0]).toMatchObject({
                 tableName: 'users',
-                row: expect.objectContaining({id: 1})
+                row: expect.objectContaining({ id: 1 })
             })
         }
     })
@@ -173,14 +178,14 @@ describe('TableSection', () => {
 
     it('shows pagination when data exceeds page size', async () => {
         // Create table with >10 rows to trigger pagination
-        const bigData = Array.from({length: 25}, (_, i) => ({
+        const bigData = Array.from({ length: 25 }, (_, i) => ({
             id: i + 1,
             name: `User ${i + 1}`,
             salary: 5000 + i * 100
         }))
 
         const wrapper = mountTable({
-            table: {...mockTable, data: bigData}
+            table: { ...mockTable, data: bigData }
         })
         await nextTick()
 
@@ -190,7 +195,15 @@ describe('TableSection', () => {
 
     it('emits navigate-tab when badge is clicked', async () => {
         const wrapper = mountTable({
-            indexes: [{name: 'idx_test', tableName: 'users', columns: ['id'], unique: false, sql: 'CREATE INDEX ...'}]
+            indexes: [
+                {
+                    name: 'idx_test',
+                    tableName: 'users',
+                    columns: ['id'],
+                    unique: false,
+                    sql: 'CREATE INDEX ...'
+                }
+            ]
         })
         // Find the index badge and click it
         const buttons = wrapper.findAll('span')
@@ -217,14 +230,16 @@ describe('TableSection', () => {
 
         it('shows truncation tooltip when lastTruncations is set', async () => {
             const truncRef = ref<TruncationInfo[]>([])
-            wrappers.push(mountTable({lastTruncations: truncRef}))
+            wrappers.push(mountTable({ lastTruncations: truncRef }))
 
-            truncRef.value = [{
-                value: 'hel',
-                wasTruncated: true,
-                originalValue: 'hello world',
-                maxLength: 3
-            }]
+            truncRef.value = [
+                {
+                    value: 'hel',
+                    wasTruncated: true,
+                    originalValue: 'hello world',
+                    maxLength: 3
+                }
+            ]
             await nextTick()
             await nextTick() // Extra tick for Teleport rendering
 
@@ -235,14 +250,16 @@ describe('TableSection', () => {
 
         it('tooltip displays correct length values', async () => {
             const truncRef = ref<TruncationInfo[]>([])
-            wrappers.push(mountTable({lastTruncations: truncRef}))
+            wrappers.push(mountTable({ lastTruncations: truncRef }))
 
-            truncRef.value = [{
-                value: 'he',
-                wasTruncated: true,
-                originalValue: 'hello world!!',
-                maxLength: 2
-            }]
+            truncRef.value = [
+                {
+                    value: 'he',
+                    wasTruncated: true,
+                    originalValue: 'hello world!!',
+                    maxLength: 2
+                }
+            ]
             await nextTick()
             await nextTick()
 
@@ -254,7 +271,7 @@ describe('TableSection', () => {
 
         it('does not show tooltip when lastTruncations is empty', () => {
             const truncRef = ref<TruncationInfo[]>([])
-            wrappers.push(mountTable({lastTruncations: truncRef}))
+            wrappers.push(mountTable({ lastTruncations: truncRef }))
             const tooltip = document.body.querySelector('.bg-amber-50') as HTMLElement
             expect(tooltip).toBeTruthy()
             expect(tooltip.style.display).toBe('none')
@@ -270,7 +287,7 @@ describe('TableSection', () => {
 
         it('preserves ghost row inputs when insert fails', async () => {
             const insertResultRef = ref<InsertResult | null>(null)
-            wrappers.push(mountTable({insertResult: insertResultRef}))
+            wrappers.push(mountTable({ insertResult: insertResultRef }))
 
             // Fill ghost row textareas
             const ghostTextareas = wrappers[0].findAll('textarea[placeholder="+"]')
@@ -280,14 +297,18 @@ describe('TableSection', () => {
             }
 
             // Simulate failed insert
-            insertResultRef.value = {success: false, tableName: 'users', error: 'UNIQUE constraint failed'}
+            insertResultRef.value = {
+                success: false,
+                tableName: 'users',
+                error: 'UNIQUE constraint failed'
+            }
             await nextTick()
             await nextTick()
 
             // Ghost row inputs should still be present
             const ghostTextareasAfter = wrappers[0].findAll('textarea[placeholder="+"]')
             if (ghostTextareasAfter.length > 0) {
-                expect(ghostTextareasAfter[0].element.value).toBe('4')
+                expect((ghostTextareasAfter[0].element as HTMLTextAreaElement).value).toBe('4')
             }
 
             // Verify failure styling
@@ -302,7 +323,7 @@ describe('TableSection', () => {
 
         it('clears ghost row when insert succeeds', async () => {
             const insertResultRef = ref<InsertResult | null>(null)
-            wrappers.push(mountTable({insertResult: insertResultRef}))
+            wrappers.push(mountTable({ insertResult: insertResultRef }))
 
             // Fill ghost row textareas
             const ghostTextareas = wrappers[0].findAll('textarea[placeholder="+"]')
@@ -312,20 +333,20 @@ describe('TableSection', () => {
             }
 
             // Simulate successful insert
-            insertResultRef.value = {success: true, tableName: 'users'}
+            insertResultRef.value = { success: true, tableName: 'users' }
             await nextTick()
             await nextTick()
 
             // Ghost row inputs should be cleared
             const ghostTextareasAfter = wrappers[0].findAll('textarea[placeholder="+"]')
             if (ghostTextareasAfter.length > 0) {
-                expect(ghostTextareasAfter[0].element.value).toBe('')
+                expect((ghostTextareasAfter[0].element as HTMLTextAreaElement).value).toBe('')
             }
         })
 
         it('ignores insertResult for different tableName', async () => {
             const insertResultRef = ref<InsertResult | null>(null)
-            wrappers.push(mountTable({insertResult: insertResultRef}))
+            wrappers.push(mountTable({ insertResult: insertResultRef }))
 
             // Fill ghost row textareas
             const ghostTextareas = wrappers[0].findAll('textarea[placeholder="+"]')
@@ -335,14 +356,14 @@ describe('TableSection', () => {
             }
 
             // Simulate result for a different table
-            insertResultRef.value = {success: false, tableName: 'products', error: 'test'}
+            insertResultRef.value = { success: false, tableName: 'products', error: 'test' }
             await nextTick()
             await nextTick()
 
             // Ghost row should NOT be cleared (wrong table)
             const ghostTextareasAfter = wrappers[0].findAll('textarea[placeholder="+"]')
             if (ghostTextareasAfter.length > 0) {
-                expect(ghostTextareasAfter[0].element.value).toBe('4')
+                expect((ghostTextareasAfter[0].element as HTMLTextAreaElement).value).toBe('4')
             }
 
             // No failure styling should appear
@@ -352,7 +373,7 @@ describe('TableSection', () => {
 
         it('auto-dismisses failure styling after typing in ghost row', async () => {
             const insertResultRef = ref<InsertResult | null>(null)
-            wrappers.push(mountTable({insertResult: insertResultRef}))
+            wrappers.push(mountTable({ insertResult: insertResultRef }))
 
             // Submit empty ghost row (just trigger failure)
             const ghostTextareas = wrappers[0].findAll('textarea[placeholder="+"]')
@@ -362,7 +383,7 @@ describe('TableSection', () => {
             }
 
             // Simulate failed insert
-            insertResultRef.value = {success: false, tableName: 'users', error: 'test error'}
+            insertResultRef.value = { success: false, tableName: 'users', error: 'test error' }
             await nextTick()
             await nextTick()
 
@@ -402,7 +423,7 @@ describe('TableSection', () => {
                 refreshSeed: 0
             })
 
-            const wrapper = mountTable({highlight})
+            const wrapper = mountTable({ highlight })
 
             // Trigger isAnimating by changing refreshSeed
             highlight.refreshSeed += 1
@@ -411,7 +432,7 @@ describe('TableSection', () => {
             // Alice's row (id=1, rowKey='users:1') should have flash-overlay on its cells
             const tds = wrapper.findAll('td')
             // Find a td with flash-overlay class
-            const flashTds = tds.filter(td => td.classes().includes('flash-overlay'))
+            const flashTds = tds.filter((td) => td.classes().includes('flash-overlay'))
             expect(flashTds.length).toBeGreaterThan(0)
         })
 
@@ -419,11 +440,15 @@ describe('TableSection', () => {
             const virtualTable: TableSchema = {
                 name: 'users',
                 columns: ['id', 'name', 'generated'],
-                columnTypes: {id: 'INTEGER | PRIMARY KEY', name: 'TEXT | NOT NULL', generated: 'TEXT | VIRTUAL'},
-                data: [{id: 1, name: 'Alice', generated: 'auto'}]
+                columnTypes: {
+                    id: 'INTEGER | PRIMARY KEY',
+                    name: 'TEXT | NOT NULL',
+                    generated: 'TEXT | VIRTUAL'
+                },
+                data: [{ id: 1, name: 'Alice', generated: 'auto' }]
             }
 
-            const wrapper = mountTable({table: virtualTable})
+            const wrapper = mountTable({ table: virtualTable })
 
             // The 'generated' column's td should have bg-primary/10 class
             // We need to inspect the rendered HTML for the class
@@ -435,13 +460,13 @@ describe('TableSection', () => {
             const highlight: HighlightState = {
                 actionType: 'select',
                 activeTables: ['users'],
-                activeRows: ['users:1'],    // Alice's rowKey
-                activeColumns: ['name'],     // highlight 'name' column
+                activeRows: ['users:1'], // Alice's rowKey
+                activeColumns: ['name'], // highlight 'name' column
                 flashingRows: [],
                 refreshSeed: 0
             }
 
-            const wrapper = mountTable({highlight})
+            const wrapper = mountTable({ highlight })
             await nextTick()
 
             // The td at row=Alice, col='name' should have bg-yellow-100
@@ -460,7 +485,7 @@ describe('TableSection', () => {
                 refreshSeed: 0
             }
 
-            const wrapper = mountTable({highlight})
+            const wrapper = mountTable({ highlight })
             await nextTick()
 
             // Non-highlighted cells should have text-muted-foreground
@@ -474,7 +499,7 @@ describe('TableSection', () => {
             const wrapper = mountTable()
             // The ✕ button should not be in the DOM when filter is empty
             const buttons = wrapper.findAll('button')
-            const clearBtn = buttons.find(b => b.text() === '✕')
+            const clearBtn = buttons.find((b) => b.text() === '✕')
             expect(clearBtn).toBeFalsy()
         })
 
@@ -489,7 +514,7 @@ describe('TableSection', () => {
 
             // Clear button should now be visible
             const buttons = wrapper.findAll('button')
-            const clearBtn = buttons.find(b => b.text() === '✕')
+            const clearBtn = buttons.find((b) => b.text() === '✕')
             expect(clearBtn).toBeTruthy()
 
             // Click clear button

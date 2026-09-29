@@ -9,7 +9,9 @@ export function parsePrimaryType(rawType: string): string {
 }
 
 export function extractTriggerTiming(sql: string): string {
-    const m = sql?.match(/(BEFORE|AFTER|INSTEAD\s+OF)\s+(DELETE|INSERT|UPDATE)(\s+OF\s+\w+(?:\s*,\s*\w+)*)?/i)
+    const m = sql?.match(
+        /(BEFORE|AFTER|INSTEAD\s+OF)\s+(DELETE|INSERT|UPDATE)(\s+OF\s+\w+(?:\s*,\s*\w+)*)?/i
+    )
     return m ? m[0].toUpperCase() : ''
 }
 
