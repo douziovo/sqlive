@@ -1,5 +1,6 @@
-import {computed, ref} from 'vue'
-import {downloadFile} from '../utils/file'
+import { computed, ref } from 'vue'
+import { nanoid } from 'nanoid'
+import { downloadFile } from '../utils/file'
 
 export interface Tab {
     id: string
@@ -12,7 +13,8 @@ export interface Tab {
 let tabCounter = 0
 
 function nextId() {
-    return `tab_${++tabCounter}_${Date.now()}`
+    tabCounter++
+    return `tab_${nanoid()}`
 }
 
 function nextName() {
@@ -25,10 +27,7 @@ export function useMultiTabs(defaultCode: string) {
             id: nextId(),
             name: '查询 1',
             code: defaultCode,
-            dbName:
-                typeof window !== 'undefined' && window.location.search.includes('e2e=1')
-                    ? `e2e_${Math.random().toString(36).slice(2, 10)}`
-                    : '',
+            dbName: '',
             isModified: false
         }
     ])

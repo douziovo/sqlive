@@ -1,4 +1,4 @@
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
     API_URL,
     jsonOk,
@@ -38,11 +38,13 @@ describe('useSqlEngine', () => {
     })
 
     it('should set isLoading to true during execution', async () => {
-        let resolveLater: (value: unknown) => void
-        const delayed = new Promise((r) => {
+        let resolveLater!: () => void
+        const delayed = new Promise<void>((r) => {
             resolveLater = r
         })
-        fetchSpy.mockReturnValue(delayed.then(() => jsonOk({success: true, data: {tables: []}})))
+        fetchSpy.mockReturnValue(
+            delayed.then(() => jsonOk({ success: true, data: { tables: [] } }))
+        )
 
         const engine = useSqlEngine()
 
@@ -61,8 +63,8 @@ describe('useSqlEngine', () => {
                 {
                     name: 'employees',
                     columns: ['id', 'name'],
-                    columnTypes: {id: 'INTEGER', name: 'TEXT'},
-                    data: [{id: 1, name: 'Alice'}]
+                    columnTypes: { id: 'INTEGER', name: 'TEXT' },
+                    data: [{ id: 1, name: 'Alice' }]
                 }
             ]
         })
@@ -81,14 +83,13 @@ describe('useSqlEngine', () => {
         await tick()
 
         expect(engine.executionError.value).toBeTruthy()
-        expect(engine.executionError.value.line).toBe(3)
-        expect(engine.executionError.value.message).toContain('syntax error')
+        expect(engine.executionError.value?.line).toBe(3)
+        expect(engine.executionError.value?.message).toContain('syntax error')
     })
 
     it('should set error on network failure', async () => {
         mockReject(fetchSpy, new Error('Connection refused'))
-        vi.spyOn(console, 'error').mockImplementation(() => {
-        })
+        vi.spyOn(console, 'error').mockImplementation(() => {})
 
         const engine = useSqlEngine()
         await tick()
@@ -97,13 +98,27 @@ describe('useSqlEngine', () => {
         const errorArg = (console.error as ReturnType<typeof vi.fn>).mock.calls[0][0]
         expect(errorArg).toContain('执行 SQL 请求失败')
         expect(engine.executionError.value).toBeTruthy()
-        expect(engine.executionError.value.line).toBe(0)
+        expect(engine.executionError.value?.line).toBe(0)
     })
 
     it('should store query results separately from tables', async () => {
         mockSuccess(fetchSpy, {
-            tables: [{name: 'users', columns: ['id'], columnTypes: {id: 'INTEGER'}, data: [{id: 1}]}],
-            queryResults: [{name: '查询结果', columns: ['x'], columnTypes: {x: 'INTEGER'}, data: [{x: 1}]}]
+            tables: [
+                {
+                    name: 'users',
+                    columns: ['id'],
+                    columnTypes: { id: 'INTEGER' },
+                    data: [{ id: 1 }]
+                }
+            ],
+            queryResults: [
+                {
+                    name: '查询结果',
+                    columns: ['x'],
+                    columnTypes: { x: 'INTEGER' },
+                    data: [{ x: 1 }]
+                }
+            ]
         })
 
         const engine = useSqlEngine()
@@ -121,8 +136,8 @@ describe('useSqlEngine', () => {
                 {
                     name: 'x',
                     columns: ['a'],
-                    columnTypes: {a: 'TEXT'},
-                    data: [{a: 'hello'}]
+                    columnTypes: { a: 'TEXT' },
+                    data: [{ a: 'hello' }]
                 }
             ]
         })
@@ -141,8 +156,8 @@ describe('useSqlEngine', () => {
                 {
                     name: 't',
                     columns: ['x'],
-                    columnTypes: {x: 'INTEGER'},
-                    data: [{x: 1}]
+                    columnTypes: { x: 'INTEGER' },
+                    data: [{ x: 1 }]
                 }
             ]
         })
@@ -155,8 +170,8 @@ describe('useSqlEngine', () => {
                 {
                     name: 't',
                     columns: ['x'],
-                    columnTypes: {x: 'INTEGER'},
-                    data: [{x: 1}, {x: 2}]
+                    columnTypes: { x: 'INTEGER' },
+                    data: [{ x: 1 }, { x: 2 }]
                 }
             ]
         })
@@ -168,7 +183,7 @@ describe('useSqlEngine', () => {
     })
 
     it('should update code when updateRow finds matching VALUES', async () => {
-        mockSuccess(fetchSpy, {tables: []})
+        mockSuccess(fetchSpy, { tables: [] })
 
         const engine = useSqlEngine()
         await tick()
@@ -178,8 +193,8 @@ describe('useSqlEngine', () => {
                 {
                     name: 't',
                     columns: ['id', 'name', 'val'],
-                    columnTypes: {id: 'INTEGER', name: 'TEXT', val: 'REAL'},
-                    data: [{id: 1, name: 'Alice', val: 999}]
+                    columnTypes: { id: 'INTEGER', name: 'TEXT', val: 'REAL' },
+                    data: [{ id: 1, name: 'Alice', val: 999 }]
                 }
             ]
         })
@@ -189,7 +204,11 @@ describe('useSqlEngine', () => {
         await tick()
 
         const oldCode = engine.code.value
-        engine.updateRow('t', {id: 1, name: 'Alice', val: 100.5}, {id: 1, name: 'Alice', val: 999})
+        engine.updateRow(
+            't',
+            { id: 1, name: 'Alice', val: 100.5 },
+            { id: 1, name: 'Alice', val: 999 }
+        )
 
         expect(engine.code.value).not.toBe(oldCode)
         expect(engine.code.value).toContain('999')
@@ -202,8 +221,8 @@ describe('useSqlEngine', () => {
                 {
                     name: 't',
                     columns: ['id', 'name', 'val'],
-                    columnTypes: {id: 'INTEGER', name: 'TEXT', val: 'REAL'},
-                    data: [{id: 1, name: 'Alice', val: 100.5}]
+                    columnTypes: { id: 'INTEGER', name: 'TEXT', val: 'REAL' },
+                    data: [{ id: 1, name: 'Alice', val: 100.5 }]
                 }
             ]
         })
@@ -215,15 +234,49 @@ describe('useSqlEngine', () => {
 
         mockError(fetchSpy, 'CHECK constraint failed', 2)
 
-        engine.insertRowUI('t', {id: 3, name: null, val: 0})
+        engine.insertRowUI('t', { id: 3, name: null, val: 0 })
         await tick()
 
         expect(engine.code.value).toBe(savedCode)
         expect(engine.executionError.value).not.toBeNull()
+
+        const callsAfterRollback = fetchSpy.mock.calls.length
+        await tick()
+        expect(fetchSpy.mock.calls.length).toBe(callsAfterRollback)
+
+        mockSuccess(fetchSpy, { tables: [] })
+        engine.code.value = 'SELECT 42;'
+        await tick()
+        expect(fetchSpy.mock.calls.length).toBe(callsAfterRollback + 1)
+        expect(JSON.parse(fetchSpy.mock.lastCall![1].body).sql).toBe('SELECT 42;')
+        expect(engine.executionError.value).toBeNull()
+    })
+
+    it('isolates unnamed tabs and browser sessions even when SQL is identical', async () => {
+        mockSuccess(fetchSpy, { tables: [] })
+        const engine = useSqlEngine()
+        await tick()
+        const firstId = engine.activeTabId.value
+        const firstDb = JSON.parse(fetchSpy.mock.lastCall![1].body).dbName
+        expect(firstDb).toBe(firstId)
+        expect(engine.tabs.value[0].dbName).toBe('')
+
+        engine.addTab('second', engine.code.value)
+        await tick()
+        const secondDb = JSON.parse(fetchSpy.mock.lastCall![1].body).dbName
+        expect(secondDb).not.toBe(firstDb)
+
+        engine.switchTab(firstId)
+        await tick()
+        expect(JSON.parse(fetchSpy.mock.lastCall![1].body).dbName).toBe(firstDb)
+
+        useSqlEngine()
+        await tick()
+        expect(JSON.parse(fetchSpy.mock.lastCall![1].body).dbName).not.toBe(firstDb)
     })
 
     it('should delete VALUES tuple from code', async () => {
-        mockSuccess(fetchSpy, {tables: []})
+        mockSuccess(fetchSpy, { tables: [] })
 
         const engine = useSqlEngine()
         await tick()
@@ -233,8 +286,8 @@ describe('useSqlEngine', () => {
                 {
                     name: 't',
                     columns: ['id', 'name', 'val'],
-                    columnTypes: {id: 'INTEGER', name: 'TEXT', val: 'REAL'},
-                    data: [{id: 1, name: 'Alice', val: 100.5}]
+                    columnTypes: { id: 'INTEGER', name: 'TEXT', val: 'REAL' },
+                    data: [{ id: 1, name: 'Alice', val: 100.5 }]
                 }
             ]
         })
@@ -244,7 +297,7 @@ describe('useSqlEngine', () => {
         await tick()
 
         const oldCode = engine.code.value
-        engine.deleteRow({id: 2, name: 'Bob', val: 200}, 't')
+        engine.deleteRow({ id: 2, name: 'Bob', val: 200 }, 't')
 
         expect(engine.code.value).not.toBe(oldCode)
         expect(engine.code.value).not.toContain("'Bob'")
@@ -252,7 +305,7 @@ describe('useSqlEngine', () => {
     })
 
     it('should insert new row via insertRowUI', async () => {
-        mockSuccess(fetchSpy, {tables: []})
+        mockSuccess(fetchSpy, { tables: [] })
 
         const engine = useSqlEngine()
         await tick()
@@ -262,8 +315,8 @@ describe('useSqlEngine', () => {
                 {
                     name: 't',
                     columns: ['id', 'name', 'val'],
-                    columnTypes: {id: 'INTEGER', name: 'TEXT', val: 'REAL'},
-                    data: [{id: 1, name: 'Alice', val: 100.5}]
+                    columnTypes: { id: 'INTEGER', name: 'TEXT', val: 'REAL' },
+                    data: [{ id: 1, name: 'Alice', val: 100.5 }]
                 }
             ]
         })
@@ -273,7 +326,7 @@ describe('useSqlEngine', () => {
         await tick()
 
         const oldCode = engine.code.value
-        engine.insertRowUI('t', {id: 3, name: 'Charlie', val: 300})
+        engine.insertRowUI('t', { id: 3, name: 'Charlie', val: 300 })
 
         expect(engine.code.value).not.toBe(oldCode)
         expect(engine.code.value).toContain('Charlie')
@@ -287,7 +340,7 @@ describe('useSqlEngine', () => {
 
         expect(engine.executionError.value).toBeTruthy()
 
-        mockSuccess(fetchSpy, {tables: []})
+        mockSuccess(fetchSpy, { tables: [] })
         engine.code.value = 'SELECT 1;'
         await tick()
 
@@ -295,7 +348,7 @@ describe('useSqlEngine', () => {
     })
 
     it('should debounce rapid user typing to a single call', async () => {
-        mockSuccess(fetchSpy, {tables: []})
+        mockSuccess(fetchSpy, { tables: [] })
 
         const engine = useSqlEngine()
         await tick()
@@ -315,7 +368,7 @@ describe('useSqlEngine', () => {
     })
 
     it('should POST to correct URL with JSON body', async () => {
-        mockSuccess(fetchSpy, {tables: []})
+        mockSuccess(fetchSpy, { tables: [] })
 
         useSqlEngine()
         await tick()
@@ -329,7 +382,7 @@ describe('useSqlEngine', () => {
     })
 
     it('should finish with isLoading false', async () => {
-        mockSuccess(fetchSpy, {tables: []})
+        mockSuccess(fetchSpy, { tables: [] })
 
         const engine = useSqlEngine()
         await tick()
@@ -340,7 +393,7 @@ describe('useSqlEngine', () => {
     // --- Boundary and edge case tests ---
 
     it('should delete row using reference from db.tables (auto-detect)', async () => {
-        mockSuccess(fetchSpy, {tables: []})
+        mockSuccess(fetchSpy, { tables: [] })
         const engine = useSqlEngine()
         await tick()
 
@@ -349,12 +402,13 @@ describe('useSqlEngine', () => {
                 {
                     name: 't',
                     columns: ['id', 'name'],
-                    columnTypes: {id: 'INTEGER', name: 'TEXT'},
-                    data: [{id: 1, name: 'Alice'}]
+                    columnTypes: { id: 'INTEGER', name: 'TEXT' },
+                    data: [{ id: 1, name: 'Alice' }]
                 }
             ]
         })
-        engine.code.value = "CREATE TABLE t (id INTEGER, name TEXT);\nINSERT INTO t (id, name) VALUES (1, 'Alice');"
+        engine.code.value =
+            "CREATE TABLE t (id INTEGER, name TEXT);\nINSERT INTO t (id, name) VALUES (1, 'Alice');"
         await tick()
 
         const oldCode = engine.code.value
@@ -367,7 +421,7 @@ describe('useSqlEngine', () => {
     })
 
     it('should remove entire INSERT when deleting last tuple', async () => {
-        mockSuccess(fetchSpy, {tables: []})
+        mockSuccess(fetchSpy, { tables: [] })
         const engine = useSqlEngine()
         await tick()
 
@@ -376,7 +430,7 @@ describe('useSqlEngine', () => {
                 {
                     name: 't',
                     columns: ['x'],
-                    columnTypes: {x: 'INTEGER'},
+                    columnTypes: { x: 'INTEGER' },
                     data: []
                 }
             ]
@@ -384,14 +438,14 @@ describe('useSqlEngine', () => {
         engine.code.value = 'CREATE TABLE t (x INTEGER);\nINSERT INTO t (x) VALUES (1);'
         await tick()
 
-        engine.deleteRow({x: 1}, 't')
+        engine.deleteRow({ x: 1 }, 't')
         // The entire INSERT statement should be removed
         expect(engine.code.value).not.toContain('VALUES')
         expect(engine.code.value).toContain('CREATE TABLE')
     })
 
     it('should auto-append semicolon in insertRowUI when code lacks one', async () => {
-        mockSuccess(fetchSpy, {tables: []})
+        mockSuccess(fetchSpy, { tables: [] })
         const engine = useSqlEngine()
         await tick()
 
@@ -400,8 +454,8 @@ describe('useSqlEngine', () => {
                 {
                     name: 't',
                     columns: ['id'],
-                    columnTypes: {id: 'INTEGER'},
-                    data: [{id: 1}]
+                    columnTypes: { id: 'INTEGER' },
+                    data: [{ id: 1 }]
                 }
             ]
         })
@@ -410,17 +464,18 @@ describe('useSqlEngine', () => {
         await tick()
 
         const oldCode = engine.code.value
-        engine.insertRowUI('t', {id: 2})
+        engine.insertRowUI('t', { id: 2 })
         expect(engine.code.value).not.toBe(oldCode)
         expect(engine.code.value).toContain('INSERT')
     })
 
     it('should handle dropTableUI by removing table-related statements', async () => {
-        mockSuccess(fetchSpy, {tables: []})
+        mockSuccess(fetchSpy, { tables: [] })
         const engine = useSqlEngine()
         await tick()
 
-        engine.code.value = 'CREATE TABLE t (id INTEGER);\nINSERT INTO t (id) VALUES (1);\nSELECT * FROM t;'
+        engine.code.value =
+            'CREATE TABLE t (id INTEGER);\nINSERT INTO t (id) VALUES (1);\nSELECT * FROM t;'
         await tick()
 
         const oldCode = engine.code.value
@@ -430,9 +485,11 @@ describe('useSqlEngine', () => {
     })
 
     it('handles malformed JSON response gracefully', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {})
         fetchSpy.mockResolvedValue({
             status: 200,
             ok: true,
+            headers: { get: () => null },
             json: () => Promise.reject(new Error('Unexpected token < in JSON'))
         })
 
@@ -444,9 +501,11 @@ describe('useSqlEngine', () => {
     })
 
     it('handles empty response body gracefully', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {})
         fetchSpy.mockResolvedValue({
             status: 200,
             ok: true,
+            headers: { get: () => null },
             json: () => Promise.resolve(null)
         })
 
@@ -471,11 +530,11 @@ describe('useSqlEngine', () => {
                 {
                     name: 't',
                     columns: ['id'],
-                    columnTypes: {id: 'INTEGER'},
-                    data: [{id: 1}]
+                    columnTypes: { id: 'INTEGER' },
+                    data: [{ id: 1 }]
                 }
             ],
-            canonicalStatements: [{start: 0, end: 25}]
+            canonicalStatements: [{ start: 0, end: 25 }]
         })
         const engine = useSqlEngine()
         await tick()
@@ -487,7 +546,8 @@ describe('useSqlEngine', () => {
         // updateRow triggers getStatements() — in GREEN it prefers canonicalStatements.value
         // and skips extractSqlStatements; in RED updateRow calls extractSqlStatements(code.value)
         // directly at line 89 of useBidirectionalSync.ts.
-        engine.updateRow('t', {id: 1}, {id: 2})
+        vi.spyOn(console, 'warn').mockImplementation(() => {})
+        engine.updateRow('t', { id: 1 }, { id: 2 })
 
         expect(extractSpy).not.toHaveBeenCalled()
     })
