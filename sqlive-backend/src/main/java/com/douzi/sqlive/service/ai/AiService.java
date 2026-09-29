@@ -158,30 +158,30 @@ public class AiService {
 		try {
 			if (raw.trim().startsWith("{")) {
 				JsonNode root = objectMapper.readTree(raw);
-				data.setSummary(root.has("summary") ? root.get("summary").asText() : raw);
-				data.setContent(root.has("detail") ? root.get("detail").asText() : raw);
+				data.setSummary(root.has("summary") ? root.get("summary").asString() : raw);
+				data.setContent(root.has("detail") ? root.get("detail").asString() : raw);
 				if (root.has("fixedCode")) {
-					data.setFixedCode(root.get("fixedCode").asText());
+					data.setFixedCode(root.get("fixedCode").asString());
 				}
 				if (root.has("prevention")) {
-					data.setContent(data.getContent() + "\n\n## 如何避免\n" + root.get("prevention").asText());
+					data.setContent(data.getContent() + "\n\n## 如何避免\n" + root.get("prevention").asString());
 				}
 				if (root.has("stepByStep")) {
 					data.setStepByStep(StreamSupport.stream(root.get("stepByStep").spliterator(), false)
 							.map(s -> {
 								var step = new AiChatResponse.DataPayload.ExplainStep();
 								step.setStep(s.path("step").asInt());
-								step.setWhat(s.path("what").asText());
-								step.setWhy(s.path("why").asText());
+								step.setWhat(s.path("what").asString());
+								step.setWhy(s.path("why").asString());
 								return step;
 							}).collect(Collectors.toList()));
 				}
 				if (root.has("tips")) {
 					data.setTips(StreamSupport.stream(root.get("tips").spliterator(), false)
-							.map(JsonNode::asText).collect(Collectors.toList()));
+							.map(JsonNode::asString).collect(Collectors.toList()));
 				}
 				if (root.has("explanation")) {
-					data.setContent(data.getContent() + "\n\n" + root.get("explanation").asText());
+					data.setContent(data.getContent() + "\n\n" + root.get("explanation").asString());
 				}
 			} else {
 				data.setContent(raw);

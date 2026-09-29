@@ -58,17 +58,17 @@ public class OpenAiProtocol implements Protocol {
 		if (choices.isArray() && !choices.isEmpty()) {
 			JsonNode delta = choices.get(0).path("delta");
 			JsonNode reasoning = delta.get("reasoning_content");
-			if (reasoning != null && !reasoning.isNull() && !reasoning.asText("").isEmpty()) {
-				return StreamChunk.reasoning(reasoning.asText());
+			if (reasoning != null && !reasoning.isNull() && !reasoning.asString("").isEmpty()) {
+				return StreamChunk.reasoning(reasoning.asString());
 			}
-			String text = delta.path("content").asText("");
+			String text = delta.path("content").asString("");
 			return text.isEmpty() ? null : StreamChunk.text(text);
 		}
 		JsonNode output = root.path("output");
 		if (output.isArray() && !output.isEmpty()) {
 			JsonNode contentArr = output.get(0).path("content");
 			if (contentArr.isArray() && !contentArr.isEmpty()) {
-				String text = contentArr.get(0).path("text").asText("");
+				String text = contentArr.get(0).path("text").asString("");
 				return text.isEmpty() ? null : StreamChunk.text(text);
 			}
 		}
@@ -99,9 +99,9 @@ public class OpenAiProtocol implements Protocol {
 			JsonNode choices = root.path("choices");
 			if (choices.isArray() && !choices.isEmpty()) {
 				JsonNode message = choices.get(0).path("message");
-				String content = message.path("content").asText("");
+				String content = message.path("content").asString("");
 				if (content.isEmpty()) {
-					String reasoning = message.path("reasoning_content").asText("");
+					String reasoning = message.path("reasoning_content").asString("");
 					if (!reasoning.isEmpty()) return reasoning;
 				}
 				return content;
@@ -111,7 +111,7 @@ public class OpenAiProtocol implements Protocol {
 			if (output.isArray() && !output.isEmpty()) {
 				JsonNode contentArr = output.get(0).path("content");
 				if (contentArr.isArray() && !contentArr.isEmpty()) {
-					return contentArr.get(0).path("text").asText("");
+					return contentArr.get(0).path("text").asString("");
 				}
 			}
 

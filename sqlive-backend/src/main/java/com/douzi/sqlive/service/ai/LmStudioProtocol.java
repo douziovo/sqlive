@@ -5,12 +5,11 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
+import org.springframework.http.codec.ServerSentEvent;
 
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 
 @Slf4j
 public class LmStudioProtocol implements Protocol {
@@ -71,28 +70,18 @@ public class LmStudioProtocol implements Protocol {
 		return sb.toString();
 	}
 
-	@Override
-	public Flux<StreamChunk> processStream(Flux<String> rawLines) {
-		return rawLines
-				.map(String::trim)
-				.filter(line -> !line.isEmpty())
-				.concatMap(new LmStudioSseLineAdapter(objectMapper));
-	}
-
-	@Override
-	public Flux<StreamChunk> parseChunk(String jsonStr) {
+	public Flux<StreamChunk> parseEvent(ServerSentEvent<String> event) {
+		if (event.event() == null || event.data() == null) return Flux.empty();
 		try {
-			JsonNode root = objectMapper.readTree(jsonStr);
-			String event = root.path("event").asText("");
-			JsonNode data = root.path("data");
+			JsonNode data = objectMapper.readTree(event.data());
 
-			return switch (event) {
+			return switch (event.event()) {
 				case "message.delta" -> {
-					String content = data.path("content").asText("");
+					String content = data.path("content").asString("");
 					yield content.isEmpty() ? Flux.empty() : Flux.just(StreamChunk.text(content));
 				}
 				case "reasoning.delta" -> {
-					String content = data.path("content").asText("");
+					String content = data.path("content").asString("");
 					yield content.isEmpty() ? Flux.empty() : Flux.just(StreamChunk.reasoning(content));
 				}
 				case "chat.end" -> {
@@ -103,7 +92,7 @@ public class LmStudioProtocol implements Protocol {
 					yield total > 0 ? Flux.just(StreamChunk.usage(inputTokens, outputTokens, total)) : Flux.empty();
 				}
 				case "error" -> {
-					String msg = data.path("error").path("message").asText("LM Studio streaming error");
+					String msg = data.path("error").path("message").asString("LM Studio streaming error");
 					yield Flux.just(StreamChunk.error(msg));
 				}
 				default -> Flux.empty();
@@ -122,9 +111,9 @@ public class LmStudioProtocol implements Protocol {
 			StringBuilder sb = new StringBuilder();
 			if (output.isArray()) {
 				for (JsonNode item : output) {
-					String type = item.path("type").asText("");
+					String type = item.path("type").asString("");
 					if ("message".equals(type)) {
-						String content = item.path("content").asText("");
+						String content = item.path("content").asString("");
 						if (!content.isEmpty()) {
 							if (!sb.isEmpty()) sb.append("\n");
 							sb.append(content);
@@ -138,48 +127,4 @@ public class LmStudioProtocol implements Protocol {
 		}
 	}
 
-	/**
-	 * Line-buffering adapter: buffers event: lines and merges them with data: lines
-	 * into single JSON objects like {"event":"message.delta", "data":{...}}.
-	 */
-	class LmStudioSseLineAdapter implements Function<String, Flux<StreamChunk>> {
-
-		private final ObjectMapper objectMapper;
-		private String lastEvent = "";
-
-		LmStudioSseLineAdapter(ObjectMapper objectMapper) {
-			this.objectMapper = objectMapper;
-		}
-
-		@Override
-		public Flux<StreamChunk> apply(String line) {
-			if (line.startsWith("event:")) {
-				lastEvent = line.substring(6).trim();
-				return Flux.empty();
-			}
-
-			if (line.startsWith("data:")) {
-				String event = lastEvent;
-				String dataStr = line.substring(5).trim();
-				lastEvent = "";
-
-				if (event.isEmpty()) return Flux.empty();
-
-				try {
-					JsonNode data = objectMapper.readTree(dataStr);
-					Map<String, Object> merged = new LinkedHashMap<>();
-					merged.put("event", event);
-					merged.put("data", data);
-					String json = objectMapper.writeValueAsString(merged);
-					return parseChunk(json);
-				} catch (Exception e) {
-					log.trace("Failed to parse stream chunk", e);
-					return Flux.empty();
-				}
-			}
-
-			lastEvent = "";
-			return Flux.empty();
-		}
-	}
 }
