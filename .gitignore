@@ -55,3 +55,6 @@ logs/
 
 # Root node (if any)
 node_modules/
+
+# Local-only agent memory (do not commit)
+docs/agents/MEMORY.md
