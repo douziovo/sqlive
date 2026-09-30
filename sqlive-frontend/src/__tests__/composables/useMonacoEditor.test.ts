@@ -33,6 +33,7 @@ vi.mock('monaco-editor/esm/vs/editor/editor.api', () => ({
     editor: {
         create: vi.fn(() => mockEditor),
         createModel: vi.fn(),
+        remeasureFonts: vi.fn(),
         setTheme: vi.fn(),
         setModelMarkers: vi.fn()
     },
@@ -341,9 +342,7 @@ describe('useMonacoEditor', () => {
 
         syncCode('SELECT 2;')
 
-        expect(mockEditor.setSelections).toHaveBeenCalledWith([
-            { sl: 1, sc: 10, el: 1, ec: 10 }
-        ])
+        expect(mockEditor.setSelections).toHaveBeenCalledWith([{ sl: 1, sc: 10, el: 1, ec: 10 }])
     })
 
     it('updates and clears error markers when the error changes', async () => {
@@ -357,11 +356,9 @@ describe('useMonacoEditor', () => {
 
         error.value = { line: 3, message: 'syntax error' }
         await nextTick()
-        expect(monaco.editor.setModelMarkers).toHaveBeenCalledWith(
-            expect.anything(),
-            'sql-error',
-            [expect.objectContaining({ startLineNumber: 3, message: 'syntax error' })]
-        )
+        expect(monaco.editor.setModelMarkers).toHaveBeenCalledWith(expect.anything(), 'sql-error', [
+            expect.objectContaining({ startLineNumber: 3, message: 'syntax error' })
+        ])
         expect(mockEditor.revealLineInCenter).toHaveBeenCalledWith(3)
 
         error.value = null
@@ -438,5 +435,52 @@ describe('useMonacoEditor', () => {
 
         expect(() => formatSql()).not.toThrow()
         expect(mockEditor.setValue).not.toHaveBeenCalled()
+    })
+
+    it('skips markers and highlights when the editor or model is unavailable', async () => {
+        const highlightChunk = ref<string | null>(null)
+        const error = ref<{ line: number; message: string } | null>(null)
+        const editor = useMonacoEditor(container, emit, { highlightChunk, error, ai: undefined })
+
+        error.value = { line: 1, message: 'before create' }
+        await nextTick()
+        expect(monaco.editor.setModelMarkers).not.toHaveBeenCalled()
+
+        error.value = null
+        await nextTick()
+        editor.create('SELECT 1;')
+        const decorations = mockEditor.createDecorationsCollection.mock.results.at(-1)!.value
+
+        mockEditor.getModel.mockReturnValueOnce(null as any)
+        highlightChunk.value = 'SELECT'
+        await nextTick()
+        expect(decorations.set).not.toHaveBeenCalled()
+
+        mockEditor.getModel.mockReturnValueOnce(null as any)
+        error.value = { line: 2, message: 'missing model' }
+        await nextTick()
+        expect(monaco.editor.setModelMarkers).toHaveBeenCalledTimes(1)
+    })
+
+    it('remeasures Monaco after the document fonts load', async () => {
+        const originalFonts = Object.getOwnPropertyDescriptor(document, 'fonts')
+        Object.defineProperty(document, 'fonts', {
+            configurable: true,
+            value: { ready: Promise.resolve() }
+        })
+        try {
+            const { create } = useMonacoEditor(container, emit, {
+                highlightChunk: ref(null),
+                error: ref(null),
+                ai: undefined
+            })
+            create('SELECT 1;')
+            await Promise.resolve()
+
+            expect(monaco.editor.remeasureFonts).toHaveBeenCalledOnce()
+        } finally {
+            if (originalFonts) Object.defineProperty(document, 'fonts', originalFonts)
+            else delete (document as any).fonts
+        }
     })
 })

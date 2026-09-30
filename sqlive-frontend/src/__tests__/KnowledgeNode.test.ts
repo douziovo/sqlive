@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
 import KnowledgeNode from '@/components/knowledge/KnowledgeNode.vue'
 import type { KnowledgeNodeData } from '@/composables/useKnowledgeGraph'
 
@@ -17,6 +18,30 @@ function makeData(overrides: Partial<KnowledgeNodeData> = {}): KnowledgeNodeData
 }
 
 describe('KnowledgeNode', () => {
+    afterEach(() => vi.useRealTimers())
+
+    it('shows a timed spark burst and unlock glow when a topic is unlocked', async () => {
+        vi.useFakeTimers()
+        const wrapper = mount(KnowledgeNode, {
+            props: { id: 'x', data: makeData() }
+        })
+
+        await wrapper.setProps({
+            data: makeData({ triggerSparkBurst: true, triggerUnlockGlow: true })
+        })
+        expect(wrapper.findAll('.kg-spark')).toHaveLength(18)
+        expect(wrapper.find('.kg-node--unlock-glow').exists()).toBe(true)
+
+        vi.advanceTimersByTime(750)
+        await nextTick()
+        expect(wrapper.find('.kg-spark-layer').exists()).toBe(false)
+        expect(wrapper.find('.kg-node--unlock-glow').exists()).toBe(true)
+
+        vi.advanceTimersByTime(450)
+        await nextTick()
+        expect(wrapper.find('.kg-node--unlock-glow').exists()).toBe(false)
+    })
+
     it('renders label text', () => {
         const w = mount(KnowledgeNode, {
             props: { id: 'topic-test', data: makeData({ label: 'JOIN 查询' }) }

@@ -332,4 +332,49 @@ describe('useInlineActions', () => {
             expect(display.calls.some((c) => c.type === 'error')).toBe(true)
         })
     })
+
+    it('sends the stored API key with inline requests', async () => {
+        localStorage.setItem('ai_api_key', 'test-key')
+        try {
+            mockFetchSuccess({ fixedCode: 'SELECT 1' })
+            await useInlineActions(makeState()).fixCode(makeDisplay())
+
+            expect(fetch).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.objectContaining({
+                    headers: expect.objectContaining({ 'X-API-Key': 'test-key' })
+                })
+            )
+        } finally {
+            localStorage.removeItem('ai_api_key')
+        }
+    })
+
+    it('reports HTTP errors while generating SQL', async () => {
+        globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 503 }) as any
+        const display = makeDisplay()
+        const result = await useInlineActions(makeState()).generateSql('create a table', display)
+
+        expect(result).toBeNull()
+        expect(display.calls).toContainEqual({
+            type: 'error',
+            message: '调用 AI 失败：API error: 503'
+        })
+    })
+
+    it('reports network failures for explanations and optimizations', async () => {
+        mockFetchNetworkError(new Error('offline'))
+        const state = makeState()
+        const display = makeDisplay()
+        const actions = useInlineActions(state)
+
+        await actions.explain('SELECT 1', display)
+        expect(await actions.optimize('SELECT 1', display)).toBeNull()
+
+        expect(display.calls.filter((c) => c.type === 'error')).toEqual([
+            { type: 'error', message: '调用 AI 失败：offline' },
+            { type: 'error', message: '调用 AI 失败：offline' }
+        ])
+        expect(state.isLoading.value).toBe(false)
+    })
 })

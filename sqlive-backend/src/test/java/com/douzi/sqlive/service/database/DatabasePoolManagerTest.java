@@ -4,10 +4,12 @@ import com.douzi.sqlive.config.PoolProperties;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -210,5 +212,27 @@ class DatabasePoolManagerTest {
 		// db3 (MRU) retained → re-access returns existing pool (isNew=false)
 		assertFalse(mgr.getOrCreateJdbcTemplate("lru_db3", null).isNew(),
 				"db3 should be retained (MRU) — isNew=false means pool still exists");
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	void shouldEvictOnlyReleasedIdlePoolsAndReturnIpQuota() {
+		var props = new PoolProperties();
+		props.setMaxDatabases(2);
+		props.setIdleTimeout(Duration.ZERO);
+		props.setCleanupInterval(Duration.ofHours(1));
+		var mgr = new DatabasePoolManager(props);
+		managers.add(mgr);
+		var held = mgr.getOrCreateJdbcTemplate("held", "203.0.113.1");
+		mgr.getOrCreateJdbcTemplate("idle", "203.0.113.1");
+		mgr.release("idle");
+
+		ReflectionTestUtils.invokeMethod(mgr, "evictIdlePools");
+		assertEquals(1, mgr.getPoolSize());
+		assertEquals(1, held.jdbcTemplate().queryForObject("SELECT 1", Integer.class));
+		Map<String, Integer> ipCounts = (Map<String, Integer>) ReflectionTestUtils.getField(mgr, "ipCounts");
+		assertNotNull(ipCounts);
+		assertEquals(1, ipCounts.get("203.0.113.1"));
+		assertTrue(mgr.getOrCreateJdbcTemplate("idle", "203.0.113.1").isNew());
 	}
 }
