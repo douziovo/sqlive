@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Ref } from 'vue'
 import { nextTick, ref } from 'vue'
-import * as monaco from 'monaco-editor/esm/vs/editor/editor.api'
+import * as monaco from 'monaco-editor/editor/editor.api'
 import { useMonacoEditor } from '@/composables/useMonacoEditor'
 
 // Mock monaco-editor completely before importing the composable
@@ -29,7 +29,7 @@ const mockEditor = {
     revealLineInCenter: vi.fn()
 }
 
-vi.mock('monaco-editor/esm/vs/editor/editor.api', () => ({
+vi.mock('monaco-editor/editor/editor.api', () => ({
     editor: {
         create: vi.fn(() => mockEditor),
         createModel: vi.fn(),
@@ -52,11 +52,11 @@ vi.mock('monaco-editor/esm/vs/editor/editor.api', () => ({
     MarkerSeverity: { Error: 1 }
 }))
 
-vi.mock('monaco-editor/esm/vs/editor/editor.worker', () => ({
+vi.mock('monaco-editor/editor/editor.worker', () => ({
     default: class MockWorker {}
 }))
 
-vi.mock('monaco-editor/esm/vs/basic-languages/sql/sql.contribution', () => ({}))
+vi.mock('monaco-editor/languages/definitions/sql/register', () => ({}))
 
 const mockFormat = vi.fn((sql: string) => `formatted: ${sql}`)
 vi.mock('sql-formatter', () => ({

@@ -221,7 +221,7 @@ watch(
     { immediate: true }
 )
 
-const styledEdges = computed<Edge[]>(() => styledEdgesCache.value)
+const styledEdges = computed(() => styledEdgesCache.value)
 
 // Sync displayNodes when props.nodes change, re-run dagre TB layout
 watch(
