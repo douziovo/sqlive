@@ -46,6 +46,10 @@ jobs:
         working-directory: sqlive-frontend
         run: pnpm install --frozen-lockfile
 
+      - name: Run frontend lint
+        working-directory: sqlive-frontend
+        run: pnpm run lint
+
       - name: Run frontend tests
         working-directory: sqlive-frontend
         run: pnpm run test

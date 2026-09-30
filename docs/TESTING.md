@@ -6,6 +6,8 @@
 
 | 目录 | 命令 | 范围 |
 | --- | --- | --- |
+| `sqlive-frontend` | `pnpm run lint` | oxlint 静态检查（`.oxlintrc.json`） |
+| `sqlive-frontend` | `pnpm run format:check` | oxfmt 格式检查（`.oxfmtrc.json`），`pnpm format` 写入 |
 | `sqlive-frontend` | `pnpm test` | Vitest 单元/组件测试 |
 | `sqlive-frontend` | `pnpm run typecheck` | 独立类型检查 |
 | `sqlive-frontend` | `pnpm run build` | Vite 生产构建，不含类型检查 |
@@ -21,7 +23,7 @@ pnpm exec playwright test --config tests/e2e/playwright.config.ts --project=edge
 
 CI 安装 Chromium 和 Edge，运行 `--project=chromium --project=edge`。浏览器 channel 说明见 [Playwright 文档](https://playwright.dev/docs/browsers#google-chrome--microsoft-edge)。
 
-已有 Bash 环境可从根目录运行 `bash scripts/verify.sh`，顺序执行后端测试、前端测试、前端构建，失败即停止；`--smoke` 只跑冒烟测试。Windows 可直接用上表命令，无需为验证安装 Bash。
+已有 Bash 环境可从根目录运行 `bash scripts/verify.sh`，顺序执行后端测试、前端 lint、前端测试、前端构建，失败即停止；`--smoke` 只跑冒烟测试。Windows 可直接用上表命令，无需为验证安装 Bash。
 
 ## 测试位置
 
@@ -32,9 +34,10 @@ CI 安装 Chromium 和 Edge，运行 `--project=chromium --project=edge`。浏�
 
 ## CI 与覆盖率
 
-[CI 配置](../.github/workflows/ci.yml) 在 push 到 `main`/`future`、PR 目标为 `main` 时运行前后端单测和 Chromium + Edge E2E。部署分支另见 `render.yaml`。
+[CI 配置](../.github/workflows/ci.yml) 在 push 到 `main`/`future`、PR 目标为 `main` 时运行前端 lint、前后端单测和 Chromium + Edge E2E。部署分支另见 `render.yaml`。
 
-- CI 当前不执行前端构建、类型检查或覆盖率门禁；不能把单测通过称为这些检查通过。
+- CI 当前不执行格式检查、前端构建、类型检查或覆盖率门禁；不能把单测通过称为这些检查通过。
+- 格式化工具为 oxfmt，风格对齐现有代码（无分号、单引号、4 空格缩进）。存量文件尚未全量格式化，`pnpm format:check` 会列出全部待格式化文件，因此 CI 暂不执行；全量 `pnpm format` 后可再纳入。
 - 前端覆盖率阈值在 `vite.config.ts`，默认 `pnpm test` 不启用 coverage。手动运行 `pnpm exec vitest run --coverage` 前需要匹配 Vitest 版本的 `@vitest/coverage-v8`，当前 manifest 未安装该包。
 - 后端 `test` 在 `CI=true` 或 `-Djacoco=true` 时生成报告。要执行配置中的覆盖率门禁，运行 `./gradlew test jacocoTestCoverageVerification -Djacoco=true`；CI 的 `test` 不执行门禁。
 
