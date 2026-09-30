@@ -68,22 +68,24 @@ public class RateLimitFilter implements Filter {
 
 		String key = clientIp + ":" + path;
 		long now = System.currentTimeMillis();
-		long[] window = counters.computeIfAbsent(key, k -> new long[]{now, 0});
-
-		synchronized (window) {
-			if (now - window[0] > WINDOW_MS) {
-				counters.remove(key, window);
-				window[0] = now;
-				window[1] = 1;
-			} else if (window[1] >= limit) {
-				log.warn("Rate limit exceeded: ip={}, path={}, count={}", clientIp, path, window[1]);
-				resp.setStatus(429);
-				resp.setContentType("application/json;charset=UTF-8");
-				resp.getWriter().write("{\"success\":false,\"error\":{\"message\":\"Too many requests, please slow down\"}}");
-				return;
-			} else {
-				window[1]++;
+		boolean[] rejected = {false};
+		long[] window = counters.compute(key, (ignored, current) -> {
+			if (current == null || now - current[0] > WINDOW_MS) {
+				current = new long[]{now, 0};
 			}
+			if (current[1] >= limit) {
+				rejected[0] = true;
+			} else {
+				current[1]++;
+			}
+			return current;
+		});
+		if (rejected[0]) {
+			log.warn("Rate limit exceeded: ip={}, path={}, count={}", clientIp, path, window[1]);
+			resp.setStatus(429);
+			resp.setContentType("application/json;charset=UTF-8");
+			resp.getWriter().write("{\"success\":false,\"error\":{\"message\":\"Too many requests, please slow down\"}}");
+			return;
 		}
 
 		chain.doFilter(request, response);
@@ -109,11 +111,9 @@ public class RateLimitFilter implements Filter {
 	}
 
 	private void cleanupMap(Map<String, long[]> counters, long now) {
-		counters.entrySet().removeIf(entry -> {
-			long[] window = entry.getValue();
-			synchronized (window) {
-				return now - window[0] > WINDOW_MS;
-			}
-		});
+		for (String key : counters.keySet()) {
+			counters.computeIfPresent(key, (ignored, window) ->
+					now - window[0] > WINDOW_MS ? null : window);
+		}
 	}
 }

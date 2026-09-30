@@ -1,5 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import { isNumericType, toSqlLiteral } from '@/utils/sql'
+import { extractTriggerTiming, isNumericType, toSqlLiteral } from '@/utils/sql'
+
+describe('extractTriggerTiming', () => {
+    it('includes the event and optional UPDATE OF columns', () => {
+        expect(extractTriggerTiming('CREATE TRIGGER t before update of a, b ON users')).toBe(
+            'BEFORE UPDATE OF A, B'
+        )
+        expect(extractTriggerTiming('CREATE TRIGGER t INSTEAD  OF INSERT ON users')).toBe(
+            'INSTEAD  OF INSERT'
+        )
+    })
+
+    it('returns empty text when no trigger timing exists', () => {
+        expect(extractTriggerTiming('SELECT * FROM users')).toBe('')
+    })
+})
 
 describe('toSqlLiteral', () => {
     it('returns NULL for null', () => {

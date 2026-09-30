@@ -8,6 +8,7 @@ import type {
     TruncationInfo
 } from '@/model/DatabaseTypes'
 import TableSection from '../../components/TableSection.vue'
+import HoverPreview from '../../components/HoverPreview.vue'
 import { SQL_CONTEXT_KEY } from '../../model/injectionKeys'
 
 const mockTable: TableSchema = {
@@ -89,11 +90,19 @@ describe('TableSection', () => {
     })
 
     it('shows "无匹配数据" when filter has no matches', async () => {
-        const wrapper = mountTable()
-        const filterInput = wrapper.find('input[placeholder="过滤..."]')
-        await filterInput.setValue('zzz_nonexistent')
-        await nextTick()
-        // After debounce the filter effect propagates
+        vi.useFakeTimers()
+        try {
+            const wrapper = mountTable()
+            const filterInput = wrapper.find('input[placeholder="过滤..."]')
+            await filterInput.setValue('zzz_nonexistent')
+            vi.advanceTimersByTime(201)
+            await nextTick()
+            expect(wrapper.text()).toContain('无匹配数据')
+            expect(wrapper.findAll('button[title="删除此行"]')).toHaveLength(0)
+            wrapper.unmount()
+        } finally {
+            vi.useRealTimers()
+        }
     })
 
     it('emits drop-table when delete table button is clicked', async () => {
@@ -169,11 +178,12 @@ describe('TableSection', () => {
     it('emits insert-row on ghost row submit with data', async () => {
         const wrapper = mountTable()
         const ghostTextareas = wrapper.findAll('textarea[placeholder="+"]')
-        if (ghostTextareas.length > 0) {
-            await ghostTextareas[0].setValue('4')
-            await ghostTextareas[0].trigger('keydown.enter')
-            // Ghost submit may need all required columns filled
-        }
+        await ghostTextareas[0].setValue('4')
+        await ghostTextareas[1].setValue('Dana')
+        await ghostTextareas[0].trigger('keydown.enter')
+        expect(wrapper.emitted('insert-row')?.[0]).toEqual([
+            { tableName: 'users', newRow: { id: '4', name: 'Dana' } }
+        ])
     })
 
     it('shows pagination when data exceeds page size', async () => {
@@ -275,6 +285,56 @@ describe('TableSection', () => {
             const tooltip = document.body.querySelector('.bg-amber-50') as HTMLElement
             expect(tooltip).toBeTruthy()
             expect(tooltip.style.display).toBe('none')
+        })
+
+        it('positions the tooltip beside the truncated cell and hides it after the delay', async () => {
+            vi.useFakeTimers()
+            const cell = document.createElement('div')
+            cell.dataset.column = 'name'
+            vi.spyOn(cell, 'getBoundingClientRect').mockReturnValue({
+                top: 100,
+                bottom: 120,
+                left: 50,
+                width: 100
+            } as DOMRect)
+            document.body.append(cell)
+            try {
+                const truncRef = ref<TruncationInfo[]>([])
+                wrappers.push(mountTable({ lastTruncations: truncRef }))
+                truncRef.value = [
+                    {
+                        value: 'Ali',
+                        originalValue: 'Alice',
+                        maxLength: 3,
+                        wasTruncated: true,
+                        column: 'name'
+                    }
+                ]
+                await nextTick()
+                await nextTick()
+                await nextTick()
+
+                const tooltip = document.body.querySelector('.bg-amber-50') as HTMLElement
+                expect(tooltip.style.top).toBe('124px')
+                expect(tooltip.textContent).toContain('原始长度 5 字符')
+
+                truncRef.value = [
+                    {
+                        value: 'Bo',
+                        originalValue: 'Bobby',
+                        maxLength: 2,
+                        wasTruncated: true,
+                        column: 'name'
+                    }
+                ]
+                await nextTick()
+                vi.advanceTimersByTime(3000)
+                await nextTick()
+                expect(tooltip.style.display).toBe('none')
+            } finally {
+                cell.remove()
+                vi.useRealTimers()
+            }
         })
     })
 
@@ -526,5 +586,151 @@ describe('TableSection', () => {
             expect(wrapper.text()).toContain('Bob')
             expect(wrapper.text()).toContain('Charlie')
         })
+    })
+
+    it('sorts visible rows and moves between pages with the selected page size', async () => {
+        const table = {
+            ...mockTable,
+            data: Array.from({ length: 25 }, (_, i) => ({
+                id: 25 - i,
+                name: `User ${25 - i}`,
+                salary: i
+            }))
+        }
+        const wrapper = mountTable({ table })
+        const firstId = () =>
+            (wrapper.find('tbody tr textarea').element as HTMLTextAreaElement).value
+        expect(firstId()).toBe('25')
+
+        await wrapper.findAll('th')[0].trigger('click')
+        expect(firstId()).toBe('1')
+        await wrapper.findAll('th')[0].trigger('click')
+        expect(firstId()).toBe('25')
+
+        expect(
+            wrapper
+                .findAll('button')
+                .find((b) => b.text().includes('上一页'))
+                ?.attributes('disabled')
+        ).toBeDefined()
+        await wrapper
+            .findAll('button')
+            .find((b) => b.text().includes('下一页'))!
+            .trigger('click')
+        expect(firstId()).toBe('15')
+        expect(wrapper.text()).toContain('2 / 3')
+
+        await wrapper
+            .findAll('button')
+            .find((b) => b.text().includes('上一页'))!
+            .trigger('click')
+        await wrapper.find('select').setValue('25')
+        expect(wrapper.text()).not.toContain('2 / 3')
+        expect(wrapper.findAll('button[title="删除此行"]')).toHaveLength(25)
+    })
+
+    it('previews related indexes, triggers, views and navigates to the selected item', async () => {
+        const wrapper = mountTable({
+            indexes: [
+                {
+                    name: 'idx_users_name',
+                    tableName: 'users',
+                    columns: ['name', 'id'],
+                    unique: true,
+                    sql: 'CREATE UNIQUE INDEX idx_users_name ON users(name, id)'
+                }
+            ],
+            triggers: [
+                {
+                    name: 'trg_users',
+                    tableName: 'users',
+                    sql: 'CREATE TRIGGER trg_users AFTER INSERT ON users BEGIN SELECT 1; END'
+                }
+            ],
+            views: [{ name: 'v_users', sql: 'SELECT * FROM users' }]
+        })
+        const badges = wrapper.findAll('span.cursor-pointer')
+        expect(badges).toHaveLength(3)
+        const preview = wrapper.findComponent(HoverPreview)
+
+        await badges[0].trigger('mouseenter')
+        expect(preview.props('title')).toBe('索引 · users 表')
+        expect(preview.props('items')[0]).toMatchObject({
+            id: 'index-idx_users_name',
+            label: 'idx_users_name'
+        })
+        await badges[0].trigger('click')
+        expect(wrapper.emitted('navigate-tab')?.at(-1)).toEqual([
+            { tab: 'indexes', targetId: undefined }
+        ])
+        preview.vm.$emit('select', 'index-idx_users_name')
+        expect(wrapper.emitted('navigate-tab')?.at(-1)).toEqual([
+            { tab: 'indexes', targetId: 'index-idx_users_name' }
+        ])
+
+        await badges[1].trigger('mouseenter')
+        expect(preview.props('title')).toBe('触发器 · users 表')
+        expect(preview.props('items')[0].id).toBe('trigger-trg_users')
+        await badges[1].trigger('click')
+        expect(wrapper.emitted('navigate-tab')?.at(-1)).toEqual([
+            { tab: 'triggers', targetId: undefined }
+        ])
+        preview.vm.$emit('navigate-all')
+        expect(wrapper.emitted('navigate-tab')?.at(-1)).toEqual([{ tab: 'triggers' }])
+
+        await badges[2].trigger('mouseenter')
+        expect(preview.props('title')).toBe('视图 · 引用 users 表')
+        expect(preview.props('items')[0].id).toBe('view-v_users')
+        await badges[2].trigger('click')
+        expect(wrapper.emitted('navigate-tab')?.at(-1)).toEqual([
+            { tab: 'views', targetId: undefined }
+        ])
+
+        const columnBadge = wrapper
+            .findAll('th')
+            .find((th) => th.text().includes('name'))!
+            .find('div.cursor-pointer')
+        await columnBadge.trigger('mouseenter')
+        expect(preview.props('title')).toBe('索引 · name 列')
+        expect(preview.props('items')[0].meta).toContain('其他列: id')
+        await columnBadge.trigger('click')
+        expect(wrapper.emitted('navigate-tab')?.at(-1)).toEqual([
+            { tab: 'indexes', targetId: undefined }
+        ])
+        wrapper.unmount()
+    })
+
+    it('keeps a hover preview open while moving from badge to preview, then closes it', async () => {
+        vi.useFakeTimers()
+        try {
+            const wrapper = mountTable({
+                indexes: [
+                    {
+                        name: 'idx_users',
+                        tableName: 'users',
+                        columns: ['id'],
+                        unique: false,
+                        sql: ''
+                    }
+                ]
+            })
+            const badge = wrapper.find('span.cursor-pointer')
+            const preview = wrapper.findComponent(HoverPreview)
+            await badge.trigger('mouseenter')
+            expect(preview.props('show')).toBe(true)
+            await badge.trigger('mouseleave')
+            preview.vm.$emit('mouseenter')
+            vi.advanceTimersByTime(201)
+            await nextTick()
+            expect(preview.props('show')).toBe(true)
+
+            preview.vm.$emit('mouseleave')
+            vi.advanceTimersByTime(201)
+            await nextTick()
+            expect(preview.props('show')).toBe(false)
+            wrapper.unmount()
+        } finally {
+            vi.useRealTimers()
+        }
     })
 })

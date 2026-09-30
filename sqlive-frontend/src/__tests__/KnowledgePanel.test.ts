@@ -1,7 +1,12 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 import KnowledgePanel from '@/components/knowledge/KnowledgePanel.vue'
+import KnowledgeGraph from '@/components/knowledge/KnowledgeGraph.vue'
+import TaskJournalPanel from '@/components/knowledge/TaskJournalPanel.vue'
+import AchievementToast from '@/components/knowledge/AchievementToast.vue'
+import ConfettiOverlay from '@/components/knowledge/ConfettiOverlay.vue'
+import ChapterCard from '@/components/knowledge/ChapterCard.vue'
 import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
 
 const mockFetch = vi.fn()
@@ -61,6 +66,7 @@ async function mountWithData(topics = mockTopics) {
         global: { provide: mockProvide, stubs: { teleport: true, VueFlow: true } }
     })
     await vi.waitFor(() => (w.vm.filteredNodes as any[]).length > 0, { timeout: 2000 })
+    await flushPromises()
     return w
 }
 
@@ -302,5 +308,148 @@ describe('KnowledgePanel', () => {
         await vi.waitFor(() => (w.vm as any).xpBarPercent !== undefined, { timeout: 2000 })
         await nextTick() // let immediate watch clamp level
         expect((w.vm as any).xpBarPercent).toBe(0)
+    })
+
+    it('opens chapter tasks, clears the chapter filter on manual tab choice, and returns to a topic', async () => {
+        const w = await mountWithData()
+        const tabs = w.findAll('.knowledge-panel__tab')
+        await tabs[2].trigger('click')
+        const chapter = w.findComponent(ChapterCard)
+        expect(chapter.exists()).toBe(true)
+
+        chapter.vm.$emit('open-chapter', chapter.props('chapter').id)
+        await nextTick()
+        let journal = w.findComponent(TaskJournalPanel)
+        expect(journal.props('chapterCategoryFilter')).toEqual(
+            chapter.props('chapter').taskCategories
+        )
+
+        await tabs[1].trigger('click')
+        journal = w.findComponent(TaskJournalPanel)
+        expect(journal.props('chapterCategoryFilter')).toBeUndefined()
+        journal.vm.$emit('navigateToTopic', 'a')
+        await nextTick()
+        expect(w.findComponent(KnowledgeGraph).exists()).toBe(true)
+        expect(tabs[0].classes()).toContain('knowledge-panel__tab--active')
+        w.unmount()
+    })
+
+    it('awards mastery XP, shows its toast, and clears the selection on graph events', async () => {
+        const w = await mountWithData()
+        const graph = w.findComponent(KnowledgeGraph)
+        graph.vm.$emit('node-select', 'a')
+        await nextTick()
+        expect(graph.props('selectedTopic')?.id).toBe('a')
+
+        graph.vm.$emit('toggle-mastered', 'a')
+        await nextTick()
+        const toast = w.findAllComponents(AchievementToast)[0]
+        expect(toast.props()).toMatchObject({ visible: true, label: 'SQL 基础', xp: 30 })
+        expect(JSON.parse(localStorage.getItem('ai-mastered-topics') || '[]')).toContain('a')
+
+        toast.vm.$emit('close')
+        w.findComponent(KnowledgeGraph).vm.$emit('deselect-node')
+        await nextTick()
+        expect(toast.props('visible')).toBe(false)
+        expect(w.findComponent(KnowledgeGraph).props('selectedTopic')).toBeNull()
+
+        w.findComponent(KnowledgeGraph).vm.$emit('ask-ai', 'SQL 基础')
+        expect(w.emitted('ask-ai')?.[0]).toEqual(['SQL 基础'])
+        w.unmount()
+    })
+
+    it('celebrates a level up from mastering a difficult topic', async () => {
+        localStorage.setItem(
+            'ai-knowledge-xp',
+            JSON.stringify({ totalXp: 740, level: 0, streak: 0, masteredLog: [] })
+        )
+        const w = await mountWithData([{ ...mockTopics[0], difficulty: 3 }])
+        vi.useFakeTimers()
+        try {
+            w.findComponent(KnowledgeGraph).vm.$emit('toggle-mastered', 'a')
+            await nextTick()
+
+            expect(w.findAllComponents(AchievementToast)[0].props()).toMatchObject({
+                visible: true,
+                label: 'SQL 基础',
+                xp: 80,
+                isHighDifficulty: true
+            })
+            expect(w.findComponent(ConfettiOverlay).props('active')).toBe(true)
+            expect(w.find('.level-up-toast').text()).toContain('进阶学者')
+            vi.advanceTimersByTime(2500)
+            await nextTick()
+            expect(w.findAllComponents(AchievementToast)[0].props('visible')).toBe(false)
+            vi.advanceTimersByTime(2500)
+            await nextTick()
+            expect(w.findComponent(ConfettiOverlay).props('active')).toBe(false)
+            w.unmount()
+        } finally {
+            vi.useRealTimers()
+        }
+    })
+
+    it('awards task XP only for a known topic and displays the task toast', async () => {
+        const w = await mountWithData()
+        const graph = w.findComponent(KnowledgeGraph)
+        graph.vm.$emit('complete-task', 'missing')
+        await nextTick()
+        expect(w.findAllComponents(AchievementToast)[1].props('visible')).toBe(false)
+
+        graph.vm.$emit('complete-task', 'c')
+        await nextTick()
+        const taskToast = w.findAllComponents(AchievementToast)[1]
+        expect(taskToast.props()).toMatchObject({
+            variant: 'task',
+            visible: true,
+            label: 'INSERT',
+            xp: 40
+        })
+        expect(JSON.parse(localStorage.getItem('ai-knowledge-xp') || '{}').masteredLog).toContain(
+            'task:c'
+        )
+        taskToast.vm.$emit('close')
+        await nextTick()
+        expect(taskToast.props('visible')).toBe(false)
+        w.unmount()
+    })
+
+    it('switches from graph to tasks, returns to graph, and closes with Escape', async () => {
+        const w = await mountWithData()
+        w.findComponent(KnowledgeGraph).vm.$emit('view-all-tasks')
+        await nextTick()
+        expect(w.findComponent(TaskJournalPanel).exists()).toBe(true)
+
+        await w.findAll('.knowledge-panel__tab')[0].trigger('click')
+        await w.find('.knowledge-panel__search').setValue('JOIN')
+        expect(w.findComponent(KnowledgeGraph).props('searchQuery')).toBe('JOIN')
+
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+        expect(w.emitted('close')).toHaveLength(1)
+        w.unmount()
+    })
+
+    it('shows task level-up celebration and dismisses its toast on schedule', async () => {
+        localStorage.setItem(
+            'ai-knowledge-xp',
+            JSON.stringify({ totalXp: 730, level: 0, streak: 0, masteredLog: [] })
+        )
+        const w = await mountWithData()
+        vi.useFakeTimers()
+        try {
+            w.findComponent(KnowledgeGraph).vm.$emit('complete-task', 'c')
+            await nextTick()
+            expect(w.findAllComponents(AchievementToast)[1].props('visible')).toBe(true)
+            expect(w.findComponent(ConfettiOverlay).props('active')).toBe(true)
+            vi.advanceTimersByTime(2500)
+            await nextTick()
+            expect(w.findAllComponents(AchievementToast)[1].props('visible')).toBe(false)
+            vi.advanceTimersByTime(2500)
+            await nextTick()
+            expect(w.findComponent(ConfettiOverlay).props('active')).toBe(false)
+            w.unmount()
+        } finally {
+            vi.useRealTimers()
+        }
     })
 })

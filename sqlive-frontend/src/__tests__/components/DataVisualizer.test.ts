@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 import type {
@@ -9,6 +9,9 @@ import type {
     ViewInfo
 } from '@/model/DatabaseTypes'
 import DataVisualizer from '../../components/DataVisualizer.vue'
+import TableSection from '../../components/TableSection.vue'
+import CreateTableModal from '../../components/CreateTableModal.vue'
+import SortFilterToolbar from '../../components/SortFilterToolbar.vue'
 import { SQL_CONTEXT_KEY } from '../../model/injectionKeys'
 
 const mockDb: DatabaseModel = {
@@ -515,5 +518,124 @@ describe('DataVisualizer', () => {
 
         // Active tab should be 'tables'
         expect(wrapper.text()).toContain('users')
+    })
+
+    it('forwards table edits and create-table submission to the parent', async () => {
+        const wrapper = mount(DataVisualizer, {
+            global: { provide: provideContext(mockDb, defaultHighlight), stubs: minimalStubs }
+        })
+        const table = wrapper.findComponent(TableSection)
+        await table.find('button[title="删除表格"]').trigger('click')
+        await table.find('button[title="删除此行"]').trigger('click')
+        expect(wrapper.emitted('drop-table')?.[0]).toEqual(['users'])
+        expect(wrapper.emitted('delete-row')?.[0][0]).toMatchObject({
+            tableName: 'users',
+            row: { id: 1 }
+        })
+
+        const nameCell = table.findAll('tbody tr textarea')[1]
+        await nameCell.setValue('Alicia')
+        await nameCell.trigger('blur')
+        expect(wrapper.emitted('update-cell')?.[0][0]).toMatchObject({
+            tableName: 'users',
+            newRow: { name: 'Alicia' }
+        })
+
+        await table.find('textarea[placeholder="+"]').setValue('2')
+        await table.find('button[title="确认添加"]').trigger('click')
+        expect(wrapper.emitted('insert-row')?.[0][0]).toMatchObject({
+            tableName: 'users',
+            newRow: { id: '2' }
+        })
+
+        await wrapper
+            .findAll('button')
+            .find((b) => b.text().includes('添加新表格'))!
+            .trigger('click')
+        const modal = wrapper.findComponent(CreateTableModal)
+        expect(modal.props('open')).toBe(true)
+        const payload = { name: 'orders', columns: ['id'], data: [{ id: 1 }] }
+        modal.vm.$emit('submit', payload)
+        expect(wrapper.emitted('create-table')?.[0]).toEqual([payload])
+        modal.vm.$emit('update:open', false)
+        await nextTick()
+        expect(modal.props('open')).toBe(false)
+        wrapper.unmount()
+    })
+
+    it('scrolls to linked cards, flashes the target, and clears flash after the delay', async () => {
+        const wrapper = mount(DataVisualizer, {
+            attachTo: document.body,
+            global: { provide: provideContext(mockDb, defaultHighlight), stubs: minimalStubs }
+        })
+        const scroll = vi.fn()
+        Object.defineProperty(wrapper.find('#index-idx_users_name').element, 'scrollIntoView', {
+            value: scroll
+        })
+        Object.defineProperty(wrapper.find('#table-users').element, 'scrollIntoView', {
+            value: scroll
+        })
+        try {
+            wrapper.findComponent(TableSection).vm.$emit('navigate-tab', {
+                tab: 'indexes',
+                targetId: 'index-idx_users_name'
+            })
+            await flushPromises()
+            expect(wrapper.find('[data-testid="tab-indexes"]').classes()).toContain('text-primary')
+            expect(wrapper.find('#index-idx_users_name').classes()).toContain('animate-flash')
+            expect(scroll).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' })
+
+            await wrapper.find('#index-idx_users_name').trigger('click')
+            await flushPromises()
+            expect(wrapper.findComponent(TableSection).props('flashTableName')).toBe('users')
+            vi.advanceTimersByTime(1000)
+            await nextTick()
+            expect(wrapper.findComponent(TableSection).props('flashTableName')).toBeNull()
+            expect(wrapper.find('#index-idx_users_name').classes()).not.toContain('animate-flash')
+        } finally {
+            wrapper.unmount()
+        }
+    })
+
+    it('sorts and filters indexes, views, and triggers using the toolbar', async () => {
+        const wrapper = mount(DataVisualizer, {
+            global: {
+                provide: provideContext(
+                    makeDb({ indexes: mockIndexes, views: mockViews, triggers: mockTriggers }),
+                    defaultHighlight
+                ),
+                stubs: minimalStubs
+            }
+        })
+        const cardIds = (prefix: string) =>
+            wrapper.findAll(`[id^="${prefix}-"]`).map((card) => card.attributes('id'))
+        await wrapper.find('[data-testid="tab-indexes"]').trigger('click')
+        const [indexToolbar, viewToolbar, triggerToolbar] =
+            wrapper.findAllComponents(SortFilterToolbar)
+
+        indexToolbar.vm.$emit('toggle-sort', 'cols')
+        await nextTick()
+        indexToolbar.vm.$emit('toggle-sort', 'cols')
+        await nextTick()
+        expect(cardIds('index')[0]).toBe('index-idx_users_name_dept')
+        await indexToolbar.find('input').setValue('email')
+        await vi.advanceTimersByTimeAsync(201)
+        expect(cardIds('index')).toEqual(['index-idx_users_email', 'index-idx_lower_email'])
+
+        await wrapper.find('[data-testid="tab-views"]').trigger('click')
+        viewToolbar.vm.$emit('toggle-sort', 'name')
+        await nextTick()
+        expect(cardIds('view')).toEqual(['view-v_active_users', 'view-v_user_stats'])
+        await viewToolbar.find('input').setValue('COUNT')
+        await vi.advanceTimersByTimeAsync(201)
+        expect(cardIds('view')).toEqual(['view-v_user_stats'])
+
+        await wrapper.find('[data-testid="tab-triggers"]').trigger('click')
+        triggerToolbar.vm.$emit('toggle-sort', 'name')
+        await nextTick()
+        await triggerToolbar.find('input').setValue('BEFORE')
+        await vi.advanceTimersByTimeAsync(201)
+        expect(cardIds('trigger')).toEqual(['trigger-trg_users_before_update'])
+        wrapper.unmount()
     })
 })

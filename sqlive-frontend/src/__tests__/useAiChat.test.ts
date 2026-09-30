@@ -151,12 +151,19 @@ describe('useAiChat', () => {
     })
 
     it('sends SQL, schema, and prior messages to chat', async () => {
-        const ctx = mockSqlEngine()
-        ctx.tablesSource = () => [
-            { name: 'users', columns: ['id'], columnTypes: { id: 'INTEGER' }, data: [] }
-        ]
+        const ctx = {
+            ...mockSqlEngine(),
+            tablesSource: () => [
+                { name: 'users', columns: ['id'], columnTypes: { id: 'INTEGER' }, data: [] }
+            ]
+        }
         const engine = useAiChat(ctx)
-        engine.messages.value.push({ id: 'prior', role: 'system', content: 'context', timestamp: 0 })
+        engine.messages.value.push({
+            id: 'prior',
+            role: 'system',
+            content: 'context',
+            timestamp: 0
+        })
         mockStreamResponse(['data: {"type":"text","content":"ok"}\n\n'])
 
         await engine.sendMessage('explain this')
@@ -242,7 +249,10 @@ describe('useAiChat', () => {
         expect(engine.messages.value[0]).toMatchObject({
             role: 'system',
             content: 'SQL 执行出错（第 4 行）：bad token',
-            metadata: { type: 'error-analysis', context: { error: { line: 4, message: 'bad token' } } }
+            metadata: {
+                type: 'error-analysis',
+                context: { error: { line: 4, message: 'bad token' } }
+            }
         })
 
         engine.autoAnalysisEnabled.value = false
@@ -288,10 +298,7 @@ describe('useAiChat', () => {
         engine.editMessage('u', 'new question')
         await vi.advanceTimersByTimeAsync(0)
 
-        expect(engine.messages.value.map((m) => m.content)).toEqual([
-            'new question',
-            'new answer'
-        ])
+        expect(engine.messages.value.map((m) => m.content)).toEqual(['new question', 'new answer'])
         expect(JSON.parse(fetchSpy.mock.calls[0][1].body).message).toBe('new question')
     })
 
@@ -311,6 +318,35 @@ describe('useAiChat', () => {
         expect(engine.messages.value).toEqual([])
 
         engine.deleteMessage('missing')
+        expect(engine.messages.value).toEqual([])
+    })
+
+    it('handles unpaired messages without deleting unrelated history', async () => {
+        const engine = useAiChat(mockSqlEngine())
+        engine.messages.value = [
+            { id: 'system', role: 'system', content: 'context', timestamp: 0 },
+            { id: 'user', role: 'user', content: 'old', timestamp: 0 }
+        ]
+        engine.regenerateMessage('user')
+        expect(engine.messages.value).toHaveLength(2)
+
+        mockStreamResponse(['data: {"type":"text","content":"answer"}\n\n'])
+        engine.editMessage('user', 'revised')
+        await vi.advanceTimersByTimeAsync(0)
+        expect(engine.messages.value.map((m) => m.content)).toEqual([
+            'context',
+            'revised',
+            'answer'
+        ])
+
+        engine.messages.value = [
+            { id: 'assistant', role: 'assistant', content: 'solo', timestamp: 0 }
+        ]
+        engine.deleteMessage('assistant')
+        expect(engine.messages.value).toEqual([])
+
+        engine.messages.value = [{ id: 'user', role: 'user', content: 'solo', timestamp: 0 }]
+        engine.deleteMessage('user')
         expect(engine.messages.value).toEqual([])
     })
 })
