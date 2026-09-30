@@ -1,7 +1,7 @@
-import {mount} from '@vue/test-utils'
-import {beforeEach, describe, expect, it, vi} from 'vitest'
-import {nextTick} from 'vue'
-import type {KnowledgeTask} from '@/composables/useKnowledgeTasks'
+import { mount } from '@vue/test-utils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
+import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'
 // Import after mocks are registered
 import TaskJournalPanel from '@/components/knowledge/TaskJournalPanel.vue'
 
@@ -11,10 +11,10 @@ import TaskJournalPanel from '@/components/knowledge/TaskJournalPanel.vue'
 // created lazily inside the factory via dynamic import('vue') so we don't
 // depend on hoisted static imports.
 
-const {mockTasksHolder} = vi.hoisted(() => ({mockTasksHolder: {ref: null as any}}))
+const { mockTasksHolder } = vi.hoisted(() => ({ mockTasksHolder: { ref: null as any } }))
 
 vi.mock('@/composables/useKnowledgeTasks', async () => {
-    const {ref} = await import('vue')
+    const { ref } = await import('vue')
     if (!mockTasksHolder.ref) mockTasksHolder.ref = ref<KnowledgeTask[]>([])
     return {
         useKnowledgeTasks: () => ({
@@ -26,10 +26,10 @@ vi.mock('@/composables/useKnowledgeTasks', async () => {
             updateSubstep: vi.fn(),
             pinTask: vi.fn(),
             unpinTask: vi.fn(),
-            getPinnedTask: {value: null},
-            getChapterProgress: () => ({completed: 0, total: 0}),
+            getPinnedTask: { value: null },
+            getChapterProgress: () => ({ completed: 0, total: 0 }),
             tasksByTopic: () => [],
-            pendingCount: {value: 0},
+            pendingCount: { value: 0 },
             isOverdue: () => false,
             seedPresetTasksIfFirstRun: () => false
         })
@@ -43,7 +43,7 @@ vi.mock('@/composables/useRedDot', () => ({
         show: vi.fn(),
         hasDotInPrefix: () => false,
         clearAll: vi.fn(),
-        keyParents: {value: {}}
+        keyParents: { value: {} }
     })
 }))
 
@@ -79,11 +79,11 @@ describe('TaskJournalPanel — D-08 default-select first task', () => {
     })
 
     it('auto-selects first task when tasks exist on mount', () => {
-        setTasks([makeTask({id: 't1'}), makeTask({id: 't2'})])
+        setTasks([makeTask({ id: 't1' }), makeTask({ id: 't2' })])
 
         const wrapper = mount(TaskJournalPanel, {
-            props: {topics: []},
-            global: {stubs}
+            props: { topics: [] },
+            global: { stubs }
         })
 
         const selected = wrapper.find('.journal__list-item--selected')
@@ -92,8 +92,8 @@ describe('TaskJournalPanel — D-08 default-select first task', () => {
 
     it('does not auto-select when tasks empty', () => {
         const wrapper = mount(TaskJournalPanel, {
-            props: {topics: []},
-            global: {stubs}
+            props: { topics: [] },
+            global: { stubs }
         })
 
         expect(wrapper.find('.journal__list-item--selected').exists()).toBe(false)
@@ -103,15 +103,15 @@ describe('TaskJournalPanel — D-08 default-select first task', () => {
 
     it('auto-selects when tasks arrive after mount via watch', async () => {
         const wrapper = mount(TaskJournalPanel, {
-            props: {topics: []},
-            global: {stubs}
+            props: { topics: [] },
+            global: { stubs }
         })
 
         expect(wrapper.find('.journal__list-item--selected').exists()).toBe(false)
 
-        setTasks([makeTask({id: 't1'})])
+        setTasks([makeTask({ id: 't1' })])
         await nextTick()
-        await nextTick()  // extra tick for watch + re-render
+        await nextTick() // extra tick for watch + re-render
 
         expect(wrapper.find('.journal__list-item--selected').exists()).toBe(true)
     })
@@ -126,23 +126,23 @@ describe('TaskJournalPanel — WR-05 chapterCategoryFilter union-list mode', () 
 
     it('filters tasks to union of chapterCategoryFilter categories', () => {
         setTasks([
-            makeTask({id: 't1', category: 'core'}),
-            makeTask({id: 't2', category: 'deep-dive'}),
-            makeTask({id: 't3', category: 'daily'})
+            makeTask({ id: 't1', category: 'core' }),
+            makeTask({ id: 't2', category: 'deep-dive' }),
+            makeTask({ id: 't3', category: 'daily' })
         ])
         const wrapper = mount(TaskJournalPanel, {
-            props: {topics: [], chapterCategoryFilter: ['core', 'deep-dive']},
-            global: {stubs}
+            props: { topics: [], chapterCategoryFilter: ['core', 'deep-dive'] },
+            global: { stubs }
         })
         const items = wrapper.findAll('.journal__list-item')
         expect(items.length).toBe(2) // t1 (core) + t2 (deep-dive), t3 (daily) excluded
     })
 
     it('no category tab highlighted when chapterCategoryFilter is set', () => {
-        setTasks([makeTask({id: 't1', category: 'core'})])
+        setTasks([makeTask({ id: 't1', category: 'core' })])
         const wrapper = mount(TaskJournalPanel, {
-            props: {topics: [], chapterCategoryFilter: ['core']},
-            global: {stubs}
+            props: { topics: [], chapterCategoryFilter: ['core'] },
+            global: { stubs }
         })
         const activeTabs = wrapper.findAll('.journal__tab--active')
         expect(activeTabs.length).toBe(0) // union mode: no single tab highlighted
@@ -150,13 +150,13 @@ describe('TaskJournalPanel — WR-05 chapterCategoryFilter union-list mode', () 
 
     it('auto-selects first task in union-filtered list', () => {
         setTasks([
-            makeTask({id: 't1', category: 'core'}),
-            makeTask({id: 't2', category: 'deep-dive'}),
-            makeTask({id: 't3', category: 'daily'})
+            makeTask({ id: 't1', category: 'core' }),
+            makeTask({ id: 't2', category: 'deep-dive' }),
+            makeTask({ id: 't3', category: 'daily' })
         ])
         const wrapper = mount(TaskJournalPanel, {
-            props: {topics: [], chapterCategoryFilter: ['core', 'deep-dive']},
-            global: {stubs}
+            props: { topics: [], chapterCategoryFilter: ['core', 'deep-dive'] },
+            global: { stubs }
         })
         const selected = wrapper.find('.journal__list-item--selected')
         expect(selected.exists()).toBe(true)
@@ -164,12 +164,12 @@ describe('TaskJournalPanel — WR-05 chapterCategoryFilter union-list mode', () 
 
     it('falls back to activeCategory single-filter when chapterCategoryFilter is undefined', () => {
         setTasks([
-            makeTask({id: 't1', category: 'core'}),
-            makeTask({id: 't2', category: 'deep-dive'})
+            makeTask({ id: 't1', category: 'core' }),
+            makeTask({ id: 't2', category: 'deep-dive' })
         ])
         const wrapper = mount(TaskJournalPanel, {
-            props: {topics: []}, // no chapterCategoryFilter
-            global: {stubs}
+            props: { topics: [] }, // no chapterCategoryFilter
+            global: { stubs }
         })
         const items = wrapper.findAll('.journal__list-item')
         expect(items.length).toBe(1) // only core (default activeCategory)

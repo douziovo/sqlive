@@ -1,4 +1,4 @@
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
  * useDocsSearch test suite (D-07 — MiniSearch lazy index + error fallback).
@@ -16,8 +16,8 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
  *   also strip the hoisted vi.mock and break subsequent tests).
  */
 const mockMinisearch = vi.hoisted(() => {
-    const ctorCalls = {count: 0}
-    const shouldThrow = {value: false}
+    const ctorCalls = { count: 0 }
+    const shouldThrow = { value: false }
     return {
         ctorCalls,
         shouldThrow,
@@ -27,24 +27,25 @@ const mockMinisearch = vi.hoisted(() => {
                 if (shouldThrow.value) throw new Error('MiniSearch init failed')
             }
 
-            addAll() {
-            }
+            addAll() {}
 
             search(q: string) {
                 return q.includes('edit')
-                    ? [{
-                        slug: 'usage/editor',
-                        title: '编辑器',
-                        category: 'usage',
-                        score: 1,
-                    }]
+                    ? [
+                          {
+                              slug: 'usage/editor',
+                              title: '编辑器',
+                              category: 'usage',
+                              score: 1
+                          }
+                      ]
                     : []
             }
-        },
+        }
     }
 })
 
-vi.mock('minisearch', () => ({default: mockMinisearch.MockMiniSearch}))
+vi.mock('minisearch', () => ({ default: mockMinisearch.MockMiniSearch }))
 
 beforeEach(() => {
     // Reset module registry so `let index = null` and refs re-initialize per test
@@ -66,7 +67,7 @@ describe('useDocsSearch', () => {
     it('builds index on first ensureIndex call', async () => {
         // D-07: ensureIndex lazily builds MiniSearch index; indexReady becomes true
         const useDocsSearch = await loadUseDocsSearch()
-        const {ensureIndex, indexReady, indexError} = useDocsSearch()
+        const { ensureIndex, indexReady, indexError } = useDocsSearch()
         await ensureIndex()
         expect(indexReady.value).toBe(true)
         expect(indexError.value).toBe(false)
@@ -76,7 +77,7 @@ describe('useDocsSearch', () => {
     it('does not rebuild on second ensureIndex call', async () => {
         // D-07 singleton: second ensureIndex is a no-op (index already built)
         const useDocsSearch = await loadUseDocsSearch()
-        const {ensureIndex} = useDocsSearch()
+        const { ensureIndex } = useDocsSearch()
         await ensureIndex()
         await ensureIndex()
         expect(mockMinisearch.ctorCalls.count).toBe(1)
@@ -85,7 +86,7 @@ describe('useDocsSearch', () => {
     it('prefix match "edit" hits editor article', async () => {
         // D-07: prefix search returns results with title/slug/category/score
         const useDocsSearch = await loadUseDocsSearch()
-        const {ensureIndex, search} = useDocsSearch()
+        const { ensureIndex, search } = useDocsSearch()
         await ensureIndex()
         const results = search('edit')
         expect(results).toHaveLength(1)
@@ -98,7 +99,7 @@ describe('useDocsSearch', () => {
     it('empty query returns empty array', async () => {
         // D-07: empty/whitespace query returns [] without calling index.search
         const useDocsSearch = await loadUseDocsSearch()
-        const {ensureIndex, search} = useDocsSearch()
+        const { ensureIndex, search } = useDocsSearch()
         await ensureIndex()
         expect(search('')).toEqual([])
         expect(search('   ')).toEqual([])
@@ -107,9 +108,10 @@ describe('useDocsSearch', () => {
     it('marks unavailable when minisearch init fails', async () => {
         // D-07 error fallback: if MiniSearch import or instantiation throws,
         // indexError becomes true (does NOT throw to caller). Sidebar nav still works.
+        vi.spyOn(console, 'error').mockImplementation(() => {})
         mockMinisearch.shouldThrow.value = true
         const useDocsSearch = await loadUseDocsSearch()
-        const {ensureIndex, indexError, indexReady} = useDocsSearch()
+        const { ensureIndex, indexError, indexReady } = useDocsSearch()
         await ensureIndex()
         expect(indexError.value).toBe(true)
         expect(indexReady.value).toBe(false)

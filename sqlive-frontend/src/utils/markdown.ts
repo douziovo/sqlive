@@ -1,5 +1,8 @@
+import DOMPurify from 'dompurify'
+import { marked, type Tokens } from 'marked'
+
 /**
- * Markdown helper pure functions (D-07 search wiring + D-12 document.title).
+ * Browser Markdown helpers for search indexing and document titles.
  *
  * Used by useDocsSearch (builds MiniSearch index from .md raw) and
  * DocsLayout (extracts H1 for document.title).
@@ -12,8 +15,10 @@
  * Example: extractH1('# 编辑器\n\nbody') === '编辑器'
  */
 export function extractH1(raw: string): string | null {
-  const match = raw.match(/^#\s+(.+)$/m)
-  return match ? match[1].trim() : null
+    const heading = marked
+        .lexer(raw)
+        .find((token): token is Tokens.Heading => token.type === 'heading' && token.depth === 1)
+    return heading?.text.trim() ?? null
 }
 
 /**
@@ -22,14 +27,12 @@ export function extractH1(raw: string): string | null {
  * extracts link text from [text](url).
  */
 export function stripMarkdown(raw: string): string {
-  return raw
-    .replace(/```[\s\S]*?```/g, '')        // fenced code blocks
-    .replace(/`[^`]+`/g, '')                // inline code
-    .replace(/^#+\s+.+$/gm, '')             // headings
-    .replace(/[*_~]+/g, '')                 // emphasis markers
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // links: keep text
-    .replace(/\s+/g, ' ')
-    .trim()
+    const fragment = DOMPurify.sanitize(marked.parse(raw, { async: false }), {
+        RETURN_DOM_FRAGMENT: true
+    })
+    fragment.querySelectorAll('pre, code, h1, h2, h3, h4, h5, h6').forEach((node) => node.remove())
+    fragment.querySelectorAll('br, p, li, td, th').forEach((node) => node.append(' '))
+    return (fragment.textContent ?? '').replace(/\s+/g, ' ').trim()
 }
 
 /**
@@ -37,7 +40,5 @@ export function stripMarkdown(raw: string): string {
  * Example: '/src/content/docs/usage/editor.md' -> 'usage/editor'
  */
 export function pathToSlug(path: string): string {
-  return path
-    .replace(/^.*\/content\/docs\//, '')
-    .replace(/\.md$/, '')
+    return path.replace(/^.*\/content\/docs\//, '').replace(/\.md$/, '')
 }

@@ -28,6 +28,7 @@ public class SqlController {
 
 	@PostMapping("/execute")
 	@Operation(summary = "执行 SQL 脚本", description = "接收 SQL 脚本，在指定数据库内执行，返回表数据 + 元数据")
+	@SuppressWarnings("UastIncorrectHttpHeaderInspection")
 	public SqlResponse executeSql(@Valid @RequestBody SqlRequest request,
 	                              HttpServletRequest httpRequest,
 	                              HttpServletResponse httpResponse) {

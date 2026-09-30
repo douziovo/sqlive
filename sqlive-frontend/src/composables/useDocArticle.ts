@@ -1,7 +1,7 @@
 import DOMPurify from 'dompurify'
-import {marked} from 'marked'
-import {computed, type Ref} from 'vue'
-import {sanitizeConfig} from '@/utils/sanitize'
+import { marked } from 'marked'
+import { computed, type Ref } from 'vue'
+import { sanitizeConfig } from '@/utils/sanitize'
 
 /**
  * useDocArticle — slug → markdown raw → marked.parse → DOMPurify.sanitize (D-03).
@@ -18,7 +18,7 @@ import {sanitizeConfig} from '@/utils/sanitize'
 const articles = import.meta.glob('/src/content/docs/**/*.md', {
     query: '?raw',
     import: 'default',
-    eager: true,
+    eager: true
 }) as Record<string, string>
 
 export function useDocArticle(slug: Ref<string>) {
@@ -32,11 +32,11 @@ export function useDocArticle(slug: Ref<string>) {
         try {
             // Pitfall 8: explicit `as string` — marked.parse can return
             // string | Promise<string>; we use sync mode (no `async: true`).
-            const parsed = marked.parse(raw.value, {breaks: true, gfm: true}) as string
+            const parsed = marked.parse(raw.value, { breaks: true, gfm: true }) as string
             // D-09: shared sanitizeConfig with afterSanitizeAttributes hook
             // (target=_blank + rel=noopener noreferrer on every <a>).
             return DOMPurify.sanitize(parsed, sanitizeConfig)
-        } catch (e) {
+        } catch {
             // Error Handling 4.8: marked.parse exception → escaped <pre> fallback
             // (escape so raw markdown is shown as text, not rendered as HTML)
             const escaped = raw.value
@@ -47,5 +47,5 @@ export function useDocArticle(slug: Ref<string>) {
         }
     })
 
-    return {raw, html}
+    return { raw, html }
 }

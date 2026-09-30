@@ -3,6 +3,7 @@ package com.douzi.sqlive.service.ai;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
+import org.springframework.http.codec.ServerSentEvent;
 
 import java.util.List;
 import java.util.Map;
@@ -230,69 +231,27 @@ class ProtocolTest {
 	}
 
 	@Test
-	void lmStudioParseChunkMessageDelta() {
+	void lmStudioParsesNamedEvents() {
 		var proto = new LmStudioProtocol(mapper);
-		String json = "{\"event\":\"message.delta\",\"data\":{\"content\":\"hello\"}}";
-		var chunks = proto.parseChunk(json).collectList().block();
-		assertNotNull(chunks);
-		assertEquals(1, chunks.size());
-		assertEquals("text", chunks.getFirst().getType());
-		assertEquals("hello", chunks.getFirst().getContent());
+		var text = proto.parseEvent(ServerSentEvent.builder("{\"content\":\"hello\"}").event("message.delta").build()).blockFirst();
+		assertNotNull(text);
+		assertEquals("hello", text.getContent());
+		var reasoning = proto.parseEvent(ServerSentEvent.builder("{\"content\":\"thinking\"}").event("reasoning.delta").build()).blockFirst();
+		assertNotNull(reasoning);
+		assertEquals("reasoning", reasoning.getType());
+		var usage = proto.parseEvent(ServerSentEvent.builder("{\"result\":{\"stats\":{\"input_tokens\":5,\"total_output_tokens\":10}}}").event("chat.end").build()).blockFirst();
+		assertNotNull(usage);
+		assertEquals("usage", usage.getType());
+		var error = proto.parseEvent(ServerSentEvent.builder("{\"error\":{\"message\":\"bad\"}}").event("error").build()).blockFirst();
+		assertNotNull(error);
+		assertEquals("bad", error.getContent());
 	}
 
 	@Test
-	void lmStudioParseChunkReasoningDelta() {
+	void lmStudioSkipsUnknownEmptyAndMalformedEvents() {
 		var proto = new LmStudioProtocol(mapper);
-		String json = "{\"event\":\"reasoning.delta\",\"data\":{\"content\":\"thinking...\"}}";
-		var chunks = proto.parseChunk(json).collectList().block();
-		assertNotNull(chunks);
-		assertEquals(1, chunks.size());
-		assertEquals("reasoning", chunks.getFirst().getType());
-	}
-
-	@Test
-	void lmStudioParseChunkChatEnd() {
-		var proto = new LmStudioProtocol(mapper);
-		String json = "{\"event\":\"chat.end\",\"data\":{\"result\":{\"stats\":{\"input_tokens\":5,\"total_output_tokens\":10}}}}";
-		var chunks = proto.parseChunk(json).collectList().block();
-		assertNotNull(chunks);
-		assertTrue(chunks.stream().anyMatch(c -> "usage".equals(c.getType())));
-	}
-
-	@Test
-	void lmStudioParseChunkError() {
-		var proto = new LmStudioProtocol(mapper);
-		String json = "{\"event\":\"error\",\"data\":{\"error\":{\"message\":\"bad\"}}}";
-		var chunks = proto.parseChunk(json).collectList().block();
-		assertNotNull(chunks);
-		assertEquals(1, chunks.size());
-		assertEquals("error", chunks.getFirst().getType());
-	}
-
-	@Test
-	void lmStudioProcessStreamMergesEventAndData() {
-		var proto = new LmStudioProtocol(mapper);
-		var lines = Flux.just("event: message.delta", "data: {\"content\":\"hello\"}");
-		var chunks = proto.processStream(lines).collectList().block();
-		assertNotNull(chunks);
-		assertEquals(1, chunks.size());
-		assertEquals("hello", chunks.getFirst().getContent());
-	}
-
-	@Test
-	void lmStudioProcessStreamSkipsUnknownEvent() {
-		var proto = new LmStudioProtocol(mapper);
-		var lines = Flux.just("event: unknown.event", "data: {}");
-		var chunks = proto.processStream(lines).collectList().block();
-		assertNotNull(chunks);
-		assertEquals(0, chunks.size());
-	}
-
-	@Test
-	void lmStudioProcessStreamEmpty() {
-		var proto = new LmStudioProtocol(mapper);
-		var chunks = proto.processStream(Flux.empty()).collectList().block();
-		assertNotNull(chunks);
-		assertEquals(0, chunks.size());
+		assertNull(proto.parseEvent(ServerSentEvent.builder("{}").event("unknown").build()).blockFirst());
+		assertNull(proto.parseEvent(ServerSentEvent.<String>builder().comment("heartbeat").build()).blockFirst());
+		assertNull(proto.parseEvent(ServerSentEvent.builder("not json").event("message.delta").build()).blockFirst());
 	}
 }

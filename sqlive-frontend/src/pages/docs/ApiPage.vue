@@ -13,42 +13,45 @@
   CLAUDE.md gotcha: handleRetry is a handler function, not inline @click.
 -->
 <template>
-  <div class="p-4 min-h-full">
-    <!-- Loading state (Error Handling 4.2) -->
-    <div v-if="loading" class="text-muted-foreground text-sm animate-pulse">
-      加载 API 文档...
+    <div class="p-4 min-h-full">
+        <!-- Loading state (Error Handling 4.2) -->
+        <div v-if="loading" class="text-muted-foreground text-sm animate-pulse">
+            加载 API 文档...
+        </div>
+
+        <!-- Error state -->
+        <div v-else-if="error" class="text-destructive">
+            <p>API 文档暂时不可用</p>
+            <p class="text-xs mt-1">无法加载 OpenAPI 规范（{{ error }}）</p>
+            <button
+                @click="handleRetry"
+                class="mt-2 px-3 py-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded text-sm"
+                aria-label="重新加载 API 文档"
+            >
+                重新加载 API 文档
+            </button>
+        </div>
+
+        <!-- Success: Scalar renders OpenAPI spec -->
+        <component
+            v-else-if="ScalarApiReference && openApiJson"
+            :is="ScalarApiReference"
+            :configuration="{ spec: { content: openApiJson } }"
+        />
+
+        <!-- Fallback: Scalar load failed, show raw JSON (Error Handling 4.7) -->
+        <pre
+            v-else-if="openApiJson"
+            class="bg-secondary text-secondary-foreground p-4 rounded-md overflow-x-auto text-sm font-mono"
+            >{{ JSON.stringify(openApiJson, null, 2) }}</pre>
     </div>
-
-    <!-- Error state -->
-    <div v-else-if="error" class="text-destructive">
-      <p>API 文档暂时不可用</p>
-      <p class="text-xs mt-1">无法加载 OpenAPI 规范（{{ error }}）</p>
-      <button
-        @click="handleRetry"
-        class="mt-2 px-3 py-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded text-sm"
-        aria-label="重新加载 API 文档"
-      >
-        重新加载 API 文档
-      </button>
-    </div>
-
-    <!-- Success: Scalar renders OpenAPI spec -->
-    <component
-      v-else-if="ScalarApiReference && openApiJson"
-      :is="ScalarApiReference"
-      :configuration="{ spec: { content: openApiJson } }"
-    />
-
-    <!-- Fallback: Scalar load failed, show raw JSON (Error Handling 4.7) -->
-    <pre v-else-if="openApiJson" class="bg-secondary text-secondary-foreground p-4 rounded-md overflow-x-auto text-sm font-mono">{{ JSON.stringify(openApiJson, null, 2) }}</pre>
-  </div>
 </template>
 
 <script setup lang="ts">
 // W7 fix: dist/style.css confirmed present (Step 1a verified post-install).
 import '@scalar/api-reference/style.css'
 
-import {onMounted, ref, shallowRef} from 'vue'
+import { onMounted, ref, shallowRef } from 'vue'
 
 // shallowRef avoids deep reactivity on the Scalar component ref (per plan Step 1).
 const ScalarApiReference = shallowRef<any>(null)
@@ -65,7 +68,7 @@ const error = ref<string | null>(null)
 async function loadScalar() {
     try {
         const mod = await import('@scalar/api-reference')
-        ScalarApiReference.value = mod.ApiReference ?? mod.default
+        ScalarApiReference.value = mod.ApiReference
     } catch (e) {
         // 4.7 Scalar load failure — fallback <pre> raw JSON renders when openApiJson is set
         console.error('Scalar component load failed:', e)
@@ -88,7 +91,7 @@ async function fetchOpenApi() {
         await new Promise((r) => setTimeout(r, 500))
         try {
             const res = await fetch('/v3/api-docs')
-            if (!res.ok) throw new Error(`HTTP ${res.status}`)
+            if (!res.ok) throw new Error(`HTTP ${res.status}`, { cause: e })
             openApiJson.value = await res.json()
         } catch (e2: any) {
             error.value = e2.message

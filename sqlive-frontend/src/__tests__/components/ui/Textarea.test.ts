@@ -1,5 +1,5 @@
-import {mount} from '@vue/test-utils'
-import {describe, expect, it} from 'vitest'
+import { mount } from '@vue/test-utils'
+import { describe, expect, it } from 'vitest'
 import Textarea from '@/components/ui/textarea/Textarea.vue'
 
 describe('Textarea', () => {
@@ -12,7 +12,7 @@ describe('Textarea', () => {
 
     it('v-model updates modelValue on input event', async () => {
         const wrapper = mount(Textarea, {
-            props: {modelValue: 'content'},
+            props: { modelValue: 'content' }
         })
         const textareaEl = wrapper.find('textarea')
         expect((textareaEl.element as HTMLTextAreaElement).value).toBe('content')

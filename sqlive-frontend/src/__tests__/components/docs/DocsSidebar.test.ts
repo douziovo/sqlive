@@ -1,14 +1,14 @@
-import {mount} from '@vue/test-utils'
-import {describe, expect, it, vi, beforeEach} from 'vitest'
+import { mount } from '@vue/test-utils'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
 
 // Mock vue-router: useRoute returns a mutable object, useRouter returns a
 // push spy. Tests can mutate mockRoute.path per-test to exercise different
 // active routes (pattern from AppHeader.test.ts).
 const push = vi.fn().mockResolvedValue(undefined)
-const mockRoute = {path: '/docs/intro'}
+const mockRoute = { path: '/docs/intro' }
 vi.mock('vue-router', () => ({
     useRoute: () => mockRoute,
-    useRouter: () => ({push}),
+    useRouter: () => ({ push })
 }))
 
 import DocsSidebar from '@/components/docs/DocsSidebar.vue'

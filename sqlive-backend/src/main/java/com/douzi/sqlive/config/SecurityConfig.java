@@ -8,6 +8,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -40,7 +41,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
 	@Bean
-	SecurityFilterChain filterChain(HttpSecurity http, ApiKeyFilter apiKeyFilter) throws Exception {
+	SecurityFilterChain filterChain(HttpSecurity http, ApiKeyFilter apiKeyFilter) {
 		return http
 				// WR-03: integrate Spring Security with the WebMvc CORS configuration in
 				// WebConfig.addCorsMappings. Without http.cors(...), Spring Security filters
@@ -63,7 +64,7 @@ public class SecurityConfig {
 						.requestMatchers("/api/ai/**").authenticated()
 						.anyRequest().permitAll())
 				.addFilterBefore(apiKeyFilter, UsernamePasswordAuthenticationFilter.class)
-				.csrf(csrf -> csrf.disable())
+				.csrf(CsrfConfigurer::disable)
 				.build();
 	}
 

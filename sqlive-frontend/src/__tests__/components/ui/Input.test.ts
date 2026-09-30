@@ -1,5 +1,5 @@
-import {mount} from '@vue/test-utils'
-import {describe, expect, it} from 'vitest'
+import { mount } from '@vue/test-utils'
+import { describe, expect, it } from 'vitest'
 import Input from '@/components/ui/input/Input.vue'
 
 describe('Input', () => {
@@ -12,7 +12,7 @@ describe('Input', () => {
 
     it('v-model updates modelValue on input event', async () => {
         const wrapper = mount(Input, {
-            props: {modelValue: 'hello'},
+            props: { modelValue: 'hello' }
         })
         const inputEl = wrapper.find('input')
         expect((inputEl.element as HTMLInputElement).value).toBe('hello')

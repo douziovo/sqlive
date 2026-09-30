@@ -1,29 +1,17 @@
-import {describe, expect, it, vi} from 'vitest'
-import {readSseStream} from '@/utils/sse'
+import { describe, expect, it, vi } from 'vitest'
+import { readSseStream } from '@/utils/sse'
 
-function createMockResponse(chunks: string[]): Response {
+function createMockResponse(chunks: (string | Uint8Array)[]): Response {
     const encoder = new TextEncoder()
-    let index = 0
-    return {
-        body: {
-            getReader: () => {
-                let done = false
-                return {
-                    read: () => {
-                        if (done) return Promise.resolve({done: true, value: undefined})
-                        if (index >= chunks.length) {
-                            done = true
-                            return Promise.resolve({done: true, value: undefined})
-                        }
-                        const chunk = chunks[index++]
-                        return Promise.resolve({done: false, value: encoder.encode(chunk)})
-                    },
-                    releaseLock: vi.fn(),
-                    cancel: vi.fn()
-                }
+    return new Response(
+        new ReadableStream({
+            start(controller) {
+                for (const chunk of chunks)
+                    controller.enqueue(typeof chunk === 'string' ? encoder.encode(chunk) : chunk)
+                controller.close()
             }
-        }
-    } as unknown as Response
+        })
+    )
 }
 
 describe('readSseStream', () => {
@@ -99,9 +87,8 @@ describe('readSseStream', () => {
     })
 
     it('throws on missing response body', async () => {
-        const response = {body: null} as unknown as Response
-        await expect(readSseStream(response, () => {
-        })).rejects.toThrow('No response body')
+        const response = { body: null } as unknown as Response
+        await expect(readSseStream(response, () => {})).rejects.toThrow('No response body')
     })
 
     it('ignores non-data fields', async () => {
@@ -113,35 +100,59 @@ describe('readSseStream', () => {
 
     it('handles multiple events with mixed fields', async () => {
         const events: string[] = []
-        const response = createMockResponse(['event: msg\ndata: first\n\n', 'data: second\n\n', 'id: 3\ndata: third\n\n'])
+        const response = createMockResponse([
+            'event: msg\ndata: first\n\n',
+            'data: second\n\n',
+            'id: 3\ndata: third\n\n'
+        ])
         await readSseStream(response, (data) => events.push(data))
         expect(events).toEqual(['first', 'second', 'third'])
     })
 
-    it('respects abort signal', async () => {
-        const controller = new AbortController()
-        const encoder = new TextEncoder()
-        const response = {
-            body: {
-                getReader: () => {
-                    let called = false
-                    return {
-                        read: () => {
-                            if (!called) {
-                                called = true
-                                controller.abort()
-                                return Promise.resolve({done: false, value: encoder.encode('data: partial')})
-                            }
-                            return Promise.resolve({done: true, value: undefined})
-                        },
-                        releaseLock: vi.fn(),
-                        cancel: vi.fn()
-                    }
-                }
-            }
-        } as unknown as Response
+    it('decodes UTF-8 and CRLF split across every byte boundary', async () => {
+        const bytes = new TextEncoder().encode('data: 中文🙂\r\n\r\n')
+        const events: string[] = []
+        await readSseStream(
+            createMockResponse(Array.from(bytes, (byte) => Uint8Array.of(byte))),
+            (data) => events.push(data)
+        )
+        expect(events).toEqual(['中文🙂'])
+    })
 
-        await expect(readSseStream(response, () => {
-        }, controller.signal)).rejects.toThrow()
+    it('discards an event without its terminating blank line', async () => {
+        const onEvent = vi.fn()
+        await readSseStream(createMockResponse(['data: incomplete']), onEvent)
+        expect(onEvent).not.toHaveBeenCalled()
+    })
+
+    it('aborts a stalled stream and releases the source reader', async () => {
+        const controller = new AbortController()
+        const cancel = vi.fn()
+        const response = new Response(new ReadableStream({ cancel }))
+        const result = readSseStream(response, vi.fn(), controller.signal)
+        const assertion = expect(result).rejects.toMatchObject({ name: 'AbortError' })
+        controller.abort()
+        await assertion
+        expect(cancel).toHaveBeenCalledOnce()
+        expect(response.body!.locked).toBe(false)
+    })
+
+    it('propagates callback failures and cancels the stream', async () => {
+        const cancel = vi.fn()
+        const response = new Response(
+            new ReadableStream({
+                start(controller) {
+                    controller.enqueue(new TextEncoder().encode('data: hello\n\n'))
+                },
+                cancel
+            })
+        )
+        await expect(
+            readSseStream(response, () => {
+                throw new Error('callback failed')
+            })
+        ).rejects.toThrow('callback failed')
+        expect(cancel).toHaveBeenCalledOnce()
+        expect(response.body!.locked).toBe(false)
     })
 })

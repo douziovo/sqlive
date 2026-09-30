@@ -1,5 +1,5 @@
-import type {InjectionKey, Ref} from 'vue'
-import {inject} from 'vue'
+import type { InjectionKey, Ref } from 'vue'
+import { inject } from 'vue'
 
 export interface ReasoningContextValue {
     isStreaming: Ref<boolean>

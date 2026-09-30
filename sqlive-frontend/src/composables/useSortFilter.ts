@@ -1,6 +1,6 @@
-import {watchDebounced} from '@vueuse/core'
-import type {ComputedRef, Ref} from 'vue'
-import {computed, ref, toValue, watch} from 'vue'
+import { watchDebounced } from '@vueuse/core'
+import type { ComputedRef, Ref } from 'vue'
+import { computed, ref, toValue, watch } from 'vue'
 
 export interface SortField<T> {
     key: string
@@ -25,8 +25,7 @@ export function useSortFilter<T>(
 
     const pageSize = computed({
         get: () => toValue(pagination?.pageSize) ?? 10,
-        set: () => {
-        } // readonly from our side — synced via watch
+        set: () => {} // readonly from our side — synced via watch
     })
     const currentPage = ref(1)
 
@@ -37,7 +36,7 @@ export function useSortFilter<T>(
         (val) => {
             debouncedFilter.value = val
         },
-        {debounce: 200}
+        { debounce: 200 }
     )
 
     // Reset page when filter or sort changes
@@ -88,7 +87,9 @@ export function useSortFilter<T>(
 
     const totalCount = computed(() => items().length)
     const filteredCount = computed(() => filtered.value.length)
-    const totalPages = computed(() => (pagination ? Math.max(1, Math.ceil(filteredCount.value / pageSize.value)) : 1))
+    const totalPages = computed(() =>
+        pagination ? Math.max(1, Math.ceil(filteredCount.value / pageSize.value)) : 1
+    )
 
     return {
         sortKey,

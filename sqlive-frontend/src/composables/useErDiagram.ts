@@ -1,9 +1,16 @@
-import type {Edge, Node} from '@vue-flow/core'
-import {MarkerType} from '@vue-flow/core'
-import {computed, nextTick, ref, watch} from 'vue'
-import {layoutNodes} from '../composables/useDagreLayout'
-import type {ColumnMeta, ErTableNodeData, ForeignKeyInfo, TableSchema} from '../model/DatabaseTypes'
-import {parsePrimaryType} from '../utils/sql'
+import type { Edge, Node } from '@vue-flow/core'
+import { MarkerType } from '@vue-flow/core'
+import { computed, nextTick, ref, shallowRef, watch } from 'vue'
+import { layoutNodes } from '../composables/useDagreLayout'
+import type {
+    ColumnMeta,
+    ErTableNodeData,
+    ForeignKeyInfo,
+    TableSchema
+} from '../model/DatabaseTypes'
+import { parsePrimaryType } from '../utils/sql'
+
+type ErTableNode = Node<ErTableNodeData> & { data: ErTableNodeData }
 
 export function buildColumnMeta(
     table: TableSchema,
@@ -21,21 +28,26 @@ export function buildColumnMeta(
             isPrimaryKey: isPK,
             isForeignKey: isFK,
             isUnique: isUQ,
-            ...(fkInfo ? {referencedTable: fkInfo.toTable, referencedColumn: fkInfo.toColumn} : {})
+            ...(fkInfo
+                ? { referencedTable: fkInfo.toTable, referencedColumn: fkInfo.toColumn }
+                : {})
         }
     })
 }
 
-export function tablesToNodes(tables: TableSchema[], foreignKeys: ForeignKeyInfo[]): Node<ErTableNodeData>[] {
+export function tablesToNodes(tables: TableSchema[], foreignKeys: ForeignKeyInfo[]): ErTableNode[] {
     const fkMap = new Map<string, { toTable: string; toColumn: string }>()
     for (const fk of foreignKeys) {
-        fkMap.set(`${fk.fromTable}.${fk.fromColumn}`, {toTable: fk.toTable, toColumn: fk.toColumn})
+        fkMap.set(`${fk.fromTable}.${fk.fromColumn}`, {
+            toTable: fk.toTable,
+            toColumn: fk.toColumn
+        })
     }
 
     return tables.map((table) => ({
         id: `table-${table.name}`,
         type: 'table',
-        position: {x: 0, y: 0},
+        position: { x: 0, y: 0 },
         data: {
             tableName: table.name,
             columns: buildColumnMeta(table, fkMap),
@@ -78,19 +90,27 @@ export function foreignKeysToEdges(fks: ForeignKeyInfo[], tables: TableSchema[])
                 type: 'smoothstep',
                 source: `table-${fk.fromTable}`,
                 target: `table-${fk.toTable}`,
-                markerEnd: {type: MarkerType.ArrowClosed, width: 16, height: 16},
-                style: {stroke: '#94a3b8', strokeWidth: 1.5},
+                markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
+                style: { stroke: '#94a3b8', strokeWidth: 1.5 },
                 label,
-                labelStyle: {fill: '#64748b', fontWeight: 600, fontSize: 11, whiteSpace: 'nowrap'},
-                labelBgStyle: {fill: '#ffffff', fillOpacity: 1},
+                labelStyle: {
+                    fill: '#64748b',
+                    fontWeight: 600,
+                    fontSize: 11,
+                    whiteSpace: 'nowrap'
+                },
+                labelBgStyle: { fill: '#ffffff', fillOpacity: 1 },
                 labelBgPadding: [4, 6] as [number, number],
                 labelBgBorderRadius: 4
             }
         })
 }
 
-export function useErDiagram(tablesSource: () => TableSchema[], foreignKeysSource: () => ForeignKeyInfo[]) {
-    const nodes = ref<Node<ErTableNodeData>[]>([])
+export function useErDiagram(
+    tablesSource: () => TableSchema[],
+    foreignKeysSource: () => ForeignKeyInfo[]
+) {
+    const nodes = shallowRef<ErTableNode[]>([])
     const edges = ref<Edge[]>([])
     const searchQuery = ref('')
     const showMinimap = ref(false)
@@ -110,7 +130,7 @@ export function useErDiagram(tablesSource: () => TableSchema[], foreignKeysSourc
 
     async function autoLayout() {
         await nextTick()
-        nodes.value = layoutNodes(nodes.value as any, edges.value, containerRef.value) as Node<ErTableNodeData>[]
+        nodes.value = layoutNodes(nodes.value, edges.value, containerRef.value)
         await nextTick()
     }
 
@@ -121,11 +141,11 @@ export function useErDiagram(tablesSource: () => TableSchema[], foreignKeysSourc
             const nodeData = n.data
             const filtered = nodeData
                 ? !nodeData.tableName.toLowerCase().includes(q) &&
-                !nodeData.columns.some((c: any) => c.name.toLowerCase().includes(q))
+                  !nodeData.columns.some((c: any) => c.name.toLowerCase().includes(q))
                 : true
             return {
                 ...n,
-                data: nodeData ? {...nodeData, isFiltered: filtered} : n.data
+                data: nodeData ? { ...nodeData, isFiltered: filtered } : n.data
             }
         })
     })
@@ -140,7 +160,7 @@ export function useErDiagram(tablesSource: () => TableSchema[], foreignKeysSourc
                 void autoLayout()
             }
         },
-        {deep: true}
+        { deep: true }
     )
 
     return {

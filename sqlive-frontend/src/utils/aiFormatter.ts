@@ -33,7 +33,8 @@ export function formatErrorAnalysis(d: ErrorAnalysisData): string {
     if (d.summary) content += `## 🔍 错误原因\n${d.summary}\n\n`
     if (d.content) content += `## 📝 详细分析\n${d.content}\n\n`
     if (d.fixedCode) content += `## ✅ 修复方案\n\`\`\`sql\n${d.fixedCode}\n\`\`\`\n\n`
-    if (d.tips?.length) content += `## 🛡️ 如何避免\n${d.tips.map((t: string) => `- ${t}`).join('\n')}\n`
+    if (d.tips?.length)
+        content += `## 🛡️ 如何避免\n${d.tips.map((t: string) => `- ${t}`).join('\n')}\n`
     return content
 }
 

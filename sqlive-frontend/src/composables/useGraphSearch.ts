@@ -1,7 +1,6 @@
-import type {ComputedRef, Ref} from 'vue'
-import {computed, getCurrentInstance, nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
-import type {Node} from '@vue-flow/core'
-import type {KnowledgeNodeData} from '@/composables/useKnowledgeGraph'
+import type { ComputedRef, Ref } from 'vue'
+import { computed, getCurrentInstance, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import type { KnowledgeNode } from '@/composables/useKnowledgeGraph'
 
 /**
  * useGraphSearch — Ctrl+F search bar + match navigation for the knowledge graph.
@@ -25,12 +24,12 @@ import type {KnowledgeNodeData} from '@/composables/useKnowledgeGraph'
  */
 export function useGraphSearch(
     flowRef: Ref<any>,
-    displayNodes: Ref<Node<KnowledgeNodeData>[]>,
+    displayNodes: Ref<KnowledgeNode[]>,
     opts?: { onResetView?: () => void }
 ): {
     showSearch: Ref<boolean>
     searchQuery: Ref<string>
-    matchNodes: ComputedRef<Node<KnowledgeNodeData>[]>
+    matchNodes: ComputedRef<KnowledgeNode[]>
     matchCount: ComputedRef<number>
     currentIndex: ComputedRef<number>
     navigateMatch: (dir: 1 | -1) => void
@@ -43,11 +42,12 @@ export function useGraphSearch(
     const previousViewport = ref<{ x: number; y: number; zoom: number } | null>(null)
 
     const matchNodes = computed(() => {
-        if (!searchQuery.value) return [] as Node<KnowledgeNodeData>[]
+        if (!searchQuery.value) return [] as KnowledgeNode[]
         const q = searchQuery.value.toLowerCase()
-        return displayNodes.value.filter((node) =>
-            node.data.label.toLowerCase().includes(q) ||
-            (node.data.description || '').toLowerCase().includes(q)
+        return displayNodes.value.filter(
+            (node) =>
+                node.data.label.toLowerCase().includes(q) ||
+                (node.data.description || '').toLowerCase().includes(q)
         )
     })
 
@@ -60,7 +60,7 @@ export function useGraphSearch(
 
     function restoreViewport(): void {
         if (previousViewport.value) {
-            flowRef.value?.setViewport?.(previousViewport.value, {duration: 200})
+            flowRef.value?.setViewport?.(previousViewport.value, { duration: 200 })
             previousViewport.value = null
         }
     }
@@ -76,7 +76,10 @@ export function useGraphSearch(
         if (matchNodes.value.length === 0 || index < 0 || index >= matchNodes.value.length) return
         const node = matchNodes.value[index]
         if (node) {
-            flowRef.value?.setCenter?.(node.position.x + 60, node.position.y + 30, {zoom: 1.2, duration: 300})
+            flowRef.value?.setCenter?.(node.position.x + 60, node.position.y + 30, {
+                zoom: 1.2,
+                duration: 300
+            })
         }
     }
 
@@ -102,7 +105,11 @@ export function useGraphSearch(
         // undefined. The cast was a type lie; instanceof correctly returns false
         // for Document, and the compound condition does not early-return (Document
         // is not input/textarea), so Ctrl+F/Ctrl+0 still proceed.
-        if (e.target instanceof HTMLElement && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return
+        if (
+            e.target instanceof HTMLElement &&
+            (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')
+        )
+            return
 
         // D-12: Ctrl+0 resets view (keyboard equivalent of dblclick) — same guard as Ctrl+F.
         // Decoupled from onPaneDblClick: caller injects the reset callback via opts.

@@ -1,6 +1,6 @@
-import {nextTick} from 'vue'
-import {afterEach, describe, expect, it} from 'vitest'
-import {mount} from '@vue/test-utils'
+import { nextTick } from 'vue'
+import { afterEach, describe, expect, it } from 'vitest'
+import { mount } from '@vue/test-utils'
 import ConfettiOverlay from '@/components/knowledge/ConfettiOverlay.vue'
 
 function getOverlay(): Element | null {
@@ -17,24 +17,24 @@ describe('ConfettiOverlay', () => {
     })
 
     it('不渲染当 active 为 false', () => {
-        mount(ConfettiOverlay, {props: {active: false}})
+        mount(ConfettiOverlay, { props: { active: false } })
         expect(getOverlay()).toBeNull()
     })
 
     it('渲染当 active 为 true', async () => {
-        mount(ConfettiOverlay, {props: {active: true}})
+        mount(ConfettiOverlay, { props: { active: true } })
         expect(getOverlay()).not.toBeNull()
     })
 
     it('根 div 有 aria-hidden="true"（纯装饰，屏幕阅读器跳过）', async () => {
-        mount(ConfettiOverlay, {props: {active: true}})
+        mount(ConfettiOverlay, { props: { active: true } })
         const overlay = getOverlay()
         expect(overlay).not.toBeNull()
         expect(overlay?.getAttribute('aria-hidden')).toBe('true')
     })
 
     it('active 时生成 40 个粒子（默认非 burst）', async () => {
-        mount(ConfettiOverlay, {props: {active: true}})
+        mount(ConfettiOverlay, { props: { active: true } })
         await nextTick()
         const count = getPieces().length
         expect(count).toBeGreaterThanOrEqual(40)
@@ -42,7 +42,7 @@ describe('ConfettiOverlay', () => {
     })
 
     it('burst 模式生成 80 个粒子', async () => {
-        mount(ConfettiOverlay, {props: {active: true, burst: true}})
+        mount(ConfettiOverlay, { props: { active: true, burst: true } })
         await nextTick()
         const count = getPieces().length
         expect(count).toBeGreaterThanOrEqual(80)
@@ -50,7 +50,7 @@ describe('ConfettiOverlay', () => {
     })
 
     it('粒子有 confetti-piece class', async () => {
-        mount(ConfettiOverlay, {props: {active: true}})
+        mount(ConfettiOverlay, { props: { active: true } })
         await nextTick()
         const pieces = getPieces()
         expect(pieces.length).toBeGreaterThan(0)
@@ -60,7 +60,7 @@ describe('ConfettiOverlay', () => {
     })
 
     it('粒子有内联样式', async () => {
-        mount(ConfettiOverlay, {props: {active: true}})
+        mount(ConfettiOverlay, { props: { active: true } })
         await nextTick()
         const pieces = getPieces()
         expect(pieces.length).toBeGreaterThan(0)
@@ -73,7 +73,7 @@ describe('ConfettiOverlay', () => {
     })
 
     it('粒子尺寸 4-12px', async () => {
-        mount(ConfettiOverlay, {props: {active: true}})
+        mount(ConfettiOverlay, { props: { active: true } })
         await nextTick()
         const pieces = getPieces()
         expect(pieces.length).toBeGreaterThan(0)
@@ -85,7 +85,7 @@ describe('ConfettiOverlay', () => {
     })
 
     it('使用自定义原点位置', async () => {
-        mount(ConfettiOverlay, {props: {active: true, originX: 300, originY: 200}})
+        mount(ConfettiOverlay, { props: { active: true, originX: 300, originY: 200 } })
         await nextTick()
         const pieces = getPieces()
         expect(pieces.length).toBeGreaterThan(0)
@@ -98,12 +98,12 @@ describe('ConfettiOverlay', () => {
 
     // ── IN-09 (D-20): clear particles on active=false ──
     it('clears particles when active becomes false (D-20)', async () => {
-        const w = mount(ConfettiOverlay, {props: {active: true}})
+        const w = mount(ConfettiOverlay, { props: { active: true } })
         await nextTick()
         // active=true generates 40 pieces
         expect(getPieces().length).toBe(40)
         // Deactivate — overlay v-if removes container, but particles ref should also clear
-        await w.setProps({active: false})
+        await w.setProps({ active: false })
         await nextTick()
         expect((w.vm as any).particles).toEqual([])
     })

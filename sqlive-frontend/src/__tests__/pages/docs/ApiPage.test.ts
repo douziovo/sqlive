@@ -1,5 +1,5 @@
-import {mount} from '@vue/test-utils'
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
+import { mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
  * ApiPage test suite (W5 fix — lightweight fetchOpenApi retry unit test).
@@ -23,16 +23,18 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 vi.mock('@scalar/api-reference', () => ({
     ApiReference: {
         name: 'ScalarApiReferenceMock',
-        render: () => null,
-    },
+        render: () => null
+    }
 }))
 
 import ApiPage from '@/pages/docs/ApiPage.vue'
 
 const realFetch = globalThis.fetch
 
-function mockFetchSequence(...responses: Array<{ok: boolean; status: number; body?: any} | Error>) {
-    const calls = {count: 0}
+function mockFetchSequence(
+    ...responses: Array<{ ok: boolean; status: number; body?: any } | Error>
+) {
+    const calls = { count: 0 }
     const fetchSpy = vi.fn().mockImplementation(async () => {
         const idx = calls.count
         calls.count++
@@ -41,11 +43,11 @@ function mockFetchSequence(...responses: Array<{ok: boolean; status: number; bod
         return {
             ok: res.ok,
             status: res.status,
-            json: async () => res.body ?? {},
+            json: async () => res.body ?? {}
         }
     })
     globalThis.fetch = fetchSpy as any
-    return {fetchSpy, calls}
+    return { fetchSpy, calls }
 }
 
 describe('ApiPage fetchOpenApi retry logic', () => {
@@ -61,9 +63,9 @@ describe('ApiPage fetchOpenApi retry logic', () => {
 
     it('retries once after 500ms when first fetch fails, then succeeds', async () => {
         // W5 fix Test 1: first fetch 500, retry fetch 200 → openApiJson populated
-        const {fetchSpy, calls} = mockFetchSequence(
-            {ok: false, status: 500},
-            {ok: true, status: 200, body: {openapi: '3.0', paths: {'/api/execute': {}}}},
+        const { fetchSpy, calls } = mockFetchSequence(
+            { ok: false, status: 500 },
+            { ok: true, status: 200, body: { openapi: '3.0', paths: { '/api/execute': {} } } }
         )
 
         const w = mount(ApiPage)
@@ -84,10 +86,7 @@ describe('ApiPage fetchOpenApi retry logic', () => {
 
     it('shows error state when both fetches fail', async () => {
         // W5 fix Test 2: both fetches fail → error.value set, button visible
-        mockFetchSequence(
-            {ok: false, status: 500},
-            {ok: false, status: 500},
-        )
+        mockFetchSequence({ ok: false, status: 500 }, { ok: false, status: 500 })
 
         const w = mount(ApiPage)
         await vi.advanceTimersByTimeAsync(0)
@@ -104,10 +103,10 @@ describe('ApiPage fetchOpenApi retry logic', () => {
 
     it('handleRetry re-invokes fetchOpenApi after error state', async () => {
         // W5 fix Test 3: after error, click retry → fetch called additional times
-        const {fetchSpy} = mockFetchSequence(
-            {ok: false, status: 500},
-            {ok: false, status: 500},
-            {ok: true, status: 200, body: {openapi: '3.0'}},
+        const { fetchSpy } = mockFetchSequence(
+            { ok: false, status: 500 },
+            { ok: false, status: 500 },
+            { ok: true, status: 200, body: { openapi: '3.0' } }
         )
 
         const w = mount(ApiPage)

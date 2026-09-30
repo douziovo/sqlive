@@ -1,6 +1,6 @@
-import {describe, expect, it} from 'vitest'
-import {nextTick, ref} from 'vue'
-import {type PreviewItem, useFilteredList} from '@/composables/useFilteredList'
+import { describe, expect, it } from 'vitest'
+import { nextTick, ref } from 'vue'
+import { type PreviewItem, useFilteredList } from '@/composables/useFilteredList'
 
 function makeItems(): PreviewItem[] {
     return [
@@ -35,21 +35,21 @@ describe('useFilteredList', () => {
     it('returns all items when filter text is empty', () => {
         const items = ref(makeItems())
         const filterText = ref('')
-        const {filteredItems} = useFilteredList(items, filterText)
+        const { filteredItems } = useFilteredList(items, filterText)
         expect(filteredItems.value).toHaveLength(3)
     })
 
     it('returns all items when filter text is whitespace only', () => {
         const items = ref(makeItems())
         const filterText = ref('   ')
-        const {filteredItems} = useFilteredList(items, filterText)
+        const { filteredItems } = useFilteredList(items, filterText)
         expect(filteredItems.value).toHaveLength(3)
     })
 
     it('filters items by label', () => {
         const items = ref(makeItems())
         const filterText = ref('users')
-        const {filteredItems} = useFilteredList(items, filterText)
+        const { filteredItems } = useFilteredList(items, filterText)
         // 'users' matches 'Users' (label) and 'UserStats' (meta has 'user_id' + sqlPreview has 'user_stats')
         expect(filteredItems.value).toHaveLength(2)
         expect(filteredItems.value[0].label).toBe('Users')
@@ -59,7 +59,7 @@ describe('useFilteredList', () => {
     it('filters items by meta field', () => {
         const items = ref(makeItems())
         const filterText = ref('email')
-        const {filteredItems} = useFilteredList(items, filterText)
+        const { filteredItems } = useFilteredList(items, filterText)
         expect(filteredItems.value).toHaveLength(1)
         expect(filteredItems.value[0].label).toBe('Users')
     })
@@ -67,7 +67,7 @@ describe('useFilteredList', () => {
     it('filters items by sqlPreview', () => {
         const items = ref(makeItems())
         const filterText = ref('user_stats')
-        const {filteredItems} = useFilteredList(items, filterText)
+        const { filteredItems } = useFilteredList(items, filterText)
         expect(filteredItems.value).toHaveLength(1)
         expect(filteredItems.value[0].label).toBe('UserStats')
     })
@@ -75,7 +75,7 @@ describe('useFilteredList', () => {
     it('filters items by tag', () => {
         const items = ref(makeItems())
         const filterText = ref('view')
-        const {filteredItems} = useFilteredList(items, filterText)
+        const { filteredItems } = useFilteredList(items, filterText)
         expect(filteredItems.value).toHaveLength(1)
         expect(filteredItems.value[0].label).toBe('UserStats')
     })
@@ -83,7 +83,7 @@ describe('useFilteredList', () => {
     it('filters case-insensitively', () => {
         const items = ref(makeItems())
         const filterText = ref('USERS')
-        const {filteredItems} = useFilteredList(items, filterText)
+        const { filteredItems } = useFilteredList(items, filterText)
         // 'users' matches Users (label) and UserStats (label 'userstats' contains 'user')
         expect(filteredItems.value).toHaveLength(2)
         expect(filteredItems.value[0].label).toBe('Users')
@@ -92,25 +92,31 @@ describe('useFilteredList', () => {
     it('returns empty array when no items match', () => {
         const items = ref(makeItems())
         const filterText = ref('nonexistent')
-        const {filteredItems} = useFilteredList(items, filterText)
+        const { filteredItems } = useFilteredList(items, filterText)
         expect(filteredItems.value).toHaveLength(0)
     })
 
     it('matches multiple items with shared substring', () => {
         const items = ref(makeItems())
         const filterText = ref('user')
-        const {filteredItems} = useFilteredList(items, filterText)
+        const { filteredItems } = useFilteredList(items, filterText)
         // Users (label), Orders (meta has user_id), UserStats (label, meta, sqlPreview)
         expect(filteredItems.value).toHaveLength(3)
     })
 
     it('handles special characters in search query', () => {
         const items = ref<PreviewItem[]>([
-            {id: '1', icon: 'table', label: 'Table (v2)', meta: ['col*1'], sqlPreview: 'SELECT * FROM t WHERE x = 1'},
-            {id: '2', icon: 'table', label: 'Other', meta: ['col2']}
+            {
+                id: '1',
+                icon: 'table',
+                label: 'Table (v2)',
+                meta: ['col*1'],
+                sqlPreview: 'SELECT * FROM t WHERE x = 1'
+            },
+            { id: '2', icon: 'table', label: 'Other', meta: ['col2'] }
         ])
         const filterText = ref('(v2)')
-        const {filteredItems} = useFilteredList(items, filterText)
+        const { filteredItems } = useFilteredList(items, filterText)
         expect(filteredItems.value).toHaveLength(1)
         expect(filteredItems.value[0].label).toBe('Table (v2)')
     })
@@ -118,7 +124,7 @@ describe('useFilteredList', () => {
     it('updates reactively when filter text changes', () => {
         const items = ref(makeItems())
         const filterText = ref('')
-        const {filteredItems} = useFilteredList(items, filterText)
+        const { filteredItems } = useFilteredList(items, filterText)
 
         expect(filteredItems.value).toHaveLength(3)
 
@@ -133,10 +139,10 @@ describe('useFilteredList', () => {
     it('updates reactively when items change', () => {
         const items = ref(makeItems())
         const filterText = ref('newtable')
-        const {filteredItems} = useFilteredList(items, filterText)
+        const { filteredItems } = useFilteredList(items, filterText)
         expect(filteredItems.value).toHaveLength(0)
 
-        items.value = [...items.value, {id: '4', icon: 'table', label: 'NewTable', meta: []}]
+        items.value = [...items.value, { id: '4', icon: 'table', label: 'NewTable', meta: [] }]
         expect(filteredItems.value).toHaveLength(1)
         expect(filteredItems.value[0].label).toBe('NewTable')
     })
@@ -144,14 +150,14 @@ describe('useFilteredList', () => {
     it('selectedItem is undefined initially', () => {
         const items = ref(makeItems())
         const filterText = ref('')
-        const {selectedItem} = useFilteredList(items, filterText)
+        const { selectedItem } = useFilteredList(items, filterText)
         expect(selectedItem.value).toBeUndefined()
     })
 
     it('navigateDown selects first item, then next', () => {
         const items = ref(makeItems())
         const filterText = ref('')
-        const {selectedItem, navigateDown, keyboardIndex} = useFilteredList(items, filterText)
+        const { selectedItem, navigateDown, keyboardIndex } = useFilteredList(items, filterText)
 
         navigateDown()
         expect(keyboardIndex.value).toBe(0)
@@ -165,7 +171,7 @@ describe('useFilteredList', () => {
     it('navigateUp selects last item when starting from null', () => {
         const items = ref(makeItems())
         const filterText = ref('')
-        const {selectedItem, navigateUp, keyboardIndex} = useFilteredList(items, filterText)
+        const { selectedItem, navigateUp, keyboardIndex } = useFilteredList(items, filterText)
 
         navigateUp()
         expect(keyboardIndex.value).toBe(2)
@@ -175,7 +181,7 @@ describe('useFilteredList', () => {
     it('navigateDown stops at last item', () => {
         const items = ref(makeItems())
         const filterText = ref('')
-        const {navigateDown, keyboardIndex} = useFilteredList(items, filterText)
+        const { navigateDown, keyboardIndex } = useFilteredList(items, filterText)
 
         navigateDown()
         navigateDown()
@@ -190,7 +196,7 @@ describe('useFilteredList', () => {
     it('navigateUp stops at first item', () => {
         const items = ref(makeItems())
         const filterText = ref('')
-        const {navigateDown, navigateUp, keyboardIndex} = useFilteredList(items, filterText)
+        const { navigateDown, navigateUp, keyboardIndex } = useFilteredList(items, filterText)
 
         navigateDown()
         expect(keyboardIndex.value).toBe(0)
@@ -202,7 +208,10 @@ describe('useFilteredList', () => {
     it('resetSelection clears keyboard and hovered index', () => {
         const items = ref(makeItems())
         const filterText = ref('')
-        const {navigateDown, resetSelection, keyboardIndex, hoveredIndex} = useFilteredList(items, filterText)
+        const { navigateDown, resetSelection, keyboardIndex, hoveredIndex } = useFilteredList(
+            items,
+            filterText
+        )
 
         navigateDown()
         expect(keyboardIndex.value).toBe(0)
@@ -216,7 +225,7 @@ describe('useFilteredList', () => {
     it('filterText change resets selection', async () => {
         const items = ref(makeItems())
         const filterText = ref('')
-        const {navigateDown, keyboardIndex} = useFilteredList(items, filterText)
+        const { navigateDown, keyboardIndex } = useFilteredList(items, filterText)
 
         navigateDown()
         expect(keyboardIndex.value).toBe(0)
@@ -229,7 +238,7 @@ describe('useFilteredList', () => {
     it('items change resets selection', async () => {
         const items = ref(makeItems())
         const filterText = ref('')
-        const {navigateDown, keyboardIndex} = useFilteredList(items, filterText)
+        const { navigateDown, keyboardIndex } = useFilteredList(items, filterText)
 
         navigateDown()
         expect(keyboardIndex.value).toBe(0)
@@ -242,7 +251,7 @@ describe('useFilteredList', () => {
     it('navigateDown on filtered list navigates within filtered results', () => {
         const items = ref(makeItems())
         const filterText = ref('user')
-        const {filteredItems, navigateDown, selectedItem} = useFilteredList(items, filterText)
+        const { filteredItems, navigateDown, selectedItem } = useFilteredList(items, filterText)
 
         // 3 items match 'user' (Users label, Orders meta user_id, UserStats label+meta+sql)
         expect(filteredItems.value).toHaveLength(3)

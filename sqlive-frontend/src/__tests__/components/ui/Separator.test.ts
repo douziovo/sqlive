@@ -1,5 +1,5 @@
-import {mount} from '@vue/test-utils'
-import {describe, expect, it} from 'vitest'
+import { mount } from '@vue/test-utils'
+import { describe, expect, it } from 'vitest'
 import Separator from '@/components/ui/separator/Separator.vue'
 
 describe('Separator', () => {
@@ -12,7 +12,7 @@ describe('Separator', () => {
 
     it('renders with vertical orientation prop', () => {
         const wrapper = mount(Separator, {
-            props: {orientation: 'vertical'},
+            props: { orientation: 'vertical' }
         })
         expect(wrapper.attributes('data-orientation')).toBe('vertical')
     })

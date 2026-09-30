@@ -8,49 +8,51 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
  * - catch-all → redirect to `/`
  */
 const routes: RouteRecordRaw[] = [
-  {
-    path: '/',
-    // App.vue is the `/` route component (NOT RootLayout — RootLayout is the
-    // mount target; App.vue is the `/` route child).
-    component: () => import('@/App.vue'),
-  },
-  {
-    path: '/docs',
-    component: () => import('@/pages/docs/DocsLayout.vue'),
-    children: [
-      { path: '', redirect: { name: 'docs-intro' } },
-      {
-        path: 'intro',
-        name: 'docs-intro',
-        component: () => import('@/pages/docs/ArticlePage.vue'),
-        props: { slug: 'intro' },
-      },
-      {
-        path: 'usage/:article',
-        component: () => import('@/pages/docs/ArticlePage.vue'),
-        props: (route) => ({ slug: 'usage/' + route.params.article }),
-      },
-      {
-        path: 'api',
-        component: () => import('@/pages/docs/ApiPage.vue'),
-      },
-      {
-        path: 'changelog',
-        component: () => import('@/pages/docs/ArticlePage.vue'),
-        props: { slug: 'changelog' },
-      },
-      {
-        path: 'not-found',
-        name: 'docs-not-found',
-        component: () => import('@/pages/docs/NotFoundPage.vue'),
-      },
-      { path: ':pathMatch(.*)*', redirect: { name: 'docs-not-found' } },
-    ],
-  },
-  { path: '/:pathMatch(.*)*', redirect: '/' },
+    {
+        path: '/',
+        // App.vue is the `/` route component (NOT RootLayout — RootLayout is the
+        // mount target; App.vue is the `/` route child).
+        component: () => import('@/App.vue')
+    },
+    {
+        path: '/docs',
+        component: () => import('@/pages/docs/DocsLayout.vue'),
+        children: [
+            { path: '', redirect: { name: 'docs-intro' } },
+            {
+                path: 'intro',
+                name: 'docs-intro',
+                component: () => import('@/pages/docs/ArticlePage.vue'),
+                props: { slug: 'intro' }
+            },
+            {
+                path: 'usage/:article',
+                component: () => import('@/pages/docs/ArticlePage.vue'),
+                props: (route) => ({ slug: 'usage/' + route.params.article })
+            },
+            {
+                path: 'api',
+                component: () => import('@/pages/docs/ApiPage.vue')
+            },
+            {
+                path: 'changelog',
+                component: () => import('@/pages/docs/ArticlePage.vue'),
+                props: { slug: 'changelog' }
+            },
+            {
+                path: 'not-found',
+                name: 'docs-not-found',
+                component: () => import('@/pages/docs/NotFoundPage.vue')
+            },
+            // Path redirect: a named redirect would forward pathMatch params to
+            // docs-not-found and trigger vue-router's "Discarded invalid param(s)" warning.
+            { path: ':pathMatch(.*)*', redirect: '/docs/not-found' }
+        ]
+    },
+    { path: '/:pathMatch(.*)*', redirect: '/' }
 ]
 
 export const router = createRouter({
-  history: createWebHistory(),
-  routes,
+    history: createWebHistory(),
+    routes
 })

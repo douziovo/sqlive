@@ -1,7 +1,7 @@
-import {beforeEach, describe, expect, it} from 'vitest'
-import {nextTick} from 'vue'
-import {useKnowledgeTasks} from '@/composables/useKnowledgeTasks'
-import {useRedDot} from '@/composables/useRedDot'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { nextTick } from 'vue'
+import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
+import { useRedDot } from '@/composables/useRedDot'
 
 beforeEach(() => {
     localStorage.clear()
@@ -11,7 +11,7 @@ beforeEach(() => {
 
 describe('addTask', () => {
     it('creates a task with generated id, status=todo, and timestamps', () => {
-        const {addTask} = useKnowledgeTasks()
+        const { addTask } = useKnowledgeTasks()
         const task = addTask({
             topicId: 'joins',
             title: 'Test',
@@ -28,7 +28,7 @@ describe('addTask', () => {
     })
 
     it('defaults optional fields correctly', () => {
-        const {addTask} = useKnowledgeTasks()
+        const { addTask } = useKnowledgeTasks()
         const task = addTask({
             topicId: 'joins',
             title: 'Minimal task',
@@ -41,7 +41,7 @@ describe('addTask', () => {
     })
 
     it('stores task in localStorage via useLocalStorage', async () => {
-        const {addTask} = useKnowledgeTasks()
+        const { addTask } = useKnowledgeTasks()
         addTask({
             topicId: 'joins',
             title: 'Persist me',
@@ -64,7 +64,7 @@ describe('addTask', () => {
 
 describe('updateTask', () => {
     it('updates specific fields and preserves others', () => {
-        const {addTask, updateTask, tasks} = useKnowledgeTasks()
+        const { addTask, updateTask, tasks } = useKnowledgeTasks()
         const task = addTask({
             topicId: 'joins',
             title: 'Original',
@@ -72,7 +72,7 @@ describe('updateTask', () => {
             priority: 'low'
         })
 
-        updateTask(task.id, {title: 'Updated', priority: 'high'})
+        updateTask(task.id, { title: 'Updated', priority: 'high' })
 
         const updated = tasks.value.find((t) => t.id === task.id)
         expect(updated).toBeTruthy()
@@ -83,7 +83,7 @@ describe('updateTask', () => {
     })
 
     it('is a no-op for non-existent id', () => {
-        const {addTask, updateTask, tasks} = useKnowledgeTasks()
+        const { addTask, updateTask, tasks } = useKnowledgeTasks()
         addTask({
             topicId: 'joins',
             title: 'Only task',
@@ -92,7 +92,7 @@ describe('updateTask', () => {
         })
 
         const lengthBefore = tasks.value.length
-        updateTask('nonexistent', {title: 'X'})
+        updateTask('nonexistent', { title: 'X' })
         expect(tasks.value.length).toBe(lengthBefore)
     })
 })
@@ -101,7 +101,7 @@ describe('updateTask', () => {
 
 describe('deleteTask', () => {
     it('removes task by id', () => {
-        const {addTask, deleteTask, tasks} = useKnowledgeTasks()
+        const { addTask, deleteTask, tasks } = useKnowledgeTasks()
         const task1 = addTask({
             topicId: 'joins',
             title: 'Task 1',
@@ -122,7 +122,7 @@ describe('deleteTask', () => {
     })
 
     it('is a no-op for non-existent id', () => {
-        const {addTask, deleteTask, tasks} = useKnowledgeTasks()
+        const { addTask, deleteTask, tasks } = useKnowledgeTasks()
         addTask({
             topicId: 'joins',
             title: 'Safe',
@@ -140,7 +140,7 @@ describe('deleteTask', () => {
 
 describe('completeTask', () => {
     it('sets status to done and records completedAt', () => {
-        const {addTask, completeTask, tasks} = useKnowledgeTasks()
+        const { addTask, completeTask, tasks } = useKnowledgeTasks()
         const task = addTask({
             topicId: 'joins',
             title: 'To complete',
@@ -153,16 +153,14 @@ describe('completeTask', () => {
         expect(result).not.toBeNull()
         expect(result!.task.status).toBe('done')
         expect(result!.task.completedAt).toBeTruthy()
-        expect(() =>
-            new Date(result!.task.completedAt!)
-        ).not.toThrow()
+        expect(() => new Date(result!.task.completedAt!)).not.toThrow()
 
         const persisted = tasks.value.find((t) => t.id === task.id)
         expect(persisted!.status).toBe('done')
     })
 
     it('returns null when task is already done (double-XP guard)', () => {
-        const {addTask, completeTask} = useKnowledgeTasks()
+        const { addTask, completeTask } = useKnowledgeTasks()
         const task = addTask({
             topicId: 'joins',
             title: 'Double complete',
@@ -178,7 +176,7 @@ describe('completeTask', () => {
     })
 
     it('returns null for non-existent id', () => {
-        const {addTask, completeTask} = useKnowledgeTasks()
+        const { addTask, completeTask } = useKnowledgeTasks()
         addTask({
             topicId: 'joins',
             title: 'Present',
@@ -195,10 +193,10 @@ describe('completeTask', () => {
 
 describe('tasksByTopic returns plain array (IN-07/D-18)', () => {
     it('returns plain array (not computed) for matching topicId', () => {
-        const {addTask, tasksByTopic} = useKnowledgeTasks()
-        addTask({topicId: 'joins', title: 'T1', notes: '', priority: 'low'})
-        addTask({topicId: 'joins', title: 'T2', notes: '', priority: 'low'})
-        addTask({topicId: 'other', title: 'T3', notes: '', priority: 'low'})
+        const { addTask, tasksByTopic } = useKnowledgeTasks()
+        addTask({ topicId: 'joins', title: 'T1', notes: '', priority: 'low' })
+        addTask({ topicId: 'joins', title: 'T2', notes: '', priority: 'low' })
+        addTask({ topicId: 'other', title: 'T3', notes: '', priority: 'low' })
         const result = tasksByTopic('joins')
         expect(Array.isArray(result)).toBe(true)
         expect(result.length).toBe(2)
@@ -207,7 +205,7 @@ describe('tasksByTopic returns plain array (IN-07/D-18)', () => {
     })
 
     it('returns empty array for unknown topicId', () => {
-        const {tasksByTopic} = useKnowledgeTasks()
+        const { tasksByTopic } = useKnowledgeTasks()
         const result = tasksByTopic('nonexistent')
         expect(Array.isArray(result)).toBe(true)
         expect(result.length).toBe(0)
@@ -218,7 +216,7 @@ describe('tasksByTopic returns plain array (IN-07/D-18)', () => {
 
 describe('pendingCount', () => {
     it('counts only todo-status tasks', () => {
-        const {addTask, updateTask, pendingCount} = useKnowledgeTasks()
+        const { addTask, updateTask, pendingCount } = useKnowledgeTasks()
         const task1 = addTask({
             topicId: 'joins',
             title: 'Todo 1',
@@ -232,13 +230,13 @@ describe('pendingCount', () => {
             priority: 'low'
         })
 
-        updateTask(task1.id, {status: 'in-progress'})
+        updateTask(task1.id, { status: 'in-progress' })
 
         expect(pendingCount.value).toBe(1)
     })
 
     it('returns 0 when all tasks are done', () => {
-        const {addTask, completeTask, pendingCount} = useKnowledgeTasks()
+        const { addTask, completeTask, pendingCount } = useKnowledgeTasks()
         const task = addTask({
             topicId: 'joins',
             title: 'Finish me',
@@ -255,7 +253,7 @@ describe('pendingCount', () => {
 
 describe('isOverdue', () => {
     it('returns true for past due date', () => {
-        const {addTask, isOverdue, tasks} = useKnowledgeTasks()
+        const { addTask, isOverdue, tasks } = useKnowledgeTasks()
         const pastDate = new Date()
         pastDate.setDate(pastDate.getDate() - 7)
         addTask({
@@ -270,7 +268,7 @@ describe('isOverdue', () => {
     })
 
     it('returns false for future due date', () => {
-        const {addTask, isOverdue, tasks} = useKnowledgeTasks()
+        const { addTask, isOverdue, tasks } = useKnowledgeTasks()
         const futureDate = new Date()
         futureDate.setDate(futureDate.getDate() + 7)
         addTask({
@@ -285,7 +283,7 @@ describe('isOverdue', () => {
     })
 
     it('returns false when task is done even if overdue', () => {
-        const {addTask, completeTask, isOverdue, tasks} = useKnowledgeTasks()
+        const { addTask, completeTask, isOverdue, tasks } = useKnowledgeTasks()
         const pastDate = new Date()
         pastDate.setDate(pastDate.getDate() - 7)
         const task = addTask({
@@ -303,7 +301,7 @@ describe('isOverdue', () => {
     })
 
     it('returns false when dueDate is undefined', () => {
-        const {addTask, isOverdue, tasks} = useKnowledgeTasks()
+        const { addTask, isOverdue, tasks } = useKnowledgeTasks()
         addTask({
             topicId: 'joins',
             title: 'No deadline',
@@ -315,7 +313,7 @@ describe('isOverdue', () => {
     })
 
     it('uses day granularity (same day is NOT overdue)', () => {
-        const {addTask, isOverdue, tasks} = useKnowledgeTasks()
+        const { addTask, isOverdue, tasks } = useKnowledgeTasks()
         const today = new Date().toISOString()
         addTask({
             topicId: 'joins',
@@ -351,7 +349,7 @@ describe('localStorage persistence', () => {
 
     it('handles empty localStorage gracefully', () => {
         localStorage.clear()
-        const {tasks} = useKnowledgeTasks()
+        const { tasks } = useKnowledgeTasks()
         expect(tasks.value).toEqual([])
     })
 })
@@ -362,7 +360,7 @@ describe('localStorage persistence', () => {
 
 describe('category and isPinned defaults', () => {
     it("addTask defaults category to 'core'", () => {
-        const {addTask} = useKnowledgeTasks()
+        const { addTask } = useKnowledgeTasks()
         const task = addTask({
             topicId: 'joins',
             title: 'Default category',
@@ -373,7 +371,7 @@ describe('category and isPinned defaults', () => {
     })
 
     it("addTask accepts category 'deep-dive' and 'daily'", () => {
-        const {addTask} = useKnowledgeTasks()
+        const { addTask } = useKnowledgeTasks()
         const dd = addTask({
             topicId: 'joins',
             title: 'Deep dive',
@@ -393,7 +391,7 @@ describe('category and isPinned defaults', () => {
     })
 
     it('addTask defaults isPinned to false', () => {
-        const {addTask} = useKnowledgeTasks()
+        const { addTask } = useKnowledgeTasks()
         const task = addTask({
             topicId: 'joins',
             title: 'Not pinned',
@@ -404,7 +402,7 @@ describe('category and isPinned defaults', () => {
     })
 
     it('addTask accepts isPinned=true', () => {
-        const {addTask} = useKnowledgeTasks()
+        const { addTask } = useKnowledgeTasks()
         const task = addTask({
             topicId: 'joins',
             title: 'Pinned task',
@@ -420,7 +418,7 @@ describe('category and isPinned defaults', () => {
 
 describe('substeps', () => {
     it('addTask creates task with empty substeps by default', () => {
-        const {addTask} = useKnowledgeTasks()
+        const { addTask } = useKnowledgeTasks()
         const task = addTask({
             topicId: 'joins',
             title: 'No substeps',
@@ -431,7 +429,7 @@ describe('substeps', () => {
     })
 
     it('addTask creates task with substeps from string array (first active, rest locked)', () => {
-        const {addTask} = useKnowledgeTasks()
+        const { addTask } = useKnowledgeTasks()
         const task = addTask({
             topicId: 'joins',
             title: 'Has steps',
@@ -450,15 +448,15 @@ describe('substeps', () => {
     })
 
     it('addTask accepts pre-built TaskSubstep[]', () => {
-        const {addTask} = useKnowledgeTasks()
+        const { addTask } = useKnowledgeTasks()
         const task = addTask({
             topicId: 'joins',
             title: 'Custom steps',
             notes: '',
             priority: 'medium',
             substeps: [
-                {id: 's1', label: 'Step 1', status: 'done'},
-                {id: 's2', label: 'Step 2', status: 'active'}
+                { id: 's1', label: 'Step 1', status: 'done' },
+                { id: 's2', label: 'Step 2', status: 'active' }
             ]
         })
         expect(task.substeps.length).toBe(2)
@@ -467,7 +465,7 @@ describe('substeps', () => {
     })
 
     it('updateSubstep toggles substep status correctly', () => {
-        const {addTask, updateSubstep, tasks} = useKnowledgeTasks()
+        const { addTask, updateSubstep, tasks } = useKnowledgeTasks()
         const task = addTask({
             topicId: 'joins',
             title: 'Step test',
@@ -485,7 +483,7 @@ describe('substeps', () => {
     })
 
     it('auto-completes task when all substeps are done', () => {
-        const {addTask, updateSubstep, tasks} = useKnowledgeTasks()
+        const { addTask, updateSubstep, tasks } = useKnowledgeTasks()
         const task = addTask({
             topicId: 'joins',
             title: 'All done',
@@ -504,7 +502,7 @@ describe('substeps', () => {
     })
 
     it('updateSubstep is a no-op for non-existent taskId', () => {
-        const {addTask, updateSubstep, tasks} = useKnowledgeTasks()
+        const { addTask, updateSubstep, tasks } = useKnowledgeTasks()
         const task = addTask({
             topicId: 'joins',
             title: 'Safe',
@@ -520,7 +518,7 @@ describe('substeps', () => {
     })
 
     it('updateSubstep is a no-op for non-existent substepId', () => {
-        const {addTask, updateSubstep, tasks} = useKnowledgeTasks()
+        const { addTask, updateSubstep, tasks } = useKnowledgeTasks()
         const task = addTask({
             topicId: 'joins',
             title: 'Safe',
@@ -538,7 +536,7 @@ describe('substeps', () => {
 
 describe('pin/unpin', () => {
     it('pinTask sets isPinned=true and unpins others', () => {
-        const {addTask, pinTask, tasks} = useKnowledgeTasks()
+        const { addTask, pinTask, tasks } = useKnowledgeTasks()
         const t1 = addTask({
             topicId: 'joins',
             title: 'Task 1',
@@ -562,7 +560,7 @@ describe('pin/unpin', () => {
     })
 
     it('unpinTask clears pinned state', () => {
-        const {addTask, pinTask, unpinTask, tasks} = useKnowledgeTasks()
+        const { addTask, unpinTask, tasks } = useKnowledgeTasks()
         const task = addTask({
             topicId: 'joins',
             title: 'Pinned',
@@ -578,7 +576,7 @@ describe('pin/unpin', () => {
     })
 
     it('getPinnedTask returns pinned task or null', () => {
-        const {addTask, pinTask, getPinnedTask} = useKnowledgeTasks()
+        const { addTask, pinTask, getPinnedTask } = useKnowledgeTasks()
         const t1 = addTask({
             topicId: 'joins',
             title: 'Task 1',
@@ -594,7 +592,7 @@ describe('pin/unpin', () => {
     })
 
     it('unpinTask is safe even when nothing is pinned', () => {
-        const {addTask, unpinTask, tasks} = useKnowledgeTasks()
+        const { addTask, unpinTask, tasks } = useKnowledgeTasks()
         addTask({
             topicId: 'joins',
             title: 'Not pinned',
@@ -618,7 +616,7 @@ describe('pin/unpin', () => {
 describe('seedPresetTasksIfFirstRun', () => {
     it('seeds preset tasks when localStorage flag is absent (first run)', () => {
         localStorage.removeItem('ai-knowledge-tasks-seeded')
-        const {tasks, seedPresetTasksIfFirstRun} = useKnowledgeTasks()
+        const { tasks, seedPresetTasksIfFirstRun } = useKnowledgeTasks()
         expect(tasks.value).toHaveLength(0)
 
         const seeded = seedPresetTasksIfFirstRun()
@@ -629,7 +627,7 @@ describe('seedPresetTasksIfFirstRun', () => {
 
     it('does not re-seed when flag is already true', () => {
         localStorage.setItem('ai-knowledge-tasks-seeded', 'true')
-        const {tasks, seedPresetTasksIfFirstRun} = useKnowledgeTasks()
+        const { tasks, seedPresetTasksIfFirstRun } = useKnowledgeTasks()
 
         const seeded = seedPresetTasksIfFirstRun()
 
@@ -639,7 +637,7 @@ describe('seedPresetTasksIfFirstRun', () => {
 
     it('respects explicit false flag (user-reset state)', () => {
         localStorage.setItem('ai-knowledge-tasks-seeded', 'false')
-        const {tasks, seedPresetTasksIfFirstRun} = useKnowledgeTasks()
+        const { tasks, seedPresetTasksIfFirstRun } = useKnowledgeTasks()
 
         const seeded = seedPresetTasksIfFirstRun()
 
@@ -649,7 +647,7 @@ describe('seedPresetTasksIfFirstRun', () => {
 
     it('sets the seeded flag to true after seeding', () => {
         localStorage.removeItem('ai-knowledge-tasks-seeded')
-        const {seedPresetTasksIfFirstRun} = useKnowledgeTasks()
+        const { seedPresetTasksIfFirstRun } = useKnowledgeTasks()
 
         seedPresetTasksIfFirstRun()
 
@@ -658,7 +656,7 @@ describe('seedPresetTasksIfFirstRun', () => {
 
     it('does not re-seed on second call within same session', () => {
         localStorage.removeItem('ai-knowledge-tasks-seeded')
-        const {tasks, seedPresetTasksIfFirstRun} = useKnowledgeTasks()
+        const { tasks, seedPresetTasksIfFirstRun } = useKnowledgeTasks()
 
         seedPresetTasksIfFirstRun()
         const firstCount = tasks.value.length
@@ -671,15 +669,33 @@ describe('seedPresetTasksIfFirstRun', () => {
 
     it('seeds tasks with valid topicId references', () => {
         localStorage.removeItem('ai-knowledge-tasks-seeded')
-        const {tasks, seedPresetTasksIfFirstRun} = useKnowledgeTasks()
+        const { tasks, seedPresetTasksIfFirstRun } = useKnowledgeTasks()
         seedPresetTasksIfFirstRun()
 
         const validTopicIds = new Set([
-            'sql-basics', 'filtering', 'sorting', 'joins', 'aggregation',
-            'subqueries', 'set-operations', 'create-table', 'constraints',
-            'alter-table', 'indexes', 'insert', 'update', 'delete', 'views',
-            'triggers', 'window-functions', 'cte', 'query-planning',
-            'optimization', 'data-types', 'string-functions', 'datetime',
+            'sql-basics',
+            'filtering',
+            'sorting',
+            'joins',
+            'aggregation',
+            'subqueries',
+            'set-operations',
+            'create-table',
+            'constraints',
+            'alter-table',
+            'indexes',
+            'insert',
+            'update',
+            'delete',
+            'views',
+            'triggers',
+            'window-functions',
+            'cte',
+            'query-planning',
+            'optimization',
+            'data-types',
+            'string-functions',
+            'datetime',
             'transactions'
         ])
         for (const task of tasks.value) {
@@ -689,7 +705,7 @@ describe('seedPresetTasksIfFirstRun', () => {
 
     it('seeds at least one pinned task (core path)', () => {
         localStorage.removeItem('ai-knowledge-tasks-seeded')
-        const {tasks, seedPresetTasksIfFirstRun} = useKnowledgeTasks()
+        const { tasks, seedPresetTasksIfFirstRun } = useKnowledgeTasks()
         seedPresetTasksIfFirstRun()
 
         const pinned = tasks.value.filter((t) => t.isPinned)
@@ -698,7 +714,7 @@ describe('seedPresetTasksIfFirstRun', () => {
 
     it('seeds tasks with substeps having first active, rest locked', () => {
         localStorage.removeItem('ai-knowledge-tasks-seeded')
-        const {tasks, seedPresetTasksIfFirstRun} = useKnowledgeTasks()
+        const { tasks, seedPresetTasksIfFirstRun } = useKnowledgeTasks()
         seedPresetTasksIfFirstRun()
 
         const tasksWithSubsteps = tasks.value.filter((t) => t.substeps.length > 0)
@@ -715,7 +731,7 @@ describe('seedPresetTasksIfFirstRun', () => {
     // ── IN-02 (D-13): daily-drill dueDate uses local YYYY-MM-DD, not UTC ──
     it('daily-drill tasks use local YYYY-MM-DD for dueDate (not UTC)', () => {
         localStorage.removeItem('ai-knowledge-tasks-seeded')
-        const {tasks, seedPresetTasksIfFirstRun} = useKnowledgeTasks()
+        const { tasks, seedPresetTasksIfFirstRun } = useKnowledgeTasks()
         seedPresetTasksIfFirstRun()
         const dailyTasks = tasks.value.filter((t) => t.category === 'daily')
         expect(dailyTasks.length).toBeGreaterThan(0)
@@ -734,7 +750,7 @@ describe('seedPresetTasksIfFirstRun', () => {
 
     it('seeds tasks across multiple categories (core, deep-dive, daily)', () => {
         localStorage.removeItem('ai-knowledge-tasks-seeded')
-        const {tasks, seedPresetTasksIfFirstRun} = useKnowledgeTasks()
+        const { tasks, seedPresetTasksIfFirstRun } = useKnowledgeTasks()
         seedPresetTasksIfFirstRun()
 
         const categories = new Set(tasks.value.map((t) => t.category))
@@ -745,7 +761,7 @@ describe('seedPresetTasksIfFirstRun', () => {
 
     it('presists seeded tasks to localStorage', async () => {
         localStorage.removeItem('ai-knowledge-tasks-seeded')
-        const {seedPresetTasksIfFirstRun} = useKnowledgeTasks()
+        const { seedPresetTasksIfFirstRun } = useKnowledgeTasks()
         seedPresetTasksIfFirstRun()
         await nextTick()
 
@@ -758,19 +774,35 @@ describe('seedPresetTasksIfFirstRun', () => {
 
     it('seeds tasks covering all 6 chapter categories', () => {
         localStorage.removeItem('ai-knowledge-tasks-seeded')
-        const {tasks, seedPresetTasksIfFirstRun} = useKnowledgeTasks()
+        const { tasks, seedPresetTasksIfFirstRun } = useKnowledgeTasks()
         seedPresetTasksIfFirstRun()
 
         // All 6 chapters should have at least one task via topicId → category mapping
         const topicToChapter: Record<string, string> = {
-            'sql-basics': 'basics', filtering: 'basics', sorting: 'basics',
-            'data-types': 'basics', 'string-functions': 'basics', datetime: 'basics',
-            joins: 'query', aggregation: 'query', subqueries: 'query', 'set-operations': 'query',
-            'create-table': 'ddl', constraints: 'ddl', 'alter-table': 'ddl', indexes: 'ddl',
-            insert: 'dml', update: 'dml', delete: 'dml',
-            views: 'advanced', triggers: 'advanced', 'window-functions': 'advanced',
-            cte: 'advanced', transactions: 'advanced',
-            'query-planning': 'performance', optimization: 'performance'
+            'sql-basics': 'basics',
+            filtering: 'basics',
+            sorting: 'basics',
+            'data-types': 'basics',
+            'string-functions': 'basics',
+            datetime: 'basics',
+            joins: 'query',
+            aggregation: 'query',
+            subqueries: 'query',
+            'set-operations': 'query',
+            'create-table': 'ddl',
+            constraints: 'ddl',
+            'alter-table': 'ddl',
+            indexes: 'ddl',
+            insert: 'dml',
+            update: 'dml',
+            delete: 'dml',
+            views: 'advanced',
+            triggers: 'advanced',
+            'window-functions': 'advanced',
+            cte: 'advanced',
+            transactions: 'advanced',
+            'query-planning': 'performance',
+            optimization: 'performance'
         }
         const chaptersCovered = new Set<string>()
         for (const task of tasks.value) {
@@ -785,8 +817,8 @@ describe('seedPresetTasksIfFirstRun', () => {
 
 describe('WR-07 useRedDot hoist + WR-03 deleteTask clears redDot', () => {
     it('deleteTask clears task redDot and cascades to category/tab when last task', async () => {
-        const {addTask, deleteTask} = useKnowledgeTasks()
-        const {isVisible: isRedDotVisible} = useRedDot()
+        const { addTask, deleteTask } = useKnowledgeTasks()
+        const { isVisible: isRedDotVisible } = useRedDot()
         const t = addTask({
             topicId: 'joins',
             title: 'T',
@@ -813,8 +845,8 @@ describe('WR-07 useRedDot hoist + WR-03 deleteTask clears redDot', () => {
     })
 
     it('deleteTask preserves sibling task redDots and parent dots', async () => {
-        const {addTask, deleteTask} = useKnowledgeTasks()
-        const {isVisible: isRedDotVisible} = useRedDot()
+        const { addTask, deleteTask } = useKnowledgeTasks()
+        const { isVisible: isRedDotVisible } = useRedDot()
         const t1 = addTask({
             topicId: 'a',
             title: 'T1',
@@ -842,8 +874,8 @@ describe('WR-07 useRedDot hoist + WR-03 deleteTask clears redDot', () => {
     })
 
     it('addTask shows red dot (hoisted useRedDot at setup scope still works)', async () => {
-        const {addTask} = useKnowledgeTasks()
-        const {isVisible} = useRedDot()
+        const { addTask } = useKnowledgeTasks()
+        const { isVisible } = useRedDot()
         const t = addTask({
             topicId: 'x',
             title: 'X',

@@ -145,7 +145,7 @@ The Vite configuration is at `sqlive-frontend/vite.config.ts`. Key settings:
 | `test.environment` | `jsdom` | Uses jsdom for Vitest DOM simulation |
 | `test.globals` | `true` | Vitest global API (`describe`, `it`, `expect`) without imports |
 
-The dev server command (`npm run dev`) runs `vite --host`, binding to all network interfaces. The default port is `5173`.
+The dev server command (`pnpm run dev`) runs `vite --host`, binding to all network interfaces. The default port is `5173`.
 
 ## Required vs optional settings
 

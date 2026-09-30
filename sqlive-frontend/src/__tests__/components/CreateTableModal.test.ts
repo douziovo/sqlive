@@ -1,11 +1,11 @@
-import {mount} from '@vue/test-utils'
-import {describe, expect, it} from 'vitest'
+import { mount } from '@vue/test-utils'
+import { describe, expect, it } from 'vitest'
 import CreateTableModal from '../../components/CreateTableModal.vue'
 
 // Dialog (reka-ui) uses Teleport / v-if — stub so content renders inline for testing
 const stubs = {
     Dialog: {
-        props: {open: Boolean},
+        props: { open: Boolean },
         template: '<div v-if="open"><slot /></div>'
     },
     DialogContent: {
@@ -15,16 +15,16 @@ const stubs = {
 
 function mountOpen(props = {}) {
     return mount(CreateTableModal, {
-        props: {open: true, ...props},
-        global: {stubs}
+        props: { open: true, ...props },
+        global: { stubs }
     })
 }
 
 describe('CreateTableModal', () => {
     it('does not show modal content when open is false', () => {
         const wrapper = mount(CreateTableModal, {
-            props: {open: false},
-            global: {stubs}
+            props: { open: false },
+            global: { stubs }
         })
         // When closed, the Dialog should not render children — the submit button should be absent
         const buttons = wrapper.findAll('button')
@@ -112,12 +112,16 @@ describe('CreateTableModal', () => {
         const wrapper = mountOpen()
 
         await wrapper.find('input[placeholder*="请输入表名"]').setValue('dirty')
-        expect((wrapper.find('input[placeholder*="请输入表名"]').element as HTMLInputElement).value).toBe('dirty')
+        expect(
+            (wrapper.find('input[placeholder*="请输入表名"]').element as HTMLInputElement).value
+        ).toBe('dirty')
 
-        await wrapper.setProps({open: false})
-        await wrapper.setProps({open: true})
+        await wrapper.setProps({ open: false })
+        await wrapper.setProps({ open: true })
 
-        expect((wrapper.find('input[placeholder*="请输入表名"]').element as HTMLInputElement).value).toBe('')
+        expect(
+            (wrapper.find('input[placeholder*="请输入表名"]').element as HTMLInputElement).value
+        ).toBe('')
     })
 
     it('shows "等待输入..." when no table name', () => {

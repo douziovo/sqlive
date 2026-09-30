@@ -103,6 +103,30 @@ class SqlParserTest {
 		assertEquals(1, stmts.size());
 	}
 
+	@Test
+	void shouldKeepEscapedDoubleQuotesAndSemicolonInsideIdentifier() {
+		var statements = parser.parseStatementsPrecise("CREATE TABLE \"a\"\";b\" (id INT); SELECT 2;");
+		assertEquals(2, statements.size());
+		assertEquals("CREATE TABLE \"a\"\";b\" (id INT);", statements.getFirst().sql());
+		assertEquals("SELECT 2;", statements.getLast().sql());
+	}
+
+	@Test
+	void shouldKeepTrailingUnterminatedCommentsWithinStatement() {
+		String lineComment = "SELECT 1 -- trailing";
+		assertEquals(lineComment, parser.parseStatementsPrecise(lineComment).getFirst().sql());
+		String blockComment = "SELECT 1 /* unfinished\ncomment";
+		assertEquals(blockComment, parser.parseStatementsPrecise(blockComment).getFirst().sql());
+		assertEquals(0, parser.parseStatementsPrecise("/* unfinished").size());
+	}
+
+	@Test
+	void shouldCountNewlinesInsideStatementBlockComment() {
+		var statements = parser.parseStatementsPrecise("SELECT 1 /* first\nsecond */; SELECT 2;");
+		assertEquals(2, statements.size());
+		assertEquals(2, statements.getLast().startLine());
+	}
+
 	// ── D-03a: endPos char-offset contract ───────────────────
 
 	@Test
@@ -169,5 +193,12 @@ class SqlParserTest {
 	void shouldReturnStartLineWhenErrorMessageIsEmpty() {
 		int line = parser.locateErrorLine("SELECT 1;", 3, "");
 		assertEquals(3, line);
+	}
+
+	@Test
+	void shouldLocateDelimiterErrorsAtRelevantClosingParenthesis() {
+		assertEquals(7, parser.locateErrorLine("SELECT (1)\n(2)\n;", 7, "near \";\""));
+		assertEquals(8, parser.locateErrorLine("SELECT f(1),\ng(2)\n;", 7, "near \";\""));
+		assertEquals(7, parser.locateErrorLine("SELECT (1)\n;", 7, "near \";\""));
 	}
 }

@@ -144,8 +144,8 @@
 ### 环境要求
 
 - **JDK 21**（推荐 Zulu JDK 21）
-- **Node.js** 18+
-- **npm** 9+
+- **Node.js** 22+ (LTS)
+- **pnpm** 12.6.0
 
 ### 1. 启动后端
 
@@ -168,10 +168,10 @@ gradlew.bat bootRun
 cd sqlive-frontend
 
 # 安装依赖（首次运行）
-npm install
+pnpm install --frozen-lockfile
 
 # 启动开发服务器
-npm run dev
+pnpm run dev
 ```
 
 前端运行在 `http://localhost:5173`，API 请求通过 `VITE_API_URL` 环境变量直接连接后端 8080 端口。
@@ -194,11 +194,13 @@ ai:
 
 ## 测试
 
+验证范围和 CI 说明见 [docs/TESTING.md](docs/TESTING.md)，agent 工作约定见 [docs/agents/README.md](docs/agents/README.md)。
+
 ```bash
 # 前端单元测试
 cd sqlive-frontend
-npm test                 # 运行全部 476 个 Vitest 用例
-npm run test:e2e         # Playwright E2E 测试
+pnpm test                 # Vitest 单元/组件测试
+pnpm run test:e2e         # Playwright E2E 测试
 
 # 后端测试
 cd sqlive-backend

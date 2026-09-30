@@ -1,9 +1,10 @@
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api'
-import {type Ref, watch} from 'vue'
+import { type Ref, watch } from 'vue'
+import { useTimeoutFn } from '@vueuse/core'
 import 'monaco-editor/esm/vs/basic-languages/sql/sql.contribution'
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
-import {format} from 'sql-formatter'
-import type {AiActions} from './useAiChat'
+import { format } from 'sql-formatter'
+import type { AiActions } from './useAiChat'
 
 self.MonacoEnvironment = {
     getWorker() {
@@ -13,11 +14,16 @@ self.MonacoEnvironment = {
 
 export function useMonacoEditor(
     container: Ref<HTMLElement | null>,
-    emit: (e: string, ...args: any[]) => void,
+    emit: {
+        (e: 'update:code', value: string): void
+        (e: 'submit'): void
+        (e: 'export-tab'): void
+        (e: 'export-all'): void
+    },
     deps: {
         highlightChunk: Ref<string | null>
         error: Ref<{ line: number; message: string } | null>
-        ai: AiActions | undefined
+        ai: Pick<AiActions, 'sendToAi' | 'onOpenChat'> | undefined
     },
     onImportClick?: () => void
 ) {
@@ -28,7 +34,7 @@ export function useMonacoEditor(
     function formatSql() {
         if (!editor) return
         try {
-            const formatted = format(editor.getValue(), {language: 'sqlite', tabWidth: 4})
+            const formatted = format(editor.getValue(), { language: 'sqlite', tabWidth: 4 })
             editor.setValue(formatted)
         } catch {
             // Silently ignore format errors
@@ -49,8 +55,13 @@ export function useMonacoEditor(
         const endPos = model.getPositionAt(idx + chunk.length)
         highlightDeco?.set([
             {
-                range: new monaco.Range(startPos.lineNumber, startPos.column, endPos.lineNumber, endPos.column),
-                options: {inlineClassName: 'flash-highlight'}
+                range: new monaco.Range(
+                    startPos.lineNumber,
+                    startPos.column,
+                    endPos.lineNumber,
+                    endPos.column
+                ),
+                options: { inlineClassName: 'flash-highlight' }
             }
         ])
     }
@@ -97,9 +108,9 @@ export function useMonacoEditor(
             fontFamily:
                 '"Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
             lineNumbers: 'on',
-            minimap: {enabled: false},
+            minimap: { enabled: false },
             scrollBeyondLastLine: false,
-            hover: {above: false},
+            hover: { above: false },
             automaticLayout: true,
             tabSize: 4,
             renderWhitespace: 'selection',
@@ -107,7 +118,7 @@ export function useMonacoEditor(
             wordWrapColumn: 160,
             wrappingIndent: 'indent',
             wrappingStrategy: 'advanced',
-            padding: {top: 16, bottom: 16},
+            padding: { top: 16, bottom: 16 },
             overviewRulerBorder: false,
             hideCursorInOverviewRuler: true,
             scrollbar: {
@@ -123,7 +134,7 @@ export function useMonacoEditor(
 
         editor.onDidChangeModelContent(() => {
             if (ignoreChanges) return
-            emit('update:code', editor?.getValue())
+            if (editor) emit('update:code', editor.getValue())
         })
 
         // Submit: Ctrl+Shift+T
@@ -183,7 +194,9 @@ export function useMonacoEditor(
                 run: () => {
                     const sel = editor?.getModel()?.getValueInRange(editor.getSelection()!)
                     if (sel?.trim()) {
-                        deps.ai?.sendToAi(`请帮我看看这段 SQL：\n\n\`\`\`sql\n${sel.trim()}\n\`\`\``)
+                        deps.ai?.sendToAi(
+                            `请帮我看看这段 SQL：\n\n\`\`\`sql\n${sel.trim()}\n\`\`\``
+                        )
                     }
                 }
             })
@@ -238,24 +251,20 @@ export function useMonacoEditor(
         ignoreChanges = false
     }
 
-    let flashTimeout: ReturnType<typeof setTimeout> | null = null
+    const { start: scheduleHighlightClear, stop: stopHighlightClear } = useTimeoutFn(
+        () => highlightDeco?.clear(),
+        1000,
+        { immediate: false }
+    )
 
     function onHighlightChunkChange(chunk: string | null) {
-        if (flashTimeout) {
-            clearTimeout(flashTimeout)
-            flashTimeout = null
-        }
+        stopHighlightClear()
         applyHighlight(chunk)
-        if (chunk) {
-            flashTimeout = setTimeout(() => {
-                highlightDeco?.clear()
-                flashTimeout = null
-            }, 1000)
-        }
+        if (chunk) scheduleHighlightClear()
     }
 
     function dispose() {
-        if (flashTimeout) clearTimeout(flashTimeout)
+        stopHighlightClear()
         highlightDeco?.clear()
         editor?.dispose()
         editor = null
@@ -266,5 +275,5 @@ export function useMonacoEditor(
     watch(() => deps.highlightChunk.value, onHighlightChunkChange)
     watch(() => deps.error.value, applyErrorMarkers)
 
-    return {create, formatSql, syncCode, dispose}
+    return { create, formatSql, syncCode, dispose }
 }

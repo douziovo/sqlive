@@ -3,7 +3,9 @@
  * nested parentheses (function calls) and quoted strings.
  */
 
-export function extractTuplesWithDepth(sql: string): { content: string; start: number; end: number }[] {
+export function extractTuplesWithDepth(
+    sql: string
+): { content: string; start: number; end: number }[] {
     const tuples: { content: string; start: number; end: number }[] = []
     const valuesIdx = sql.toUpperCase().indexOf('VALUES')
     if (valuesIdx === -1) return tuples

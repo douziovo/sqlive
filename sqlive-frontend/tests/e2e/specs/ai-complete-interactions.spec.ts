@@ -1,12 +1,12 @@
-import {expect, gotoApp, test} from '../fixtures/sql-editor.fixture';
+import { expect, gotoApp, test } from '../fixtures/sql-editor.fixture'
 
 test.describe('AI Complete Interactions', () => {
-    test.beforeEach(async ({page}) => {
+    test.beforeEach(async ({ page }) => {
         // Mock all AI API endpoints — dispatch by AiChatRequest.mode field (D-05a).
         // SSE /chat retained with precise URL match (D-05d); dead /suggest branch
         // removed (D-05b); fixedCode field aligned with backend DTO (D-05c).
         await page.route('**/api/ai/**', async (route) => {
-            const url = route.request().url();
+            const url = route.request().url()
 
             // SSE /chat — D-05d retained (precise URL match)
             if (url.endsWith('/api/ai/chat')) {
@@ -21,14 +21,14 @@ test.describe('AI Complete Interactions', () => {
                         'data: [USAGE]15,35,50',
                         '',
                         'data: [DONE]',
-                        '',
-                    ].join('\n'),
-                });
+                        ''
+                    ].join('\n')
+                })
             }
 
             // Non-streaming endpoints — dispatch by AiChatRequest.mode field (D-05a)
             // Pitfall 5: postData() returns null for empty bodies; guard with || '{}'.
-            const body = JSON.parse(route.request().postData() || '{}');
+            const body = JSON.parse(route.request().postData() || '{}')
             switch (body.mode) {
                 case 'analyze-error':
                     return route.fulfill({
@@ -37,11 +37,12 @@ test.describe('AI Complete Interactions', () => {
                         body: JSON.stringify({
                             success: true,
                             data: {
-                                content: 'Analysis: Your query has a syntax error on line 3. Missing comma.',
-                                summary: 'Syntax error detected',
-                            },
-                        }),
-                    });
+                                content:
+                                    'Analysis: Your query has a syntax error on line 3. Missing comma.',
+                                summary: 'Syntax error detected'
+                            }
+                        })
+                    })
                 case 'fix-code':
                     return route.fulfill({
                         status: 200,
@@ -50,10 +51,10 @@ test.describe('AI Complete Interactions', () => {
                             success: true,
                             data: {
                                 content: 'Fixed your SQL.',
-                                fixedCode: 'SELECT * FROM departments ORDER BY name;',
-                            },
-                        }),
-                    });
+                                fixedCode: 'SELECT * FROM departments ORDER BY name;'
+                            }
+                        })
+                    })
                 case 'explain':
                     return route.fulfill({
                         status: 200,
@@ -61,11 +62,12 @@ test.describe('AI Complete Interactions', () => {
                         body: JSON.stringify({
                             success: true,
                             data: {
-                                content: 'This query selects all columns from the departments table.',
-                                summary: 'Simple SELECT query',
-                            },
-                        }),
-                    });
+                                content:
+                                    'This query selects all columns from the departments table.',
+                                summary: 'Simple SELECT query'
+                            }
+                        })
+                    })
                 case 'optimize':
                     return route.fulfill({
                         status: 200,
@@ -74,239 +76,246 @@ test.describe('AI Complete Interactions', () => {
                             success: true,
                             data: {
                                 content: 'Optimized query using index hint.',
-                                fixedCode: 'SELECT * FROM departments INDEXED BY idx_dept_name WHERE name > "A";',
-                            },
-                        }),
-                    });
+                                fixedCode:
+                                    'SELECT * FROM departments INDEXED BY idx_dept_name WHERE name > "A";'
+                            }
+                        })
+                    })
                 default:
-                    return route.fulfill({status: 400, body: `Unknown mode: ${body.mode}`});
+                    return route.fulfill({ status: 400, body: `Unknown mode: ${body.mode}` })
             }
-        });
+        })
 
-        await gotoApp(page);
-        await expect(page.locator('#table-departments')).toBeVisible({timeout: 15_000});
-    });
+        await gotoApp(page)
+        await expect(page.locator('#table-departments')).toBeVisible({ timeout: 15_000 })
+    })
 
-    test('T3.1 AI panel opens via toggle button', async ({page}) => {
+    test('T3.1 AI panel opens via toggle button', async ({ page }) => {
         // Click AI toggle button
-        const aiBtn = page.locator('[data-testid="ai-toggle-btn"]');
-        await expect(aiBtn).toBeVisible({timeout: 5_000});
-        await aiBtn.click();
+        const aiBtn = page.locator('[data-testid="ai-toggle-btn"]')
+        await expect(aiBtn).toBeVisible({ timeout: 5_000 })
+        await aiBtn.click()
 
         // AI panel should be visible
-        await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({timeout: 5_000});
-    });
+        await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({ timeout: 5_000 })
+    })
 
-    test('T3.2 sends a message and receives streaming response', async ({page}) => {
+    test('T3.2 sends a message and receives streaming response', async ({ page }) => {
         // Open AI panel
-        await page.locator('[data-testid="ai-toggle-btn"]').click();
-        await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({timeout: 5_000});
+        await page.locator('[data-testid="ai-toggle-btn"]').click()
+        await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({ timeout: 5_000 })
 
         // Find input and send message
-        const input = page.locator('textarea[placeholder="输入消息..."]');
-        await expect(input).toBeVisible({timeout: 5_000});
-        await input.fill('Explain this query');
-        await input.press('Enter');
+        const input = page.locator('textarea[placeholder="输入消息..."]')
+        await expect(input).toBeVisible({ timeout: 5_000 })
+        await input.fill('Explain this query')
+        await input.press('Enter')
 
         // Streaming response should render (md-body is the markdown container)
-        await expect(page.locator('.md-body').first()).toBeVisible({timeout: 5_000});
-    });
+        await expect(page.locator('.md-body').first()).toBeVisible({ timeout: 5_000 })
+    })
 
-    test('T3.3 receives explanation formatted as markdown', async ({page}) => {
+    test('T3.3 receives explanation formatted as markdown', async ({ page }) => {
         // Open AI panel and send message
-        await page.locator('[data-testid="ai-toggle-btn"]').click();
-        await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({timeout: 5_000});
+        await page.locator('[data-testid="ai-toggle-btn"]').click()
+        await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({ timeout: 5_000 })
 
-        const input = page.locator('textarea[placeholder="输入消息..."]');
-        await expect(input).toBeVisible({timeout: 5_000});
-        await input.fill('Explain');
-        await input.press('Enter');
+        const input = page.locator('textarea[placeholder="输入消息..."]')
+        await expect(input).toBeVisible({ timeout: 5_000 })
+        await input.fill('Explain')
+        await input.press('Enter')
 
         // Response should be rendered (md-body class contains markdown)
-        await expect(page.locator('.md-body').first()).toBeVisible({timeout: 5_000});
-    });
+        await expect(page.locator('.md-body').first()).toBeVisible({ timeout: 5_000 })
+    })
 
-    test('T3.4 regenerates a response', async ({page}) => {
+    test('T3.4 regenerates a response', async ({ page }) => {
         // Open AI panel and send message
-        await page.locator('[data-testid="ai-toggle-btn"]').click();
-        await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({timeout: 5_000});
+        await page.locator('[data-testid="ai-toggle-btn"]').click()
+        await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({ timeout: 5_000 })
 
-        const input = page.locator('textarea[placeholder="输入消息..."]');
-        await expect(input).toBeVisible({timeout: 5_000});
-        await input.fill('Test regenerate');
-        await input.press('Enter');
-        await expect(page.locator('.md-body').first()).toBeVisible({timeout: 5_000});
+        const input = page.locator('textarea[placeholder="输入消息..."]')
+        await expect(input).toBeVisible({ timeout: 5_000 })
+        await input.fill('Test regenerate')
+        await input.press('Enter')
+        await expect(page.locator('.md-body').first()).toBeVisible({ timeout: 5_000 })
 
         // Hover over message row to reveal regenerate button
-        const msgRow = page.locator('.group\\/row').last();
-        await msgRow.hover();
-        const regenBtn = msgRow.locator('button[title="重新回答"]');
-        await expect(regenBtn).toBeVisible({timeout: 3_000});
+        const msgRow = page.locator('.group\\/row').last()
+        await msgRow.hover()
+        const regenBtn = msgRow.locator('button[title="重新回答"]')
+        await expect(regenBtn).toBeVisible({ timeout: 3_000 })
 
         // Click regenerate button (circular arrow icon button)
         if (await regenBtn.isVisible().catch(() => false)) {
-            await regenBtn.click();
-            await expect(page.locator('.md-body').first()).toBeVisible({timeout: 5_000});
+            await regenBtn.click()
+            await expect(page.locator('.md-body').first()).toBeVisible({ timeout: 5_000 })
         }
 
         // App should not crash
-        await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible();
-    });
+        await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible()
+    })
 
-    test('T3.5 cancels a streaming response', async ({page}) => {
+    test('T3.5 cancels a streaming response', async ({ page }) => {
         // Override mock with slow response
-        await page.unroute('**/api/ai/chat');
+        await page.unroute('**/api/ai/chat')
         await page.route('**/api/ai/chat', async (route) => {
             // Delay to simulate slow response
-            await new Promise((r) => setTimeout(r, 3000));
+            await new Promise((r) => setTimeout(r, 3000))
             route.fulfill({
                 status: 200,
                 contentType: 'text/event-stream',
-                body: 'data: {"content":"Slow response"}\n\ndata: [DONE]\n',
-            });
-        });
+                body: 'data: {"content":"Slow response"}\n\ndata: [DONE]\n'
+            })
+        })
 
         // Open AI panel and send message
-        await page.locator('[data-testid="ai-toggle-btn"]').click();
-        await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({timeout: 5_000});
+        await page.locator('[data-testid="ai-toggle-btn"]').click()
+        await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({ timeout: 5_000 })
 
-        const input = page.locator('textarea[placeholder="输入消息..."]');
-        await expect(input).toBeVisible({timeout: 5_000});
-        await input.fill('Cancel this');
-        await input.press('Enter');
+        const input = page.locator('textarea[placeholder="输入消息..."]')
+        await expect(input).toBeVisible({ timeout: 5_000 })
+        await input.fill('Cancel this')
+        await input.press('Enter')
 
         // Click stop button (appears when isLoading)
-        await expect(page.locator('button[title="停止生成"]')).toBeVisible({timeout: 3_000});
-        await page.locator('button[title="停止生成"]').click();
+        await expect(page.locator('button[title="停止生成"]')).toBeVisible({ timeout: 3_000 })
+        await page.locator('button[title="停止生成"]').click()
         // Wait for loading state to clear
-        await expect(page.locator('button[title="停止生成"]')).not.toBeVisible({timeout: 3_000});
+        await expect(page.locator('button[title="停止生成"]')).not.toBeVisible({ timeout: 3_000 })
 
         // App should not crash after cancel
-        await expect(page.locator('.monaco-editor')).toBeVisible();
-    });
+        await expect(page.locator('.monaco-editor')).toBeVisible()
+    })
 
-    test('T3.6 edits a sent message', async ({page}) => {
+    test('T3.6 edits a sent message', async ({ page }) => {
         // Open AI panel and send message
-        await page.locator('[data-testid="ai-toggle-btn"]').click();
-        await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({timeout: 5_000});
+        await page.locator('[data-testid="ai-toggle-btn"]').click()
+        await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({ timeout: 5_000 })
 
-        const input = page.locator('textarea[placeholder="输入消息..."]');
-        await expect(input).toBeVisible({timeout: 5_000});
-        await input.fill('Original message');
-        await input.press('Enter');
-        await expect(page.locator('.md-body').first()).toBeVisible({timeout: 5_000});
+        const input = page.locator('textarea[placeholder="输入消息..."]')
+        await expect(input).toBeVisible({ timeout: 5_000 })
+        await input.fill('Original message')
+        await input.press('Enter')
+        await expect(page.locator('.md-body').first()).toBeVisible({ timeout: 5_000 })
 
         // Hover over user message to reveal edit button
-        const userMsgRow = page.locator('.group\\/row').first();
-        await userMsgRow.hover();
-        const editBtn = userMsgRow.locator('button[title="编辑"]');
-        await expect(editBtn).toBeVisible({timeout: 3_000});
+        const userMsgRow = page.locator('.group\\/row').first()
+        await userMsgRow.hover()
+        const editBtn = userMsgRow.locator('button[title="编辑"]')
+        await expect(editBtn).toBeVisible({ timeout: 3_000 })
 
         // Click edit button (pencil icon)
         if (await editBtn.isVisible().catch(() => false)) {
-            await editBtn.click();
+            await editBtn.click()
 
             // Edit textarea should appear
-            const editTextarea = page.locator('.fixed.z-50 textarea:not([placeholder="输入消息..."])');
+            const editTextarea = page.locator(
+                '.fixed.z-50 textarea:not([placeholder="输入消息..."])'
+            )
             if (await editTextarea.isVisible().catch(() => false)) {
-                await editTextarea.fill('Edited message');
+                await editTextarea.fill('Edited message')
 
                 // Click update button
-                const updateBtn = page.locator('button:has-text("更新")');
+                const updateBtn = page.locator('button:has-text("更新")')
                 if (await updateBtn.isVisible().catch(() => false)) {
-                    await updateBtn.click();
-                    await expect(page.locator('.md-body').first()).toBeVisible({timeout: 5_000});
+                    await updateBtn.click()
+                    await expect(page.locator('.md-body').first()).toBeVisible({ timeout: 5_000 })
                 }
             }
         }
 
-        await expect(page.locator('.monaco-editor')).toBeVisible();
-    });
+        await expect(page.locator('.monaco-editor')).toBeVisible()
+    })
 
-    test('T3.7 deletes a message', async ({page}) => {
+    test('T3.7 deletes a message', async ({ page }) => {
         // Open AI panel and send message
-        await page.locator('[data-testid="ai-toggle-btn"]').click();
-        await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({timeout: 5_000});
+        await page.locator('[data-testid="ai-toggle-btn"]').click()
+        await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({ timeout: 5_000 })
 
-        const input = page.locator('textarea[placeholder="输入消息..."]');
-        await expect(input).toBeVisible({timeout: 5_000});
-        await input.fill('Message to delete');
-        await input.press('Enter');
-        await expect(page.locator('.md-body').first()).toBeVisible({timeout: 5_000});
+        const input = page.locator('textarea[placeholder="输入消息..."]')
+        await expect(input).toBeVisible({ timeout: 5_000 })
+        await input.fill('Message to delete')
+        await input.press('Enter')
+        await expect(page.locator('.md-body').first()).toBeVisible({ timeout: 5_000 })
 
         // Get message count before deletion
-        const msgCountBefore = await page.locator('.group\\/row').count();
+        const msgCountBefore = await page.locator('.group\\/row').count()
 
         // Hover over user message to reveal delete button
-        const userMsgRow = page.locator('.group\\/row').first();
-        await userMsgRow.hover();
-        const deleteBtns = userMsgRow.locator('button[title="删除"]');
-        await expect(deleteBtns.first()).toBeVisible({timeout: 3_000});
+        const userMsgRow = page.locator('.group\\/row').first()
+        await userMsgRow.hover()
+        const deleteBtns = userMsgRow.locator('button[title="删除"]')
+        await expect(deleteBtns.first()).toBeVisible({ timeout: 3_000 })
 
         // Click delete button (trash icon) — useAiChat.deleteMessage() removes
         // user msg + following assistant msg (splice(idx, 2)), so count drops by 2
-        const deleteCount = await deleteBtns.count();
+        const deleteCount = await deleteBtns.count()
         if (deleteCount > 0) {
-            await deleteBtns.first().click();
+            await deleteBtns.first().click()
             // Wait for messages to be removed (2 messages: user + assistant)
-            await expect(page.locator('.group\\/row')).toHaveCount(msgCountBefore - 2, {timeout: 3_000});
+            await expect(page.locator('.group\\/row')).toHaveCount(msgCountBefore - 2, {
+                timeout: 3_000
+            })
         }
 
         // Verify message count decreased
-        const msgCountAfter = await page.locator('.group\\/row').count();
-        expect(msgCountAfter).toBeLessThan(msgCountBefore);
+        const msgCountAfter = await page.locator('.group\\/row').count()
+        expect(msgCountAfter).toBeLessThan(msgCountBefore)
 
         // App should not crash
-        await expect(page.locator('.monaco-editor')).toBeVisible();
-    });
+        await expect(page.locator('.monaco-editor')).toBeVisible()
+    })
 
-    test('T3.8 multi-turn conversation maintains 6 messages', async ({page}) => {
+    test('T3.8 multi-turn conversation maintains 6 messages', async ({ page }) => {
         // Open AI panel
-        await page.locator('[data-testid="ai-toggle-btn"]').click();
-        await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({timeout: 5_000});
+        await page.locator('[data-testid="ai-toggle-btn"]').click()
+        await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({ timeout: 5_000 })
 
-        const input = page.locator('textarea[placeholder="输入消息..."]');
-        await expect(input).toBeVisible({timeout: 5_000});
+        const input = page.locator('textarea[placeholder="输入消息..."]')
+        await expect(input).toBeVisible({ timeout: 5_000 })
 
         // Send 3 messages (should get 3 user + 3 assistant = 6 total)
         for (let i = 0; i < 3; i++) {
-            await input.fill(`Question ${i + 1}`);
-            await input.press('Enter');
-            await expect(page.locator('.md-body').nth(i)).toBeVisible({timeout: 5_000});
+            await input.fill(`Question ${i + 1}`)
+            await input.press('Enter')
+            await expect(page.locator('.md-body').nth(i)).toBeVisible({ timeout: 5_000 })
         }
 
         // Verify multiple message rows exist
-        const msgRows = page.locator('.group\\/row');
-        const count = await msgRows.count();
-        expect(count).toBeGreaterThanOrEqual(3);
-    });
+        const msgRows = page.locator('.group\\/row')
+        const count = await msgRows.count()
+        expect(count).toBeGreaterThanOrEqual(3)
+    })
 
-    test('T3.9 AI panel close and reopen does not crash', async ({page}) => {
+    test('T3.9 AI panel close and reopen does not crash', async ({ page }) => {
         // Open AI panel and send message
-        await page.locator('[data-testid="ai-toggle-btn"]').click();
-        await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({timeout: 5_000});
+        await page.locator('[data-testid="ai-toggle-btn"]').click()
+        await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({ timeout: 5_000 })
 
-        const input = page.locator('textarea[placeholder="输入消息..."]');
-        await expect(input).toBeVisible({timeout: 5_000});
-        await input.fill('Test minimize');
-        await input.press('Enter');
-        await expect(page.locator('.md-body').first()).toBeVisible({timeout: 5_000});
+        const input = page.locator('textarea[placeholder="输入消息..."]')
+        await expect(input).toBeVisible({ timeout: 5_000 })
+        await input.fill('Test minimize')
+        await input.press('Enter')
+        await expect(page.locator('.md-body').first()).toBeVisible({ timeout: 5_000 })
 
         // Close AI panel
-        await page.locator('[data-testid="ai-chat-close"]').click();
-        await expect(page.locator('[data-testid="ai-chat-close"]')).not.toBeVisible({timeout: 3_000});
+        await page.locator('[data-testid="ai-chat-close"]').click()
+        await expect(page.locator('[data-testid="ai-chat-close"]')).not.toBeVisible({
+            timeout: 3_000
+        })
 
         // Reopen AI panel
-        await page.locator('[data-testid="ai-toggle-btn"]').click();
-        await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({timeout: 5_000});
+        await page.locator('[data-testid="ai-toggle-btn"]').click()
+        await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({ timeout: 5_000 })
 
         // Verify the app doesn't crash after close/reopen (component is rebuilt)
-        await expect(page.locator('.monaco-editor')).toBeVisible();
-    });
+        await expect(page.locator('.monaco-editor')).toBeVisible()
+    })
 
-    test('T3.10 handles AI API error gracefully (mocked 503)', async ({page}) => {
+    test('T3.10 handles AI API error gracefully (mocked 503)', async ({ page }) => {
         // Override mock to return error
-        await page.unroute('**/api/ai/**');
+        await page.unroute('**/api/ai/**')
         await page.route('**/api/ai/chat', (route) => {
             route.fulfill({
                 status: 503,
@@ -314,23 +323,25 @@ test.describe('AI Complete Interactions', () => {
                 body: JSON.stringify({
                     success: false,
                     data: null,
-                    error: {message: 'AI service unavailable'},
-                }),
-            });
-        });
+                    error: { message: 'AI service unavailable' }
+                })
+            })
+        })
 
         // Open AI panel and send message
-        await page.locator('[data-testid="ai-toggle-btn"]').click();
-        await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({timeout: 5_000});
+        await page.locator('[data-testid="ai-toggle-btn"]').click()
+        await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({ timeout: 5_000 })
 
-        const input = page.locator('textarea[placeholder="输入消息..."]');
-        await expect(input).toBeVisible({timeout: 5_000});
-        await input.fill('Test error handling');
-        await input.press('Enter');
+        const input = page.locator('textarea[placeholder="输入消息..."]')
+        await expect(input).toBeVisible({ timeout: 5_000 })
+        await input.fill('Test error handling')
+        await input.press('Enter')
         // Wait for error message to appear
-        await expect(page.locator('.md-body, [class*="error"]').first()).toBeVisible({timeout: 5_000});
+        await expect(page.locator('.md-body, [class*="error"]').first()).toBeVisible({
+            timeout: 5_000
+        })
 
         // Should show error gracefully, not crash
-        await expect(page.locator('.monaco-editor')).toBeVisible();
-    });
-});
+        await expect(page.locator('.monaco-editor')).toBeVisible()
+    })
+})

@@ -26,7 +26,7 @@ export function registerChartTheme(): void {
     if (registered) return
     echarts.registerTheme(THEME_NAME, {
         color: COLOR_PALETTE,
-        textStyle: {fontFamily: 'inherit'}
+        textStyle: { fontFamily: 'inherit' }
     })
     registered = true
 }

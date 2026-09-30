@@ -1,7 +1,7 @@
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
-import {ref} from 'vue'
-import {useAiStreaming} from '@/composables/useAiStreaming'
-import {readSseStream} from '@/utils/sse'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { ref } from 'vue'
+import { useAiStreaming } from '@/composables/useAiStreaming'
+import { readSseStream } from '@/utils/sse'
 
 // Mock readSseStream before importing the composable
 vi.mock('@/utils/sse', () => ({
@@ -31,7 +31,7 @@ function makeSseResponse(body: string = 'data: chunk1\n\ndata: chunk2\n\n') {
         body: {
             getReader: () => stream.getReader()
         },
-        headers: {get: () => 'text/event-stream'}
+        headers: { get: () => 'text/event-stream' }
     }
 }
 
@@ -48,7 +48,7 @@ describe('useAiStreaming', () => {
     it('initializes with null streamAbortController', () => {
         makeFetchSpy()
         const isLoading = ref(false)
-        const {streamAbortController} = useAiStreaming('http://localhost:8080', isLoading)
+        const { streamAbortController } = useAiStreaming('http://localhost:8080', isLoading)
         expect(streamAbortController.value).toBeNull()
     })
 
@@ -59,10 +59,13 @@ describe('useAiStreaming', () => {
         fetchSpy.mockResolvedValue(response)
 
         const isLoading = ref(false)
-        const {streamCall, streamAbortController} = useAiStreaming('http://localhost:8080', isLoading)
+        const { streamCall, streamAbortController } = useAiStreaming(
+            'http://localhost:8080',
+            isLoading
+        )
         const onChunk = vi.fn()
 
-        const promise = streamCall('/api/ai/chat', {prompt: 'hello'}, onChunk)
+        const promise = streamCall('/api/ai/chat', { prompt: 'hello' }, onChunk)
         expect(streamAbortController.value).toBeInstanceOf(AbortController)
 
         await promise
@@ -84,9 +87,9 @@ describe('useAiStreaming', () => {
         fetchSpy.mockResolvedValue(makeSseResponse())
 
         const isLoading = ref(false)
-        const {streamCall} = useAiStreaming('http://localhost:8080', isLoading)
+        const { streamCall } = useAiStreaming('http://localhost:8080', isLoading)
 
-        await streamCall('/api/ai/chat', {prompt: 'test'}, vi.fn())
+        await streamCall('/api/ai/chat', { prompt: 'test' }, vi.fn())
 
         const body = JSON.parse(fetchSpy.mock.calls[0][1].body)
         expect(body.stream).toBe(true)
@@ -103,7 +106,7 @@ describe('useAiStreaming', () => {
         fetchSpy.mockResolvedValue(makeSseResponse())
 
         const isLoading = ref(false)
-        const {streamCall} = useAiStreaming('http://localhost:8080', isLoading)
+        const { streamCall } = useAiStreaming('http://localhost:8080', isLoading)
         const onChunk = vi.fn((text: string) => chunks.push(text))
 
         await streamCall('/api/ai/chat', {}, onChunk)
@@ -118,7 +121,7 @@ describe('useAiStreaming', () => {
         fetchSpy.mockResolvedValue(makeSseResponse())
 
         const isLoading = ref(true)
-        const {streamCall, cancelStream, streamAbortController} = useAiStreaming(
+        const { streamCall, cancelStream, streamAbortController } = useAiStreaming(
             'http://localhost:8080',
             isLoading
         )
@@ -141,7 +144,7 @@ describe('useAiStreaming', () => {
         })
 
         const isLoading = ref(false)
-        const {streamCall} = useAiStreaming('http://localhost:8080', isLoading)
+        const { streamCall } = useAiStreaming('http://localhost:8080', isLoading)
 
         await expect(streamCall('/api/ai/chat', {}, vi.fn())).rejects.toThrow(
             'SSE error: 500 Internal Server Error'
@@ -155,7 +158,7 @@ describe('useAiStreaming', () => {
         fetchSpy.mockRejectedValue(abortError)
 
         const isLoading = ref(false)
-        const {streamCall} = useAiStreaming('http://localhost:8080', isLoading)
+        const { streamCall } = useAiStreaming('http://localhost:8080', isLoading)
 
         // Should resolve, not reject
         await expect(streamCall('/api/ai/chat', {}, vi.fn())).resolves.toBeUndefined()
@@ -166,7 +169,7 @@ describe('useAiStreaming', () => {
         fetchSpy.mockRejectedValue(new Error('Network failure'))
 
         const isLoading = ref(false)
-        const {streamCall} = useAiStreaming('http://localhost:8080', isLoading)
+        const { streamCall } = useAiStreaming('http://localhost:8080', isLoading)
 
         await expect(streamCall('/api/ai/chat', {}, vi.fn())).rejects.toThrow('Network failure')
     })
@@ -177,13 +180,16 @@ describe('useAiStreaming', () => {
         fetchSpy.mockResolvedValue(makeSseResponse())
 
         const isLoading = ref(false)
-        const {streamCall, streamAbortController} = useAiStreaming('http://localhost:8080', isLoading)
+        const { streamCall, streamAbortController } = useAiStreaming(
+            'http://localhost:8080',
+            isLoading
+        )
 
-        const promise1 = streamCall('/api/ai/chat', {id: 1}, vi.fn())
+        const promise1 = streamCall('/api/ai/chat', { id: 1 }, vi.fn())
         const controller1 = streamAbortController.value
         await promise1
 
-        const promise2 = streamCall('/api/ai/chat', {id: 2}, vi.fn())
+        const promise2 = streamCall('/api/ai/chat', { id: 2 }, vi.fn())
         const controller2 = streamAbortController.value
         await promise2
 

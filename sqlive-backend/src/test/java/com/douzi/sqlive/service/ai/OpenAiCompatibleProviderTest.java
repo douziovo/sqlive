@@ -6,10 +6,14 @@ import com.douzi.sqlive.exception.AiProviderException;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.ClientResponse;
+import org.springframework.core.io.buffer.DefaultDataBufferFactory;
+import org.springframework.http.HttpStatus;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -76,11 +80,11 @@ class OpenAiCompatibleProviderTest {
 	void completeReturnsExtractedContent() {
 		var config = createConfig();
 		var proto = mock(Protocol.class);
-		var webClient = mockWebClientForComplete("{\"summary\":\"ok\"}");
+		var webClient = mockWebClientForComplete();
 		when(proto.buildRequest(any())).thenReturn(Map.of("model", "test"));
 		when(proto.extractContent(anyString())).thenReturn("extracted content");
 
-		var provider = new OpenAiCompatibleProvider(config, webClient, proto, "test", "/chat/completions", Duration.ofSeconds(5), Duration.ofSeconds(60), Duration.ofSeconds(30));
+		var provider = new OpenAiCompatibleProvider(config, webClient, proto, "test", "/chat/completions");
 		String result = provider.complete("system prompt", "user message");
 
 		assertEquals("extracted content", result);
@@ -95,7 +99,7 @@ class OpenAiCompatibleProviderTest {
 		var webClient = mockWebClientThatThrows(new RuntimeException("Connection refused"));
 		when(proto.buildRequest(any())).thenReturn(Map.of("model", "test"));
 
-		var provider = new OpenAiCompatibleProvider(config, webClient, proto, "test", "/chat/completions", Duration.ofSeconds(5), Duration.ofSeconds(60), Duration.ofSeconds(30));
+		var provider = new OpenAiCompatibleProvider(config, webClient, proto, "test", "/chat/completions");
 		var ex = assertThrows(AiProviderException.class,
 				() -> provider.complete("system", "user"));
 		assertTrue(ex.getMessage().contains("Connection refused"));
@@ -113,12 +117,12 @@ class OpenAiCompatibleProviderTest {
 
 		var webClient = mockWebClientForStream(Flux.just("chunk1", "chunk2"));
 
-		var provider = new OpenAiCompatibleProvider(config, webClient, proto, "test", "/chat/completions", Duration.ofSeconds(5), Duration.ofSeconds(60), Duration.ofSeconds(30));
+		var provider = new OpenAiCompatibleProvider(config, webClient, proto, "test", "/chat/completions");
 		var chunks = provider.streamChat("system", null, "user").collectList().block();
 
 		assertNotNull(chunks);
 		assertEquals(2, chunks.size());
-		assertEquals("hello", chunks.get(0).getContent());
+		assertEquals("hello", chunks.getFirst().getContent());
 	}
 
 	@Test
@@ -131,17 +135,47 @@ class OpenAiCompatibleProviderTest {
 		var webClient = mockWebClientForStream(
 				Flux.error(new RuntimeException("Stream broken")));
 
-		var provider = new OpenAiCompatibleProvider(config, webClient, proto, "test", "/chat/completions", Duration.ofSeconds(5), Duration.ofSeconds(60), Duration.ofSeconds(30));
+		var provider = new OpenAiCompatibleProvider(config, webClient, proto, "test", "/chat/completions");
 		var chunks = provider.streamChat("system", null, "user")
 				.onErrorResume(e -> Flux.just(StreamChunk.error(e.getMessage())))
 				.collectList().block();
 
 		assertNotNull(chunks);
 		assertEquals(1, chunks.size());
-		assertEquals("error", chunks.get(0).getType());
+		assertEquals("error", chunks.getFirst().getType());
 	}
 
 	// ── helpers ──────────────────────────────────────────────
+	@Test
+	void lmStudioUsesSpringSseDecoderForFragmentedNamedEvents() {
+		String wire = """
+				event: message.delta
+				: heartbeat
+				data: {"content":
+				data: "中文🙂"}
+
+				event: reasoning.delta
+				data: {"content":"thinking"}
+
+				event: message.delta
+				data: {"content":"done"}
+
+				""".replace("\n", "\r\n");
+		byte[] bytes = wire.getBytes(StandardCharsets.UTF_8);
+		var buffers = new DefaultDataBufferFactory();
+		var client = WebClient.builder().exchangeFunction(request -> Mono.just(
+				ClientResponse.create(HttpStatus.OK).header("Content-Type", "text/event-stream")
+						.body(Flux.range(0, bytes.length).map(i -> buffers.wrap(new byte[]{bytes[i]})))
+						.build())).build();
+		var provider = new OpenAiCompatibleProvider(createConfig(), client, new LmStudioProtocol(mapper),
+				"lmstudio", "/api/v1/chat");
+		var chunks = provider.streamChat("system", null, "user").collectList().block(Duration.ofSeconds(5));
+		assertNotNull(chunks);
+		assertEquals(3, chunks.size());
+		assertEquals("中文🙂", chunks.getFirst().getContent());
+		assertEquals("reasoning", chunks.get(1).getType());
+		assertEquals("done", chunks.get(2).getContent());
+	}
 
 	private AiProviderConfig createConfig() {
 		var config = new AiProviderConfig();
@@ -151,7 +185,7 @@ class OpenAiCompatibleProviderTest {
 		return config;
 	}
 
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({"unchecked", "rawtypes"})
 	private MockWebClientCore mockWebClientCore() {
 		WebClient webClient = mock(WebClient.class);
 		WebClient.RequestBodyUriSpec uriSpec = mock(WebClient.RequestBodyUriSpec.class);
@@ -167,9 +201,9 @@ class OpenAiCompatibleProviderTest {
 		return new MockWebClientCore(webClient, uriSpec, bodySpec, headersSpec, responseSpec);
 	}
 
-	private WebClient mockWebClientForComplete(String responseBody) {
+	private WebClient mockWebClientForComplete() {
 		MockWebClientCore core = mockWebClientCore();
-		when(core.responseSpec().bodyToMono(String.class)).thenReturn(Mono.just(responseBody));
+		when(core.responseSpec().bodyToMono(String.class)).thenReturn(Mono.just("{\"summary\":\"ok\"}"));
 		return core.webClient();
 	}
 

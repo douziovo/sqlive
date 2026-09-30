@@ -1,6 +1,6 @@
 # Runbook
 
-操作手册——部署、调试、故障排查。架构见 `docs/ARCHITECTURE.md`，开发规范见 `CLAUDE.md`。
+操作手册——部署、调试、故障排查。架构见 [ARCHITECTURE.md](ARCHITECTURE.md)，开发规范见 [agents/README.md](agents/README.md)。
 
 ## 部署
 
@@ -27,7 +27,7 @@ docker run -p 8080:8080 sqlive
 
 ### 本地 dev
 
-前端：`npm run dev`（Vite dev server，5173 端口，直连 `VITE_API_URL` 到 :8080）。
+前端：`pnpm run dev`（Vite dev server，5173 端口，直连 `VITE_API_URL` 到 :8080）。
 后端：`./gradlew bootRun`（8080 端口）。
 
 JDK 21（Zulu），设置 `$JAVA_HOME` 后用 `java -version` 验证。
@@ -47,7 +47,7 @@ LRU 淘汰参数（`application.yml` 可覆盖）：
 
 ### JdbcTemplate
 
-**必须用 `ResultSetExtractor`，不能用 `RowCallbackHandler`**——0-row 表用后者会静默丢失（CLAUDE.md Gotcha 已记录）。`SqlExecutionService` 用 `ResultSetExtractor` 收集 schema + 数据。
+**必须保留零行表的 schema**。`SqlExecutionService` 用 `ResultSetExtractor` 收集 schema + 数据；使用 `RowCallbackHandler` 曾导致零行表丢失，经验见 [agents/MEMORY.md](agents/MEMORY.md)。
 
 ## 故障排查
 

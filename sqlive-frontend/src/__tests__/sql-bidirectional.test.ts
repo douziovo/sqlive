@@ -1,5 +1,11 @@
-import {afterEach, beforeEach, describe, expect, it, type vi} from 'vitest'
-import {mockSuccess, setupSqlEngine, type SqlEngineSetup, teardownSqlEngine, tick} from './test-utils'
+import { afterEach, beforeEach, describe, expect, it, type vi } from 'vitest'
+import {
+    mockSuccess,
+    setupSqlEngine,
+    type SqlEngineSetup,
+    teardownSqlEngine,
+    tick
+} from './test-utils'
 
 describe('Bidirectional sync', () => {
     let useSqlEngine: SqlEngineSetup['useSqlEngine']
@@ -16,7 +22,7 @@ describe('Bidirectional sync', () => {
     })
     describe('Bidirectional sync', () => {
         it('should match VALUES by explicit column order', async () => {
-            mockSuccess(fetchSpy, {tables: []})
+            mockSuccess(fetchSpy, { tables: [] })
             const engine = useSqlEngine()
             await tick()
 
@@ -25,22 +31,23 @@ describe('Bidirectional sync', () => {
                     {
                         name: 't',
                         columns: ['a', 'b', 'c'],
-                        columnTypes: {a: 'INTEGER', b: 'TEXT', c: 'REAL'},
-                        data: [{a: 1, b: 'x', c: 3.14}]
+                        columnTypes: { a: 'INTEGER', b: 'TEXT', c: 'REAL' },
+                        data: [{ a: 1, b: 'x', c: 3.14 }]
                     }
                 ]
             })
-            engine.code.value = "CREATE TABLE t (a INTEGER, b TEXT, c REAL);\nINSERT INTO t (b, c, a) VALUES ('x', 3.14, 1);"
+            engine.code.value =
+                "CREATE TABLE t (a INTEGER, b TEXT, c REAL);\nINSERT INTO t (b, c, a) VALUES ('x', 3.14, 1);"
             await tick()
 
             const oldCode = engine.code.value
-            engine.updateRow('t', {a: 1, b: 'x', c: 3.14}, {a: 1, b: 'y', c: 3.14})
+            engine.updateRow('t', { a: 1, b: 'x', c: 3.14 }, { a: 1, b: 'y', c: 3.14 })
             expect(engine.code.value).not.toBe(oldCode)
             expect(engine.code.value).toContain("'y'")
         })
 
         it('should handle multi-row INSERT in updateRow', async () => {
-            mockSuccess(fetchSpy, {tables: []})
+            mockSuccess(fetchSpy, { tables: [] })
             const engine = useSqlEngine()
             await tick()
 
@@ -49,10 +56,10 @@ describe('Bidirectional sync', () => {
                     {
                         name: 't',
                         columns: ['x', 'y'],
-                        columnTypes: {x: 'INTEGER', y: 'TEXT'},
+                        columnTypes: { x: 'INTEGER', y: 'TEXT' },
                         data: [
-                            {x: 1, y: 'a'},
-                            {x: 2, y: 'b'}
+                            { x: 1, y: 'a' },
+                            { x: 2, y: 'b' }
                         ]
                     }
                 ]
@@ -61,7 +68,7 @@ describe('Bidirectional sync', () => {
                 "CREATE TABLE t (x INTEGER, y TEXT);\nINSERT INTO t (x, y) VALUES (1, 'a'), (2, 'b'), (3, 'c');"
             await tick()
 
-            engine.updateRow('t', {x: 2, y: 'b'}, {x: 2, y: 'updated'})
+            engine.updateRow('t', { x: 2, y: 'b' }, { x: 2, y: 'updated' })
             expect(engine.code.value).toContain("'updated'")
             expect(engine.code.value).not.toContain("'b'")
             expect(engine.code.value).toContain("'a'")
@@ -69,7 +76,7 @@ describe('Bidirectional sync', () => {
         })
 
         it('should delete row from middle of multi-row INSERT', async () => {
-            mockSuccess(fetchSpy, {tables: []})
+            mockSuccess(fetchSpy, { tables: [] })
             const engine = useSqlEngine()
             await tick()
 
@@ -78,10 +85,10 @@ describe('Bidirectional sync', () => {
                     {
                         name: 't',
                         columns: ['x', 'y'],
-                        columnTypes: {x: 'INTEGER', y: 'TEXT'},
+                        columnTypes: { x: 'INTEGER', y: 'TEXT' },
                         data: [
-                            {x: 1, y: 'a'},
-                            {x: 3, y: 'c'}
+                            { x: 1, y: 'a' },
+                            { x: 3, y: 'c' }
                         ]
                     }
                 ]
@@ -90,14 +97,14 @@ describe('Bidirectional sync', () => {
                 "CREATE TABLE t (x INTEGER, y TEXT);\nINSERT INTO t (x, y) VALUES (1, 'a'), (2, 'b'), (3, 'c');"
             await tick()
 
-            engine.deleteRow({x: 2, y: 'b'}, 't')
+            engine.deleteRow({ x: 2, y: 'b' }, 't')
             expect(engine.code.value).not.toContain("'b'")
             expect(engine.code.value).toContain("'a'")
             expect(engine.code.value).toContain("'c'")
         })
 
         it('should insert new row into existing INSERT', async () => {
-            mockSuccess(fetchSpy, {tables: []})
+            mockSuccess(fetchSpy, { tables: [] })
             const engine = useSqlEngine()
             await tick()
 
@@ -106,23 +113,24 @@ describe('Bidirectional sync', () => {
                     {
                         name: 't',
                         columns: ['x', 'y'],
-                        columnTypes: {x: 'INTEGER', y: 'TEXT'},
-                        data: [{x: 1, y: 'a'}]
+                        columnTypes: { x: 'INTEGER', y: 'TEXT' },
+                        data: [{ x: 1, y: 'a' }]
                     }
                 ]
             })
-            engine.code.value = "CREATE TABLE t (x INTEGER, y TEXT);\nINSERT INTO t (x, y) VALUES (1, 'a');"
+            engine.code.value =
+                "CREATE TABLE t (x INTEGER, y TEXT);\nINSERT INTO t (x, y) VALUES (1, 'a');"
             await tick()
 
             const oldCode = engine.code.value
-            engine.insertRowUI('t', {x: 2, y: 'b'})
+            engine.insertRowUI('t', { x: 2, y: 'b' })
             expect(engine.code.value).not.toBe(oldCode)
             expect(engine.code.value).toContain('2')
             expect(engine.code.value).toContain("'b'")
         })
 
         it('should match numeric values regardless of string representation', async () => {
-            mockSuccess(fetchSpy, {tables: []})
+            mockSuccess(fetchSpy, { tables: [] })
             const engine = useSqlEngine()
             await tick()
 
@@ -131,20 +139,21 @@ describe('Bidirectional sync', () => {
                     {
                         name: 't',
                         columns: ['id', 'val'],
-                        columnTypes: {id: 'INTEGER', val: 'REAL'},
-                        data: [{id: 1, val: 100}]
+                        columnTypes: { id: 'INTEGER', val: 'REAL' },
+                        data: [{ id: 1, val: 100 }]
                     }
                 ]
             })
-            engine.code.value = 'CREATE TABLE t (id INTEGER, val REAL);\nINSERT INTO t (id, val) VALUES (1, 100.0);'
+            engine.code.value =
+                'CREATE TABLE t (id INTEGER, val REAL);\nINSERT INTO t (id, val) VALUES (1, 100.0);'
             await tick()
 
-            engine.updateRow('t', {id: 1, val: 100}, {id: 1, val: 200})
+            engine.updateRow('t', { id: 1, val: 100 }, { id: 1, val: 200 })
             expect(engine.code.value).toContain('200')
         })
 
         it('should handle NULL matching in tuples', async () => {
-            mockSuccess(fetchSpy, {tables: []})
+            mockSuccess(fetchSpy, { tables: [] })
             const engine = useSqlEngine()
             await tick()
 
@@ -153,15 +162,16 @@ describe('Bidirectional sync', () => {
                     {
                         name: 't',
                         columns: ['id', 'name'],
-                        columnTypes: {id: 'INTEGER', name: 'TEXT'},
-                        data: [{id: 1, name: null}]
+                        columnTypes: { id: 'INTEGER', name: 'TEXT' },
+                        data: [{ id: 1, name: null }]
                     }
                 ]
             })
-            engine.code.value = 'CREATE TABLE t (id INTEGER, name TEXT);\nINSERT INTO t (id, name) VALUES (1, NULL);'
+            engine.code.value =
+                'CREATE TABLE t (id INTEGER, name TEXT);\nINSERT INTO t (id, name) VALUES (1, NULL);'
             await tick()
 
-            engine.updateRow('t', {id: 1, name: null}, {id: 1, name: 'Bob'})
+            engine.updateRow('t', { id: 1, name: null }, { id: 1, name: 'Bob' })
             expect(engine.code.value).toContain("'Bob'")
         })
     })
@@ -169,5 +179,4 @@ describe('Bidirectional sync', () => {
     // ============================================================
     //  Complex multi-statement scripts
     // ============================================================
-
 })

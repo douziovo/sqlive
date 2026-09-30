@@ -1,7 +1,7 @@
-import {describe, expect, it, vi} from 'vitest'
-import {ref} from 'vue'
-import type {Tab} from '@/composables/useMultiTabs'
-import {useDatabaseLifecycle} from '@/composables/useDatabaseLifecycle'
+import { describe, expect, it, vi } from 'vitest'
+import { ref } from 'vue'
+import type { Tab } from '@/composables/useMultiTabs'
+import { useDatabaseLifecycle } from '@/composables/useDatabaseLifecycle'
 
 type EngineMode = 'user' | 'reconciling' | 'rollback'
 
@@ -40,23 +40,23 @@ function setup(tabs: Tab[] = [makeTab()], activeIndex = 0) {
         transitionFn
     )
 
-    return {lifecycle, tabsRef, activeTab, mode, executeSqlRemote, setTabDbName}
+    return { lifecycle, tabsRef, activeTab, mode, executeSqlRemote, setTabDbName }
 }
 
 describe('useDatabaseLifecycle', () => {
     describe('shouldReset', () => {
         it('returns true when dbName is empty', () => {
-            const {lifecycle} = setup()
+            const { lifecycle } = setup()
             expect(lifecycle.shouldReset('SELECT 1;', '')).toBe(true)
         })
 
         it('returns true when dbName is not in committedDbNames', () => {
-            const {lifecycle} = setup()
+            const { lifecycle } = setup()
             expect(lifecycle.shouldReset('SELECT 1;', 'newdb')).toBe(true)
         })
 
         it('returns false when dbName is in committedDbNames', () => {
-            const {lifecycle, activeTab} = setup()
+            const { lifecycle, activeTab } = setup()
             activeTab.value.dbName = 'mydb'
             lifecycle.submitNow()
             expect(lifecycle.shouldReset('SELECT 1;', 'mydb')).toBe(false)
@@ -65,7 +65,7 @@ describe('useDatabaseLifecycle', () => {
 
     describe('submitNow', () => {
         it('adds dbName to committedDbNames', () => {
-            const {lifecycle, activeTab} = setup()
+            const { lifecycle, activeTab } = setup()
             activeTab.value.dbName = 'mydb'
 
             lifecycle.submitNow()
@@ -74,7 +74,7 @@ describe('useDatabaseLifecycle', () => {
         })
 
         it('transitions mode to user', () => {
-            const {lifecycle, activeTab, mode} = setup()
+            const { lifecycle, activeTab, mode } = setup()
             activeTab.value.dbName = 'mydb'
 
             lifecycle.submitNow()
@@ -83,7 +83,7 @@ describe('useDatabaseLifecycle', () => {
         })
 
         it('calls executeSqlRemote with true (forceReset)', () => {
-            const {lifecycle, activeTab, executeSqlRemote} = setup()
+            const { lifecycle, activeTab, executeSqlRemote } = setup()
             activeTab.value.dbName = 'mydb'
 
             lifecycle.submitNow()
@@ -92,7 +92,7 @@ describe('useDatabaseLifecycle', () => {
         })
 
         it('does nothing when activeTab has no dbName', () => {
-            const {lifecycle, executeSqlRemote} = setup()
+            const { lifecycle, executeSqlRemote } = setup()
             // dbName defaults to '' in makeTab
             lifecycle.submitNow()
 
@@ -100,7 +100,7 @@ describe('useDatabaseLifecycle', () => {
         })
 
         it('dbList includes submitted db names sorted', () => {
-            const {lifecycle, activeTab} = setup()
+            const { lifecycle, activeTab } = setup()
 
             activeTab.value.dbName = 'zdb'
             lifecycle.submitNow()
@@ -113,7 +113,7 @@ describe('useDatabaseLifecycle', () => {
 
     describe('deleteDb', () => {
         it('removes dbName from committedDbNames', () => {
-            const {lifecycle, activeTab} = setup()
+            const { lifecycle, activeTab } = setup()
             activeTab.value.dbName = 'mydb'
             lifecycle.submitNow()
 
@@ -123,10 +123,10 @@ describe('useDatabaseLifecycle', () => {
         })
 
         it('clears dbName from tabs matching the deleted name', () => {
-            const tab1 = makeTab({id: 'tab_1', dbName: 'shared_db'})
-            const tab2 = makeTab({id: 'tab_2', dbName: 'shared_db'})
-            const tab3 = makeTab({id: 'tab_3', dbName: 'other_db'})
-            const {lifecycle, setTabDbName} = setup([tab1, tab2, tab3])
+            const tab1 = makeTab({ id: 'tab_1', dbName: 'shared_db' })
+            const tab2 = makeTab({ id: 'tab_2', dbName: 'shared_db' })
+            const tab3 = makeTab({ id: 'tab_3', dbName: 'other_db' })
+            const { lifecycle, setTabDbName } = setup([tab1, tab2, tab3])
 
             lifecycle.deleteDb('shared_db')
 
@@ -137,7 +137,7 @@ describe('useDatabaseLifecycle', () => {
         })
 
         it('dbList no longer includes deleted db', () => {
-            const {lifecycle, activeTab} = setup()
+            const { lifecycle, activeTab } = setup()
             activeTab.value.dbName = 'mydb'
             lifecycle.submitNow()
             expect(lifecycle.dbList.value).toContain('mydb')
@@ -149,12 +149,12 @@ describe('useDatabaseLifecycle', () => {
 
     describe('dbList', () => {
         it('is empty initially', () => {
-            const {lifecycle} = setup()
+            const { lifecycle } = setup()
             expect(lifecycle.dbList.value).toEqual([])
         })
 
         it('reflects committed db names', () => {
-            const {lifecycle, activeTab} = setup()
+            const { lifecycle, activeTab } = setup()
             activeTab.value.dbName = 'db1'
             lifecycle.submitNow()
             activeTab.value.dbName = 'db2'
@@ -166,7 +166,7 @@ describe('useDatabaseLifecycle', () => {
 
     describe('committedDbNames', () => {
         it('is empty Set initially', () => {
-            const {lifecycle} = setup()
+            const { lifecycle } = setup()
             expect(lifecycle.committedDbNames.value.size).toBe(0)
         })
     })

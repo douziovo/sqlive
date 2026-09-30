@@ -1,5 +1,5 @@
-import {describe, expect, it} from 'vitest'
-import {isNumericType, toSqlLiteral} from '@/utils/sql'
+import { describe, expect, it } from 'vitest'
+import { isNumericType, toSqlLiteral } from '@/utils/sql'
 
 describe('toSqlLiteral', () => {
     it('returns NULL for null', () => {

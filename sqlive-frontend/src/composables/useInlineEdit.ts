@@ -1,5 +1,5 @@
-import type {CellUpdateEvent, Row} from '../model/DatabaseTypes'
-import {isNumericType} from '../utils/sql'
+import type { CellUpdateEvent, Row } from '../model/DatabaseTypes'
+import { isNumericType } from '../utils/sql'
 
 export function useInlineEdit(
     tableName: string,
@@ -30,8 +30,8 @@ export function useInlineEdit(
             if (newVal === '' || newVal.trim() === '') return
         }
 
-        emit('update-cell', {tableName, oldRow: row, newRow: {...row, [col]: newVal}})
+        emit('update-cell', { tableName, oldRow: row, newRow: { ...row, [col]: newVal } })
     }
 
-    return {autoResizeGhost, handleBlur}
+    return { autoResizeGhost, handleBlur }
 }

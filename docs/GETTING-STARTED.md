@@ -9,10 +9,10 @@ Before you begin, ensure your system has the following installed:
 | Tool | Version | Check Command |
 |---|---|---|
 | Java (JDK) | 21 (Zulu recommended) | `java -version` |
-| Node.js | >= 18.0.0 | `node -v` |
-| npm | >= 9.0.0 | `npm -v` |
+| Node.js | >= 22.0.0 (LTS) | `node -v` |
+| pnpm | 12.6.0 | `pnpm -v` |
 
-The backend uses the Gradle Wrapper (`gradlew` / `gradlew.bat`), so you do not need to install Gradle separately. The wrapper downloads Gradle 9.2.1 automatically on first use.
+The backend uses the Gradle Wrapper (`gradlew` / `gradlew.bat`), so you do not need to install Gradle separately. The wrapper downloads Gradle 9.6.0 automatically on first use.
 
 **Ports:** The backend runs on port `8080` by default. The frontend dev server runs on port `5173`. Ensure these ports are available before starting.
 
@@ -31,7 +31,7 @@ The backend uses the Gradle Wrapper (`gradlew` / `gradlew.bat`), so you do not n
 
    ```bash
    cd sqlive-frontend
-   npm install
+   pnpm install --frozen-lockfile
    ```
 
 3. **Verify the backend builds (optional, but recommended for first-time setup):**
@@ -96,7 +96,7 @@ The backend uses the Gradle Wrapper (`gradlew` / `gradlew.bat`), so you do not n
    Open a second terminal in the `sqlive-frontend` directory:
 
    ```bash
-   npm run dev
+   pnpm run dev
    ```
 
    The dev server starts with hot reload at `http://localhost:5173`. Vite automatically proxies `/api` requests to the backend on port `8080`.
@@ -130,7 +130,7 @@ export JAVA_HOME=/path/to/jdk-21
 **Solution:** Free the port by stopping the process using it, or change the port:
 
 - **Backend:** Add `server.port=8081` to `application.yml` under `spring:` and update `VITE_API_URL`, `VITE_AI_API_URL`, and `VITE_KNOWLEDGE_API_URL` in `sqlive-frontend/.env` to match.
-- **Frontend:** Run `npm run dev -- --port 3000` to use a different port.
+- **Frontend:** Run `pnpm run dev -- --port 3000` to use a different port.
 
 ### AI features not working
 

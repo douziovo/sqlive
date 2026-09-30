@@ -9,6 +9,8 @@ import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.WriteTimeoutHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
@@ -28,30 +30,25 @@ public class OpenAiCompatibleProvider implements AiProvider {
 	private final String providerName;
 	private final Protocol protocol;
 	private final String endpoint;
-	private final Duration connectTimeout;
-	private final Duration readTimeout;
-	private final Duration writeTimeout;
 
-	// Full constructor — package-private for test injection
+	// Full constructor — package-private for test injection.
+	// The test constructor injects a prebuilt WebClient, so it has no timeout
+	// parameters; timeouts only apply in the production constructor below.
 	OpenAiCompatibleProvider(AiProviderConfig config,
 	                         WebClient webClient, Protocol protocol,
-	                         String providerName, String endpoint,
-	                         Duration connectTimeout, Duration readTimeout, Duration writeTimeout) {
+	                         String providerName, String endpoint) {
 		this.config = config;
 		this.webClient = webClient;
 		this.protocol = protocol;
 		this.providerName = providerName;
 		this.endpoint = endpoint;
-		this.connectTimeout = connectTimeout;
-		this.readTimeout = readTimeout;
-		this.writeTimeout = writeTimeout;
 	}
 
 	// Production constructor
 	public OpenAiCompatibleProvider(AiProviderConfig config,
 	                                Protocol protocol, String providerName, String endpoint,
 	                                Duration connectTimeout, Duration readTimeout, Duration writeTimeout) {
-		this(config, buildWebClient(config, connectTimeout, readTimeout, writeTimeout), protocol, providerName, endpoint, connectTimeout, readTimeout, writeTimeout);
+		this(config, buildWebClient(config, connectTimeout, readTimeout, writeTimeout), protocol, providerName, endpoint);
 	}
 
 	public static OpenAiCompatibleProvider create(String name, AiProviderConfig cfg, ObjectMapper mapper,
@@ -91,6 +88,19 @@ public class OpenAiCompatibleProvider implements AiProvider {
 	private static String sanitizeErrorMessage(String message) {
 		if (message == null) return null;
 		return message.replaceAll("(?i)Authorization:\\s*Bearer\\s+\\S+", "Authorization: Bearer [REDACTED]");
+	}
+
+	private String redactErrorMessage(String message, String apiKey) {
+		String sanitized = sanitizeErrorMessage(message);
+		if (message != null && apiKey != null && !apiKey.isBlank()) {
+			// CR-01: Ollama/LMStudio providers don't require an API key — config.getApiKey()
+			// returns null for them. String.replace((CharSequence) null, ...) throws NPE
+			// inside the catch block, masking the original error and propagating to
+			// AiService.executeNonStreaming which returns a generic "AI service error".
+			// Guard with the same null/blank check AiService.streamChat uses.
+			sanitized = sanitized.replace(apiKey, "[REDACTED]");
+		}
+		return sanitized;
 	}
 
 	@Override
@@ -134,19 +144,7 @@ public class OpenAiCompatibleProvider implements AiProvider {
 			return result;
 		} catch (Exception e) {
 			long elapsed = System.currentTimeMillis() - start;
-			String msg = e.getMessage();
-			String sanitized = sanitizeErrorMessage(msg);
-			if (msg != null) {
-				// CR-01: Ollama/LMStudio providers don't require an API key — config.getApiKey()
-				// returns null for them. String.replace((CharSequence) null, ...) throws NPE
-				// inside the catch block, masking the original error and propagating to
-				// AiService.executeNonStreaming which returns a generic "AI service error".
-				// Guard with the same null/blank check AiService.streamChat uses.
-				String apiKey = config.getApiKey();
-				if (apiKey != null && !apiKey.isBlank()) {
-					sanitized = sanitized.replace(apiKey, "[REDACTED]");
-				}
-			}
+			String sanitized = redactErrorMessage(e.getMessage(), config.getApiKey());
 			log.error("{} API call failed: model={}, elapsed={}ms, error={}", providerName, config.getModel(), elapsed, sanitized);
 			throw new AiProviderException("AI service call failed: " + sanitized);
 		}
@@ -162,14 +160,18 @@ public class OpenAiCompatibleProvider implements AiProvider {
 				config.getReasoningEffort(), config.getMaxContextTokens(), true);
 		Map<String, Object> body = protocol.buildRequest(ctx);
 
-		return webClient.post()
+		var response = webClient.post()
 				.uri(endpoint)
 				.contentType(MediaType.APPLICATION_JSON)
 				.accept(MediaType.TEXT_EVENT_STREAM)
 				.bodyValue(body)
-				.retrieve()
-				.bodyToFlux(String.class)
-				.transform(protocol::processStream);
+				.retrieve();
+		// LM Studio uses named SSE events; decoding only String data loses the event type.
+		if (protocol instanceof LmStudioProtocol lmStudio) {
+			return response.bodyToFlux(new ParameterizedTypeReference<ServerSentEvent<String>>() {})
+					.concatMap(lmStudio::parseEvent);
+		}
+		return response.bodyToFlux(String.class).transform(protocol::processStream);
 	}
 
 	private List<Map<String, String>> buildMessages(String systemPrompt,
