@@ -47,7 +47,9 @@ function mountInteractive(tables = mockTables) {
     setCenter.mockClear()
     return mount(ErDiagram, {
         props: { tables, foreignKeys: [] },
-        global: { stubs: { VueFlow: FlowStub, Background: true, MiniMap: true, ErSearchBar: SearchStub } }
+        global: {
+            stubs: { VueFlow: FlowStub, Background: true, MiniMap: true, ErSearchBar: SearchStub }
+        }
     })
 }
 
@@ -194,5 +196,7 @@ describe('ErDiagram', () => {
 })
 
 function flowNodes(wrapper: ReturnType<typeof mountInteractive>) {
-    return wrapper.findComponent(FlowStub).props('nodes') as Array<{ data: { isActiveMatch?: boolean } }>
+    return wrapper.findComponent(FlowStub).props('nodes') as Array<{
+        data: { isActiveMatch?: boolean }
+    }>
 }

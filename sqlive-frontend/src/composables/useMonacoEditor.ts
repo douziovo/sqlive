@@ -1,8 +1,8 @@
-import * as monaco from 'monaco-editor/esm/vs/editor/editor.api'
+import * as monaco from 'monaco-editor/editor/editor.api'
 import { type Ref, watch } from 'vue'
 import { useTimeoutFn } from '@vueuse/core'
-import 'monaco-editor/esm/vs/basic-languages/sql/sql.contribution'
-import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
+import 'monaco-editor/languages/definitions/sql/register'
+import editorWorker from 'monaco-editor/editor/editor.worker?worker'
 import { format } from 'sql-formatter'
 import type { AiActions } from './useAiChat'
 
