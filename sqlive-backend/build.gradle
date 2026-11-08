@@ -56,8 +56,14 @@ tasks.named('test') {
     //noinspection GrUnresolvedAccess
     useJUnitPlatform()
     def cpu = Runtime.runtime.availableProcessors()
+    // Measured on this 24-core/16GB box (~4-5GB RAM typically free, heavy background load):
+    // - more forks (6/8) don't help: memory-bound, 8 forks was clearly slower
+    // - MaxRAMPercentage 50 -> 12 (4 x 12 = 48% worst-case aggregate heap cap, was 200%)
+    // - -XX:TieredStopAtLevel=1 (C1 only): short-lived test JVMs warm up faster;
+    //   interleaved A/B (3 paired runs): 52/28/38s vs 57/42/46s with original flags
     maxParallelForks = Math.max(1, Math.min((cpu / 2) as int, 4))
-    jvmArgs '-Xshare:auto', '-XX:+UseParallelGC', '-XX:MaxRAMPercentage=50.0'
+    jvmArgs '-Xshare:auto', '-XX:+UseParallelGC', '-XX:MaxRAMPercentage=12.0',
+            '-XX:TieredStopAtLevel=1'
     finalizedBy jacocoTestReport
 }
 
