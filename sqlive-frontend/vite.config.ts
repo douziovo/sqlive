@@ -34,6 +34,10 @@ export default defineConfig({
         }
     },
     test: {
+        // Per-file isolation is kept on purpose: both env-reuse options suggested by Vitest
+        // fail this suite — pool: 'vmThreads' breaks SSE tests (TransformStream is undefined
+        // inside the VM context), and isolate: false leaks cross-file DOM/timer state
+        // (TaskItem Teleport remnants crash DocsSearchBox, useAiStreaming/useGraphViewport flake).
         environment: 'jsdom',
         globals: true,
         setupFiles: ['./src/__tests__/setup.ts'],
