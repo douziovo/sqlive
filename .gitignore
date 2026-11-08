@@ -38,3 +38,6 @@ node_modules/
 
 # Local-only agent memory (do not commit)
 docs/agents/MEMORY.md
+
+# Local tool artifacts (reports, traces)
+output/
