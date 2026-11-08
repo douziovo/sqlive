@@ -30,12 +30,8 @@
 
         <!-- Tab: 表数据 -->
         <div v-show="activeTab === 'tables'" class="flex flex-col">
-            <EmptyState v-if="tables.length === 0" icon="&#x1F4ED;" title="暂无数据表" />
-
-            <TableSection
-                v-for="table in tables"
-                :key="table.name"
-                :table="table"
+            <TablesTab
+                :tables="tables"
                 :indexes="indexes"
                 :triggers="triggers"
                 :views="views"
@@ -44,214 +40,38 @@
                 @delete-row="emit('delete-row', $event)"
                 @insert-row="emit('insert-row', $event)"
                 @drop-table="emit('drop-table', $event)"
-                @navigate-tab="handleNavigate"
-            />
-
-            <div class="mt-4 pb-8 flex justify-center">
-                <button
-                    @click="showCreateModal = true"
-                    class="flex items-center gap-2 px-6 py-3 border-2 border-dashed border-border rounded-lg text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/10 transition-colors font-semibold"
-                >
-                    <span>&#x2795;</span> 添加新表格
-                </button>
-            </div>
-            <CreateTableModal
-                :open="showCreateModal"
-                @update:open="showCreateModal = $event"
-                @submit="handleCreateTable"
+                @create-table="emit('create-table', $event)"
+                @navigate="handleNavigate"
             />
         </div>
 
         <!-- Tab: ER 图 -->
         <div v-show="activeTab === 'er'" class="flex-1 min-h-0">
-            <ErDiagram
-                :tables="tables"
-                :foreign-keys="foreignKeys"
-                @navigate-tab="handleNavigate"
-            />
+            <ErDiagram :tables="tables" :foreign-keys="foreignKeys" @navigate-tab="handleNavigate" />
         </div>
 
         <!-- Tab: 索引 -->
         <div v-show="activeTab === 'indexes'">
-            <EmptyState
-                v-if="indexes.length === 0"
-                icon="&#x1F4ED;"
-                title="暂无索引"
-                subtitle="在 SQL 中使用 CREATE INDEX 语句创建索引"
+            <IndexesTab
+                :indexes="indexes"
+                :flash-target="flashTarget"
+                @navigate="handleNavigate"
             />
-
-            <template v-else>
-                <SortFilterToolbar
-                    v-model:filter="idxFilter"
-                    placeholder="搜索索引名称/表名/列名..."
-                    :fields="idxFieldDefs"
-                    :sort-key="idxSortKey"
-                    :sort-dir="idxSortDir"
-                    @toggle-sort="idxToggleSort"
-                    item-label="索引"
-                    :total-count="indexes.length"
-                    :filtered-count="idxFiltered.length"
-                />
-
-                <div
-                    v-if="idxFiltered.length === 0"
-                    class="flex flex-col items-center justify-center h-24 text-muted-foreground/70"
-                >
-                    <p class="text-sm">&#x1F50D; 无匹配的索引</p>
-                </div>
-
-                <div
-                    v-for="idx in idxFiltered"
-                    :key="idx.name"
-                    :id="'index-' + idx.name"
-                    class="mb-4 border border-border rounded-lg bg-card shadow-sm hover:shadow-md hover:border-primary p-4 cursor-pointer"
-                    :class="{ 'animate-flash': flashTarget === 'index-' + idx.name }"
-                    @click="handleNavigate({ tab: 'tables', targetId: 'table-' + idx.tableName })"
-                >
-                    <div class="flex items-center gap-2 mb-2">
-                        <span class="text-lg">&#x1F4C7;</span>
-                        <span class="font-bold text-secondary-foreground">{{ idx.name }}</span>
-                        <span
-                            v-if="idx.unique"
-                            class="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded font-medium"
-                            >唯一</span
-                        >
-                        <span
-                            v-if="idx.columns.length > 1"
-                            class="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium"
-                            >复合</span
-                        >
-                        <span
-                            v-if="idx.sql && /lower\s*\(/i.test(idx.sql)"
-                            class="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-medium"
-                            >表达式</span
-                        >
-                        <span
-                            v-if="idx.sql && /\bWHERE\b/i.test(idx.sql)"
-                            class="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium"
-                            >部分</span
-                        >
-                    </div>
-                    <div class="text-xs text-muted-foreground mb-1">
-                        表：<span class="text-secondary-foreground font-medium">{{
-                            idx.tableName
-                        }}</span>
-                    </div>
-                    <div class="text-xs text-muted-foreground mb-3">
-                        列：<span class="text-secondary-foreground">{{
-                            idx.columns.join(', ')
-                        }}</span>
-                    </div>
-                    <pre
-                        v-if="idx.sql"
-                        class="text-xs font-mono bg-secondary rounded p-3 text-muted-foreground overflow-x-auto whitespace-pre-wrap"
-                        @click.stop
-                        >{{ idx.sql }}</pre>
-                </div>
-            </template>
         </div>
 
         <!-- Tab: 视图 -->
         <div v-show="activeTab === 'views'">
-            <EmptyState
-                v-if="views.length === 0"
-                icon="&#x1F4ED;"
-                title="暂无视图"
-                subtitle="在 SQL 中使用 CREATE VIEW 语句创建视图"
+            <ViewsTab
+                :views="views"
+                :tables="tables"
+                :flash-target="flashTarget"
+                @navigate="handleNavigate"
             />
-
-            <template v-else>
-                <SortFilterToolbar
-                    v-model:filter="viewFilter"
-                    placeholder="搜索视图名称/SQL..."
-                    :fields="viewFieldDefs"
-                    :sort-key="viewSortKey"
-                    :sort-dir="viewSortDir"
-                    @toggle-sort="viewToggleSort"
-                    item-label="视图"
-                    :total-count="views.length"
-                    :filtered-count="viewFiltered.length"
-                />
-
-                <div
-                    v-if="viewFiltered.length === 0"
-                    class="flex flex-col items-center justify-center h-24 text-muted-foreground/70"
-                >
-                    <p class="text-sm">&#x1F50D; 无匹配的视图</p>
-                </div>
-
-                <div
-                    v-for="v in viewFiltered"
-                    :key="v.name"
-                    :id="'view-' + v.name"
-                    class="mb-4 border border-border rounded-lg bg-card shadow-sm hover:shadow-md hover:border-primary p-4 cursor-pointer"
-                    :class="{ 'animate-flash': flashTarget === 'view-' + v.name }"
-                    @click="navigateToViewTable(v)"
-                >
-                    <div class="flex items-center gap-2 mb-2">
-                        <span class="text-lg">&#x1F440;</span>
-                        <span class="font-bold text-secondary-foreground">{{ v.name }}</span>
-                    </div>
-                    <pre
-                        class="text-xs font-mono bg-secondary rounded p-3 text-muted-foreground overflow-x-auto whitespace-pre-wrap"
-                        @click.stop
-                        >{{ v.sql }}</pre>
-                </div>
-            </template>
         </div>
 
         <!-- Tab: 触发器 -->
         <div v-show="activeTab === 'triggers'">
-            <EmptyState
-                v-if="triggers.length === 0"
-                icon="&#x1F4ED;"
-                title="暂无触发器"
-                subtitle="在 SQL 中使用 CREATE TRIGGER 语句创建触发器"
-            />
-
-            <template v-else>
-                <SortFilterToolbar
-                    v-model:filter="trgFilter"
-                    placeholder="搜索触发器名称/表名/SQL..."
-                    :fields="trgFieldDefs"
-                    :sort-key="trgSortKey"
-                    :sort-dir="trgSortDir"
-                    @toggle-sort="trgToggleSort"
-                    item-label="触发器"
-                    :total-count="triggers.length"
-                    :filtered-count="trgFiltered.length"
-                />
-
-                <div
-                    v-if="trgFiltered.length === 0"
-                    class="flex flex-col items-center justify-center h-24 text-muted-foreground/70"
-                >
-                    <p class="text-sm">&#x1F50D; 无匹配的触发器</p>
-                </div>
-
-                <div
-                    v-for="t in trgFiltered"
-                    :key="t.name"
-                    :id="'trigger-' + t.name"
-                    class="mb-4 border border-border rounded-lg bg-card shadow-sm hover:shadow-md hover:border-primary p-4 cursor-pointer"
-                    :class="{ 'animate-flash': flashTarget === 'trigger-' + t.name }"
-                    @click="handleNavigate({ tab: 'tables', targetId: 'table-' + t.tableName })"
-                >
-                    <div class="flex items-center gap-2 mb-2">
-                        <span class="text-lg">&#x26A1;</span>
-                        <span class="font-bold text-secondary-foreground">{{ t.name }}</span>
-                    </div>
-                    <div class="text-xs text-muted-foreground mb-3">
-                        表：<span class="text-secondary-foreground font-medium">{{
-                            t.tableName
-                        }}</span>
-                    </div>
-                    <pre
-                        class="text-xs font-mono bg-secondary rounded p-3 text-muted-foreground overflow-x-auto whitespace-pre-wrap"
-                        @click.stop
-                        >{{ t.sql }}</pre>
-                </div>
-            </template>
+            <TriggersTab :triggers="triggers" :flash-target="flashTarget" @navigate="handleNavigate" />
         </div>
 
         <!-- Tab: 查询结果 -->
@@ -270,24 +90,20 @@
 
 <script setup lang="ts">
 import { computed, inject, nextTick, onUnmounted, provide, ref, watch } from 'vue'
-import { type SortField, useSortFilter } from '../composables/useSortFilter'
 import type {
     CellUpdateEvent,
     CreateTableEvent,
-    IndexInfo,
     RowDeleteEvent,
-    RowInsertEvent,
-    TriggerInfo,
-    ViewInfo
+    RowInsertEvent
 } from '../model/DatabaseTypes'
 import { SQL_CONTEXT_KEY } from '../model/injectionKeys'
-import CreateTableModal from './CreateTableModal.vue'
 import EmptyState from './EmptyState.vue'
 import ErDiagram from './er/ErDiagram.vue'
 import ResultTable from './ResultTable.vue'
-import type { SortFieldDef } from './SortFilterToolbar.vue'
-import SortFilterToolbar from './SortFilterToolbar.vue'
-import TableSection from './TableSection.vue'
+import IndexesTab from './visualizer/IndexesTab.vue'
+import TablesTab from './visualizer/TablesTab.vue'
+import TriggersTab from './visualizer/TriggersTab.vue'
+import ViewsTab from './visualizer/ViewsTab.vue'
 
 const { db } = inject(SQL_CONTEXT_KEY)!
 
@@ -310,7 +126,6 @@ const emit = defineEmits<{
     'insert-row': [event: RowInsertEvent]
 }>()
 
-const showCreateModal = ref(false)
 const activeTab = ref('tables')
 
 const tabs = [
@@ -321,8 +136,6 @@ const tabs = [
     { key: 'triggers', label: '触发器' },
     { key: 'results', label: '查询结果' }
 ]
-
-const handleCreateTable = (payload: CreateTableEvent) => emit('create-table', payload)
 
 // --- Bidirectional navigation ---
 const navigateTarget = ref<string | null>(null)
@@ -368,100 +181,6 @@ watch(activeTab, () => {
     }
 })
 
-// --- Index sort/filter ---
-const strCmp = (a: string, b: string) => a.localeCompare(b)
-const numCmp = (a: number, b: number) => a - b
-
-const idxFieldDefs: SortFieldDef[] = [
-    { key: 'name', label: '名称' },
-    { key: 'table', label: '表名' },
-    { key: 'cols', label: '列数' },
-    { key: 'unique', label: '唯一' }
-]
-
-const idxSortFields: SortField<IndexInfo>[] = [
-    { key: 'name', label: '名称', compare: (a, b) => strCmp(a.name, b.name) },
-    { key: 'table', label: '表名', compare: (a, b) => strCmp(a.tableName, b.tableName) },
-    { key: 'cols', label: '列数', compare: (a, b) => numCmp(a.columns.length, b.columns.length) },
-    {
-        key: 'unique',
-        label: '唯一',
-        compare: (a, b) => (a.unique === b.unique ? 0 : a.unique ? -1 : 1)
-    }
-]
-
-const {
-    sortKey: idxSortKey,
-    sortDir: idxSortDir,
-    filterText: idxFilter,
-    toggleSort: idxToggleSort,
-    result: idxFiltered
-} = useSortFilter(
-    () => indexes.value,
-    idxSortFields,
-    (idx, f) =>
-        idx.name.toLowerCase().includes(f) ||
-        idx.tableName.toLowerCase().includes(f) ||
-        idx.columns.some((c) => c.toLowerCase().includes(f))
-)
-
-// --- View sort/filter ---
-const viewFieldDefs: SortFieldDef[] = [{ key: 'name', label: '名称' }]
-
-const viewSortFields: SortField<ViewInfo>[] = [
-    { key: 'name', label: '名称', compare: (a, b) => strCmp(a.name, b.name) }
-]
-
-const {
-    sortKey: viewSortKey,
-    sortDir: viewSortDir,
-    filterText: viewFilter,
-    toggleSort: viewToggleSort,
-    result: viewFiltered
-} = useSortFilter(
-    () => views.value,
-    viewSortFields,
-    (v, f) => v.name.toLowerCase().includes(f) || (v.sql || '').toLowerCase().includes(f)
-)
-
-// Navigate from view to table (best effort: match table name in SQL)
-function navigateToViewTable(v: ViewInfo) {
-    const sql = v.sql || ''
-    for (const t of tables.value) {
-        if (sql.includes(t.name) || sql.includes(`"${t.name}"`) || sql.includes(`\`${t.name}\``)) {
-            handleNavigate({ tab: 'tables', targetId: `table-${t.name}` })
-            return
-        }
-    }
-    handleNavigate({ tab: 'tables' })
-}
-
-// --- Trigger sort/filter ---
-const trgFieldDefs: SortFieldDef[] = [
-    { key: 'name', label: '名称' },
-    { key: 'table', label: '表名' }
-]
-
-const trgSortFields: SortField<TriggerInfo>[] = [
-    { key: 'name', label: '名称', compare: (a, b) => strCmp(a.name, b.name) },
-    { key: 'table', label: '表名', compare: (a, b) => strCmp(a.tableName, b.tableName) }
-]
-
-const {
-    sortKey: trgSortKey,
-    sortDir: trgSortDir,
-    filterText: trgFilter,
-    toggleSort: trgToggleSort,
-    result: trgFiltered
-} = useSortFilter(
-    () => triggers.value,
-    trgSortFields,
-    (t, f) =>
-        t.name.toLowerCase().includes(f) ||
-        t.tableName.toLowerCase().includes(f) ||
-        (t.sql || '').toLowerCase().includes(f)
-)
-
 onUnmounted(() => {
     if (flashTableTimeout) clearTimeout(flashTableTimeout)
     if (flashTargetTimeout) clearTimeout(flashTargetTimeout)
@@ -485,20 +204,5 @@ onUnmounted(() => {
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: #94a3b8;
-}
-
-@keyframes flash-bg {
-    0% {
-        background-color: rgba(250, 204, 21, 0.6);
-        transform: scale(1.02);
-    }
-    100% {
-        background-color: transparent;
-        transform: scale(1);
-    }
-}
-
-.animate-flash {
-    animation: flash-bg 0.8s ease-out;
 }
 </style>
