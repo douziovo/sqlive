@@ -69,6 +69,7 @@
 import { Background } from '@vue-flow/background'
 import { MiniMap } from '@vue-flow/minimap'
 import { VueFlow } from '@vue-flow/core'
+import type { VueFlowStore } from '@vue-flow/core'
 import {
     computed,
     markRaw,
@@ -95,6 +96,7 @@ import type {
     KnowledgeTopic
 } from '@/composables/useKnowledgeGraph'
 import ErSearchBar from '@/components/er/ErSearchBar.vue'
+import { STORAGE_KEYS } from '@/constants/storageKeys'
 import KnowledgeDetail from './KnowledgeDetail.vue'
 import KnowledgeNode from './KnowledgeNode.vue'
 
@@ -116,8 +118,13 @@ const emit = defineEmits<{
     (e: 'navigate-to-topic', topicId: string): void
 }>()
 
+// `as any`: vue-flow's NodeComponent type does not structurally accept custom
+// SFC node components (known upstream typing friction).
 const nodeTypes = markRaw({ 'knowledge-node': KnowledgeNode }) as any
-const flowRef = ref<any>(null)
+// Template ref on <VueFlow>: exposes the store's methods (fitView/setCenter/...)
+// plus the component's $el (used for layout measurement). shallowRef keeps the
+// store's nested ComputedRefs from being deeply unwrapped by ref()'s UnwrapRef.
+const flowRef = shallowRef<(VueFlowStore & { $el?: HTMLElement }) | null>(null)
 const displayNodes = shallowRef<KnowledgeFlowNode[]>([...props.nodes])
 
 // ── Composables (split: hover/viewport/search/LOD) ───────
@@ -204,7 +211,7 @@ watch(
             }
 
             // 默认：大陆宽虚线 / 前置边近透明 / 节点内部细虚线
-            const prereq = (edge as any).data?.isPrereq
+            const prereq = edge.data?.isPrereq
             return {
                 ...edge,
                 type: 'smoothstep',
@@ -379,7 +386,7 @@ async function onPaneReady(): Promise<void> {
     })
     // restore saved viewport after layout
     try {
-        const saved = localStorage.getItem('kg-viewport')
+        const saved = localStorage.getItem(STORAGE_KEYS.graphViewport)
         if (saved) {
             const vp = JSON.parse(saved) as { x: number; y: number; zoom: number }
             await nextTick()

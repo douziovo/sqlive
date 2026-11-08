@@ -1,4 +1,5 @@
 import { type Ref, ref } from 'vue'
+import { resolveAiApiKey } from '../utils/aiApiKey'
 import { readSseStream } from '../utils/sse'
 
 export function useAiStreaming(apiBase: string, isLoading: Ref<boolean>) {
@@ -13,17 +14,11 @@ export function useAiStreaming(apiBase: string, isLoading: Ref<boolean>) {
             const controller = new AbortController()
             streamAbortController.value = controller
 
-            // wire X-API-Key so the backend ApiKeyFilter authorizes /api/ai/** in
-            // production (AI_API_KEY set). Build-time env var takes precedence; fall back
-            // to localStorage so end users can paste a key without rebuilding. typeof
-            // guard keeps the composable testable in non-browser contexts.
             const headers: Record<string, string> = {
                 'Content-Type': 'application/json',
                 Accept: 'text/event-stream'
             }
-            const apiKey =
-                import.meta.env.VITE_AI_API_KEY ||
-                (typeof localStorage !== 'undefined' ? localStorage.getItem('ai_api_key') : null)
+            const apiKey = resolveAiApiKey()
             if (apiKey) headers['X-API-Key'] = apiKey
 
             const response = await fetch(`${apiBase}${endpoint}`, {

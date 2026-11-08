@@ -6,7 +6,7 @@ import {
     formatFixCode,
     formatGenerateSql,
     formatOptimize
-} from '../utils/aiFormatter'
+} from '../../utils/aiFormatter'
 
 describe('formatErrorAnalysis', () => {
     it('formats full error analysis with all fields', () => {

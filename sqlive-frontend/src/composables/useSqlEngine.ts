@@ -178,7 +178,7 @@ export function useSqlEngine() {
             // 检查是否仍是当前请求
             if (requestId !== currentRequestId) return
 
-            if (!result.success) {
+            if (result.error) {
                 const errMsg = result.error?.message || '未知错误'
                 executionError.value = { line: result.error?.line || 1, message: errMsg }
 

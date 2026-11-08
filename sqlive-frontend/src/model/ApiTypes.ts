@@ -16,8 +16,8 @@ export interface ExecuteRequest {
     reset?: boolean
 }
 
+// Backend SqlResponse: success is implied — `error` is non-null iff execution failed.
 export interface ExecuteResponse {
-    success: boolean
     data?: ExecuteDataPayload
     error?: ExecuteErrorPayload
 }

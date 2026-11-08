@@ -166,7 +166,7 @@
                                     {{ row[col] || ' ' }}
                                 </div>
                                 <textarea
-                                    :value="row[col]"
+                                    :value="String(row[col] ?? '')"
                                     @input="(e) => autoResizeGhost(e)"
                                     @blur="(e) => handleBlur(e, row, col)"
                                     @keydown.enter.prevent="(e) => (e.target as HTMLElement).blur()"
@@ -674,7 +674,7 @@ const { autoResizeGhost, handleBlur } = useInlineEdit(
     emit
 )
 
-const getGhostValue = (col: string) => ghostRow[col] || ''
+const getGhostValue = (col: string): string => String(ghostRow[col] ?? '')
 const onGhostInputDismiss = () => {
     if (ghostFailureVisible.value) {
         ghostFailureVisible.value = false

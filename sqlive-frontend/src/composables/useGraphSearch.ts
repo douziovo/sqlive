@@ -1,3 +1,4 @@
+import type { VueFlowStore } from '@vue-flow/core'
 import type { ComputedRef, Ref } from 'vue'
 import { computed, getCurrentInstance, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { KnowledgeNode } from '@/composables/useKnowledgeGraph'
@@ -23,7 +24,7 @@ import type { KnowledgeNode } from '@/composables/useKnowledgeGraph'
  * can be unit-tested outside a component setup without Vue warnings.
  */
 export function useGraphSearch(
-    flowRef: Ref<any>,
+    flowRef: Ref<VueFlowStore | null>,
     displayNodes: Ref<KnowledgeNode[]>,
     opts?: { onResetView?: () => void }
 ): {

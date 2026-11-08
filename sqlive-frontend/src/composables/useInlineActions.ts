@@ -9,6 +9,7 @@ import {
     formatGenerateSql,
     formatOptimize
 } from '../utils/aiFormatter'
+import { resolveAiApiKey } from '../utils/aiApiKey'
 import type { AiMessage, AiPanelMode } from './useAiChat'
 
 let msgCounter = 0
@@ -38,14 +39,8 @@ export function useInlineActions(state: {
     )
 
     async function apiCall<T>(endpoint: string, body: unknown): Promise<T> {
-        // wire X-API-Key so the backend ApiKeyFilter authorizes /api/ai/** in
-        // production (AI_API_KEY set). Build-time env var takes precedence; fall back
-        // to localStorage so end users can paste a key without rebuilding. typeof
-        // guard keeps the composable testable in non-browser contexts.
         const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-        const apiKey =
-            import.meta.env.VITE_AI_API_KEY ||
-            (typeof localStorage !== 'undefined' ? localStorage.getItem('ai_api_key') : null)
+        const apiKey = resolveAiApiKey()
         if (apiKey) headers['X-API-Key'] = apiKey
 
         const resp = await fetch(`${API_BASE}${endpoint}`, {

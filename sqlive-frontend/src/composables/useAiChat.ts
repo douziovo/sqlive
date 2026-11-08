@@ -2,6 +2,7 @@ import { useLocalStorage, watchDebounced } from '@vueuse/core'
 import { computed, type Ref, ref } from 'vue'
 import { useAiStreaming } from '../composables/useAiStreaming'
 import { API_BASE } from '../config'
+import { STORAGE_KEYS } from '../constants/storageKeys'
 import type { TableSchema } from '../model/DatabaseTypes'
 import type { DisplayHandler } from './useInlineActions'
 
@@ -83,7 +84,7 @@ export function useAiChat(ctx: {
     const messages = ref<AiMessage[]>([])
     const isLoading = ref(false)
     const showPanel = ref(false)
-    const masteredTopicsRaw = useLocalStorage<string[]>('ai-mastered-topics', [])
+    const masteredTopicsRaw = useLocalStorage<string[]>(STORAGE_KEYS.masteredTopics, [])
     const masteredTopics = computed({
         get: () => new Set(masteredTopicsRaw.value),
         set: (v: Set<string>) => {

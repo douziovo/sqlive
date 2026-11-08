@@ -3,6 +3,7 @@ import { useLocalStorage } from '@vueuse/core'
 import { computed, ref, watch } from 'vue'
 import { KNOWLEDGE_API_BASE } from '@/config'
 import { getChapterById } from '@/data/learningChapters'
+import { STORAGE_KEYS } from '@/constants/storageKeys'
 
 export interface KnowledgeTopic {
     id: string
@@ -71,7 +72,7 @@ const sessionStreak = ref(0)
 export const LEVEL_NAMES = ['初级学者', '进阶学者', 'SQL 大师', '数据库传奇']
 
 export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
-    const masteredTopics = useLocalStorage<string[]>('ai-mastered-topics', [])
+    const masteredTopics = useLocalStorage<string[]>(STORAGE_KEYS.masteredTopics, [])
 
     // ── XP/Level/Combo system (-03) ──────────────────────
 

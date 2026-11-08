@@ -134,20 +134,18 @@ export function useErDiagram(
         await nextTick()
     }
 
-    const filteredNodes = computed<any[]>(() => {
+    const filteredNodes = computed<ErTableNode[]>(() => {
         if (!searchQuery.value) return nodes.value
         const q = searchQuery.value.toLowerCase()
-        return (nodes.value as any[]).map((n: any) => {
-            const nodeData = n.data
-            const filtered = nodeData
-                ? !nodeData.tableName.toLowerCase().includes(q) &&
-                  !nodeData.columns.some((c: any) => c.name.toLowerCase().includes(q))
-                : true
-            return {
-                ...n,
-                data: nodeData ? { ...nodeData, isFiltered: filtered } : n.data
+        return nodes.value.map((n) => ({
+            ...n,
+            data: {
+                ...n.data,
+                isFiltered:
+                    !n.data.tableName.toLowerCase().includes(q) &&
+                    !n.data.columns.some((c) => c.name.toLowerCase().includes(q))
             }
-        })
+        }))
     })
 
     rebuild()

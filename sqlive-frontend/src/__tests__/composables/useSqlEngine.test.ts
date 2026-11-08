@@ -9,14 +9,14 @@ import {
     type SqlEngineSetup,
     teardownSqlEngine,
     tick
-} from './test-utils'
+} from '../test-utils'
 
 // spy on extractSqlStatements to verify canonicalStatements consumption.
 // vi.mock is hoisted by vitest; factory wraps the real impl so existing tests
 // (which don't reference extractSqlStatements directly) continue to work, while
 // tests in this file can assert call counts on the spy.
-vi.mock('../utils/sqlStatements', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('../utils/sqlStatements')>()
+vi.mock('../../utils/sqlStatements', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../../utils/sqlStatements')>()
     return {
         ...actual,
         extractSqlStatements: vi.fn(actual.extractSqlStatements)
@@ -43,7 +43,7 @@ describe('useSqlEngine', () => {
             resolveLater = r
         })
         fetchSpy.mockReturnValue(
-            delayed.then(() => jsonOk({ success: true, data: { tables: [] } }))
+            delayed.then(() => jsonOk({ data: { tables: [] } }))
         )
 
         const engine = useSqlEngine()
@@ -521,7 +521,7 @@ describe('useSqlEngine', () => {
     it('consumes backend canonicalStatements for updateRow', async () => {
         // After setupSqlEngine's vi.resetModules(), a fresh dynamic import returns
         // the same sqlStatements module instance that useBidirectionalSync references.
-        const sqlStatementsModule = await import('../utils/sqlStatements')
+        const sqlStatementsModule = await import('../../utils/sqlStatements')
         const extractSpy = sqlStatementsModule.extractSqlStatements as ReturnType<typeof vi.fn>
 
         // Mock response WITH canonicalStatements present — the contract under test.

@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { nanoid } from 'nanoid'
 import { useRedDot } from './useRedDot'
 import { buildPresetTasks } from '@/data/presetTasks'
+import { STORAGE_KEYS } from '@/constants/storageKeys'
 
 // ── TaskSubstep interface ────────────────────────────────────────
 
@@ -43,7 +44,7 @@ type AddTaskInput = Omit<
 // ── useKnowledgeTasks composable ─────────────────────────────────
 
 export function useKnowledgeTasks() {
-    const tasks = useLocalStorage<KnowledgeTask[]>('ai-knowledge-tasks', [])
+    const tasks = useLocalStorage<KnowledgeTask[]>(STORAGE_KEYS.knowledgeTasks, [])
 
     // hoist useRedDot to setup scope so useLocalStorage's storage event
     // listener registers under the component's effect scope and cleans up on
@@ -202,7 +203,7 @@ export function useKnowledgeTasks() {
 
     /**
      * Seeds 8 built-in preset tasks on the very first run.
-     * Idempotent — guarded by `ai-knowledge-tasks-seeded` localStorage flag.
+     * Idempotent — guarded by the `knowledgeTasksSeeded` localStorage flag.
      * Returns true if seeding happened, false if already seeded.
      *
      * Call this once at app startup (e.g., in KnowledgePanel's setup).
@@ -210,7 +211,7 @@ export function useKnowledgeTasks() {
      * will NOT happen because the flag remains 'true'.
      */
     function seedPresetTasksIfFirstRun(): boolean {
-        const flag = localStorage.getItem('ai-knowledge-tasks-seeded')
+        const flag = localStorage.getItem(STORAGE_KEYS.knowledgeTasksSeeded)
         if (flag === 'true') return false
         // Only seed when flag is null (never run before). If flag was set to
         // 'false' explicitly (e.g., user wiped via a future "reset" action),
@@ -219,7 +220,7 @@ export function useKnowledgeTasks() {
 
         const preset = buildPresetTasks()
         tasks.value = [...tasks.value, ...preset]
-        localStorage.setItem('ai-knowledge-tasks-seeded', 'true')
+        localStorage.setItem(STORAGE_KEYS.knowledgeTasksSeeded, 'true')
         return true
     }
 

@@ -29,7 +29,6 @@ const thinkingMessage = computed(() => {
 
 const thinkingTitle = computed(() => {
     if (!props.reasoning) return ''
-    // const clean = stripMarkdown(props.reasoning)
     const clean = props.reasoning
     const lines = clean.split('\n').filter((l) => l.trim())
     if (lines.length === 0) return ''
