@@ -33,108 +33,21 @@
                         </div>
                     </Transition>
                     <!-- Top bar -->
-                    <div class="knowledge-panel__topbar">
-                        <button class="knowledge-panel__back-btn" @click="close">
-                            &larr; 返回编码
-                        </button>
-                        <span class="knowledge-panel__title">知识图谱</span>
-                        <input
-                            v-model="searchQuery"
-                            class="knowledge-panel__search"
-                            type="text"
-                            placeholder="搜索知识点..."
-                        />
-                        <div class="knowledge-panel__tabs">
-                            <button
-                                class="knowledge-panel__tab"
-                                :class="{ 'knowledge-panel__tab--active': activeTab === 'graph' }"
-                                @click="handleTabClick('graph')"
-                            >
-                                图谱
-                            </button>
-                            <button
-                                class="knowledge-panel__tab knowledge-panel__tab--with-dot"
-                                :class="{ 'knowledge-panel__tab--active': activeTab === 'tasks' }"
-                                @click="handleTabClick('tasks')"
-                            >
-                                任务
-                                <RedDotBadge :show="showTaskTabDot" />
-                            </button>
-                            <button
-                                class="knowledge-panel__tab"
-                                :class="{
-                                    'knowledge-panel__tab--active': activeTab === 'chapters'
-                                }"
-                                @click="handleTabClick('chapters')"
-                            >
-                                冒险之证
-                            </button>
-                        </div>
-                        <template v-if="activeTab === 'graph'">
-                            <div class="knowledge-panel__filters">
-                                <button
-                                    class="knowledge-panel__filter-btn"
-                                    :class="{
-                                        'knowledge-panel__filter-btn--active':
-                                            !activeDifficulty && !activeCategory
-                                    }"
-                                    @click="resetAllFilters"
-                                >
-                                    全部
-                                </button>
-                                <button
-                                    v-for="f in difficultyChips"
-                                    :key="f.key"
-                                    class="knowledge-panel__filter-btn"
-                                    :class="{
-                                        'knowledge-panel__filter-btn--active':
-                                            activeDifficulty === f.key
-                                    }"
-                                    @click="
-                                        activeDifficulty = activeDifficulty === f.key ? null : f.key
-                                    "
-                                >
-                                    {{ f.label }}
-                                </button>
-                                <span class="knowledge-panel__filter-sep" />
-                                <button
-                                    v-for="f in categoryChips"
-                                    :key="f.key"
-                                    class="knowledge-panel__filter-btn"
-                                    :class="{
-                                        'knowledge-panel__filter-btn--active':
-                                            activeCategory === f.key
-                                    }"
-                                    @click="
-                                        activeCategory = activeCategory === f.key ? null : f.key
-                                    "
-                                >
-                                    {{ f.label }}
-                                </button>
-                            </div>
-                        </template>
-                        <div class="knowledge-panel__level-bar">
-                            <span class="knowledge-panel__level-badge">{{
-                                kgProgress.levelName
-                            }}</span>
-                            <div class="knowledge-panel__xp-bar-track">
-                                <div
-                                    class="knowledge-panel__xp-bar-fill"
-                                    :style="{ width: xpBarPercent + '%' }"
-                                />
-                            </div>
-                            <span class="knowledge-panel__xp-text"
-                                >{{ kgProgress.xp }}/{{ kgProgress.nextLevelXp }}</span
-                            >
-                            <span class="knowledge-panel__progress-text"
-                                >{{ kgProgress.count }}/{{ kgProgress.total }}</span
-                            >
-                            <span v-if="kgProgress.streak > 0" class="knowledge-panel__streak">
-                                <span class="knowledge-panel__streak-fire">🔥</span>
-                                {{ kgProgress.streak }}
-                            </span>
-                        </div>
-                    </div>
+                    <KnowledgePanelTopbar
+                        :active-tab="activeTab"
+                        :search-query="searchQuery"
+                        :active-difficulty="activeDifficulty"
+                        :active-category="activeCategory"
+                        :show-task-tab-dot="showTaskTabDot"
+                        :progress="kgProgress"
+                        :xp-bar-percent="xpBarPercent"
+                        @close="close"
+                        @update:search-query="searchQuery = $event"
+                        @tab-click="handleTabClick"
+                        @toggle-difficulty="toggleDifficulty"
+                        @toggle-category="toggleCategory"
+                        @reset-filters="resetAllFilters"
+                    />
 
                     <!-- Body: full-width graph (graph tab) -->
                     <div v-if="activeTab === 'graph'" class="knowledge-panel__body">
@@ -174,23 +87,11 @@
                         v-if="activeTab === 'chapters'"
                         class="knowledge-panel__body knowledge-panel__body--chapters"
                     >
-                        <div class="chapters__header">
-                            <h2 class="chapters__title">冒险之证</h2>
-                            <span class="chapters__level"
-                                >当前等级：{{ kg.progress.value.levelName }}</span
-                            >
-                        </div>
-                        <div class="chapters__list">
-                            <ChapterCard
-                                v-for="chapter in CHAPTERS"
-                                :key="chapter.id"
-                                :chapter="chapter"
-                                :progress="kg.getChapterProgress(chapter.id)"
-                                :unlocked="kg.xpData.value.level >= chapter.rankRequired"
-                                :current-level="kg.xpData.value.level"
-                                @open-chapter="handleOpenChapter"
-                            />
-                        </div>
+                        <KnowledgePanelChapters
+                            :chapters="chapterCards"
+                            :level-name="kg.progress.value.levelName"
+                            @open-chapter="handleOpenChapter"
+                        />
                     </div>
                 </div>
             </div>
@@ -199,17 +100,17 @@
 </template>
 
 <script setup lang="ts">
-import type { Edge } from '@vue-flow/core'
 import { computed, inject, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import type { KnowledgeNode } from '@/composables/useKnowledgeGraph'
 import { useKnowledgeGraph } from '@/composables/useKnowledgeGraph'
 import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
 import AchievementToast from './AchievementToast.vue'
 import ConfettiOverlay from './ConfettiOverlay.vue'
 import KnowledgeGraph from './KnowledgeGraph.vue'
 import TaskJournalPanel from './TaskJournalPanel.vue'
-import ChapterCard from './ChapterCard.vue'
-import RedDotBadge from './RedDotBadge.vue'
+import KnowledgePanelTopbar from './panel/KnowledgePanelTopbar.vue'
+import KnowledgePanelChapters from './panel/KnowledgePanelChapters.vue'
+import { useKnowledgePanelFilters } from './panel/useKnowledgePanelFilters'
+import { usePanelCelebration } from './panel/usePanelCelebration'
 import { CHAPTERS, getChapterById } from '@/data/learningChapters'
 import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
 import { useRedDot } from '@/composables/useRedDot'
@@ -225,31 +126,12 @@ const emit = defineEmits<{
 
 const sqlContext = inject(SQL_CONTEXT_KEY)!
 const searchQuery = ref('')
-const activeDifficulty = ref<string | null>(null)
-const activeCategory = ref<string | null>(null)
 const activeTab = ref<'graph' | 'tasks' | 'chapters'>('graph')
 
 // chapter → multi-category filter wiring. Non-null array triggers
 // TaskJournalPanel union-list mode (displays tasks across all listed
 // categories). Cleared on manual category tab click (handleTabClick).
 const chapterCategoryFilter = ref<string[] | null>(null)
-
-interface FilterOption {
-    key: string
-    label: string
-}
-
-const difficultyChips: FilterOption[] = [
-    { key: '1', label: '入门 L1' },
-    { key: '2', label: '进阶 L2' },
-    { key: '3', label: '高级 L3' }
-]
-
-const categoryChips: FilterOption[] = [
-    { key: 'query', label: '查询类' },
-    { key: 'dml', label: '增删改' },
-    { key: 'advanced', label: '高级特性' }
-]
 
 const kg = useKnowledgeGraph({
     sqlSource: () => {
@@ -273,6 +155,42 @@ const kgSelectedNodeData = computed(() => kg.selectedNodeData.value)
 const kgProgress = computed(() => kg.progress.value)
 const kgMasteredTopics = computed(() => kg.masteredTopics.value)
 
+const {
+    activeDifficulty,
+    activeCategory,
+    filteredNodes,
+    filteredEdges,
+    toggleDifficulty,
+    toggleCategory,
+    resetAllFilters
+} = useKnowledgePanelFilters(kgNodes, kgEdges)
+
+const {
+    showToast,
+    toastStreak,
+    toastXp,
+    toastLabel,
+    toastHighDiff,
+    showTaskToast,
+    taskToastLabel,
+    taskToastXp,
+    showConfetti,
+    confettiKey,
+    showLevelUpToast,
+    showAchievementToast,
+    showTaskToastFor,
+    celebrateLevelUp
+} = usePanelCelebration()
+
+const chapterCards = computed(() =>
+    CHAPTERS.map((chapter) => ({
+        chapter,
+        progress: kg.getChapterProgress(chapter.id),
+        unlocked: kg.xpData.value.level >= chapter.rankRequired,
+        currentLevel: kg.xpData.value.level
+    }))
+)
+
 const xpBarPercent = computed(() => {
     const p = kgProgress.value
     if (!p || p.nextLevelXp === 0) return 0
@@ -281,64 +199,9 @@ const xpBarPercent = computed(() => {
     return Math.min(100, Math.round((xpInLevel / p.xpForNext) * 100))
 })
 
-const filteredNodes = computed<KnowledgeNode[]>(() => {
-    return kgNodes.value.map((node) => {
-        let dimmed = false
-        if (activeDifficulty.value) {
-            const d = parseInt(activeDifficulty.value, 10)
-            if (node.data.difficulty !== d) dimmed = true
-        }
-        if (activeCategory.value) {
-            if (node.data.category !== activeCategory.value) dimmed = true
-        }
-        return {
-            ...node,
-            style: { ...node.style, opacity: dimmed ? 0.12 : 1 }
-        }
-    })
-})
-
-const filteredEdges = computed<Edge[]>(() => {
-    if (!activeDifficulty.value && !activeCategory.value) return kgEdges.value
-    const visibleIds = new Set(
-        kgNodes.value
-            .filter((n) => {
-                if (
-                    activeDifficulty.value &&
-                    n.data.difficulty !== parseInt(activeDifficulty.value, 10)
-                )
-                    return false
-                if (activeCategory.value && n.data.category !== activeCategory.value) return false
-                return true
-            })
-            .map((n) => n.id)
-    )
-    return kgEdges.value.filter((e) => visibleIds.has(e.source) && visibleIds.has(e.target))
-})
-
 function close(): void {
     emit('close')
 }
-
-function resetAllFilters(): void {
-    activeDifficulty.value = null
-    activeCategory.value = null
-}
-
-// ── Gamification state (-03) ───────────────────────────
-const showToast = ref(false)
-const toastStreak = ref(0)
-const toastXp = ref(0)
-const toastLabel = ref('')
-const toastHighDiff = ref(false)
-const showConfetti = ref(false)
-const confettiKey = ref(0)
-const showLevelUpToast = ref(false)
-
-// ── Task gamification state (-03) ──────────────────────
-const showTaskToast = ref(false)
-const taskToastLabel = ref('')
-const taskToastXp = ref(0)
 
 function onToggleMastered(topicId: string): void {
     const result = kg.toggleMastered(topicId)
@@ -352,30 +215,9 @@ function onToggleMastered(topicId: string): void {
 
         showAchievementToast(result, label, isHighDiff)
         if (result.leveledUp) {
-            showConfetti.value = true
-            confettiKey.value++
-            showLevelUpToast.value = true
-            setTimeout(() => {
-                showConfetti.value = false
-                showLevelUpToast.value = false
-            }, 5000)
+            celebrateLevelUp()
         }
     }
-}
-
-function showAchievementToast(
-    result: { xpGained: number; leveledUp: boolean; streak: number },
-    topicLabel: string,
-    isHighDiff: boolean
-): void {
-    toastStreak.value = result.streak
-    toastXp.value = result.xpGained
-    toastLabel.value = topicLabel
-    toastHighDiff.value = isHighDiff
-    showToast.value = true
-    setTimeout(() => {
-        showToast.value = false
-    }, 2500)
 }
 
 function handleTaskComplete(topicId: string): void {
@@ -390,21 +232,10 @@ function handleTaskComplete(topicId: string): void {
 
     graphRef.value?.triggerSparkBurst?.(topicId)
 
-    taskToastLabel.value = topic.label
-    taskToastXp.value = xpGained
-    showTaskToast.value = true
-    setTimeout(() => {
-        showTaskToast.value = false
-    }, 2500)
+    showTaskToastFor(topic.label, xpGained)
 
     if (result.leveledUp) {
-        showConfetti.value = true
-        confettiKey.value++
-        showLevelUpToast.value = true
-        setTimeout(() => {
-            showConfetti.value = false
-            showLevelUpToast.value = false
-        }, 5000)
+        celebrateLevelUp()
     }
 }
 
@@ -509,84 +340,6 @@ defineExpose({
     clip-path: circle(150% at calc(100% - 52px) calc(100% - 52px));
 }
 
-.knowledge-panel__topbar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 20px;
-    border-bottom: 1px solid var(--border);
-    background: white;
-    flex-shrink: 0;
-    flex-wrap: wrap;
-}
-
-.knowledge-panel__back-btn {
-    font-size: 13px;
-    color: var(--muted-foreground);
-    border: none;
-    background: none;
-    cursor: pointer;
-}
-.knowledge-panel__back-btn:hover {
-    color: var(--foreground);
-}
-
-.knowledge-panel__title {
-    font-size: 16px;
-    font-weight: 700;
-}
-
-.knowledge-panel__search {
-    flex: 1;
-    max-width: 200px;
-    padding: 5px 10px;
-    font-size: 12px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--muted);
-    color: var(--foreground);
-    outline: none;
-}
-.knowledge-panel__search:focus {
-    border-color: var(--primary);
-}
-.knowledge-panel__search::placeholder {
-    color: var(--muted-foreground);
-}
-
-/* ── Tab bar (-03) ──────────────────── */
-
-.knowledge-panel__tabs {
-    display: flex;
-    gap: 0;
-    margin-right: 12px;
-}
-
-.knowledge-panel__tab {
-    padding: 6px 16px;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--muted-foreground);
-    border: none;
-    background: none;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: all 0.15s;
-}
-
-.knowledge-panel__tab--with-dot {
-    position: relative;
-}
-
-.knowledge-panel__tab--active {
-    color: var(--foreground);
-    border-bottom-color: var(--primary);
-}
-
-.knowledge-panel__tab:hover:not(.knowledge-panel__tab--active) {
-    color: var(--foreground);
-}
-
 .knowledge-panel__body--tasks {
     padding: 16px 20px;
     overflow-y: auto;
@@ -595,132 +348,6 @@ defineExpose({
 .knowledge-panel__body--chapters {
     padding: 20px;
     overflow-y: auto;
-}
-
-.chapters__header {
-    margin-bottom: 20px;
-}
-
-.chapters__title {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--foreground);
-    margin: 0;
-}
-
-.chapters__level {
-    font-size: 13px;
-    color: var(--muted-foreground);
-    margin-top: 4px;
-    display: block;
-}
-
-.knowledge-panel__filters {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-}
-
-.knowledge-panel__filter-sep {
-    width: 1px;
-    background: var(--border);
-    margin: 0 4px;
-}
-
-.knowledge-panel__filter-btn {
-    font-size: 12px;
-    padding: 3px 10px;
-    border-radius: 999px;
-    border: 1px solid var(--border);
-    background: var(--muted);
-    color: var(--muted-foreground);
-    cursor: pointer;
-    transition:
-        background 0.15s,
-        color 0.15s,
-        border-color 0.15s;
-}
-.knowledge-panel__filter-btn:hover {
-    background: var(--secondary);
-    color: var(--foreground);
-}
-.knowledge-panel__filter-btn--active {
-    background: var(--primary);
-    color: white;
-    border-color: var(--primary);
-}
-
-.knowledge-panel__level-bar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-left: auto;
-}
-
-.knowledge-panel__level-badge {
-    font-size: 11px;
-    font-weight: 700;
-    padding: 2px 10px;
-    border-radius: 999px;
-    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
-    color: white;
-    white-space: nowrap;
-}
-
-.knowledge-panel__xp-bar-track {
-    width: 80px;
-    height: 6px;
-    background: #e2e8f0;
-    border-radius: 999px;
-    overflow: hidden;
-}
-
-.knowledge-panel__xp-bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #10b981, #16a34a);
-    border-radius: 999px;
-    transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.knowledge-panel__streak {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 12px;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 999px;
-    background: #fef2f2;
-    color: #991b1b;
-    white-space: nowrap;
-}
-
-.knowledge-panel__streak-fire {
-    font-size: 14px;
-    animation: fireFlicker 0.3s ease-in-out infinite alternate;
-}
-
-@keyframes fireFlicker {
-    from {
-        transform: scale(1) rotate(-2deg);
-    }
-    to {
-        transform: scale(1.15) rotate(2deg);
-    }
-}
-
-.knowledge-panel__xp-text {
-    font-size: 11px;
-    color: var(--muted-foreground);
-    white-space: nowrap;
-    min-width: 60px;
-    text-align: right;
-}
-
-.knowledge-panel__progress-text {
-    font-size: 12px;
-    color: var(--muted-foreground);
-    white-space: nowrap;
 }
 
 .knowledge-panel__body {
