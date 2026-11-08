@@ -58,10 +58,7 @@ public class AiController {
 	@PostMapping("/analyze-error")
 	@Operation(summary = "分析错误", description = "解释 SQL 错误原因并给出修复建议")
 	public AiChatResponse analyzeError(@Valid @RequestBody AiChatRequest request) {
-		String reqId = UUID.randomUUID().toString().substring(0, 8);
-		request.setMode("analyze-error");
-		log.info("[{}] Analyze-error request", reqId);
-		return logAndReturn(reqId, request.getMode(), aiService.executeNonStreaming(request));
+		return executeMode(request, "analyze-error");
 	}
 
 	/**
@@ -70,10 +67,7 @@ public class AiController {
 	@PostMapping("/fix-code")
 	@Operation(summary = "修复代码", description = "针对 SQL 错误生成修复后的代码")
 	public AiChatResponse fixCode(@Valid @RequestBody AiChatRequest request) {
-		String reqId = UUID.randomUUID().toString().substring(0, 8);
-		request.setMode("fix-code");
-		log.info("[{}] Fix-code request", reqId);
-		return logAndReturn(reqId, request.getMode(), aiService.executeNonStreaming(request));
+		return executeMode(request, "fix-code");
 	}
 
 	/**
@@ -82,10 +76,7 @@ public class AiController {
 	@PostMapping("/explain")
 	@Operation(summary = "解释代码", description = "解释选中 SQL 的语义")
 	public AiChatResponse explain(@Valid @RequestBody AiChatRequest request) {
-		String reqId = UUID.randomUUID().toString().substring(0, 8);
-		request.setMode("explain");
-		log.info("[{}] Explain request", reqId);
-		return logAndReturn(reqId, request.getMode(), aiService.executeNonStreaming(request));
+		return executeMode(request, "explain");
 	}
 
 	/**
@@ -94,10 +85,14 @@ public class AiController {
 	@PostMapping("/optimize")
 	@Operation(summary = "优化 SQL", description = "对选中 SQL 提出优化建议")
 	public AiChatResponse optimize(@Valid @RequestBody AiChatRequest request) {
+		return executeMode(request, "optimize");
+	}
+
+	private AiChatResponse executeMode(AiChatRequest request, String mode) {
 		String reqId = UUID.randomUUID().toString().substring(0, 8);
-		request.setMode("optimize");
-		log.info("[{}] Optimize request", reqId);
-		return logAndReturn(reqId, request.getMode(), aiService.executeNonStreaming(request));
+		request.setMode(mode);
+		log.info("[{}] {} request", reqId, mode);
+		return logAndReturn(reqId, mode, aiService.executeNonStreaming(request));
 	}
 
 	private AiChatResponse logAndReturn(String reqId, String mode, AiChatResponse resp) {

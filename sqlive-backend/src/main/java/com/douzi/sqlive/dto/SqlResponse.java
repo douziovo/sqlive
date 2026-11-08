@@ -6,14 +6,14 @@ import java.util.List;
 
 @Data
 public class SqlResponse {
-	private boolean success;
+//	private boolean success;
 	private boolean sessionRecreated;
 	private DataPayload data;
 	private ErrorPayload error;
 
 	public static SqlResponse error(String message, int line) {
 		SqlResponse response = new SqlResponse();
-		response.setSuccess(false);
+//		response.setSuccess(false);
 		response.setError(new ErrorPayload(message, line));
 		return response;
 	}

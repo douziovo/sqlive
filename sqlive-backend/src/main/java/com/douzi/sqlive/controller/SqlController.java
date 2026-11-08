@@ -50,7 +50,8 @@ public class SqlController {
 		}
 
 		long elapsed = System.currentTimeMillis() - start;
-		if (response.isSuccess()) {
+		// success is derived: a response is successful iff it carries no error payload
+		if (response.getError() == null) {
 			var data = response.getData();
 			int tableCount = data != null && data.getTables() != null ? data.getTables().size() : 0;
 			int stmtCount = data != null && data.getMetadata() != null ? data.getMetadata().getStatementCount() : 0;

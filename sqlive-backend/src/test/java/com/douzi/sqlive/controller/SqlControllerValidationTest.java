@@ -45,7 +45,7 @@ class SqlControllerValidationTest {
 
 		ResponseEntity<SqlResponse> resp = post(req);
 		assertNotNull(resp.getBody());
-		assertFalse(resp.getBody().isSuccess());
+		assertFalse(resp.getBody().getError() == null);
 		assertTrue(resp.getBody().getError().getMessage().contains("SQL cannot be empty"));
 	}
 
@@ -56,7 +56,7 @@ class SqlControllerValidationTest {
 
 		ResponseEntity<SqlResponse> resp = post(req);
 		assertNotNull(resp.getBody());
-		assertFalse(resp.getBody().isSuccess());
+		assertFalse(resp.getBody().getError() == null);
 		assertTrue(resp.getBody().getError().getMessage().contains("SQL cannot be empty"));
 	}
 
@@ -67,7 +67,7 @@ class SqlControllerValidationTest {
 
 		ResponseEntity<SqlResponse> resp = post(req);
 		assertNotNull(resp.getBody());
-		assertFalse(resp.getBody().isSuccess());
+		assertFalse(resp.getBody().getError() == null);
 		assertTrue(resp.getBody().getError().getMessage().contains("SQL cannot be empty"));
 	}
 
@@ -80,7 +80,7 @@ class SqlControllerValidationTest {
 
 		ResponseEntity<SqlResponse> resp = post(req);
 		assertNotNull(resp.getBody());
-		assertTrue(resp.getBody().isSuccess());
+		assertTrue(resp.getBody().getError() == null);
 	}
 
 	@Test
@@ -91,7 +91,7 @@ class SqlControllerValidationTest {
 
 		ResponseEntity<SqlResponse> resp = post(req);
 		assertNotNull(resp.getBody());
-		assertFalse(resp.getBody().isSuccess());
+		assertFalse(resp.getBody().getError() == null);
 		assertTrue(resp.getBody().getError().getMessage().contains("dbName must be 1-64"));
 	}
 }

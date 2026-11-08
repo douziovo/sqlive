@@ -70,7 +70,10 @@ public class SqlExecutionService {
 		var poolEntry = poolManager.getOrCreateJdbcTemplate(dbName, clientIp);
 		JdbcTemplate jdbc = poolEntry.jdbcTemplate();
 
-		// Serialize whole scripts, including reset and metadata, within one database.
+		// Serialize whole scripts, including reset and metadata, within one database (c00deef).
+		// Each per-db pool holds a single connection, so metadata reads must stay inside the
+		// lock too — outside it they could interleave with another request's writes and see
+		// torn state.
 		synchronized (jdbc) {
 			// If the database was just recreated after eviction and the client didn't
 			// request a reset, flag session recreation so the frontend can show a recovery toast.
@@ -82,75 +85,10 @@ public class SqlExecutionService {
 				if (reset || poolEntry.isNew()) {
 					clearDatabase(jdbc);
 				}
-				List<SqlParser.SqlStatement> statements = sqlParser.parseStatementsPrecise(sqlScript);
-				List<TableSchema> allQueryResults = new ArrayList<>();
-				int statementCount = 0;
-				long startTime = System.nanoTime();
-
-				for (SqlParser.SqlStatement s : statements) {
-					if (s.sql().trim().isEmpty()) continue;
-
-					String blockedReason = isBlockedStatement(s.sql());
-					if (blockedReason != null) {
-						return SqlResponse.error(blockedReason, s.startLine());
-					}
-
-					try {
-						jdbc.execute((Statement stmt) -> {
-							// / WARN-01: @SuppressWarnings narrowed from method-level to the actual SQL sink
-							// (local variable declaration — Java annotations can only target declarations, not statements).
-							@SuppressWarnings("SqlSourceToSinkFlow")
-							boolean hasResultSet = stmt.execute(s.sql());
-							if (hasResultSet) {
-								try (ResultSet rs = stmt.getResultSet()) {
-									String resultName = allQueryResults.isEmpty()
-											? "查询结果"
-											: "查询结果 " + (allQueryResults.size() + 1);
-									allQueryResults.add(metadataExtractor.extractTableSchema(rs, resultName));
-								}
-							}
-							return null;
-						});
-						statementCount++;
-					} catch (Exception e) {
-						log.warn("SQL execution failed at line {}: {}", s.startLine(), e.getMessage());
-						String rawMsg = e.getMessage() != null ? e.getMessage() : "unknown error";
-						String cleanMsg = rawMsg.replace("[SQLITE_ERROR] SQL error or missing database ", "");
-						return SqlResponse.error(cleanMsg,
-								sqlParser.locateErrorLine(s.sql(), s.startLine(), rawMsg));
-					}
+				SqlResponse scriptError = runScript(sqlScript, jdbc, response);
+				if (scriptError != null) {
+					return scriptError;
 				}
-
-				long durationMs = (System.nanoTime() - startTime) / 1_000_000;
-
-				SqlResponse.DataPayload payload = new SqlResponse.DataPayload();
-				payload.setTables(metadataExtractor.extractAllTables(jdbc));
-				payload.setQueryResults(allQueryResults);
-				payload.setIndexes(metadataExtractor.extractIndexes(jdbc));
-				payload.setViews(metadataExtractor.extractViews(jdbc));
-				payload.setTriggers(metadataExtractor.extractTriggers(jdbc));
-				payload.setForeignKeys(metadataExtractor.extractForeignKeys(jdbc));
-
-				// populate canonicalStatements with 1:1 mapping from parsed statements.
-				// Char offsets match JS String.prototype.substring (UTF-16 code unit indices).
-				List<SqlResponse.CanonicalStatement> canonical = statements.stream()
-						.map(s -> {
-							SqlResponse.CanonicalStatement cs = new SqlResponse.CanonicalStatement();
-							cs.setStart(s.startPos());
-							cs.setEnd(s.endPos());
-							return cs;
-						})
-						.toList();
-				payload.setCanonicalStatements(canonical);
-
-				ExecutionMetadata meta = new ExecutionMetadata();
-				meta.setDurationMs(durationMs);
-				meta.setStatementCount(statementCount);
-				payload.setMetadata(meta);
-
-				response.setSuccess(true);
-				response.setData(payload);
-
 			} catch (Exception e) {
 				log.error("Failed to execute SQL script", e);
 				return SqlResponse.error("Internal server error", 0);
@@ -160,6 +98,92 @@ public class SqlExecutionService {
 
 			return response;
 		}
+	}
+
+	/**
+	 * Runs every parsed statement, then fills {@code response} with the post-execution
+	 * metadata snapshot. Returns null on success, or a fresh error response (without
+	 * metadata or the sessionRecreated flag) when a statement is blocked or fails.
+	 */
+	private SqlResponse runScript(String sqlScript, JdbcTemplate jdbc, SqlResponse response) {
+		List<SqlParser.SqlStatement> statements = sqlParser.parseStatementsPrecise(sqlScript);
+		List<TableSchema> allQueryResults = new ArrayList<>();
+		int statementCount = 0;
+		long startTime = System.nanoTime();
+
+		for (SqlParser.SqlStatement s : statements) {
+			if (s.sql().trim().isEmpty()) continue;
+
+			String blockedReason = isBlockedStatement(s.sql());
+			if (blockedReason != null) {
+				return SqlResponse.error(blockedReason, s.startLine());
+			}
+
+			try {
+				executeStatement(jdbc, s, allQueryResults);
+				statementCount++;
+			} catch (Exception e) {
+				log.warn("SQL execution failed at line {}: {}", s.startLine(), e.getMessage());
+				String rawMsg = e.getMessage() != null ? e.getMessage() : "unknown error";
+				String cleanMsg = rawMsg.replace("[SQLITE_ERROR] SQL error or missing database ", "");
+				return SqlResponse.error(cleanMsg,
+						sqlParser.locateErrorLine(s.sql(), s.startLine(), rawMsg));
+			}
+		}
+
+		long durationMs = (System.nanoTime() - startTime) / 1_000_000;
+		response.setData(buildPayload(jdbc, statements, allQueryResults, statementCount, durationMs));
+		return null;
+	}
+
+	private void executeStatement(JdbcTemplate jdbc, SqlParser.SqlStatement s, List<TableSchema> allQueryResults) {
+		jdbc.execute((Statement stmt) -> {
+			// / WARN-01: @SuppressWarnings narrowed from method-level to the actual SQL sink
+			// (local variable declaration — Java annotations can only target declarations, not statements).
+			@SuppressWarnings("SqlSourceToSinkFlow")
+			boolean hasResultSet = stmt.execute(s.sql());
+			if (hasResultSet) {
+				try (ResultSet rs = stmt.getResultSet()) {
+					String resultName = allQueryResults.isEmpty()
+							? "查询结果"
+							: "查询结果 " + (allQueryResults.size() + 1);
+					allQueryResults.add(metadataExtractor.extractTableSchema(rs, resultName));
+				}
+			}
+			return null;
+		});
+	}
+
+	private SqlResponse.DataPayload buildPayload(JdbcTemplate jdbc,
+	                                             List<SqlParser.SqlStatement> statements,
+	                                             List<TableSchema> allQueryResults,
+	                                             int statementCount,
+	                                             long durationMs) {
+		SqlResponse.DataPayload payload = new SqlResponse.DataPayload();
+		payload.setTables(metadataExtractor.extractAllTables(jdbc));
+		payload.setQueryResults(allQueryResults);
+		payload.setIndexes(metadataExtractor.extractIndexes(jdbc));
+		payload.setViews(metadataExtractor.extractViews(jdbc));
+		payload.setTriggers(metadataExtractor.extractTriggers(jdbc));
+		payload.setForeignKeys(metadataExtractor.extractForeignKeys(jdbc));
+
+		// populate canonicalStatements with 1:1 mapping from parsed statements.
+		// Char offsets match JS String.prototype.substring (UTF-16 code unit indices).
+		List<SqlResponse.CanonicalStatement> canonical = statements.stream()
+				.map(s -> {
+					SqlResponse.CanonicalStatement cs = new SqlResponse.CanonicalStatement();
+					cs.setStart(s.startPos());
+					cs.setEnd(s.endPos());
+					return cs;
+				})
+				.toList();
+		payload.setCanonicalStatements(canonical);
+
+		ExecutionMetadata meta = new ExecutionMetadata();
+		meta.setDurationMs(durationMs);
+		meta.setStatementCount(statementCount);
+		payload.setMetadata(meta);
+		return payload;
 	}
 
 	private String isBlockedStatement(String sql) {

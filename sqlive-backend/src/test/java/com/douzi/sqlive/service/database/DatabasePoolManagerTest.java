@@ -173,6 +173,20 @@ class DatabasePoolManagerTest {
 	}
 
 	@Test
+	void shouldAllowLocalhostShortFormsToBypassPerIpLimit() {
+		var mgr = createManager();
+		// "localhost" name and IPv6 short form "::1" must bypass the per-IP limit
+		// just like "127.0.0.1" / "0:0:0:0:0:0:0:1" (both exceed MAX_PER_IP = 50).
+		for (int i = 0; i < 55; i++) {
+			assertNotNull(mgr.getOrCreateJdbcTemplate("lhname_db_" + i, "localhost").jdbcTemplate());
+		}
+		for (int i = 0; i < 55; i++) {
+			assertNotNull(mgr.getOrCreateJdbcTemplate("lh6_db_" + i, "::1").jdbcTemplate());
+		}
+		assertEquals(110, mgr.getPoolSize());
+	}
+
+	@Test
 	void shouldRefCountCorrectly() {
 		var mgr = createManager();
 		mgr.getOrCreateJdbcTemplate("ref_db");

@@ -51,7 +51,7 @@ class GlobalExceptionHandlerTest {
 		assertEquals(400, result.getStatusCode().value());
 		assertNotNull(result.getBody());
 		SqlResponse body = (SqlResponse) result.getBody();
-		assertFalse(body.isSuccess());
+		assertFalse(body.getError() == null);
 		assertTrue(body.getError().getMessage().contains("sql"));
 	}
 
@@ -60,7 +60,7 @@ class GlobalExceptionHandlerTest {
 		var ex = new RuntimeException("some internal error");
 		SqlResponse response = handler.handleGeneral(ex);
 
-		assertFalse(response.isSuccess());
+		assertFalse(response.getError() == null);
 		assertEquals("Internal server error", response.getError().getMessage());
 	}
 }

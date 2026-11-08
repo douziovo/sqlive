@@ -14,8 +14,7 @@ import static org.mockito.Mockito.*;
 class RateLimitFilterTest {
 	@Test
 	void zeroLimitRejectsTheFirstRequest() throws Exception {
-		System.setProperty("rate.limit.sql", "0");
-		var filter = new RateLimitFilter();
+		var filter = new RateLimitFilter(100, 0, 60_000);
 		FilterChain chain = mock(FilterChain.class);
 		try {
 			var request = new MockHttpServletRequest("POST", "/api/execute");
@@ -25,15 +24,12 @@ class RateLimitFilterTest {
 			verifyNoInteractions(chain);
 		} finally {
 			filter.destroy();
-			System.clearProperty("rate.limit.sql");
 		}
 	}
 
 	@Test
 	void aiAndSqlRequestsHaveSeparateLimitsAndOtherPathsPassThrough() throws Exception {
-		System.setProperty("rate.limit.ai", "1");
-		System.setProperty("rate.limit.sql", "1");
-		var filter = new RateLimitFilter();
+		var filter = new RateLimitFilter(1, 1, 60_000);
 		FilterChain chain = mock(FilterChain.class);
 		try {
 			var ai = new MockHttpServletRequest("POST", "/api/ai/chat");
@@ -56,15 +52,13 @@ class RateLimitFilterTest {
 			verify(chain, times(3)).doFilter(any(), any());
 		} finally {
 			filter.destroy();
-			System.clearProperty("rate.limit.ai");
-			System.clearProperty("rate.limit.sql");
 		}
 	}
 
 	@Test
 	@SuppressWarnings("unchecked")
 	void cleanupRemovesExpiredAiAndSqlWindowsButKeepsActiveWindow() throws Exception {
-		var filter = new RateLimitFilter();
+		var filter = new RateLimitFilter(100, 500, 60_000);
 		FilterChain chain = mock(FilterChain.class);
 		try {
 			var ai = new MockHttpServletRequest("POST", "/api/ai/chat");
@@ -97,8 +91,7 @@ class RateLimitFilterTest {
 	@Test
 	@SuppressWarnings("unchecked")
 	void expiredWindowMustCountTheFirstNewRequest() throws Exception {
-		System.setProperty("rate.limit.sql", "1");
-		var filter = new RateLimitFilter();
+		var filter = new RateLimitFilter(100, 1, 60_000);
 		FilterChain chain = mock(FilterChain.class);
 		try {
 			var request = new MockHttpServletRequest("POST", "/api/execute");
@@ -117,7 +110,6 @@ class RateLimitFilterTest {
 			verify(chain, times(2)).doFilter(any(), any());
 		} finally {
 			filter.destroy();
-			System.clearProperty("rate.limit.sql");
 		}
 	}
 }

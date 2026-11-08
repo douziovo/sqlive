@@ -46,7 +46,7 @@ class SqlControllerTest {
 
 		SqlResponse body = post(req);
 		assertNotNull(body);
-		assertTrue(body.isSuccess());
+		assertTrue(body.getError() == null);
 		assertEquals(1, body.getData().getTables().size());
 		assertEquals("t", body.getData().getTables().getFirst().getName());
 		assertEquals(1, body.getData().getQueryResults().size());
@@ -61,7 +61,7 @@ class SqlControllerTest {
 
 		SqlResponse body = post(req);
 		assertNotNull(body);
-		assertFalse(body.isSuccess());
+		assertFalse(body.getError() == null);
 		assertNotNull(body.getError());
 		assertNotNull(body.getError().getMessage());
 	}
@@ -75,7 +75,7 @@ class SqlControllerTest {
 
 		SqlResponse body = post(req);
 		assertNotNull(body);
-		assertFalse(body.isSuccess());
+		assertFalse(body.getError() == null);
 		assertNotNull(body.getError());
 		assertTrue(body.getError().getMessage().contains("SQL cannot be empty"));
 	}
@@ -101,7 +101,7 @@ class SqlControllerTest {
 		checkA.setReset(false);
 
 		SqlResponse respA = post(checkA);
-		assertTrue(respA.isSuccess());
+		assertTrue(respA.getError() == null);
 		assertEquals(1, respA.getData().getTables().size());
 		assertEquals("a", respA.getData().getTables().getFirst().getName());
 	}
@@ -115,7 +115,7 @@ class SqlControllerTest {
 
 		SqlResponse body = post(req);
 		assertNotNull(body);
-		assertTrue(body.isSuccess());
+		assertTrue(body.getError() == null);
 		assertNotNull(body.getData().getMetadata());
 		assertTrue(body.getData().getMetadata().getDurationMs() >= 0);
 		assertTrue(body.getData().getMetadata().getStatementCount() >= 2);

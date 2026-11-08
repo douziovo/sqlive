@@ -6,9 +6,16 @@ import reactor.core.publisher.Flux;
 import java.util.Map;
 
 public interface Protocol {
+	int LOG_CHUNK_MAX_LEN = 200;
+
 	Map<String, Object> buildRequest(RequestContext ctx);
 
 	String extractContent(String responseJson);
+
+	static String abbreviateForLog(String chunk) {
+		return chunk.length() <= LOG_CHUNK_MAX_LEN ? chunk
+				: chunk.substring(0, LOG_CHUNK_MAX_LEN) + "...(truncated)";
+	}
 
 	default boolean requiresApiKey() {
 		return false;

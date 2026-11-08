@@ -10,11 +10,17 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
+	private final SqliveProperties sqliveProperties;
+
+	public WebConfig(SqliveProperties sqliveProperties) {
+		this.sqliveProperties = sqliveProperties;
+	}
+
 	@Override
 	@SuppressWarnings("HttpUrlsUsage")
 	public void addCorsMappings(CorsRegistry registry) {
 		registry.addMapping("/api/**")
-				.allowedOriginPatterns("http://localhost:*", "http://127.0.0.1:*", "http://[::1]:*")
+				.allowedOriginPatterns(sqliveProperties.getCors().getAllowedOriginPatterns().toArray(String[]::new))
 				.allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
 				// include X-API-Key so the frontend can send it (wiring) and
 				// the browser CORS preflight accepts it. Without this, cross-origin requests
@@ -26,8 +32,9 @@ public class WebConfig implements WebMvcConfigurer {
 
 	@Bean
 	public FilterRegistrationBean<RateLimitFilter> rateLimitFilter() {
+		var limits = sqliveProperties.getRateLimit();
 		FilterRegistrationBean<RateLimitFilter> registration = new FilterRegistrationBean<>();
-		registration.setFilter(new RateLimitFilter());
+		registration.setFilter(new RateLimitFilter(limits.getAiPerMinute(), limits.getSqlPerMinute(), limits.getWindowMs()));
 		registration.addUrlPatterns("/api/*");
 		registration.setOrder(1);
 		return registration;

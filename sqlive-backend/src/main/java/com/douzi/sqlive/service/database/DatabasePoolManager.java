@@ -23,8 +23,17 @@ public class DatabasePoolManager {
 	private static final int DEFAULT_SOFT_MAX = 500;
 	private static final int DEFAULT_MAX_PER_IP = 50;
 	private static final String DB_NAME_PATTERN = "^[a-zA-Z0-9_-]{1,64}$";
+	// 4x headroom above softMax: softMax only triggers eager eviction, so the hard ceiling
+	// absorbs transient bursts while still bounding memory before eviction catches up.
+	private static final int HARD_MAX_MULTIPLIER = 4;
+	// 5s: SQLite busy_timeout for lock contention — long enough for a concurrent writer
+	// in a playground script to finish, short enough that users aren't left hanging.
 	private static final int BUSY_TIMEOUT_MS = 5000;
+	// 5s: each per-database pool has maximumPoolSize(1), so acquiring the single connection
+	// should be near-instant; this only fails fast on a stuck lease instead of hanging.
 	private static final int CONNECTION_TIMEOUT_MS = 5000;
+	// 60s: playground scripts are short interactive runs; a connection held longer than
+	// this almost certainly means a leaked lease (missing release), not slow SQL.
 	private static final int LEAK_DETECTION_MS = 60_000;
 
 	private final int softMax;
@@ -46,7 +55,7 @@ public class DatabasePoolManager {
 
 	public DatabasePoolManager(PoolProperties props) {
 		this.softMax = props.getMaxDatabases() > 0 ? props.getMaxDatabases() : DEFAULT_SOFT_MAX;
-		this.hardMax = softMax * 4;
+		this.hardMax = softMax * HARD_MAX_MULTIPLIER;
 		this.maxPerIp = DEFAULT_MAX_PER_IP;
 		this.idleEvictionNanos = props.getIdleTimeout().toNanos();
 
@@ -176,7 +185,9 @@ public class DatabasePoolManager {
 	}
 
 	private boolean isLocalhost(String ip) {
-		return "127.0.0.1".equals(ip) || "0:0:0:0:0:0:0:1".equals(ip);
+		// "localhost" and "::1" are the short forms getRemoteAddr/servlet proxies may report.
+		return "127.0.0.1".equals(ip) || "localhost".equals(ip)
+				|| "::1".equals(ip) || "0:0:0:0:0:0:0:1".equals(ip);
 	}
 
 	public record PoolEntry(JdbcTemplate jdbcTemplate, boolean isNew) {

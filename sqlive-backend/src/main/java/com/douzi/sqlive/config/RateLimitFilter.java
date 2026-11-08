@@ -15,7 +15,9 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class RateLimitFilter implements Filter {
 
-	private static final long WINDOW_MS = 60_000;
+	private final long windowMs;
+	private final int aiPerMinute;
+	private final int sqlPerMinute;
 
 	private final Map<String, long[]> aiCounters = new ConcurrentHashMap<>();
 	private final Map<String, long[]> sqlCounters = new ConcurrentHashMap<>();
@@ -28,12 +30,11 @@ public class RateLimitFilter implements Filter {
 
 	private volatile boolean cleanupStarted = false;
 
-	private static int aiRateLimit() {
-		return Integer.getInteger("rate.limit.ai", 100);
-	}
-
-	private static int sqlRateLimit() {
-		return Integer.getInteger("rate.limit.sql", 500);
+	// Limits and window come from application.yml (sqlive.rate-limit.*) — see WebConfig.
+	public RateLimitFilter(int aiPerMinute, int sqlPerMinute, long windowMs) {
+		this.aiPerMinute = aiPerMinute;
+		this.sqlPerMinute = sqlPerMinute;
+		this.windowMs = windowMs;
 	}
 
 	@Override
@@ -56,10 +57,10 @@ public class RateLimitFilter implements Filter {
 		int limit;
 		Map<String, long[]> counters;
 		if (path.startsWith("/api/ai/")) {
-			limit = aiRateLimit();
+			limit = aiPerMinute;
 			counters = aiCounters;
 		} else if (path.equals("/api/execute")) {
-			limit = sqlRateLimit();
+			limit = sqlPerMinute;
 			counters = sqlCounters;
 		} else {
 			chain.doFilter(request, response);
@@ -70,7 +71,7 @@ public class RateLimitFilter implements Filter {
 		long now = System.currentTimeMillis();
 		boolean[] rejected = {false};
 		long[] window = counters.compute(key, (ignored, current) -> {
-			if (current == null || now - current[0] > WINDOW_MS) {
+			if (current == null || now - current[0] > windowMs) {
 				current = new long[]{now, 0};
 			}
 			if (current[1] >= limit) {
@@ -113,7 +114,7 @@ public class RateLimitFilter implements Filter {
 	private void cleanupMap(Map<String, long[]> counters, long now) {
 		for (String key : counters.keySet()) {
 			counters.computeIfPresent(key, (ignored, window) ->
-					now - window[0] > WINDOW_MS ? null : window);
+					now - window[0] > windowMs ? null : window);
 		}
 	}
 }

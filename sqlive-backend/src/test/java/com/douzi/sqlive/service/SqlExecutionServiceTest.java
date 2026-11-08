@@ -74,27 +74,27 @@ class SqlExecutionServiceTest {
 	@Test
 	void shouldExecuteSimpleSelect() {
 		SqlResponse r = service.execute("SELECT 1;", db("test"), true);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 		assertEquals(1, r.getData().getQueryResults().size());
 	}
 
 	@Test
 	void shouldReturnErrorForInvalidSql() {
 		SqlResponse r = service.execute("NOT VALID SQL;", db("test"), true);
-		assertFalse(r.isSuccess());
+		assertFalse(r.getError() == null);
 		assertNotNull(r.getError());
 	}
 
 	@Test
 	void shouldHandleEmptyScript() {
 		SqlResponse r = service.execute("", db("test"), true);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 	}
 
 	@Test
 	void shouldHandleCommentsOnly() {
 		SqlResponse r = service.execute("-- comment\n/* block */", db("test"), true);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 	}
 
 	// ============================================================
@@ -105,7 +105,7 @@ class SqlExecutionServiceTest {
 	void shouldExecuteFullScriptSuccessfully() {
 		assertNotNull(fullScript, "test-multi-table.sql should be loaded");
 		SqlResponse r = service.execute(fullScript, db("fulltest"), true);
-		assertTrue(r.isSuccess(), "Full script should succeed. Error: " +
+		assertTrue(r.getError() == null, "Full script should succeed. Error: " +
 				(r.getError() != null ? "line " + r.getError().getLine() + " — " + r.getError().getMessage() : "none"));
 	}
 
@@ -116,7 +116,7 @@ class SqlExecutionServiceTest {
 	@Test
 	void shouldCreateAllTables() {
 		SqlResponse r = service.execute(fullScript, db("tables_test"), true);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 
 		List<String> tableNames = r.getData().getTables().stream()
 				.map(TableSchema::getName).toList();
@@ -139,7 +139,7 @@ class SqlExecutionServiceTest {
 	@Test
 	void shouldHaveCorrectColumnConstraintsOnTypeDemo() {
 		SqlResponse r = service.execute(fullScript, db("typedemo_test"), true);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 
 		TableSchema typeDemo = r.getData().getTables().stream()
 				.filter(t -> t.getName().equals("type_demo"))
@@ -157,7 +157,7 @@ class SqlExecutionServiceTest {
 	@Test
 	void shouldHaveCorrectDataInTypeDemo() {
 		SqlResponse r = service.execute(fullScript, db("typedata_test"), true);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 
 		TableSchema typeDemo = r.getData().getTables().stream()
 				.filter(t -> t.getName().equals("type_demo"))
@@ -174,7 +174,7 @@ class SqlExecutionServiceTest {
 	@Test
 	void shouldHaveCorrectEmployeeAndDepartmentData() {
 		SqlResponse r = service.execute(fullScript, db("empdata_test"), true);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 
 		TableSchema employees = r.getData().getTables().stream()
 				.filter(t -> t.getName().equals("employees"))
@@ -196,7 +196,7 @@ class SqlExecutionServiceTest {
 	@Test
 	void shouldCreateAllIndexes() {
 		SqlResponse r = service.execute(fullScript, db("index_test"), true);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 
 		List<IndexInfo> indexes = r.getData().getIndexes();
 		assertTrue(indexes.size() >= 7, "Should have at least 7 indexes, got " + indexes.size());
@@ -222,7 +222,7 @@ class SqlExecutionServiceTest {
 	@Test
 	void shouldCreateAllViews() {
 		SqlResponse r = service.execute(fullScript, db("view_test"), true);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 
 		List<ViewInfo> views = r.getData().getViews();
 		assertTrue(views.size() >= 4, "Should have at least 4 views, got " + views.size());
@@ -246,7 +246,7 @@ class SqlExecutionServiceTest {
 	@Test
 	void shouldCreateAllTriggers() {
 		SqlResponse r = service.execute(fullScript, db("trigger_test"), true);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 
 		List<TriggerInfo> triggers = r.getData().getTriggers();
 		assertTrue(triggers.size() >= 7, "Should have at least 7 triggers, got " + triggers.size());
@@ -264,7 +264,7 @@ class SqlExecutionServiceTest {
 	@Test
 	void shouldFireInsertTriggerAndCreateAuditLog() {
 		SqlResponse r = service.execute(fullScript, db("trg_fire_test"), true);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 
 		// INSERT triggers: original 8 INSERTs + 2 new ones with triggers = audit records
 		// Also: trg_high_salary_alert fires for 新员工A (salary 25000)
@@ -287,7 +287,7 @@ class SqlExecutionServiceTest {
 		SqlResponse r = service.execute(fullScript + "\nINSERT INTO employees (name, age, salary, dept_id, hire_date, email) VALUES ('低薪者', 20, 2000, 1, '2025-06-01', 'low@test.com');", db("trg_check_test"), true);
 		// The full script succeeds, but the extra INSERT should fail due to trigger
 		// Actually the full script already runs fine, the extra low-salary insert should fail
-		assertFalse(r.isSuccess(), "Low salary INSERT should be blocked by trigger");
+		assertFalse(r.getError() == null, "Low salary INSERT should be blocked by trigger");
 		assertTrue(r.getError().getMessage().contains("3000"), "Error should mention minimum salary");
 	}
 
@@ -298,7 +298,7 @@ class SqlExecutionServiceTest {
 	@Test
 	void shouldExecuteUpdateAndModifyData() {
 		SqlResponse r = service.execute(fullScript, db("update_test"), true);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 
 		TableSchema employees = r.getData().getTables().stream()
 				.filter(t -> t.getName().equals("employees")).findFirst().orElseThrow();
@@ -314,7 +314,7 @@ class SqlExecutionServiceTest {
 	@Test
 	void shouldHandleUpsertCorrectly() {
 		SqlResponse r = service.execute(fullScript, db("upsert_test"), true);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 
 		TableSchema employees = r.getData().getTables().stream()
 				.filter(t -> t.getName().equals("employees")).findFirst().orElseThrow();
@@ -341,7 +341,7 @@ class SqlExecutionServiceTest {
 				INSERT INTO employees VALUES (1, 'Alice', 7500, 1), (2, 'Bob', 5000, 2), (3, 'Charlie', 9000, 1);
 				""";
 		SqlResponse r = service.execute(cteSql, db("cte_test"), true);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 
 		// Regular CTE
 		r = service.execute("""
@@ -350,7 +350,7 @@ class SqlExecutionServiceTest {
 				)
 				SELECT d.name, dt.total_salary FROM dept_total dt JOIN departments d ON d.id = dt.dept_id;
 				""", db("cte_test"), false);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 		assertFalse(r.getData().getQueryResults().isEmpty());
 	}
 
@@ -362,7 +362,7 @@ class SqlExecutionServiceTest {
 				)
 				SELECT n, n * n AS square FROM seq;
 				""", db("rec_cte_test"), true);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 		assertEquals(1, r.getData().getQueryResults().size());
 		assertEquals(10, r.getData().getQueryResults().getFirst().getData().size());
 	}
@@ -380,11 +380,11 @@ class SqlExecutionServiceTest {
 		service.execute(setup, db("setop_test"), true);
 
 		SqlResponse r1 = service.execute("SELECT x FROM a INTERSECT SELECT x FROM b;", db("setop_test"), false);
-		assertTrue(r1.isSuccess());
+		assertTrue(r1.getError() == null);
 		assertEquals(2, r1.getData().getQueryResults().getFirst().getData().size());
 
 		SqlResponse r2 = service.execute("SELECT x FROM a EXCEPT SELECT x FROM b;", db("setop_test"), false);
-		assertTrue(r2.isSuccess());
+		assertTrue(r2.getError() == null);
 		assertEquals(1, r2.getData().getQueryResults().getFirst().getData().size());
 	}
 
@@ -408,7 +408,7 @@ class SqlExecutionServiceTest {
 				    NTILE(2)     OVER (ORDER BY salary DESC) AS nt
 				FROM t;
 				""", db("window_test"), false);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 	}
 
 	@Test
@@ -425,7 +425,7 @@ class SqlExecutionServiceTest {
 				    LEAD(salary, 1, 0) OVER (ORDER BY salary) AS next
 				FROM t;
 				""", db("window_test"), false);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 	}
 
 	@Test
@@ -443,7 +443,7 @@ class SqlExecutionServiceTest {
 				        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS lowest
 				FROM t;
 				""", db("window_test"), false);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 	}
 
 	@Test
@@ -459,7 +459,7 @@ class SqlExecutionServiceTest {
 				    ROUND(PERCENT_RANK() OVER (ORDER BY salary), 3) AS pr
 				FROM t;
 				""", db("window_test"), false);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 	}
 
 	// ============================================================
@@ -475,7 +475,7 @@ class SqlExecutionServiceTest {
 		service.execute(setup, db("join_test"), true);
 
 		SqlResponse r = service.execute("SELECT * FROM a CROSS JOIN b;", db("join_test"), false);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 		assertEquals(4, r.getData().getQueryResults().getFirst().getData().size());
 	}
 
@@ -488,7 +488,7 @@ class SqlExecutionServiceTest {
 		service.execute(setup, db("join_test"), true);
 
 		SqlResponse r = service.execute("SELECT a.name, b.val FROM a LEFT JOIN b ON a.id = b.id;", db("join_test"), false);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 	}
 
 	// ============================================================
@@ -504,7 +504,7 @@ class SqlExecutionServiceTest {
 				    NULLIF(10, 10) AS n1,
 				    NULLIF(10, 20) AS n2;
 				""", db("null_test"), true);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 		Map<String, Object> row = r.getData().getQueryResults().getFirst().getData().getFirst();
 		assertEquals("third", row.get("c"));
 		assertEquals("default", row.get("i"));
@@ -528,7 +528,7 @@ class SqlExecutionServiceTest {
 				    TRIM('  x  ') AS tr,
 				    'A' || 'B' AS concat;
 				""", db("str_test"), true);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 		Map<String, Object> row = r.getData().getQueryResults().getFirst().getData().getFirst();
 		assertEquals("HELLO", row.get("u"));
 		assertEquals("world", row.get("l"));
@@ -555,7 +555,7 @@ class SqlExecutionServiceTest {
 				    strftime('%Y-%m-%d', 'now') AS fmt,
 				    julianday('now') AS jd;
 				""", db("dt_test"), true);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 		Map<String, Object> row = r.getData().getQueryResults().getFirst().getData().getFirst();
 		assertNotNull(row.get("d"));
 		assertNotNull(row.get("t"));
@@ -576,7 +576,7 @@ class SqlExecutionServiceTest {
 				    GROUP_CONCAT(x, ',') AS gc, TOTAL(x) AS tot
 				FROM t;
 				""", db("agg_test"), false);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 		Map<String, Object> row = r.getData().getQueryResults().getFirst().getData().getFirst();
 		assertEquals(5, row.get("cnt"));
 		assertEquals(5, row.get("dc"));
@@ -595,7 +595,7 @@ class SqlExecutionServiceTest {
 				INSERT INTO t VALUES (1, 'test');
 				ALTER TABLE t ADD COLUMN email TEXT DEFAULT 'no-email';
 				""", db("alter_test"), true);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 		TableSchema t = r.getData().getTables().getFirst();
 		assertTrue(t.getColumns().contains("email"), "Should have new column 'email'");
 	}
@@ -607,7 +607,7 @@ class SqlExecutionServiceTest {
 				INSERT INTO src VALUES (1, 'a'), (2, 'b');
 				CREATE TABLE copy AS SELECT * FROM src;
 				""", db("ctas_test"), true);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 		assertEquals(2, r.getData().getTables().size());
 		TableSchema copy = r.getData().getTables().stream()
 				.filter(t -> t.getName().equals("copy")).findFirst().orElseThrow();
@@ -629,7 +629,7 @@ class SqlExecutionServiceTest {
 				         ELSE '不及格' END AS grade
 				FROM t ORDER BY score DESC;
 				""", db("case_test"), false);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 		assertEquals("优秀", r.getData().getQueryResults().getFirst().getData().getFirst().get("grade"));
 	}
 
@@ -649,7 +649,7 @@ class SqlExecutionServiceTest {
 				SELECT e.name, e.salary FROM emp e
 				WHERE e.salary > (SELECT AVG(e2.salary) FROM emp e2 WHERE e2.dept_id = e.dept_id);
 				""", db("subq_test"), false);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 	}
 
 	@Test
@@ -662,7 +662,7 @@ class SqlExecutionServiceTest {
 				    ROUND(salary - (SELECT AVG(salary) FROM t), 2) AS diff
 				FROM t;
 				""", db("scalar_test"), false);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 	}
 
 	// ============================================================
@@ -675,7 +675,7 @@ class SqlExecutionServiceTest {
 		service.execute(setup, db("like_test"), true);
 
 		SqlResponse r = service.execute("SELECT * FROM t WHERE name LIKE '张%';", db("like_test"), false);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 		assertEquals(1, r.getData().getQueryResults().getFirst().getData().size());
 	}
 
@@ -689,7 +689,7 @@ class SqlExecutionServiceTest {
 		service.execute(setup, db("dlo_test"), true);
 
 		SqlResponse r = service.execute("SELECT DISTINCT x FROM t ORDER BY x;", db("dlo_test"), false);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 		assertEquals(3, r.getData().getQueryResults().getFirst().getData().size());
 
 		r = service.execute("SELECT * FROM t LIMIT 2;", db("dlo_test"), false);
@@ -719,7 +719,7 @@ class SqlExecutionServiceTest {
 				END;
 				""";
 		SqlResponse r = service.execute(sql, db("parse_trigger_test"), true);
-		assertTrue(r.isSuccess(), "Should parse trigger with CASE...END inside BEGIN...END");
+		assertTrue(r.getError() == null, "Should parse trigger with CASE...END inside BEGIN...END");
 		assertEquals(1, r.getData().getTriggers().size());
 	}
 
@@ -745,7 +745,7 @@ class SqlExecutionServiceTest {
 				END;
 				""";
 		SqlResponse r = service.execute(sql, db("multi_trg_test"), true);
-		assertTrue(r.isSuccess(), "Should parse 3 triggers correctly");
+		assertTrue(r.getError() == null, "Should parse 3 triggers correctly");
 		assertEquals(3, r.getData().getTriggers().size());
 	}
 
@@ -769,7 +769,7 @@ class SqlExecutionServiceTest {
 				SELECT id, path, level FROM org_path ORDER BY id;
 				""";
 		SqlResponse r = service.execute(sql, db("org_test"), true);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 		var rows = r.getData().getQueryResults().getFirst().getData();
 		assertEquals(5, rows.size());
 		// Check that the path contains hierarchy
@@ -784,7 +784,7 @@ class SqlExecutionServiceTest {
 	@Test
 	void shouldReportCorrectMetadata() {
 		SqlResponse r = service.execute(fullScript, db("meta_test"), true);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 		ExecutionMetadata meta = r.getData().getMetadata();
 		assertNotNull(meta);
 		assertTrue(meta.getDurationMs() >= 0);
@@ -798,7 +798,7 @@ class SqlExecutionServiceTest {
 	@Test
 	void shouldDetectForeignKeys() {
 		SqlResponse r = service.execute(fullScript, db("fk_test"), true);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 		List<ForeignKeyInfo> fks = r.getData().getForeignKeys();
 		// dept_id → departments.id, emp_id → employees.id, project_id → projects.id
 		assertFalse(fks.isEmpty(), "Should detect foreign keys");
@@ -814,17 +814,17 @@ class SqlExecutionServiceTest {
 		String setup = "CREATE TABLE parent (id INTEGER PRIMARY KEY); " +
 				"CREATE TABLE child (id INTEGER PRIMARY KEY, pid INTEGER REFERENCES parent(id));";
 		SqlResponse r1 = service.execute(setup, db("fksort"), true);
-		assertTrue(r1.isSuccess(), "setup should succeed");
+		assertTrue(r1.getError() == null, "setup should succeed");
 
 		// Trigger clearDatabase via reset=true — must drop both tables.
 		SqlResponse r2 = service.execute("SELECT 1;", db("fksort"), true);
-		assertTrue(r2.isSuccess(), "clearDatabase should succeed");
+		assertTrue(r2.getError() == null, "clearDatabase should succeed");
 
 		// Verify both tables are gone (clearDatabase dropped all objects).
 		SqlResponse r3 = service.execute(
 				"SELECT name FROM sqlite_master WHERE type='table' AND name IN ('parent','child');",
 				db("fksort"), false);
-		assertTrue(r3.isSuccess());
+		assertTrue(r3.getError() == null);
 		assertTrue(r3.getData().getQueryResults().getFirst().getData().isEmpty(),
 				"both parent and child should be dropped after clearDatabase");
 	}
@@ -839,10 +839,10 @@ class SqlExecutionServiceTest {
 				INSERT INTO b VALUES (1, 1);
 				UPDATE a SET bid = 1;
 				""";
-		assertTrue(service.execute(setup, name, true).isSuccess());
-		assertTrue(service.execute(setup, name, true).isSuccess(), "reset must handle populated FK cycles");
+		assertTrue(service.execute(setup, name, true).getError() == null);
+		assertTrue(service.execute(setup, name, true).getError() == null, "reset must handle populated FK cycles");
 		var invalid = service.execute("INSERT INTO a VALUES (2, 999);", name, false);
-		assertFalse(invalid.isSuccess());
+		assertFalse(invalid.getError() == null);
 		assertTrue(invalid.getError().getMessage().contains("FOREIGN KEY"));
 	}
 
@@ -856,11 +856,11 @@ class SqlExecutionServiceTest {
 		service.execute("CREATE TABLE b (y TEXT); INSERT INTO b VALUES ('hello');", db("db2"), true);
 
 		SqlResponse r1 = service.execute("SELECT * FROM a;", db("db1"), false);
-		assertTrue(r1.isSuccess());
+		assertTrue(r1.getError() == null);
 		assertEquals("a", r1.getData().getTables().getFirst().getName());
 
 		SqlResponse r2 = service.execute("SELECT * FROM b;", db("db2"), false);
-		assertTrue(r2.isSuccess());
+		assertTrue(r2.getError() == null);
 		assertEquals("b", r2.getData().getTables().getFirst().getName());
 	}
 
@@ -872,7 +872,7 @@ class SqlExecutionServiceTest {
 				INSERT INTO t VALUES ('it''s fine');
 				SELECT * FROM t;
 				""", db("str_esc_test"), true);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 		assertEquals(2, r.getData().getQueryResults().getFirst().getData().size());
 	}
 
@@ -896,7 +896,7 @@ class SqlExecutionServiceTest {
 								"CREATE TABLE t" + n + " (x INTEGER); INSERT INTO t" + n + " VALUES (" + n + ");",
 								dbName, true
 						);
-						assertTrue(r.isSuccess(), "Thread " + n + " should succeed");
+						assertTrue(r.getError() == null, "Thread " + n + " should succeed");
 					} catch (Exception e) {
 						errors.add(e);
 					} finally {
@@ -928,7 +928,7 @@ class SqlExecutionServiceTest {
 								"INSERT INTO con_test VALUES (" + n + ", 'thread-" + n + "');",
 								db("con_same_db"), false
 						);
-						assertTrue(r.isSuccess(), "Thread " + n + " insert should succeed");
+						assertTrue(r.getError() == null, "Thread " + n + " insert should succeed");
 						successCount.incrementAndGet();
 					} catch (Exception e) {
 						errors.add(e);
@@ -944,7 +944,7 @@ class SqlExecutionServiceTest {
 
 			SqlResponse verify = service.execute(
 					"SELECT COUNT(*) AS cnt FROM con_test;", db("con_same_db"), false);
-			assertTrue(verify.isSuccess());
+			assertTrue(verify.getError() == null);
 			long count = ((Number) verify.getData().getQueryResults().getFirst().getData().getFirst().get("cnt")).longValue();
 			assertEquals(threadCount, count, "All " + threadCount + " rows should be visible");
 		}
@@ -964,7 +964,7 @@ class SqlExecutionServiceTest {
 								"CREATE TABLE t (x INTEGER); INSERT INTO t VALUES (1); SELECT * FROM t;",
 								db("con_reset_db"), true
 						);
-						assertTrue(r.isSuccess());
+						assertTrue(r.getError() == null);
 					} catch (Exception e) {
 						errors.add(e);
 					} finally {
@@ -991,7 +991,7 @@ class SqlExecutionServiceTest {
 						SqlResponse r = service.execute(
 								"SELECT 1 AS col;", db("evict_db_" + n), true
 						);
-						assertTrue(r.isSuccess(), "DB " + db("evict_db_" + n) + " should succeed");
+						assertTrue(r.getError() == null, "DB " + db("evict_db_" + n) + " should succeed");
 					} catch (Throwable e) {
 						errors.add(e);
 					} finally {
@@ -1004,7 +1004,7 @@ class SqlExecutionServiceTest {
 
 			// Verify the first-created database is still accessible
 			SqlResponse verify = service.execute("SELECT 1;", db("evict_db_0"), false);
-			assertTrue(verify.isSuccess(), "First created db should be accessible after concurrent creation");
+			assertTrue(verify.getError() == null, "First created db should be accessible after concurrent creation");
 		}
 	}
 
@@ -1066,7 +1066,7 @@ class SqlExecutionServiceTest {
 	@Test
 	void shouldRejectAttachDatabase() {
 		SqlResponse r = service.execute("ATTACH DATABASE '/etc/passwd' AS aux;", db("attach_test_attachdb"), true);
-		assertFalse(r.isSuccess());
+		assertFalse(r.getError() == null);
 		assertEquals("ATTACH DATABASE is not allowed for security reasons", r.getError().getMessage());
 		assertEquals(1, r.getError().getLine());
 	}
@@ -1074,21 +1074,21 @@ class SqlExecutionServiceTest {
 	@Test
 	void shouldRejectAttachShorthand() {
 		SqlResponse r = service.execute("ATTACH ':memory:' AS mem;", db("attach_test_shorthand"), true);
-		assertFalse(r.isSuccess());
+		assertFalse(r.getError() == null);
 		assertEquals("ATTACH DATABASE is not allowed for security reasons", r.getError().getMessage());
 	}
 
 	@Test
 	void shouldRejectAttachLowercase() {
 		SqlResponse r = service.execute("attach ':memory:' AS mem;", db("attach_test_lowercase"), true);
-		assertFalse(r.isSuccess());
+		assertFalse(r.getError() == null);
 		assertTrue(r.getError().getMessage().contains("ATTACH"));
 	}
 
 	@Test
 	void shouldRejectAttachInScript() {
 		SqlResponse r = service.execute("CREATE TABLE t (x INTEGER);\nATTACH ':memory:' AS aux;\nSELECT 1;", db("attach_test_script"), true);
-		assertFalse(r.isSuccess());
+		assertFalse(r.getError() == null);
 		assertEquals(2, r.getError().getLine());
 	}
 
@@ -1099,7 +1099,7 @@ class SqlExecutionServiceTest {
 	@Test
 	void shouldRejectPragmaStatement() {
 		SqlResponse r = service.execute("PRAGMA database_list;", db("pragma_test_std"), true);
-		assertFalse(r.isSuccess());
+		assertFalse(r.getError() == null);
 		assertEquals("PRAGMA statements are not allowed", r.getError().getMessage());
 		assertEquals(1, r.getError().getLine());
 	}
@@ -1107,23 +1107,23 @@ class SqlExecutionServiceTest {
 	@Test
 	void shouldRejectPragmaWithLeadingWhitespace() {
 		SqlResponse r = service.execute("  PRAGMA page_count;", db("pragma_test_ws"), true);
-		assertFalse(r.isSuccess());
+		assertFalse(r.getError() == null);
 		assertTrue(r.getError().getMessage().contains("PRAGMA"));
 	}
 
 	@Test
 	void shouldRejectPragmaInScript() {
 		SqlResponse r = service.execute("CREATE TABLE t (x INTEGER);\nINSERT INTO t VALUES (1);\nPRAGMA table_info('t');\nSELECT * FROM t;", db("pragma_test_script"), true);
-		assertFalse(r.isSuccess());
+		assertFalse(r.getError() == null);
 		assertEquals(3, r.getError().getLine());
 	}
 
 	@Test
 	void shouldRejectVariousPragmaNames() {
 		SqlResponse r1 = service.execute("PRAGMA journal_mode;", db("pragma_test_names1"), true);
-		assertFalse(r1.isSuccess());
+		assertFalse(r1.getError() == null);
 		SqlResponse r2 = service.execute("PRAGMA cache_size;", db("pragma_test_names2"), true);
-		assertFalse(r2.isSuccess());
+		assertFalse(r2.getError() == null);
 	}
 
 	// ============================================================
@@ -1133,16 +1133,16 @@ class SqlExecutionServiceTest {
 	@Test
 	void shouldAllowNormalStatementsDespiteBlockingCheck() {
 		SqlResponse r1 = service.execute("SELECT 1;", db("reg_test_normal"), true);
-		assertTrue(r1.isSuccess());
+		assertTrue(r1.getError() == null);
 
 		SqlResponse r2 = service.execute("CREATE TABLE demo (id INTEGER); INSERT INTO demo VALUES (1); SELECT * FROM demo;", db("reg_test_ddl"), true);
-		assertTrue(r2.isSuccess());
+		assertTrue(r2.getError() == null);
 
 		SqlResponse r3 = service.execute("SELECT 2;", db("reg_test_dml"), true);
-		assertTrue(r3.isSuccess());
+		assertTrue(r3.getError() == null);
 
 		SqlResponse r4 = service.execute("  SELECT 3;", db("reg_test_ws"), true);
-		assertTrue(r4.isSuccess());
+		assertTrue(r4.getError() == null);
 	}
 
 	// ============================================================
@@ -1152,11 +1152,11 @@ class SqlExecutionServiceTest {
 	@Test
 	void shouldRejectPragmaMixedCase() {
 		SqlResponse r1 = service.execute("Pragma database_list;", db("pragma_mixed1"), true);
-		assertFalse(r1.isSuccess());
+		assertFalse(r1.getError() == null);
 		assertTrue(r1.getError().getMessage().contains("PRAGMA"));
 
 		SqlResponse r2 = service.execute("pragMA cache_size;", db("pragma_mixed2"), true);
-		assertFalse(r2.isSuccess());
+		assertFalse(r2.getError() == null);
 		assertTrue(r2.getError().getMessage().contains("PRAGMA"));
 	}
 
@@ -1167,14 +1167,14 @@ class SqlExecutionServiceTest {
 	@Test
 	void shouldAllowAttachAsTableName() {
 		SqlResponse r = service.execute("CREATE TABLE attach (x INTEGER); INSERT INTO attach VALUES (1); SELECT * FROM attach;", db("attach_as_table"), true);
-		assertTrue(r.isSuccess(), "ATTACH as table name should not be blocked");
+		assertTrue(r.getError() == null, "ATTACH as table name should not be blocked");
 		assertEquals(1, r.getData().getQueryResults().getFirst().getData().size());
 	}
 
 	@Test
 	void shouldAllowPragmaAsColumnName() {
 		SqlResponse r = service.execute("CREATE TABLE t (pragma TEXT); INSERT INTO t VALUES ('val'); SELECT pragma FROM t;", db("pragma_as_col"), true);
-		assertTrue(r.isSuccess(), "PRAGMA as column name should not be blocked");
+		assertTrue(r.getError() == null, "PRAGMA as column name should not be blocked");
 		assertEquals("val", r.getData().getQueryResults().getFirst().getData().getFirst().get("pragma"));
 	}
 
@@ -1185,14 +1185,14 @@ class SqlExecutionServiceTest {
 	@Test
 	void shouldRejectAttachWithTabWhitespace() {
 		SqlResponse r = service.execute("\tATTACH ':memory:' AS x;", db("attach_tab"), true);
-		assertFalse(r.isSuccess());
+		assertFalse(r.getError() == null);
 		assertEquals("ATTACH DATABASE is not allowed for security reasons", r.getError().getMessage());
 	}
 
 	@Test
 	void shouldRejectPragmaWithWindowsNewline() {
 		SqlResponse r = service.execute("\r\nPRAGMA cache_size;", db("pragma_crlf"), true);
-		assertFalse(r.isSuccess());
+		assertFalse(r.getError() == null);
 		assertTrue(r.getError().getMessage().contains("PRAGMA"));
 	}
 
@@ -1204,7 +1204,7 @@ class SqlExecutionServiceTest {
 	void shouldNotExecuteStatementsAfterBlockedOne() {
 		// ATTACH blocked → immediate return, SELECT 1 never executes
 		SqlResponse r = service.execute("ATTACH ':memory:' AS aux;\nSELECT 1;", db("early_return"), true);
-		assertFalse(r.isSuccess());
+		assertFalse(r.getError() == null);
 		assertEquals("ATTACH DATABASE is not allowed for security reasons", r.getError().getMessage());
 		// Verify no query results (SELECT didn't execute)
 		assertNull(r.getData());
@@ -1217,7 +1217,7 @@ class SqlExecutionServiceTest {
 	@Test
 	void shouldReportCorrectLineForAttachAfterBlankLines() {
 		SqlResponse r = service.execute("\n\nATTACH ':memory:' AS aux;", db("attach_blank_lines"), true);
-		assertFalse(r.isSuccess());
+		assertFalse(r.getError() == null);
 		assertEquals(3, r.getError().getLine(), "ATTACH on line 3 after two blank lines");
 	}
 
@@ -1228,7 +1228,7 @@ class SqlExecutionServiceTest {
 	@Test
 	void shouldPopulateCanonicalStatementsWithCharOffsets() {
 		SqlResponse r = service.execute("SELECT 1; SELECT 2;", db("canonical"), true);
-		assertTrue(r.isSuccess());
+		assertTrue(r.getError() == null);
 		assertNotNull(r.getData().getCanonicalStatements(),
 				"canonicalStatements must be populated by SqlExecutionService.execute()");
 		assertEquals(2, r.getData().getCanonicalStatements().size(),
@@ -1248,7 +1248,7 @@ class SqlExecutionServiceTest {
 				"/* lead */ ATTACH(':memory:') AS aux;",
 				"EXPLAIN ATTACH ':memory:' AS aux;", "\uFEFFATTACH ':memory:' AS aux;")) {
 			var result = service.execute(sql, db("attach_variants"), true);
-			assertFalse(result.isSuccess(), sql);
+			assertFalse(result.getError() == null, sql);
 			assertEquals(SqlExecutionService.DEFAULT_ATTACH_ERROR, result.getError().getMessage(), sql);
 		}
 	}
@@ -1262,7 +1262,7 @@ class SqlExecutionServiceTest {
 				"EXPLAIN VACUUM INTO '" + filename + "';",
 				"backup to '" + filename + "'", "restore from '" + filename + "'")) {
 			var result = service.execute(sql, db("file_ops"), true);
-			assertFalse(result.isSuccess(), sql);
+			assertFalse(result.getError() == null, sql);
 			assertTrue(result.getError().getMessage().contains("not allowed"), sql);
 			assertFalse(Files.exists(target), "blocked SQL must not create a file");
 		}
@@ -1271,7 +1271,7 @@ class SqlExecutionServiceTest {
 	@Test
 	void shouldAllowDangerousWordsInStringValues() {
 		assertTrue(service.execute("SELECT 'ATTACH DATABASE', 'VACUUM INTO', 'PRAGMA foreign_keys';",
-				db("literal"), true).isSuccess());
+				db("literal"), true).getError() == null);
 	}
 
 	@Test
@@ -1279,7 +1279,7 @@ class SqlExecutionServiceTest {
 		var result = service.execute("CREATE TABLE p (id INTEGER PRIMARY KEY);"
 				+ "CREATE TABLE c (pid INTEGER REFERENCES p(id)); INSERT INTO c VALUES (999);",
 				db("invalid_fk"), true);
-		assertFalse(result.isSuccess());
+		assertFalse(result.getError() == null);
 		assertTrue(result.getError().getMessage().contains("FOREIGN KEY"));
 	}
 
