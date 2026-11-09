@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, future]
+    branches: [master, future]
   pull_request:
-    branches: [main]
+    branches: [master]
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -28,7 +28,7 @@ jobs:
         #noinspection UndefinedParamsPresent
         with:
           build-root-directory: sqlive-backend
-          cache-read-only: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/future' }}
+          cache-read-only: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/future' }}
       - run: ./gradlew test
 
   frontend-test:

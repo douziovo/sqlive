@@ -34,7 +34,7 @@ CI 安装 Chromium 和 Edge，运行 `--project=chromium --project=edge`。浏�
 
 ## CI 与覆盖率
 
-[CI 配置](../.github/workflows/ci.yml) 在 push 到 `main`/`future`、PR 目标为 `main` 时运行前端格式检查、脚本/样式 lint、类型检查、生产构建、前后端单测和 Chromium + Edge E2E。部署分支另见 `render.yaml`。
+[CI 配置](../.github/workflows/ci.yml) 在 push 到 `master`/`future`、PR 目标为 `master` 时运行前端格式检查、脚本/样式 lint、类型检查、生产构建、前后端单测和 Chromium + Edge E2E。部署分支另见 `render.yaml`。
 
 - CI 执行格式检查，当前不执行覆盖率门禁；不能把单测通过称为覆盖率检查通过。
 - Oxfmt 已全量规范化前端，检查 Tailwind v4 类名排序、导入排序和多语言格式；详细范围与规则例外见 [DEVELOPMENT.md](DEVELOPMENT.md#修改约定)。Stylelint 使用 `postcss-html` 读取 Vue 样式，不将模板中的 Tailwind 类误作 CSS 选择器。
