@@ -35,7 +35,7 @@ test.describe('Docs Mobile Responsive', () => {
         // Click an article → drawer auto-closes (@navigate handler)
         const editorNav = drawerSidebar.locator('[data-testid="nav-usage-editor"]')
         await editorNav.click()
-        await expect(page).toHaveURL(/\/docs\/usage\/editor/)
+        await expect(page).toHaveURL(/\/docs\/usage\/editor/u)
         // Drawer auto-closes after navigation
         await expect(drawerSidebar).not.toBeVisible({ timeout: 5_000 })
     })

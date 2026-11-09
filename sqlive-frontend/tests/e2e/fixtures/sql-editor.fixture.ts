@@ -47,7 +47,7 @@ export class SqlEditor {
     }
 
     async getText(): Promise<string> {
-        return await this.page.evaluate(() => {
+        return this.page.evaluate(() => {
             const editors = (window as any).monaco?.editor?.getEditors?.()
             if (!editors?.length) return ''
             // Try focused editor first, fallback to first

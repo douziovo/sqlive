@@ -10,7 +10,7 @@ export function useAiStreaming(apiBase: string, isLoading: Ref<boolean>) {
 
     async function streamCall(
         endpoint: string,
-        body: unknown,
+        body: Record<string, unknown>,
         onChunk: (text: string) => void
     ): Promise<void> {
         const controller = new AbortController()
@@ -20,7 +20,7 @@ export function useAiStreaming(apiBase: string, isLoading: Ref<boolean>) {
             const response = await aiClient.raw(endpoint, {
                 method: 'POST',
                 headers: { Accept: 'text/event-stream' },
-                body: { ...(body as Record<string, unknown>), stream: true },
+                body: { ...body, stream: true },
                 responseType: 'stream',
                 timeout: 0,
                 signal: controller.signal

@@ -47,8 +47,8 @@ export function useGraphHover(
     const adjacencyMap = computed(() => {
         const map = new Map<string, Set<string>>()
         for (const edge of edgesGetter()) {
-            const sourceId = edge.source.replace(/^topic-/, '')
-            const targetId = edge.target.replace(/^topic-/, '')
+            const sourceId = edge.source.replace(/^topic-/u, '')
+            const targetId = edge.target.replace(/^topic-/u, '')
             if (!map.has(sourceId)) map.set(sourceId, new Set())
             if (!map.has(targetId)) map.set(targetId, new Set())
             map.get(sourceId)!.add(targetId)

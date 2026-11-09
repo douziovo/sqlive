@@ -6,6 +6,7 @@ import type { Ref } from 'vue'
 import { layoutNodes } from '@/composables/useDagreLayout'
 import type { KnowledgeNode as KnowledgeFlowNode } from '@/composables/useKnowledgeGraph'
 import { STORAGE_KEYS } from '@/constants/storageKeys'
+import { isRecord } from '@/utils/guards'
 
 /**
  * useGraphLayoutManager — dagre TB layout + saved-viewport restore
@@ -30,7 +31,7 @@ export function useGraphLayoutManager(opts: {
             opts.displayNodes.value = [...newNodes]
             if (newNodes.length === 0) return
             await nextTick()
-            const el = opts.flowRef.value?.$el as HTMLElement | undefined
+            const el = opts.flowRef.value?.$el
             opts.displayNodes.value = layoutNodes(opts.displayNodes.value, opts.edgesGetter(), el, {
                 rankdir: 'TB',
                 ranksep: 120,
@@ -46,7 +47,7 @@ export function useGraphLayoutManager(opts: {
 
     async function onPaneReady(): Promise<void> {
         await nextTick()
-        const el = opts.flowRef.value?.$el as HTMLElement | undefined
+        const el = opts.flowRef.value?.$el
         opts.displayNodes.value = layoutNodes(opts.displayNodes.value, opts.edgesGetter(), el, {
             rankdir: 'TB',
             ranksep: 120,
@@ -56,9 +57,19 @@ export function useGraphLayoutManager(opts: {
         try {
             const saved = localStorage.getItem(STORAGE_KEYS.graphViewport)
             if (saved) {
-                const vp = JSON.parse(saved) as { x: number; y: number; zoom: number }
-                await nextTick()
-                opts.flowRef.value?.setViewport?.(vp, { duration: 0 })
+                const vp: unknown = JSON.parse(saved)
+                if (
+                    isRecord(vp) &&
+                    typeof vp.x === 'number' &&
+                    typeof vp.y === 'number' &&
+                    typeof vp.zoom === 'number'
+                ) {
+                    await nextTick()
+                    await opts.flowRef.value?.setViewport?.(
+                        { x: vp.x, y: vp.y, zoom: vp.zoom },
+                        { duration: 0 }
+                    )
+                }
             }
         } catch {
             /* localStorage unavailable */

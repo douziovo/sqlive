@@ -2,7 +2,7 @@ import { useLocalStorage } from '@vueuse/core'
 import { computed } from 'vue'
 
 export function useRedDot() {
-    const redDots = useLocalStorage<Record<string, boolean>>('ai-knowledge-reddot', {})
+    const redDots = useLocalStorage<Record<string, boolean | undefined>>('ai-knowledge-reddot', {})
     // D-03: keyParents stores key → parent chain so clear() can propagate upward
     // when the last child of a parent is cleared.
     const keyParents = useLocalStorage<Record<string, string[]>>('ai-knowledge-reddot-parents', {})
@@ -40,7 +40,7 @@ export function useRedDot() {
                 ([childKey, childParents]) =>
                     Array.isArray(childParents) &&
                     childParents.includes(p) &&
-                    Boolean(redDots.value[childKey])
+                    redDots.value[childKey]
             )
             if (!hasOtherChild) {
                 clear(p)
@@ -60,7 +60,7 @@ export function useRedDot() {
         // the parent. Previously clearAll dropped parent registrations but left
         // parent dots visible (asymmetric with clear).
         const matchingKeys = Object.keys(redDots.value).filter(
-            (k) => k.startsWith(prefix) && Boolean(redDots.value[k])
+            (k) => k.startsWith(prefix) && redDots.value[k]
         )
         for (const key of matchingKeys) {
             clear(key)
@@ -72,7 +72,7 @@ export function useRedDot() {
 
     // D-03: prefix query for parent-level visibility checks
     function hasDotInPrefix(prefix: string): boolean {
-        return Object.entries(redDots.value).some(([k, v]) => Boolean(v) && k.startsWith(prefix))
+        return Object.entries(redDots.value).some(([k, v]) => v && k.startsWith(prefix))
     }
 
     return { redDots, keyParents, show, clear, isVisible, clearAll, hasAnyDot, hasDotInPrefix }

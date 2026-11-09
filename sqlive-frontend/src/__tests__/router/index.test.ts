@@ -46,7 +46,7 @@ describe('router', () => {
         // ArticlePage props function returns slug = 'usage/' + params.article
         const matched = router.currentRoute.value.matched
         expect(matched.length).toBeGreaterThan(0)
-        expect(matched[matched.length - 1].components?.default?.name).toBe('ArticlePageStub')
+        expect(matched.at(-1)?.components?.default?.name).toBe('ArticlePageStub')
     })
 
     it('resolves /docs/intro as named route docs-intro', async () => {

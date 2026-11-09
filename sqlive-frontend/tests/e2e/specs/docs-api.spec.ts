@@ -25,7 +25,7 @@ test.describe('Docs API', () => {
     test('mock fetch failure shows error state + retry button', async ({ page }) => {
         // Error Handling 4.2: both fetches fail → error state + retry button
         await page.route('**/v3/api-docs', (route) => {
-            route.fulfill({ status: 500 })
+            void route.fulfill({ status: 500 })
         })
 
         await page.goto('/docs/api')

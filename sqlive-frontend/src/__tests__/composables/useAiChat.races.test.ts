@@ -28,7 +28,10 @@ describe('AI request ownership and history', () => {
         let resolveFirst!: (response: Response) => void
         setup.fetchSpy
             .mockImplementationOnce(
-                () => new Promise<Response>((resolve) => (resolveFirst = resolve))
+                () =>
+                    new Promise<Response>((resolve) => {
+                        resolveFirst = resolve
+                    })
             )
             .mockResolvedValueOnce(new Response(new ReadableStream()))
         const chat = setup.useAiChat(context())
@@ -53,7 +56,10 @@ describe('AI request ownership and history', () => {
     it('clears and cancels the conversation without accepting late chunks', async () => {
         let resolve!: (response: Response) => void
         setup.fetchSpy.mockImplementationOnce(
-            () => new Promise<Response>((done) => (resolve = done))
+            () =>
+                new Promise<Response>((done) => {
+                    resolve = done
+                })
         )
         const chat = setup.useAiChat(context())
         const pending = chat.sendMessage('question')

@@ -33,12 +33,13 @@ export function useKnowledgePanelFilters(
                 const d = parseInt(activeDifficulty.value, 10)
                 if (node.data.difficulty !== d) dimmed = true
             }
-            if (activeCategory.value) {
-                if (node.data.category !== activeCategory.value) dimmed = true
-            }
+            if (activeCategory.value && node.data.category !== activeCategory.value) dimmed = true
             return {
                 ...node,
-                style: { ...node.style, opacity: dimmed ? 0.12 : 1 }
+                style: {
+                    ...(typeof node.style === 'function' ? {} : node.style),
+                    opacity: dimmed ? 0.12 : 1
+                }
             }
         })
     })

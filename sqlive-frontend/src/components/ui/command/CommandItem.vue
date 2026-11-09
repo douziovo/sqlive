@@ -21,9 +21,7 @@ const { filterState, allItems, allGroups } = useCommand()
 const groupContext = useCommandGroup()
 
 const isRender = computed(() => {
-    if (!filterState.search) {
-        return true
-    } else {
+    if (filterState.search) {
         const filteredCurrentItem = filterState.filtered.items.get(id)
         // If the filtered items is undefined means not in the all times map yet
         // Do the first render to add into the map
@@ -34,6 +32,7 @@ const isRender = computed(() => {
         // Check with filter
         return filteredCurrentItem > 0
     }
+    return true
 })
 
 const itemRef = ref()
@@ -46,10 +45,10 @@ onMounted(() => {
 
     const groupId = groupContext?.id
     if (groupId) {
-        if (!allGroups.value.has(groupId)) {
-            allGroups.value.set(groupId, new Set([id]))
-        } else {
+        if (allGroups.value.has(groupId)) {
             allGroups.value.get(groupId)?.add(id)
+        } else {
+            allGroups.value.set(groupId, new Set([id]))
         }
     }
 })

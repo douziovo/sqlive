@@ -64,13 +64,13 @@ export const extractSqlStatements = (script: string) => {
 
         // 处理语句分隔符
         if (!inString && c === ';') {
-            statements.push({ text: script.substring(start, i + 1), start, end: i + 1 })
+            statements.push({ text: script.slice(start, i + 1), start, end: i + 1 })
             start = i + 1
         }
     }
 
-    if (start < script.length && script.substring(start).trim()) {
-        statements.push({ text: script.substring(start), start, end: script.length })
+    if (start < script.length && script.slice(start).trim()) {
+        statements.push({ text: script.slice(start), start, end: script.length })
     }
     return statements
 }
@@ -79,12 +79,12 @@ export const enforceTypeConstraints = (val: any, rawType: string): TruncationInf
     if (val === null || val === undefined) return { value: val, wasTruncated: false }
     const strVal = String(val)
     const typeUpper = parsePrimaryType(rawType).toUpperCase()
-    const charMatch = typeUpper.match(/(?:VARCHAR|CHAR)\s*\((\d+)\)/)
+    const charMatch = typeUpper.match(/(?:VARCHAR|CHAR)\s*\((\d+)\)/u)
     if (charMatch) {
         const maxLength = parseInt(charMatch[1], 10)
         if (strVal.length > maxLength) {
             return {
-                value: strVal.substring(0, maxLength),
+                value: strVal.slice(0, maxLength),
                 wasTruncated: true,
                 originalValue: val,
                 maxLength
@@ -106,8 +106,8 @@ export const normalizeAndCompare = (dbVal: any, sqlValRaw: string): boolean => {
         (sqlVal.startsWith("'") && sqlVal.endsWith("'")) ||
         (sqlVal.startsWith('"') && sqlVal.endsWith('"'))
     if (isQuoted) {
-        let unquoted = sqlVal.slice(1, -1).replace(/''/g, "'")
-        unquoted = unquoted.replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\\\/g, '\\')
+        let unquoted = sqlVal.slice(1, -1).replaceAll("''", "'")
+        unquoted = unquoted.replaceAll('\\n', '\n').replaceAll('\\r', '\r').replaceAll('\\\\', '\\')
         return String(dbVal) === unquoted || String(dbVal).trim() === unquoted.trim()
     }
 
@@ -151,13 +151,13 @@ export const compareValuesForHighlight = (rowVal: any, operator: string, queryVa
         }
     }
     const s1 = String(rowVal)
-    const s2 = String(cleanQueryVal)
+    const s2 = cleanQueryVal
     if (operator.toUpperCase() === 'LIKE') {
         const pattern = s2
-            .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-            .replace(/%/g, '.*')
-            .replace(/_/g, '.')
-        return new RegExp(`^${pattern}$`, 'i').test(s1)
+            .replaceAll(/[.+^${}()|[\]\\]/gu, '\\$&')
+            .replaceAll('%', '.*')
+            .replaceAll('_', '.')
+        return new RegExp(`^${pattern}$`, 'iu').test(s1)
     }
     switch (operator) {
         case '=':

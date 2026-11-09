@@ -8,15 +8,25 @@ export function jsonOk(data: any) {
     return Promise.resolve(Response.json(data))
 }
 
-export function mockSuccess(fetchSpy: ReturnType<typeof vi.fn>, data: any) {
+export function mockSuccess(
+    fetchSpy: ReturnType<typeof vi.fn<(...args: any[]) => Promise<Response>>>,
+    data: any
+) {
     fetchSpy.mockImplementation(() => jsonOk({ success: true, data }))
 }
 
-export function mockError(fetchSpy: ReturnType<typeof vi.fn>, message: string, line: number) {
+export function mockError(
+    fetchSpy: ReturnType<typeof vi.fn<(...args: any[]) => Promise<Response>>>,
+    message: string,
+    line: number
+) {
     fetchSpy.mockImplementation(() => jsonOk({ success: false, error: { message, line } }))
 }
 
-export function mockReject(fetchSpy: ReturnType<typeof vi.fn>, err: Error) {
+export function mockReject(
+    fetchSpy: ReturnType<typeof vi.fn<(...args: any[]) => Promise<Response>>>,
+    err: Error
+) {
     fetchSpy.mockRejectedValue(err)
 }
 
@@ -26,13 +36,13 @@ export async function tick(ms = 150) {
 
 export interface SqlEngineSetup {
     useSqlEngine: typeof useSqlEngine
-    fetchSpy: ReturnType<typeof vi.fn>
+    fetchSpy: ReturnType<typeof vi.fn<(...args: any[]) => Promise<Response>>>
 }
 
 export async function setupSqlEngine(): Promise<SqlEngineSetup> {
     vi.useFakeTimers()
-    const fetchSpy = vi.fn()
-    globalThis.fetch = fetchSpy as any
+    const fetchSpy = vi.fn<(...args: any[]) => Promise<Response>>()
+    globalThis.fetch = fetchSpy
     vi.resetModules()
     const mod = await import('../composables/useSqlEngine')
     const useSqlEngine = mod.useSqlEngine
@@ -41,13 +51,13 @@ export async function setupSqlEngine(): Promise<SqlEngineSetup> {
 
 export interface AiChatSetup {
     useAiChat: typeof useAiChat
-    fetchSpy: ReturnType<typeof vi.fn>
+    fetchSpy: ReturnType<typeof vi.fn<(...args: any[]) => Promise<Response>>>
 }
 
 export async function setupAiChat(): Promise<AiChatSetup> {
     vi.useFakeTimers()
-    const fetchSpy = vi.fn()
-    globalThis.fetch = fetchSpy as any
+    const fetchSpy = vi.fn<(...args: any[]) => Promise<Response>>()
+    globalThis.fetch = fetchSpy
 
     const store: Record<string, string> = {}
     vi.stubGlobal('localStorage', {

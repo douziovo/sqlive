@@ -19,7 +19,7 @@ const sampleItems: PreviewItem[] = [
 
 function mountPreview(overrides: Record<string, any> = {}) {
     const triggerEl = document.createElement('div')
-    document.body.appendChild(triggerEl)
+    document.body.append(triggerEl)
 
     return {
         wrapper: mount(HoverPreview, {

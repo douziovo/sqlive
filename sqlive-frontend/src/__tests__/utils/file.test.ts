@@ -26,11 +26,12 @@ function stubDownloadEnvironment(): DownloadSpies {
 
 /** 拦截 document.createElement，为生成的 <a> 挂上 click spy；onAnchor 供需要记录锚点元素的用例使用 */
 function stubAnchorCreation(clickSpy: Spy, onAnchor?: (el: HTMLElement) => void) {
+    // oxlint-disable-next-line typescript/no-deprecated -- DOM overload selection on bind falsely selects the deprecated tag-name overload.
     const originalCreateElement = document.createElement.bind(document)
     vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
         const el = originalCreateElement(tag)
         if (tag === 'a') {
-            onAnchor?.(el as HTMLElement)
+            onAnchor?.(el)
             Object.defineProperty(el, 'click', { value: clickSpy })
         }
         return el
@@ -82,21 +83,14 @@ describe('downloadFile', () => {
 
     it('cleans up the anchor element after download', () => {
         const { clickSpy } = stubDownloadEnvironment()
-        const removedElements: HTMLElement[] = []
         let createdAnchor: HTMLElement | null = null
 
         stubAnchorCreation(clickSpy, (el) => {
             createdAnchor = el
         })
-        vi.spyOn(document.body, 'appendChild').mockImplementation((el: Node) => el)
-        vi.spyOn(document.body, 'removeChild').mockImplementation((el: Node) => {
-            removedElements.push(el as HTMLElement)
-            return el
-        })
-
         downloadFile('test.sql', 'SELECT 1;')
 
-        expect(removedElements).toHaveLength(1)
-        expect(removedElements[0]).toBe(createdAnchor)
+        expect(createdAnchor).toBeInstanceOf(HTMLAnchorElement)
+        expect(document.body.contains(createdAnchor)).toBe(false)
     })
 })

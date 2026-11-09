@@ -16,7 +16,7 @@ const { mockTasksHolder } = vi.hoisted(() => ({ mockTasksHolder: { ref: null as 
 
 vi.mock('@/composables/useKnowledgeTasks', async () => {
     const { ref } = await import('vue')
-    if (!mockTasksHolder.ref) mockTasksHolder.ref = ref<KnowledgeTask[]>([])
+    mockTasksHolder.ref ??= ref<KnowledgeTask[]>([])
     return {
         useKnowledgeTasks: () => ({
             tasks: mockTasksHolder.ref,

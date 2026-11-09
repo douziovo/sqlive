@@ -137,10 +137,10 @@ describe('TableSection', () => {
         const wrapper = mountTable()
         // Find the delete button (trash icon) by title
         const deleteBtn = wrapper.find('button[title="删除表格"]')
-        if (deleteBtn.exists()) {
-            await deleteBtn.trigger('click')
-            expect(wrapper.emitted('drop-table')?.[0]).toEqual(['users'])
-        }
+        expect(deleteBtn.exists()).toBeTruthy()
+
+        await deleteBtn.trigger('click')
+        expect(wrapper.emitted('drop-table')?.[0]).toEqual(['users'])
     })
 
     it('emits update-cell on cell edit and blur', async () => {
@@ -152,49 +152,49 @@ describe('TableSection', () => {
             return !ph && t.element.value !== ''
         })
 
-        if (dataTextareas.length > 0) {
-            // Use the second textarea (name column = TEXT, allows non-numeric values)
-            const nameCell = dataTextareas[1] || dataTextareas[0]
-            const el = nameCell.element as HTMLTextAreaElement
-            el.value = 'UpdatedName'
-            el.dispatchEvent(new Event('input'))
-            await nameCell.trigger('blur')
+        expect(dataTextareas.length > 0).toBeTruthy()
 
-            const updateCellEvents = wrapper.emitted('update-cell')
-            expect(updateCellEvents).toBeTruthy()
-            expect(updateCellEvents?.[0][0]).toMatchObject({
-                tableName: 'users',
-                oldRow: expect.objectContaining({ name: 'Alice' }),
-                newRow: expect.objectContaining({ name: 'UpdatedName' })
-            })
-        }
+        // Use the second textarea (name column = TEXT, allows non-numeric values)
+        const nameCell = dataTextareas[1] || dataTextareas[0]
+        const el = nameCell.element as HTMLTextAreaElement
+        el.value = 'UpdatedName'
+        el.dispatchEvent(new Event('input'))
+        await nameCell.trigger('blur')
+
+        const updateCellEvents = wrapper.emitted('update-cell')
+        expect(updateCellEvents).toBeTruthy()
+        expect(updateCellEvents?.[0][0]).toMatchObject({
+            tableName: 'users',
+            oldRow: expect.objectContaining({ name: 'Alice' }),
+            newRow: expect.objectContaining({ name: 'UpdatedName' })
+        })
     })
 
     it('does not emit update-cell on blur with unchanged value', async () => {
         const wrapper = mountTable()
         const textareas = wrapper.findAll('textarea')
         const dataTextareas = textareas.filter((t) => !t.attributes('placeholder'))
-        if (dataTextareas.length > 0) {
-            const firstCell = dataTextareas[0]
-            await firstCell.trigger('blur')
-            // Since we didn't change the value, no emit should happen
-            expect(wrapper.emitted('update-cell')).toBeFalsy()
-        }
+        expect(dataTextareas.length > 0).toBeTruthy()
+
+        const firstCell = dataTextareas[0]
+        await firstCell.trigger('blur')
+        // Since we didn't change the value, no emit should happen
+        expect(wrapper.emitted('update-cell')).toBeFalsy()
     })
 
     it('emits delete-row when row delete button is clicked', async () => {
         const wrapper = mountTable()
         // Hover over a row to reveal delete buttons (they are opacity-0 by default)
         const deleteBtns = wrapper.findAll('button[title="删除此行"]')
-        if (deleteBtns.length > 0) {
-            await deleteBtns[0].trigger('click')
-            const deleteRowEvents = wrapper.emitted('delete-row')
-            expect(deleteRowEvents).toBeTruthy()
-            expect(deleteRowEvents?.[0][0]).toMatchObject({
-                tableName: 'users',
-                row: expect.objectContaining({ id: 1 })
-            })
-        }
+        expect(deleteBtns.length > 0).toBeTruthy()
+
+        await deleteBtns[0].trigger('click')
+        const deleteRowEvents = wrapper.emitted('delete-row')
+        expect(deleteRowEvents).toBeTruthy()
+        expect(deleteRowEvents?.[0][0]).toMatchObject({
+            tableName: 'users',
+            row: expect.objectContaining({ id: 1 })
+        })
     })
 
     it('shows ghost row for insertion', () => {
@@ -245,16 +245,16 @@ describe('TableSection', () => {
         })
         // Find the index badge and click it
         const buttons = wrapper.findAll('span')
-        const badgeEls = buttons.filter((b) => b.text().includes('📋'))
-        if (badgeEls.length > 0) {
-            await badgeEls[0].trigger('click')
-            const navEvents = wrapper.emitted('navigate-tab')
-            expect(navEvents).toBeTruthy()
-            expect(navEvents?.[0][0]).toMatchObject({
-                tab: expect.any(String),
-                targetId: expect.any(String)
-            })
-        }
+        const badgeEls = buttons.filter((b) => b.text().includes('📇'))
+        expect(badgeEls.length > 0).toBeTruthy()
+
+        await badgeEls[0].trigger('click')
+        const navEvents = wrapper.emitted('navigate-tab')
+        expect(navEvents).toBeTruthy()
+        expect(navEvents?.[0][0]).toMatchObject({
+            tab: expect.any(String),
+            targetId: undefined
+        })
     })
 
     describe('truncation tooltip', () => {
@@ -380,20 +380,20 @@ describe('TableSection', () => {
 
             // Fill ghost row textareas
             const ghostTextareas = wrappers[0].findAll('textarea[placeholder="+"]')
-            if (ghostTextareas.length > 0) {
-                await ghostTextareas[0].setValue(value)
-                await ghostTextareas[0].trigger('keydown.enter')
-            }
+            expect(ghostTextareas.length > 0).toBeTruthy()
+
+            await ghostTextareas[0].setValue(value)
+            await ghostTextareas[0].trigger('keydown.enter')
 
             return { insertResultRef, ghostTextareas }
         }
 
-        /** 断言幽灵行首个输入框的值；与原先的 if(length>0) 写法一致，幽灵行不存在时不产生断言 */
+        /** 断言幽灵行首个输入框的值；幽灵行必须存在 */
         function expectGhostRowValue(expected: string) {
             const ghostTextareasAfter = wrappers[0].findAll('textarea[placeholder="+"]')
-            if (ghostTextareasAfter.length > 0) {
-                expect((ghostTextareasAfter[0].element as HTMLTextAreaElement).value).toBe(expected)
-            }
+            expect(ghostTextareasAfter.length > 0).toBeTruthy()
+
+            expect((ghostTextareasAfter[0].element as HTMLTextAreaElement).value).toBe(expected)
         }
 
         it('preserves ghost row inputs when insert fails', async () => {
@@ -462,10 +462,10 @@ describe('TableSection', () => {
             expect(ghostRow.classes()).toContain('ghost-failure')
 
             // User types in ghost row textarea — should dismiss
-            if (ghostTextareas.length > 0) {
-                await ghostTextareas[0].trigger('input')
-                await nextTick()
-            }
+            expect(ghostTextareas.length > 0).toBeTruthy()
+
+            await ghostTextareas[0].trigger('input')
+            await nextTick()
 
             // Verify failure styling removed
             ghostRow = wrappers[0].find('[data-testid="ghost-row"]')
@@ -536,6 +536,7 @@ describe('TableSection', () => {
             // Unmount while the 1s animation timer is still pending
             wrapper.unmount()
             vi.advanceTimersByTime(1100)
+            expect(vi.getTimerCount()).toBe(0)
         })
 
         it('VIRTUAL column gets bg-primary/10 class', () => {

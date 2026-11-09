@@ -83,28 +83,35 @@ const toastClass = computed(() => {
     border-radius: 14px;
     background: var(--toast-gradient-default);
     color: white;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 8px 32px rgb(0 0 0 / 25%);
     pointer-events: none;
     white-space: nowrap;
 }
 
 /* toastClass 计算属性在运行时拼接这些变体类名，静态检查器无法识别，不可删除 */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .achievement-toast--high-diff {
     background: var(--toast-gradient-high-diff);
 }
+
 /* 同上：由 toastClass 动态返回 */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .achievement-toast--task {
     background: var(--toast-gradient-task);
 }
+
 /* 同上：由 toastClass 动态返回 */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .achievement-toast--electric {
     background: var(--toast-gradient-electric);
 }
+
 /* 同上：由 toastClass 动态返回 */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .achievement-toast--fire {
     background: var(--toast-gradient-fire);
 }
@@ -131,23 +138,30 @@ const toastClass = computed(() => {
 }
 
 /* <Transition name="toast-pop"> 运行时生成的进入过渡类，静态检查器无法识别，不可删除 */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .toast-pop-enter-active {
     transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
 /* 同上：Transition 运行时生成的离开过渡类 */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .toast-pop-leave-active {
     transition: all 0.2s ease-in;
 }
+
 /* 同上：Transition 运行时生成的进入起始态 */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .toast-pop-enter-from {
     opacity: 0;
     transform: translateX(-50%) translateY(-12px) scale(0.9);
 }
+
 /* 同上：Transition 运行时生成的离开结束态 */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .toast-pop-leave-to {
     opacity: 0;
     transform: translateX(-50%) translateY(-8px);

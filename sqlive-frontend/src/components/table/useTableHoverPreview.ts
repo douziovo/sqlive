@@ -26,14 +26,16 @@ export function useTableHoverPreview(options: TableHoverPreviewOptions, emit: Na
 
     function onBadgeEnter(e: MouseEvent, type: HoverType) {
         if (hoverLeaveTimer) clearTimeout(hoverLeaveTimer)
-        hoverTriggerEl.value = e.currentTarget as HTMLElement
+        if (!(e.currentTarget instanceof HTMLElement)) return
+        hoverTriggerEl.value = e.currentTarget
         hoverType.value = type
         hoverColumn.value = ''
     }
 
     function onColumnIdxEnter(e: MouseEvent, col: string) {
         if (hoverLeaveTimer) clearTimeout(hoverLeaveTimer)
-        hoverTriggerEl.value = e.currentTarget as HTMLElement
+        if (!(e.currentTarget instanceof HTMLElement)) return
+        hoverTriggerEl.value = e.currentTarget
         hoverType.value = 'column-index'
         hoverColumn.value = col
     }
@@ -115,9 +117,9 @@ export function useTableHoverPreview(options: TableHoverPreviewOptions, emit: Na
                 label: idx.name,
                 meta: [`列: ${idx.columns.join(', ')}  ·  ${idx.unique ? 'UNIQUE' : '普通'}`],
                 sqlPreview: idx.sql
-                    ? idx.sql.substring(0, 80) + (idx.sql.length > 80 ? '...' : '')
+                    ? idx.sql.slice(0, 80) + (idx.sql.length > 80 ? '...' : '')
                     : undefined,
-                accent: (idx.unique ? 'blue' : 'none') as 'blue' | 'none'
+                accent: idx.unique ? 'blue' : 'none'
             }))
         }
         if (hoverType.value === 'column-index') {
@@ -134,7 +136,7 @@ export function useTableHoverPreview(options: TableHoverPreviewOptions, emit: Na
                     icon: idx?.unique ? '\u{1F48E}' : '\u{1F4CB}',
                     label: name,
                     meta,
-                    accent: (idx?.unique ? 'blue' : 'none') as 'blue' | 'none'
+                    accent: idx?.unique ? 'blue' : 'none'
                 }
             })
         }
@@ -148,7 +150,7 @@ export function useTableHoverPreview(options: TableHoverPreviewOptions, emit: Na
                     meta: timing ? [timing] : [],
                     tag: timing || undefined,
                     sqlPreview: t.sql
-                        ? t.sql.substring(0, 80) + (t.sql.length > 80 ? '...' : '')
+                        ? t.sql.slice(0, 80) + (t.sql.length > 80 ? '...' : '')
                         : undefined
                 }
             })
@@ -158,9 +160,9 @@ export function useTableHoverPreview(options: TableHoverPreviewOptions, emit: Na
                 id: `view-${v.name}`,
                 icon: '\u{1F440}',
                 label: v.name,
-                meta: v.sql ? [v.sql.split('\n')[0]?.substring(0, 60) || ''] : [],
+                meta: v.sql ? [v.sql.split('\n')[0]?.slice(0, 60) || ''] : [],
                 sqlPreview: v.sql
-                    ? v.sql.substring(0, 80) + (v.sql.length > 80 ? '...' : '')
+                    ? v.sql.slice(0, 80) + (v.sql.length > 80 ? '...' : '')
                     : undefined
             }))
         }

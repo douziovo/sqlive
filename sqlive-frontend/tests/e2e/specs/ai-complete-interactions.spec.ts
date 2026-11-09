@@ -28,7 +28,7 @@ test.describe('AI Complete Interactions', () => {
 
             // Non-streaming endpoints — dispatch by AiChatRequest.mode field (D-05a)
             // Pitfall 5: postData() returns null for empty bodies; guard with || '{}'.
-            const body = JSON.parse(route.request().postData() || '{}')
+            const body = JSON.parse(route.request().postData() ?? '{}')
             switch (body.mode) {
                 case 'analyze-error':
                     return route.fulfill({
@@ -161,7 +161,9 @@ test.describe('AI Complete Interactions', () => {
         await page.unroute('**/api/ai/chat')
         await page.route('**/api/ai/chat', async (route) => {
             // Delay to simulate slow response
-            await new Promise((r) => setTimeout(r, 3000))
+            await new Promise((r) => {
+                setTimeout(r, 3000)
+            })
             await route.fulfill({
                 status: 200,
                 contentType: 'text/event-stream',
@@ -317,7 +319,7 @@ test.describe('AI Complete Interactions', () => {
         // Override mock to return error
         await page.unroute('**/api/ai/**')
         await page.route('**/api/ai/chat', (route) => {
-            route.fulfill({
+            void route.fulfill({
                 status: 503,
                 contentType: 'application/json',
                 body: JSON.stringify({

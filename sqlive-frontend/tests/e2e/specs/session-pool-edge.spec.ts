@@ -58,7 +58,7 @@ test.describe('Session & Pool Edge Cases', () => {
     test('T4.2 429 pool-full response handled without crash', async ({ page }) => {
         // Mock /api/execute to return 429
         await page.route('**/api/execute', (route) => {
-            route.fulfill({
+            void route.fulfill({
                 status: 429,
                 contentType: 'application/json',
                 body: JSON.stringify({
@@ -92,7 +92,7 @@ test.describe('Session & Pool Edge Cases', () => {
     test('T4.3 503 backend unavailable handled without crash', async ({ page }) => {
         // Mock /api/execute to return 503
         await page.route('**/api/execute', (route) => {
-            route.fulfill({
+            void route.fulfill({
                 status: 503,
                 contentType: 'application/json',
                 body: JSON.stringify({
@@ -130,7 +130,7 @@ test.describe('Session & Pool Edge Cases', () => {
 
         // Override with request containing special characters in dbName
         await page.route('**/api/execute', (route) => {
-            route.fulfill({
+            void route.fulfill({
                 status: 400,
                 contentType: 'application/json',
                 body: JSON.stringify({
@@ -157,7 +157,7 @@ test.describe('Session & Pool Edge Cases', () => {
     test('T4.6 empty SQL code response handled without crash', async ({ page }) => {
         // Mock backend to return empty data for empty code
         await page.route('**/api/execute', (route) => {
-            route.fulfill({
+            void route.fulfill({
                 status: 200,
                 contentType: 'application/json',
                 body: JSON.stringify({

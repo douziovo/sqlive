@@ -89,7 +89,9 @@ async function fetchOpenApi() {
         openApiJson.value = await res.json()
     } catch (e: any) {
         // Retry once after 500ms
-        await new Promise((r) => setTimeout(r, 500))
+        await new Promise((r) => {
+            setTimeout(r, 500)
+        })
         try {
             const res = await fetch('/v3/api-docs')
             // 同上：throw 交由 catch 写入 error.value 并结束加载态

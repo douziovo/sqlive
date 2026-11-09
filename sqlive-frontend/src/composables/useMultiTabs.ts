@@ -101,7 +101,7 @@ export function useMultiTabs(defaultCode: string) {
     // --- Import ---
     async function importFile(file: File): Promise<string> {
         const text = await file.text()
-        const name = file.name.replace(/\.sql$/i, '') || '导入'
+        const name = file.name.replace(/\.sql$/iu, '') || '导入'
         addTab(name, text)
         return text
     }

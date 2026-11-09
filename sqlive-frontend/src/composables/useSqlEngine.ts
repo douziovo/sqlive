@@ -14,6 +14,7 @@ import type { CanonicalStatement, DatabaseModel, InsertResult, Row } from '../mo
 function hashString(s: string): number {
     let hash = 5381
     for (let i = 0; i < s.length; i++) {
+        // oxlint-disable-next-line unicorn/prefer-math-trunc, unicorn/prefer-code-point -- Stable IDs require signed int32 overflow and UTF-16 code units.
         hash = ((hash << 5) + hash + s.charCodeAt(i)) | 0
     }
     return hash
@@ -66,7 +67,7 @@ export function useSqlEngine() {
         db.views = data.views || []
         db.triggers = data.triggers || []
         db.foreignKeys = data.foreignKeys || []
-        db.metadata = data.metadata || null
+        db.metadata = data.metadata ?? null
     }
 
     function clearDb() {
@@ -99,7 +100,9 @@ export function useSqlEngine() {
     // code is derived from active tab — writable computed
     const code = computed({
         get: () => activeTab.value.code,
-        set: (val: string) => updateCode(val)
+        set: (val: string) => {
+            updateCode(val)
+        }
     })
 
     let previousDataState = new Map<string, string>()
@@ -243,15 +246,16 @@ export function useSqlEngine() {
                     if (row.id === undefined && !row._highlightId) {
                         row._highlightId = table.columns.reduce((hash: number, col: string) => {
                             const v = row[col]
-                            return (
-                                ((hash << 5) -
-                                    hash +
-                                    (v === null || v === undefined ? 0 : hashString(String(v)))) |
-                                0
-                            )
+                            const valueHash =
+                                // oxlint-disable-next-line typescript/no-base-to-string -- SQL cell values retain their existing JavaScript string representation.
+                                v === null || v === undefined ? 0 : hashString(String(v))
+                            // oxlint-disable-next-line unicorn/prefer-math-trunc -- Preserve signed int32 overflow in stable row IDs.
+                            return ((hash << 5) - hash + valueHash) | 0
                         }, rowIdx)
                     }
-                    const key = `${table.name}:${row.id !== undefined ? row.id : row._highlightId}`
+                    // oxlint-disable-next-line typescript/prefer-nullish-coalescing -- A present SQL NULL ID retains its previous identity.
+                    const rowId = row.id === undefined ? row._highlightId : row.id
+                    const key = `${table.name}:${rowId}`
                     const sig = JSON.stringify({ ...row, _highlightId: undefined })
                     nextDataState.set(key, sig)
                     if (mode.value !== 'reconciling' && previousDataState.get(key) !== sig) {

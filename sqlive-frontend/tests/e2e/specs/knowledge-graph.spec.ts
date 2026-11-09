@@ -181,7 +181,7 @@ test.describe('Knowledge Graph', () => {
     test('T1.4 "Teach me" triggers AI panel with preset message', async ({ page }) => {
         // Mock AI chat endpoint for SSE response
         await page.route('**/api/ai/chat', (route) => {
-            route.fulfill({
+            void route.fulfill({
                 status: 200,
                 contentType: 'text/event-stream',
                 body: [

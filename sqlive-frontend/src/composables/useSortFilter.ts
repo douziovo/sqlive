@@ -67,7 +67,7 @@ export function useSortFilter<T>(
             const field = resolvedSortFields.value.find((sf) => sf.key === sortKey.value)
             if (field) {
                 const dir = sortDir.value
-                data = [...data].sort((a, b) => {
+                data = [...data].toSorted((a, b) => {
                     const cmp = field.compare(a, b)
                     return dir === 'asc' ? cmp : -cmp
                 })

@@ -314,7 +314,6 @@ function onKeydown(e: KeyboardEvent) {
         e.preventDefault()
         const item = selectedItem.value
         if (item) onItemClick(item)
-        return
     }
 }
 
@@ -331,9 +330,11 @@ function scrollToKeyboardItem() {
 .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-track {
     background: transparent;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb {
     background-color: #d1d5db;
     border-radius: 3px;

@@ -190,15 +190,6 @@ function handlePinClick(): void {
     background: var(--secondary);
 }
 
-.task-item--completed .task-item__title {
-    opacity: 0.6;
-    text-decoration: line-through;
-}
-
-.task-item--completed .task-item__priority-dot {
-    visibility: hidden;
-}
-
 .task-item__priority-dot {
     display: inline-block;
     width: 8px;
@@ -213,6 +204,15 @@ function handlePinClick(): void {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.task-item--completed .task-item__title {
+    opacity: 0.6;
+    text-decoration: line-through;
+}
+
+.task-item--completed .task-item__priority-dot {
+    visibility: hidden;
 }
 
 .task-item__steps {
@@ -236,7 +236,7 @@ function handlePinClick(): void {
     border-radius: 3px;
     font-size: 10px;
     color: #ef4444;
-    background: rgba(239, 68, 68, 0.1);
+    background: rgb(239 68 68 / 10%);
 }
 
 .task-item__status {
@@ -255,23 +255,26 @@ function handlePinClick(): void {
 }
 
 /* statusBadgeClass 计算属性在运行时拼接这些类名，静态检查器无法识别，不可删除 */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .task-item__status--todo {
     background: var(--muted);
     color: var(--muted-foreground);
 }
 
 /* 同上：由 statusBadgeClass 动态返回 */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .task-item__status--in-progress {
-    background: rgba(59, 130, 246, 0.12);
+    background: rgb(59 130 246 / 12%);
     color: #3b82f6;
 }
 
 /* 同上：由 statusBadgeClass 动态返回 */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .task-item__status--done {
-    background: rgba(16, 185, 129, 0.12);
+    background: rgb(16 185 129 / 12%);
     color: #10b981;
 }
 
@@ -288,7 +291,7 @@ function handlePinClick(): void {
 }
 
 .task-item__pin:hover {
-    background: rgba(250, 204, 21, 0.12);
+    background: rgb(250 204 21 / 12%);
 }
 
 .task-item__delete {
@@ -305,7 +308,7 @@ function handlePinClick(): void {
 }
 
 .task-item__delete:hover {
-    background: rgba(239, 68, 68, 0.08);
+    background: rgb(239 68 68 / 8%);
 }
 
 /* ── D-13: AlertDialog delete confirmation styles ─────────── */
@@ -313,7 +316,7 @@ function handlePinClick(): void {
 .task-item__dialog-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgb(0 0 0 / 40%);
     z-index: 200;
 }
 
@@ -330,19 +333,19 @@ function handlePinClick(): void {
     z-index: 201;
     min-width: 320px;
     max-width: calc(100% - 2rem);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    box-shadow: 0 8px 32px rgb(0 0 0 / 18%);
 }
 
 .task-item__dialog-title {
     font-size: 16px;
     font-weight: 700;
-    margin: 0 0 8px 0;
+    margin: 0 0 8px;
 }
 
 .task-item__dialog-description {
     font-size: 13px;
     color: var(--muted-foreground);
-    margin: 0 0 16px 0;
+    margin: 0 0 16px;
     line-height: 1.5;
 }
 

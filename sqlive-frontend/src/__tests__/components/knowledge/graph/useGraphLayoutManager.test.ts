@@ -147,7 +147,17 @@ describe('useGraphLayoutManager', () => {
     it('onPaneReady tolerates a flow ref without setViewport', async () => {
         localStorage.setItem('kg-viewport', JSON.stringify({ x: 0, y: 0, zoom: 1 }))
         const { flowRef, manager } = setup([makeNode('a')])
-        delete (flowRef.value as any).setViewport
+        delete flowRef.value.setViewport
         await expect(manager.onPaneReady()).resolves.toBeUndefined()
     })
+
+    it.each([null, [], {}, { x: '0', y: 0, zoom: 1 }])(
+        'ignores saved viewport with an invalid shape: %j',
+        async (viewport) => {
+            localStorage.setItem('kg-viewport', JSON.stringify(viewport))
+            const { setViewport, manager } = setup([makeNode('a')])
+            await manager.onPaneReady()
+            expect(setViewport).not.toHaveBeenCalled()
+        }
+    )
 })

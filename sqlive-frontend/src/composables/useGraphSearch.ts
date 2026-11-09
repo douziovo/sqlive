@@ -62,7 +62,7 @@ export function useGraphSearch(
 
     function restoreViewport(): void {
         if (previousViewport.value) {
-            flowRef.value?.setViewport?.(previousViewport.value, { duration: 200 })
+            void flowRef.value?.setViewport?.(previousViewport.value, { duration: 200 })
             previousViewport.value = null
         }
     }
@@ -78,7 +78,7 @@ export function useGraphSearch(
         if (matchNodes.value.length === 0 || index < 0 || index >= matchNodes.value.length) return
         const node = matchNodes.value[index]
         if (node) {
-            flowRef.value?.setCenter?.(node.position.x + 60, node.position.y + 30, {
+            void flowRef.value?.setCenter?.(node.position.x + 60, node.position.y + 30, {
                 zoom: 1.2,
                 duration: 300
             })
@@ -140,7 +140,9 @@ export function useGraphSearch(
     watch(searchQuery, (val) => {
         if (val) {
             matchIndex.value = 0
-            void nextTick(() => centerOnMatch(0))
+            void nextTick(() => {
+                centerOnMatch(0)
+            })
         } else {
             matchIndex.value = 0
         }

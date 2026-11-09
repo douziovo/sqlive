@@ -100,9 +100,11 @@ watch(
         transform: translateY(0) rotate(0deg) scale(1);
         opacity: 1;
     }
+
     80% {
         opacity: 1;
     }
+
     100% {
         transform: translateY(var(--fall-dist)) rotate(var(--spin)) scale(0.3);
         opacity: 0;

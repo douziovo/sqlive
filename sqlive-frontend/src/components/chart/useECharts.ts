@@ -15,7 +15,9 @@ export function useECharts() {
     const { start: scheduleResize, stop: stopResize } = useTimeoutFn(resize, 100, {
         immediate: false
     })
-    useResizeObserver(containerRef, () => scheduleResize())
+    useResizeObserver(containerRef, () => {
+        scheduleResize()
+    })
 
     function initChart(dom: HTMLDivElement): echarts.ECharts {
         chartInstance = echarts.init(dom, THEME_NAME)

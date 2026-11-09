@@ -11,7 +11,7 @@ import {
 
 describe('Error display with multiple statements', () => {
     let useSqlEngine: SqlEngineSetup['useSqlEngine']
-    let fetchSpy: ReturnType<typeof vi.fn>
+    let fetchSpy: ReturnType<typeof vi.fn<(...args: any[]) => Promise<Response>>>
 
     beforeEach(async () => {
         const setup = await setupSqlEngine()

@@ -118,7 +118,7 @@ function handleCreate(payload: TaskCreatePayload): void {
 .journal__detail-title {
     font-size: 18px;
     font-weight: 700;
-    margin: 0 0 12px 0;
+    margin: 0 0 12px;
 }
 
 .journal__detail-badge {
@@ -173,7 +173,7 @@ function handleCreate(payload: TaskCreatePayload): void {
     font-size: 16px;
     font-weight: 600;
     color: var(--foreground);
-    margin: 8px 0 0 0;
+    margin: 8px 0 0;
 }
 
 .journal__detail-empty-btn {

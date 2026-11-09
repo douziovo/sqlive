@@ -38,7 +38,7 @@ export default defineConfig({
     webServer: [
         {
             command:
-                process.env.BACKEND_BOOT_CMD ||
+                process.env.BACKEND_BOOT_CMD ??
                 (isWindows ? 'cmd /c ".\\gradlew.bat bootRun"' : './gradlew bootRun'),
             cwd: path.resolve(import.meta.dirname, '../../../sqlive-backend'),
             url: 'http://127.0.0.1:8080/health',

@@ -98,13 +98,13 @@ describe('AiChatPanel', () => {
     it('ignores Escape when the target is a textarea or input', async () => {
         const wrapper = mountPanel()
         const textarea = document.createElement('textarea')
-        wrapper.element.appendChild(textarea)
+        wrapper.element.append(textarea)
         keyDown(textarea, 'Escape')
         await nextTick()
         expect(wrapper.emitted('close')).toBeUndefined()
 
         const input = document.createElement('input')
-        wrapper.element.appendChild(input)
+        wrapper.element.append(input)
         keyDown(input, 'Escape')
         await nextTick()
         expect(wrapper.emitted('close')).toBeUndefined()
@@ -141,6 +141,7 @@ describe('AiChatPanel', () => {
         wrapper.unmount()
         // After unmount, Escape must no longer be routed to the panel
         keyDown(document.body, 'Escape')
+        expect(wrapper.emitted('close')).toBeUndefined()
     })
 
     it('passes isLoading down to the input area', () => {

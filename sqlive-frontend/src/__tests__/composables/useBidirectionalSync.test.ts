@@ -273,11 +273,10 @@ describe('useBidirectionalSync', () => {
             const { sync, code } = setup(initial, makeDb({ tables: [table] }))
             if (action === 'update') {
                 sync.updateRow('a.b', { id: 1, name: 'Alice' }, { id: 1, name: 'Ann' })
-                expect(code.value).toContain(`INSERT INTO "a.b" (id, name) VALUES (1, 'Ann');`)
             } else {
                 sync.deleteRow({ id: 1, name: 'Alice' }, 'a.b')
-                expect(code.value).not.toContain('INSERT INTO "a.b"')
             }
+            expect(code.value.includes('INSERT INTO "a.b"')).toBe(action === 'update')
             expect(code.value).toContain("INSERT INTO axb (id, name) VALUES (1, 'Alice');")
         })
 

@@ -12,7 +12,7 @@ test.describe('Docs Deep Link Refresh', () => {
 
         // Refresh — URL + content must survive
         await page.reload()
-        await expect(page).toHaveURL(/\/docs\/usage\/editor/)
+        await expect(page).toHaveURL(/\/docs\/usage\/editor/u)
         await expect(page.locator('article h1').first()).toBeVisible({ timeout: 10_000 })
         const h1After = await page.locator('article h1').first().textContent()
 
@@ -25,7 +25,7 @@ test.describe('Docs Deep Link Refresh', () => {
         await expect(page.locator('article h1').first()).toBeVisible({ timeout: 10_000 })
 
         await page.reload()
-        await expect(page).toHaveURL(/\/docs\/intro/)
+        await expect(page).toHaveURL(/\/docs\/intro/u)
         await expect(page.locator('article h1').first()).toBeVisible({ timeout: 10_000 })
     })
 })

@@ -160,29 +160,28 @@ function handleNavigate(payload: { tab: string; targetId?: string }) {
 
 provide('navigate', handleNavigate)
 
-watch(activeTab, () => {
+watch(activeTab, async () => {
     if (navigateTarget.value) {
         const targetId = navigateTarget.value
         navigateTarget.value = null
-        nextTick().then(() => {
-            const el = document.getElementById(targetId)
-            if (el) {
-                el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                if (targetId.startsWith('table-')) {
-                    flashTableName.value = targetId.replace('table-', '')
-                    if (flashTableTimeout) clearTimeout(flashTableTimeout)
-                    flashTableTimeout = setTimeout(() => {
-                        flashTableName.value = null
-                    }, 1000)
-                } else {
-                    flashTarget.value = targetId
-                    if (flashTargetTimeout) clearTimeout(flashTargetTimeout)
-                    flashTargetTimeout = setTimeout(() => {
-                        flashTarget.value = null
-                    }, 1000)
-                }
+        await nextTick()
+        const el = document.querySelector(`#${targetId}`)
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            if (targetId.startsWith('table-')) {
+                flashTableName.value = targetId.replace('table-', '')
+                if (flashTableTimeout) clearTimeout(flashTableTimeout)
+                flashTableTimeout = setTimeout(() => {
+                    flashTableName.value = null
+                }, 1000)
+            } else {
+                flashTarget.value = targetId
+                if (flashTargetTimeout) clearTimeout(flashTargetTimeout)
+                flashTargetTimeout = setTimeout(() => {
+                    flashTarget.value = null
+                }, 1000)
             }
-        })
+        }
     }
 })
 

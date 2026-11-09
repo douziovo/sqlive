@@ -182,17 +182,22 @@ filterColumns.value = props.result.columns
 
 <style scoped>
 /* <Transition name="chart-expand"> 运行时生成的进入过渡类，静态检查器无法识别，不可删除 */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .chart-expand-enter-active {
     transition: opacity 0.3s ease-out;
 }
+
 /* 同上：Transition 运行时生成的离开过渡类 */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .chart-expand-leave-active {
     transition: opacity 0.2s ease-in;
 }
+
 /* 同上：Transition 运行时生成的进入起始态与离开结束态 */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .chart-expand-enter-from,
 .chart-expand-leave-to {
     opacity: 0;

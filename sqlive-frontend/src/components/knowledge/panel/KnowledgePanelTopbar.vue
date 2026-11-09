@@ -124,6 +124,7 @@ const searchQueryModel = computed({
     background: none;
     cursor: pointer;
 }
+
 .knowledge-panel__back-btn:hover {
     color: var(--foreground);
 }
@@ -144,9 +145,11 @@ const searchQueryModel = computed({
     color: var(--foreground);
     outline: none;
 }
+
 .knowledge-panel__search:focus {
     border-color: var(--primary);
 }
+
 .knowledge-panel__search::placeholder {
     color: var(--muted-foreground);
 }
@@ -238,6 +241,7 @@ const searchQueryModel = computed({
     from {
         transform: scale(1) rotate(-2deg);
     }
+
     to {
         transform: scale(1.15) rotate(2deg);
     }

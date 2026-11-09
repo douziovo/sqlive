@@ -27,10 +27,10 @@ export default defineConfig({
         }
     },
     build: {
-        rollupOptions: {
+        rolldownOptions: {
             output: {
                 manualChunks(id: string) {
-                    if (id.includes('monaco-editor')) return 'monaco'
+                    return id.includes('monaco-editor') ? 'monaco' : undefined
                 }
             }
         }
@@ -50,6 +50,7 @@ export default defineConfig({
         onConsoleLog(log) {
             if (log.includes('[Vue Flow]')) return false
             if (log.includes('Extraneous non-props attributes')) return false
+            return true
         },
         coverage: {
             provider: 'v8',

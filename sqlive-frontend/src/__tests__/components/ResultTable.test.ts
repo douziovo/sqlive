@@ -113,8 +113,8 @@ describe('ResultTable', () => {
                 index: 0,
                 result: makeResult({
                     data: [
-                        { id: 1, name: null as unknown as string },
-                        { id: null as unknown as number, name: undefined as unknown as string }
+                        { id: 1, name: null },
+                        { id: null as unknown as number, name: undefined }
                     ]
                 })
             }

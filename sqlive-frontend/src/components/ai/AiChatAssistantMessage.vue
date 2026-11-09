@@ -130,7 +130,10 @@ function renderMd(text: string): string {
         const raw = marked.parse(text, { breaks: true, gfm: true }) as string
         return DOMPurify.sanitize(raw, sanitizeConfig)
     } catch {
-        const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        const escaped = text
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
         return `<pre>${escaped}</pre>`
     }
 }
@@ -139,45 +142,55 @@ function renderMd(text: string): string {
 <style>
 /* Markdown body — marked output (global styles, moved verbatim from AiChatPanel.vue) */
 .md-body {
-    word-break: break-word;
+    overflow-wrap: anywhere;
 }
+
 .md-body h1 {
     font-size: 0.95rem;
     font-weight: 700;
     margin: 0.8em 0 0.4em;
 }
+
 .md-body h2 {
     font-size: 0.88rem;
     font-weight: 600;
     margin: 0.7em 0 0.3em;
 }
+
 .md-body h3 {
     font-size: 0.85rem;
     font-weight: 600;
     margin: 0.6em 0 0.25em;
 }
+
 .md-body h4 {
     font-size: 0.8rem;
     font-weight: 600;
     margin: 0.5em 0 0.2em;
 }
+
 .md-body p {
     margin: 0.5em 0;
 }
+
 .md-body p:first-child {
     margin-top: 0;
 }
+
 .md-body p:last-child {
     margin-bottom: 0;
 }
+
 .md-body ul,
 .md-body ol {
     padding-left: 1.5em;
     margin: 0.5em 0;
 }
+
 .md-body li {
     margin: 0.15em 0;
 }
+
 .md-body pre {
     background: #f8fafc;
     color: #334155;
@@ -191,16 +204,19 @@ function renderMd(text: string): string {
     line-height: 1.5;
     white-space: pre-wrap;
 }
+
 .md-body code {
     font-family: var(--font-mono), monospace;
     font-size: 0.8em;
 }
+
 .md-body :not(pre) > code {
     background: var(--muted);
     color: var(--foreground);
     padding: 0.1em 0.35em;
     border-radius: 0.25rem;
 }
+
 .md-body table {
     width: 100%;
     border-collapse: collapse;
@@ -209,6 +225,7 @@ function renderMd(text: string): string {
     overflow-x: auto;
     max-width: 100%;
 }
+
 .md-body th,
 .md-body td {
     border: 1px solid #d1d5db;
@@ -216,29 +233,35 @@ function renderMd(text: string): string {
     text-align: left;
     font-size: 0.75rem;
 }
+
 .md-body th {
     background: #f3f4f6;
     font-weight: 600;
 }
+
 .md-body blockquote {
     border-left: 3px solid #d1d5db;
     padding-left: 1em;
     margin: 0.5em 0;
     color: #6b7280;
 }
+
 .md-body hr {
     border: none;
     border-top: 1px solid #e5e7eb;
     margin: 1em 0;
 }
+
 .md-body img {
     max-width: 100%;
     border-radius: 0.5rem;
 }
+
 .md-body a {
     color: #2563eb;
     text-decoration: underline;
 }
+
 .md-body strong {
     font-weight: 600;
 }

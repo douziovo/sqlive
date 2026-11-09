@@ -29,7 +29,7 @@ test.describe('Docs Search', () => {
 
         // Click the result → navigate to /docs/usage/editor
         await results.locator('button', { hasText: '编辑器' }).click()
-        await expect(page).toHaveURL(/\/docs\/usage\/editor/)
+        await expect(page).toHaveURL(/\/docs\/usage\/editor/u)
     })
 
     test('Ctrl+K focuses search box', async ({ page }) => {

@@ -54,7 +54,7 @@ function makeAi(overrides: Partial<AiActions> = {}): AiActions {
         sendToAi: vi.fn(),
         onTogglePanel: vi.fn(),
         ...overrides
-    } as AiActions
+    }
 }
 
 let wrapper: VueWrapper

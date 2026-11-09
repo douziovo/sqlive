@@ -32,8 +32,8 @@ describe('TruncationTooltip', () => {
 
     it('shows lengths and auto-hides after 3s', async () => {
         const cell = document.createElement('td')
-        cell.setAttribute('data-column', 'name')
-        document.body.appendChild(cell)
+        cell.dataset.column = 'name'
+        document.body.append(cell)
         try {
             const { wrapper, lastTruncations } = mountTooltip()
             lastTruncations.value = [
@@ -43,7 +43,7 @@ describe('TruncationTooltip', () => {
                     originalValue: 'Alexander',
                     maxLength: 3,
                     column: 'name'
-                } as TruncationInfo
+                }
             ]
             await nextTick()
             expect(wrapper.text()).toContain('原始长度 9 字符')
@@ -60,13 +60,11 @@ describe('TruncationTooltip', () => {
 
     it('defaults missing originalValue/maxLength to zero', async () => {
         const cell = document.createElement('td')
-        cell.setAttribute('data-column', 'note')
-        document.body.appendChild(cell)
+        cell.dataset.column = 'note'
+        document.body.append(cell)
         try {
             const { wrapper, lastTruncations } = mountTooltip()
-            lastTruncations.value = [
-                { value: 'x', wasTruncated: true, column: 'note' } as TruncationInfo
-            ]
+            lastTruncations.value = [{ value: 'x', wasTruncated: true, column: 'note' }]
             await nextTick()
             expect(wrapper.text()).toContain('原始长度 0 字符')
             expect(wrapper.text()).toContain('列最大长度: 0')
@@ -77,11 +75,11 @@ describe('TruncationTooltip', () => {
 
     it('positions the tooltip above the cell when below would overflow', async () => {
         const cell = document.createElement('td')
-        cell.setAttribute('data-column', 'bio')
+        cell.dataset.column = 'bio'
         // Cell near the bottom of a short viewport → below does not fit and above >= 0
         cell.getBoundingClientRect = () =>
             ({ top: 340, bottom: 360, left: 100, width: 50 }) as DOMRect
-        document.body.appendChild(cell)
+        document.body.append(cell)
         const innerHeightSpy = vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(400)
         const innerWidthSpy = vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)
         try {
@@ -93,7 +91,7 @@ describe('TruncationTooltip', () => {
                     originalValue: 'y',
                     maxLength: 1,
                     column: 'bio'
-                } as TruncationInfo
+                }
             ]
             await nextTick()
             await nextTick()
@@ -110,30 +108,18 @@ describe('TruncationTooltip', () => {
 
     it('replaces a pending hide timer when a second truncation arrives', async () => {
         const cell = document.createElement('td')
-        cell.setAttribute('data-column', 'a')
-        document.body.appendChild(cell)
+        cell.dataset.column = 'a'
+        document.body.append(cell)
         try {
             const { wrapper, lastTruncations } = mountTooltip()
             lastTruncations.value = [
-                {
-                    value: 'x',
-                    wasTruncated: true,
-                    originalValue: 'yy',
-                    maxLength: 1,
-                    column: 'a'
-                } as TruncationInfo
+                { value: 'x', wasTruncated: true, originalValue: 'yy', maxLength: 1, column: 'a' }
             ]
             await nextTick()
             // Second truncation 2s later resets the 3s timer
             await vi.advanceTimersByTimeAsync(2000)
             lastTruncations.value = [
-                {
-                    value: 'z',
-                    wasTruncated: true,
-                    originalValue: 'zzz',
-                    maxLength: 1,
-                    column: 'a'
-                } as TruncationInfo
+                { value: 'z', wasTruncated: true, originalValue: 'zzz', maxLength: 1, column: 'a' }
             ]
             await nextTick()
             expect(wrapper.text()).toContain('原始长度 3 字符')
@@ -148,22 +134,17 @@ describe('TruncationTooltip', () => {
 
     it('clears a pending timer on unmount', async () => {
         const cell = document.createElement('td')
-        cell.setAttribute('data-column', 'b')
-        document.body.appendChild(cell)
+        cell.dataset.column = 'b'
+        document.body.append(cell)
         try {
             const { wrapper, lastTruncations } = mountTooltip()
             lastTruncations.value = [
-                {
-                    value: 'x',
-                    wasTruncated: true,
-                    originalValue: 'yy',
-                    maxLength: 1,
-                    column: 'b'
-                } as TruncationInfo
+                { value: 'x', wasTruncated: true, originalValue: 'yy', maxLength: 1, column: 'b' }
             ]
             await nextTick()
             wrapper.unmount()
             vi.advanceTimersByTime(4000)
+            expect(vi.getTimerCount()).toBe(0)
         } finally {
             cell.remove()
         }

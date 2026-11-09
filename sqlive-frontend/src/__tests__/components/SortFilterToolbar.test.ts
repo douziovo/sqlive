@@ -51,10 +51,10 @@ describe('SortFilterToolbar', () => {
         const wrapper = mountToolbar()
         const buttons = wrapper.findAll('button')
         const nameBtn = buttons.find((b) => b.text().includes('名称'))
-        if (nameBtn) {
-            await nameBtn.trigger('click')
-            expect(wrapper.emitted('toggle-sort')?.[0]).toEqual(['name'])
-        }
+        expect(nameBtn).toBeTruthy()
+
+        await nameBtn!.trigger('click')
+        expect(wrapper.emitted('toggle-sort')?.[0]).toEqual(['name'])
     })
 
     it('shows filtered count vs total count', () => {

@@ -30,9 +30,13 @@ export function stripMarkdown(raw: string): string {
     const fragment = DOMPurify.sanitize(marked.parse(raw, { async: false }), {
         RETURN_DOM_FRAGMENT: true
     })
-    fragment.querySelectorAll('pre, code, h1, h2, h3, h4, h5, h6').forEach((node) => node.remove())
-    fragment.querySelectorAll('br, p, li, td, th').forEach((node) => node.append(' '))
-    return (fragment.textContent ?? '').replace(/\s+/g, ' ').trim()
+    fragment.querySelectorAll('pre, code, h1, h2, h3, h4, h5, h6').forEach((node) => {
+        node.remove()
+    })
+    fragment.querySelectorAll('br, p, li, td, th').forEach((node) => {
+        node.append(' ')
+    })
+    return (fragment.textContent ?? '').replaceAll(/\s+/gu, ' ').trim()
 }
 
 /**
@@ -40,5 +44,5 @@ export function stripMarkdown(raw: string): string {
  * Example: '/src/content/docs/usage/editor.md' -> 'usage/editor'
  */
 export function pathToSlug(path: string): string {
-    return path.replace(/^.*\/content\/docs\//, '').replace(/\.md$/, '')
+    return path.replace(/^.*\/content\/docs\//u, '').replace(/\.md$/u, '')
 }

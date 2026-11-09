@@ -34,6 +34,7 @@ export function useFilteredList(items: Ref<PreviewItem[]>, filterText: Ref<strin
         if (keyboardIndex.value !== null && filteredItems.value[keyboardIndex.value]) {
             return filteredItems.value[keyboardIndex.value]
         }
+        // oxlint-disable-next-line unicorn/no-useless-undefined -- The computed value explicitly models an absent selection.
         return undefined
     })
 

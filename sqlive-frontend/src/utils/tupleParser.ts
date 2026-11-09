@@ -22,7 +22,7 @@ export function extractTuplesWithDepth(
 
     let i = valuesStart
     while (i < sql.length) {
-        while (i < sql.length && /\s/.test(masked[i])) i++
+        while (i < sql.length && /\s/u.test(masked[i])) i++
         if (i >= sql.length || masked[i] !== '(') break
 
         const tupleStart = i
@@ -62,7 +62,7 @@ export function extractTuplesWithDepth(
                 i++
                 if (depth === 0) {
                     tuples.push({
-                        content: sql.substring(tupleStart + 1, i - 1),
+                        content: sql.slice(tupleStart + 1, i - 1),
                         start: tupleStart,
                         end: i
                     })
@@ -74,7 +74,7 @@ export function extractTuplesWithDepth(
             i++
         }
 
-        while (i < sql.length && (masked[i] === ',' || /\s/.test(masked[i]))) i++
+        while (i < sql.length && (masked[i] === ',' || /\s/u.test(masked[i]))) i++
     }
 
     return tuples

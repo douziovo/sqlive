@@ -96,7 +96,7 @@ function handleOpenChapter(): void {
 .chapter-card__desc {
     font-size: 13px;
     color: var(--muted-foreground);
-    margin: 4px 0 0 0;
+    margin: 4px 0 0;
 }
 
 .chapter-card__progress {

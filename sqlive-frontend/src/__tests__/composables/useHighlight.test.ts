@@ -15,7 +15,7 @@ vi.mock('@/utils/sqlStatements', () => ({
         })
     }),
     compareValuesForHighlight: vi.fn((cellVal: any, op: string, target: string) => {
-        const cleanTarget = target.replace(/^'|'$/g, '')
+        const cleanTarget = target.replaceAll(/^'|'$/gu, '')
         switch (op) {
             case '=':
                 return String(cellVal) === cleanTarget

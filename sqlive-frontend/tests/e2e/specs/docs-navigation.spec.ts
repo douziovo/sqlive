@@ -8,20 +8,20 @@ test.describe('Docs Navigation', () => {
         // Click AppHeader Docs button → navigate to /docs/intro
         const docsBtn = page.locator('[data-testid="docs-link-btn"]')
         await docsBtn.click()
-        await expect(page).toHaveURL(/\/docs\/intro/)
+        await expect(page).toHaveURL(/\/docs\/intro/u)
         // Article H1 renders (markdown loaded + sanitized + v-html)
         await expect(page.locator('article h1').first()).toBeVisible({ timeout: 10_000 })
 
         // Sidebar nav click → /docs/usage/editor
         const editorNav = page.locator('[data-testid="nav-usage-editor"]')
         await editorNav.click()
-        await expect(page).toHaveURL(/\/docs\/usage\/editor/)
+        await expect(page).toHaveURL(/\/docs\/usage\/editor/u)
         await expect(page.locator('article h1').first()).toBeVisible({ timeout: 10_000 })
 
         // Wordmark click → back to / (AppHeader is in RootLayout, single instance)
         const wordmark = page.locator('header button', { hasText: 'sqlive' }).first()
         await wordmark.click()
-        await expect(page).toHaveURL(/\/$/)
+        await expect(page).toHaveURL(/\/$/u)
     })
 
     test('sidebar highlights current route', async ({ page }) => {
@@ -30,7 +30,7 @@ test.describe('Docs Navigation', () => {
         await expect(page.locator('article h1').first()).toBeVisible({ timeout: 10_000 })
 
         const introNav = page.locator('[data-testid="nav-intro"]')
-        await expect(introNav).toHaveClass(/bg-primary\/10/)
+        await expect(introNav).toHaveClass(/bg-primary\/10/u)
         await expect(introNav).toHaveAttribute('aria-current', 'page')
     })
 

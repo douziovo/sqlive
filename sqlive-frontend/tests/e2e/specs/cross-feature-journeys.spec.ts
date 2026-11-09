@@ -30,13 +30,13 @@ test.describe('Cross-Feature User Journeys', () => {
         await page.route('**/api/ai/**', (route) => {
             const url = route.request().url()
             if (url.includes('/chat')) {
-                route.fulfill({
+                void route.fulfill({
                     status: 200,
                     contentType: 'text/event-stream',
                     body: 'data: {"content":"Fixed the syntax error."}\n\ndata: [DONE]\n'
                 })
             } else if (url.includes('/fix')) {
-                route.fulfill({
+                void route.fulfill({
                     status: 200,
                     contentType: 'application/json',
                     body: JSON.stringify({
@@ -48,7 +48,7 @@ test.describe('Cross-Feature User Journeys', () => {
                     })
                 })
             } else {
-                route.fulfill({
+                void route.fulfill({
                     status: 200,
                     contentType: 'application/json',
                     body: JSON.stringify({ success: true, data: { content: 'Mock.' } })
@@ -265,7 +265,7 @@ test.describe('Cross-Feature User Journeys', () => {
         const downloadPromise = page.waitForEvent('download')
         await sqlEditor.clickContextMenuAction('导出当前标签页')
         const download = await downloadPromise
-        expect(download.suggestedFilename()).toMatch(/\.sql$/)
+        expect(download.suggestedFilename()).toMatch(/\.sql$/u)
         expect(await download.failure()).toBeNull()
 
         await expect(page.locator('.monaco-editor')).toBeVisible()
@@ -275,7 +275,7 @@ test.describe('Cross-Feature User Journeys', () => {
         // Mock knowledge graph API
         await page.route('**/api/knowledge/**', (route) => {
             if (route.request().url().includes('/graph')) {
-                route.fulfill({
+                void route.fulfill({
                     status: 200,
                     contentType: 'application/json',
                     body: JSON.stringify({
@@ -306,7 +306,7 @@ test.describe('Cross-Feature User Journeys', () => {
                     })
                 })
             } else {
-                route.fulfill({
+                void route.fulfill({
                     status: 200,
                     contentType: 'application/json',
                     body: JSON.stringify({ success: true })
@@ -316,7 +316,7 @@ test.describe('Cross-Feature User Journeys', () => {
 
         // Mock AI chat
         await page.route('**/api/ai/chat', (route) => {
-            route.fulfill({
+            void route.fulfill({
                 status: 200,
                 contentType: 'text/event-stream',
                 body: 'data: {"content":"SELECT queries retrieve data from tables. Use FROM to specify the table, WHERE to filter."}\n\ndata: [DONE]\n'
@@ -338,7 +338,7 @@ test.describe('Cross-Feature User Journeys', () => {
         // Verify AI response relates to the topic
         const chatPanel = page.locator('.ai-chat-panel')
         await expect(chatPanel).toBeVisible()
-        await expect(chatPanel.getByText(/SELECT queries retrieve data/)).toBeVisible({
+        await expect(chatPanel.getByText(/SELECT queries retrieve data/u)).toBeVisible({
             timeout: 5_000
         })
 

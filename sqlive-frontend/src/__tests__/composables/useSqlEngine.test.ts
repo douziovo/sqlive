@@ -26,7 +26,7 @@ vi.mock('../../utils/sqlStatements', async (importOriginal) => {
 
 describe('useSqlEngine', () => {
     let useSqlEngine: SqlEngineSetup['useSqlEngine']
-    let fetchSpy: ReturnType<typeof vi.fn>
+    let fetchSpy: ReturnType<typeof vi.fn<(...args: any[]) => Promise<Response>>>
 
     beforeEach(async () => {
         const setup = await setupSqlEngine()
@@ -397,7 +397,7 @@ describe('useSqlEngine', () => {
         await tick()
 
         expect(fetchSpy).toHaveBeenCalled()
-        const call = fetchSpy.mock.calls[0]!
+        const call = fetchSpy.mock.calls[0]
         expect(call[0]).toBe(API_URL)
         expect(call[1].method).toBe('POST')
         expect(new Headers(call[1].headers).get('Content-Type')).toBe('application/json')
@@ -508,14 +508,25 @@ describe('useSqlEngine', () => {
         expect(engine.code.value).toContain('DROP TABLE "t";')
     })
 
+    it('preserves signed int32 UTF-16 row IDs for text containing emoji', async () => {
+        mockSuccess(fetchSpy, {
+            tables: [
+                {
+                    name: 'notes',
+                    columns: ['message'],
+                    columnTypes: { message: 'TEXT' },
+                    data: [{ message: '😀 SQLive long text' }]
+                }
+            ]
+        })
+        const engine = useSqlEngine()
+        await tick()
+        expect(engine.db.tables[0].data[0]._highlightId).toBe(956595467)
+    })
+
     it('handles malformed JSON response gracefully', async () => {
         vi.spyOn(console, 'error').mockImplementation(() => {})
-        fetchSpy.mockResolvedValue({
-            status: 200,
-            ok: true,
-            headers: { get: () => null },
-            json: () => Promise.reject(new Error('Unexpected token < in JSON'))
-        })
+        fetchSpy.mockResolvedValue(new Response('<invalid json>'))
 
         const engine = useSqlEngine()
         await tick()
@@ -526,12 +537,7 @@ describe('useSqlEngine', () => {
 
     it('handles empty response body gracefully', async () => {
         vi.spyOn(console, 'error').mockImplementation(() => {})
-        fetchSpy.mockResolvedValue({
-            status: 200,
-            ok: true,
-            headers: { get: () => null },
-            json: () => Promise.resolve(null)
-        })
+        fetchSpy.mockResolvedValue(Response.json(null))
 
         const engine = useSqlEngine()
         await tick()

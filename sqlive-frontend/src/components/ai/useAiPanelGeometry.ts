@@ -21,12 +21,12 @@ export function useAiPanelGeometry() {
     const isMinimized = ref(false)
 
     function toggleMinimize() {
-        if (!isMinimized.value) {
-            savedPosition.x = panelState.x
-            savedPosition.y = panelState.y
-        } else {
+        if (isMinimized.value) {
             savedPosition.x = 0
             savedPosition.y = 0
+        } else {
+            savedPosition.x = panelState.x
+            savedPosition.y = panelState.y
         }
         isMinimized.value = !isMinimized.value
     }
@@ -98,8 +98,8 @@ export function useAiPanelGeometry() {
     useEventListener(document, 'mouseup', onDragEnd)
 
     // ── Resize ─────────────────────────────────────────────────────
-    const MIN_W = 340,
-        MIN_H = 320
+    const MIN_H = 320,
+        MIN_W = 340
     const resizeStartPos = reactive({ x: 0, y: 0, w: 0, h: 0 })
     function onResizeStart(e: MouseEvent) {
         e.preventDefault()

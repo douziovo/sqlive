@@ -224,7 +224,7 @@ function toggleHistory(): void {
     background: white;
     border: 1px solid var(--border);
     border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 8px 32px rgb(0 0 0 / 15%);
     padding: 16px 20px;
     display: flex;
     flex-direction: column;
@@ -253,6 +253,7 @@ function toggleHistory(): void {
     line-height: 1;
     padding: 0 2px;
 }
+
 .knowledge-detail__close:hover {
     color: var(--foreground);
 }
@@ -294,6 +295,7 @@ function toggleHistory(): void {
     color: var(--foreground);
     border: 1px solid var(--border);
 }
+
 .knowledge-detail__btn--master:hover {
     background: var(--muted);
 }
@@ -303,6 +305,7 @@ function toggleHistory(): void {
     color: white;
     border: none;
 }
+
 .knowledge-detail__btn--ai:hover {
     opacity: 0.9;
 }

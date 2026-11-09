@@ -84,5 +84,5 @@ export function formatGenerateSql(result: string): string {
 }
 
 export function extractSqlFromMarkdown(text: string): string | undefined {
-    return text.match(/```sql\n([\s\S]*?)\n```/)?.[1]?.trim()
+    return text.match(/```sql\n([\s\S]*?)\n```/u)?.[1]?.trim()
 }

@@ -54,7 +54,9 @@ vi.mock('monaco-editor/editor/editor.api', () => ({
 }))
 
 vi.mock('monaco-editor/editor/editor.worker', () => ({
-    default: class MockWorker {}
+    default: class MockWorker {
+        terminate() {}
+    }
 }))
 
 vi.mock('monaco-editor/languages/definitions/sql/register', () => ({}))
@@ -148,8 +150,7 @@ describe('useMonacoEditor', () => {
             ai: undefined
         })
 
-        // Should not throw
-        syncCode('SELECT 1;')
+        expect(() => syncCode('SELECT 1;')).not.toThrow()
     })
 
     it('dispose cleans up editor', () => {
@@ -205,8 +206,7 @@ describe('useMonacoEditor', () => {
             ai: undefined
         })
 
-        // Should not throw
-        dispose()
+        expect(() => dispose()).not.toThrow()
     })
 
     it('formatSql calls sql-formatter and updates editor', () => {
@@ -230,8 +230,7 @@ describe('useMonacoEditor', () => {
             ai: undefined
         })
 
-        // Should not throw
-        formatSql()
+        expect(() => formatSql()).not.toThrow()
     })
 
     it('create registers editor actions', () => {

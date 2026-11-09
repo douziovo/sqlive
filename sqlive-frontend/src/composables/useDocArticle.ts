@@ -13,14 +13,13 @@ import { sanitizeConfig } from '@/utils/sanitize'
  * (Error Handling 4.1).
  *
  * marked.parse is wrapped in try/catch with `<pre>` fallback (Error Handling 4.8).
- * marked.parse return type is explicitly cast to string ( — marked v18
- * can return Promise<string> under async option; we use sync mode).
+ * marked.parse uses explicit synchronous mode, returning a string.
  */
-const articles = import.meta.glob('/src/content/docs/**/*.md', {
+const articles = import.meta.glob<string>('/src/content/docs/**/*.md', {
     query: '?raw',
     import: 'default',
     eager: true
-}) as Record<string, string>
+})
 
 export function useDocArticle(slug: Ref<string>) {
     const raw = computed(() => {
@@ -31,9 +30,8 @@ export function useDocArticle(slug: Ref<string>) {
     const html = computed(() => {
         if (!raw.value) return null
         try {
-            // : explicit `as string` — marked.parse can return
-            // string | Promise<string>; we use sync mode (no `async: true`).
-            const parsed = marked.parse(raw.value, { breaks: true, gfm: true }) as string
+            // async: false keeps the parser result synchronous and typed as string.
+            const parsed = marked.parse(raw.value, { async: false, breaks: true, gfm: true })
             // shared sanitizeConfig with afterSanitizeAttributes hook
             // (target=_blank + rel=noopener noreferrer on every <a>).
             return DOMPurify.sanitize(parsed, sanitizeConfig)
@@ -41,9 +39,9 @@ export function useDocArticle(slug: Ref<string>) {
             // Error Handling 4.8: marked.parse exception → escaped <pre> fallback
             // (escape so raw markdown is shown as text, not rendered as HTML)
             const escaped = raw.value
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
             return `<pre>${escaped}</pre>`
         }
     })

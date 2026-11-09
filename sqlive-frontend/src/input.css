@@ -1,7 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&display=swap');
-
+@import 'https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&display=swap';
 @import 'tailwindcss';
-
 @import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
@@ -30,25 +28,25 @@ body,
     /* D-04 (Rule 3 deviation): converted slate-300 hex to oklch to satisfy
        "no hex from D-04 palette in input.css" acceptance criterion. Tailwind
        canonical oklch value. Visual appearance unchanged. */
-    background-color: oklch(0.869 0.015 252);
+    background-color: oklch(86.9% 0.015 252deg);
     border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
     /* D-04 (Rule 3 deviation): converted slate-400 hex to oklch. Tailwind
        canonical oklch value. */
-    background-color: oklch(0.707 0.022 261);
+    background-color: oklch(70.7% 0.022 261deg);
 }
 
 /* Firefox thin scrollbar */
 * {
     scrollbar-width: thin;
-    scrollbar-color: oklch(0.869 0.015 252) transparent;
+    scrollbar-color: oklch(86.9% 0.015 252deg) transparent;
 }
 
 @theme inline {
     --font-sans: 'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
-    --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --font-mono: 'Geist Mono', ui-monospace, sfmono-regular, menlo, monaco, consolas, monospace;
     --font-heading: var(--font-sans);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
@@ -89,72 +87,80 @@ body,
 
 :root {
     --radius: 0.625rem;
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.488 0.243 264.376);
-    --primary-foreground: oklch(0.97 0.014 254.604);
-    --secondary: oklch(0.967 0.001 286.375);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.967 0.001 286.375);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.967 0.001 286.375);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.705 0.015 286.067);
-    --chart-1: oklch(0.646 0.222 41.116);
-    --chart-2: oklch(0.6 0.118 184.704);
-    --chart-3: oklch(0.398 0.07 227.392);
-    --chart-4: oklch(0.828 0.189 84.429);
-    --chart-5: oklch(0.769 0.188 70.08);
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    --background: oklch(100% 0 0deg);
+    --foreground: oklch(14.5% 0 0deg);
+    --card: oklch(100% 0 0deg);
+    --card-foreground: oklch(14.5% 0 0deg);
+    --popover: oklch(100% 0 0deg);
+    --popover-foreground: oklch(14.5% 0 0deg);
+    --primary: oklch(48.8% 0.243 264.376deg);
+    --primary-foreground: oklch(97% 0.014 254.604deg);
+    --secondary: oklch(96.7% 0.001 286.375deg);
+    --secondary-foreground: oklch(20.5% 0 0deg);
+    --muted: oklch(96.7% 0.001 286.375deg);
+    --muted-foreground: oklch(55.6% 0 0deg);
+    --accent: oklch(96.7% 0.001 286.375deg);
+    --accent-foreground: oklch(20.5% 0 0deg);
+    --destructive: oklch(57.7% 0.245 27.325deg);
+    --border: oklch(92.2% 0 0deg);
+    --input: oklch(92.2% 0 0deg);
+    --ring: oklch(70.5% 0.015 286.067deg);
+    --chart-1: oklch(64.6% 0.222 41.116deg);
+    --chart-2: oklch(60% 0.118 184.704deg);
+    --chart-3: oklch(39.8% 0.07 227.392deg);
+    --chart-4: oklch(82.8% 0.189 84.429deg);
+    --chart-5: oklch(76.9% 0.188 70.08deg);
+    --sidebar: oklch(98.5% 0 0deg);
+    --sidebar-foreground: oklch(14.5% 0 0deg);
+    --sidebar-primary: oklch(48.8% 0.243 264.376deg);
+    --sidebar-primary-foreground: oklch(97% 0.014 254.604deg);
+    --sidebar-accent: oklch(97% 0 0deg);
+    --sidebar-accent-foreground: oklch(20.5% 0 0deg);
+    --sidebar-border: oklch(92.2% 0 0deg);
+    --sidebar-ring: oklch(70.8% 0 0deg);
 
     /* D-04: Knowledge node status colors (3 states × 3 difficulties × 3 props = 27, unlearned merged to 3) */
-    --node-mastered-d1-bg: oklch(0.97 0.04 145);
-    --node-mastered-d1-border: oklch(0.85 0.13 145);
-    --node-mastered-d1-text: oklch(0.45 0.11 145);
-    --node-mastered-d2-bg: oklch(0.97 0.03 240);
-    --node-mastered-d2-border: oklch(0.75 0.1 240);
-    --node-mastered-d2-text: oklch(0.45 0.14 240);
-    --node-mastered-d3-bg: oklch(0.97 0.04 350);
-    --node-mastered-d3-border: oklch(0.8 0.1 350);
-    --node-mastered-d3-text: oklch(0.5 0.15 350);
-    --node-progress-d1-bg: oklch(0.96 0.05 85);
-    --node-progress-d1-border: oklch(0.85 0.13 85);
-    --node-progress-d1-text: oklch(0.4 0.1 85);
-    --node-progress-d2-bg: oklch(0.95 0.04 250);
-    --node-progress-d2-border: oklch(0.78 0.1 250);
-    --node-progress-d2-text: oklch(0.4 0.12 250);
-    --node-progress-d3-bg: oklch(0.96 0.05 350);
-    --node-progress-d3-border: oklch(0.8 0.12 350);
-    --node-progress-d3-text: oklch(0.45 0.15 350);
-    --node-unlearned-bg: oklch(0.98 0.005 250);
-    --node-unlearned-border: oklch(0.85 0.01 250);
-    --node-unlearned-text: oklch(0.65 0.015 250);
+    --node-mastered-d1-bg: oklch(97% 0.04 145deg);
+    --node-mastered-d1-border: oklch(85% 0.13 145deg);
+    --node-mastered-d1-text: oklch(45% 0.11 145deg);
+    --node-mastered-d2-bg: oklch(97% 0.03 240deg);
+    --node-mastered-d2-border: oklch(75% 0.1 240deg);
+    --node-mastered-d2-text: oklch(45% 0.14 240deg);
+    --node-mastered-d3-bg: oklch(97% 0.04 350deg);
+    --node-mastered-d3-border: oklch(80% 0.1 350deg);
+    --node-mastered-d3-text: oklch(50% 0.15 350deg);
+    --node-progress-d1-bg: oklch(96% 0.05 85deg);
+    --node-progress-d1-border: oklch(85% 0.13 85deg);
+    --node-progress-d1-text: oklch(40% 0.1 85deg);
+    --node-progress-d2-bg: oklch(95% 0.04 250deg);
+    --node-progress-d2-border: oklch(78% 0.1 250deg);
+    --node-progress-d2-text: oklch(40% 0.12 250deg);
+    --node-progress-d3-bg: oklch(96% 0.05 350deg);
+    --node-progress-d3-border: oklch(80% 0.12 350deg);
+    --node-progress-d3-text: oklch(45% 0.15 350deg);
+    --node-unlearned-bg: oklch(98% 0.005 250deg);
+    --node-unlearned-border: oklch(85% 0.01 250deg);
+    --node-unlearned-text: oklch(65% 0.015 250deg);
 
     /* D-04: Task category colors */
-    --task-core: oklch(0.85 0.17 85);
-    --task-deep: oklch(0.62 0.15 250);
-    --task-daily: oklch(0.65 0.15 350);
+    --task-core: oklch(85% 0.17 85deg);
+    --task-deep: oklch(62% 0.15 250deg);
+    --task-daily: oklch(65% 0.15 350deg);
 
     /* D-04: Achievement toast gradients */
-    --toast-gradient-default: linear-gradient(135deg, oklch(0.25 0.02 250), oklch(0.4 0.03 250));
-    --toast-gradient-high-diff: linear-gradient(135deg, oklch(0.4 0.12 280), oklch(0.55 0.15 280));
-    --toast-gradient-task: linear-gradient(135deg, oklch(0.55 0.12 160), oklch(0.65 0.15 160));
-    --toast-gradient-electric: linear-gradient(135deg, oklch(0.5 0.1 60), oklch(0.62 0.14 60));
-    --toast-gradient-fire: linear-gradient(135deg, oklch(0.45 0.15 25), oklch(0.55 0.18 25));
+    --toast-gradient-default: linear-gradient(
+        135deg,
+        oklch(25% 0.02 250deg),
+        oklch(40% 0.03 250deg)
+    );
+    --toast-gradient-high-diff: linear-gradient(
+        135deg,
+        oklch(40% 0.12 280deg),
+        oklch(55% 0.15 280deg)
+    );
+    --toast-gradient-task: linear-gradient(135deg, oklch(55% 0.12 160deg), oklch(65% 0.15 160deg));
+    --toast-gradient-electric: linear-gradient(135deg, oklch(50% 0.1 60deg), oklch(62% 0.14 60deg));
+    --toast-gradient-fire: linear-gradient(135deg, oklch(45% 0.15 25deg), oklch(55% 0.18 25deg));
 }
 
 @layer base {
@@ -168,15 +174,19 @@ body,
 }
 
 /* Prevent splitpanes slide-in animation on initial page load */
+
 /* splitpanes__pane 是第三方库 splitpanes 在运行时渲染的类名，静态检查器无法识别，不可删除 */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .splitpanes.no-animate .splitpanes__pane {
     transition: none !important;
 }
 
 /* Splitpanes splitter customization */
+
 /* splitpanes__splitter 是第三方库 splitpanes 在运行时渲染的类名，静态检查器无法识别，不可删除 */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .splitpanes.default-theme .splitpanes__splitter {
     background-color: var(--border);
     transition: background-color 0.2s ease;
@@ -184,19 +194,22 @@ body,
 }
 
 /* 同上：splitter 的悬停态，类名来自第三方库 splitpanes */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .splitpanes.default-theme .splitpanes__splitter:hover {
     background-color: color-mix(in srgb, var(--primary) 30%, transparent);
 }
 
 /* 同上：splitter 的按下态，类名来自第三方库 splitpanes */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .splitpanes.default-theme .splitpanes__splitter:active {
     background-color: var(--primary);
 }
 
 /* 同上：splitter 中心的拖拽提示条，类名来自第三方库 splitpanes */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .splitpanes.default-theme .splitpanes__splitter::after {
     content: '';
     position: absolute;
@@ -212,7 +225,8 @@ body,
 }
 
 /* 同上：splitter 悬停时显示提示条，类名来自第三方库 splitpanes */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .splitpanes.default-theme .splitpanes__splitter:hover::after {
     opacity: 0.6;
 }

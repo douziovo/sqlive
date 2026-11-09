@@ -7,7 +7,7 @@ import { type AiChatSetup, setupAiChat } from '../test-utils'
 
 describe('useAiChat', () => {
     let useAiChat: AiChatSetup['useAiChat']
-    let fetchSpy: ReturnType<typeof vi.fn>
+    let fetchSpy: ReturnType<typeof vi.fn<(...args: any[]) => Promise<Response>>>
 
     const mockSqlEngine = () => ({
         executionError: ref<{ line: number; message: string } | null>(null),
@@ -209,6 +209,9 @@ describe('useAiChat', () => {
         const engine = useAiChat(mockSqlEngine())
         mockStreamResponse([
             'data: invalid-json\n\n',
+            'data: null\n\n',
+            'data: []\n\n',
+            'data: {"type":"text","content":{"unexpected":"object"}}\n\n',
             'data: {"type":"error","content":"model unavailable"}\n\n'
         ])
 

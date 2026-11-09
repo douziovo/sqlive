@@ -34,13 +34,13 @@ const thinkingTitle = computed(() => {
     const clean = props.reasoning
     const lines = clean.split('\n').filter((l) => l.trim())
     if (lines.length === 0) return ''
-    const meaningful = lines.filter((l) => l.replace(/^[\d*.•\- ]+/, '').trim().length > 3)
+    const meaningful = lines.filter((l) => l.replace(/^[\d*.•\- ]+/u, '').trim().length > 3)
     return (
         meaningful
             .pop()
-            ?.replace(/^[\d*.•\- ]+/, '')
+            ?.replace(/^[\d*.•\- ]+/u, '')
             .trim()
-            .substring(0, 80) || ''
+            .slice(0, 80) || ''
     )
 })
 </script>

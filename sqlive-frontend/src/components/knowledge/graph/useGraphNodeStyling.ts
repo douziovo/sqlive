@@ -28,7 +28,7 @@ export function useGraphNodeStyling(opts: {
 
         return opts.displayNodes.value.map((node) => {
             let data = { ...node.data }
-            let style = { ...node.style }
+            let style = { ...(typeof node.style === 'function' ? {} : node.style) }
             let searchDimmed = false
 
             // Step 1: Local search filter
@@ -43,7 +43,7 @@ export function useGraphNodeStyling(opts: {
             } // Step 2: Hover state (overrides search opacity for connected nodes)
             if (opts.hoveredNodeId.value) {
                 const tid = data.topicId
-                const adj = opts.adjacencyMap.value.get(opts.hoveredNodeId.value) || new Set()
+                const adj = opts.adjacencyMap.value.get(opts.hoveredNodeId.value) ?? new Set()
                 if (tid === opts.hoveredNodeId.value) {
                     data = { ...data, isFocused: true, isHighlighted: false, isDimmed: false }
                     style = { ...style, opacity: 1 }

@@ -91,7 +91,7 @@ const filteredTasksByCategory = computed(() => {
         ? allTasks.value.filter((t) => props.chapterCategoryFilter!.includes(t.category))
         : allTasks.value.filter((t) => t.category === activeCategory.value)
     // Pinned tasks always appear first
-    return [...source].sort((a, b) => {
+    return [...source].toSorted((a, b) => {
         if (a.isPinned && !b.isPinned) return -1
         if (!a.isPinned && b.isPinned) return 1
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()

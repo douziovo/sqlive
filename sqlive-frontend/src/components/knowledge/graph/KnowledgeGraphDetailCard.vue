@@ -46,27 +46,34 @@ const emit = defineEmits<{
 }
 
 /* <Transition name="card-pop"> 运行时生成的进入过渡类，静态检查器无法识别，不可删除 */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .card-pop-enter-active {
     transition:
         opacity 0.2s ease-out,
         transform 0.2s ease-out;
 }
+
 /* 同上：Transition 运行时生成的离开过渡类 */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .card-pop-leave-active {
     transition:
         opacity 0.15s ease-in,
         transform 0.15s ease-in;
 }
+
 /* 同上：Transition 运行时生成的进入起始态 */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .card-pop-enter-from {
     opacity: 0;
     transform: translateY(12px) scale(0.95);
 }
+
 /* 同上：Transition 运行时生成的离开结束态 */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .card-pop-leave-to {
     opacity: 0;
     transform: translateY(12px) scale(0.95);

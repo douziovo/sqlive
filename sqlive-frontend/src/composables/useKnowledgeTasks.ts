@@ -62,14 +62,16 @@ export const useKnowledgeTasks = createSharedComposable(() => {
         // Normalize substeps: string[] → TaskSubstep[], first active, rest locked
         let substeps: TaskSubstep[] = []
         if (Array.isArray(input.substeps) && input.substeps.length > 0) {
-            if (typeof input.substeps[0] === 'string') {
-                substeps = (input.substeps as string[]).map((label, i) => ({
+            if (input.substeps.every((step): step is string => typeof step === 'string')) {
+                substeps = input.substeps.map((label, i) => ({
                     id: nanoid(),
                     label,
                     status: i === 0 ? 'active' : 'locked'
                 }))
             } else {
-                substeps = input.substeps as TaskSubstep[]
+                substeps = input.substeps.filter(
+                    (step): step is TaskSubstep => typeof step !== 'string'
+                )
             }
         }
 

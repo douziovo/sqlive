@@ -65,7 +65,7 @@ describe('JournalTaskDetail', () => {
 
     it('shows the XP reward for the task', () => {
         const wrapper = mountDetail({ task: makeTask() })
-        expect(wrapper.find('.journal__detail-reward').text()).toMatch(/奖励：\+\d+ XP/)
+        expect(wrapper.find('.journal__detail-reward').text()).toMatch(/奖励：\+\d+ XP/u)
     })
 
     it('shows StepProgress only when the task has substeps', () => {

@@ -21,11 +21,11 @@ import { extractH1, stripMarkdown, pathToSlug } from '@/utils/markdown'
  *
  * locked config: prefix true, fuzzy 0.2, boost title x2.
  */
-const articles = import.meta.glob('/src/content/docs/**/*.md', {
+const articles = import.meta.glob<string>('/src/content/docs/**/*.md', {
     query: '?raw',
     import: 'default',
     eager: true
-}) as Record<string, string>
+})
 
 // Module-level singleton state — survives component unmount.
 let index: MiniSearchType | null = null
@@ -73,10 +73,10 @@ export function useDocsSearch() {
         score: number
     }> {
         if (!index || !query.trim()) return []
-        return index.search(query).map((r: any) => ({
-            slug: r.slug,
-            title: r.title,
-            category: r.category,
+        return index.search(query).map((r) => ({
+            slug: typeof r.slug === 'string' ? r.slug : '',
+            title: typeof r.title === 'string' ? r.title : '',
+            category: typeof r.category === 'string' ? r.category : '',
             score: r.score
         }))
     }

@@ -85,10 +85,12 @@ const categoryChips: FilterOption[] = [
         color 0.15s,
         border-color 0.15s;
 }
+
 .knowledge-panel__filter-btn:hover {
     background: var(--secondary);
     color: var(--foreground);
 }
+
 .knowledge-panel__filter-btn--active {
     background: var(--primary);
     color: white;

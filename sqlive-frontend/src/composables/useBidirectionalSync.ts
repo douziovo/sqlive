@@ -43,7 +43,7 @@ export function useBidirectionalSync(
             return canonical.map((cs) => ({
                 start: cs.start,
                 end: cs.end,
-                text: code.value.substring(cs.start, cs.end)
+                text: code.value.slice(cs.start, cs.end)
             }))
         }
         return extractSqlStatements(code.value)
@@ -123,7 +123,7 @@ export function useBidirectionalSync(
             findTuplesInBatch(stmt.text, tableName, row).map((match) => ({ stmt, match }))
         )
         const keys =
-            table?.columns.filter((col) => /\bPRIMARY\s+KEY\b/i.test(table.columnTypes[col])) ?? []
+            table?.columns.filter((col) => /\bPRIMARY\s+KEY\b/iu.test(table.columnTypes[col])) ?? []
         const candidate = matches.length === 1 ? matches[0] : undefined
         // An omitted/generated key cannot identify a VALUES tuple. Preserve the source
         // and append a database operation addressed to the actual, unique primary key.
@@ -180,11 +180,8 @@ export function useBidirectionalSync(
             )
             if (truncations.length > 0) lastTruncations.value = truncations
             code.value =
-                code.value.substring(0, absoluteStart) +
-                newTupleSql +
-                code.value.substring(absoluteEnd)
+                code.value.slice(0, absoluteStart) + newTupleSql + code.value.slice(absoluteEnd)
             flashCode(newTupleSql)
-            return
         }
     }
 
@@ -215,18 +212,17 @@ export function useBidirectionalSync(
             let deleteStart = absoluteStart
             let deleteEnd = absoluteEnd
             const masked = maskSqlComments(stmt.text)
-            const charAfter = masked.substring(match.end).match(/^\s*,/)
-            const charBefore = masked.substring(0, match.start).match(/,\s*$/)
+            const charAfter = masked.slice(match.end).match(/^\s*,/u)
+            const charBefore = masked.slice(0, match.start).match(/,\s*$/u)
             if (charAfter) deleteEnd += charAfter[0].length
             else if (charBefore) deleteStart -= charBefore[0].length
             else {
                 code.value = (
-                    code.value.substring(0, stmt.start) + code.value.substring(stmt.end)
-                ).replace(/\n{3,}/g, '\n\n')
+                    code.value.slice(0, stmt.start) + code.value.slice(stmt.end)
+                ).replaceAll(/\n{3,}/gu, '\n\n')
                 return
             }
-            code.value = code.value.substring(0, deleteStart) + code.value.substring(deleteEnd)
-            return
+            code.value = code.value.slice(0, deleteStart) + code.value.slice(deleteEnd)
         }
     }
 

@@ -100,6 +100,7 @@ describe('HTTP transport', () => {
         const controller = new AbortController()
         const fetchSpy = vi.fn().mockImplementation((_request, options) => {
             controller.abort()
+            // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- Fetch must propagate the exact AbortSignal reason.
             return Promise.reject(options.signal.reason)
         })
         vi.stubGlobal('fetch', fetchSpy)
@@ -119,16 +120,18 @@ describe('HTTP transport', () => {
                 (_request, options) =>
                     new Promise((_resolve, reject) => {
                         options.signal.addEventListener('abort', () =>
+                            // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- Fetch must propagate the exact AbortSignal reason.
                             reject(options.signal.reason)
                         )
                     })
             )
         )
-        const request = expect(
-            http('/api/knowledge/graph', { timeout: 100 })
-        ).rejects.toMatchObject({
-            name: 'TimeoutError'
-        })
+        // oxlint-disable-next-line vitest/valid-expect -- Awaited below, after advancing the fake timeout.
+        const request = Promise.resolve(
+            expect(http('/api/knowledge/graph', { timeout: 100 })).rejects.toMatchObject({
+                name: 'TimeoutError'
+            })
+        )
         await vi.advanceTimersByTimeAsync(101)
         await request
     })

@@ -144,7 +144,7 @@ test.describe('Split Pane & Viewport Edge Cases', () => {
 
         // Scroll within the table container if table exists
         const table = page.locator('#table-many_rows')
-        const tableVisible = await table.isVisible({ timeout: 5_000 }).catch(() => false)
+        const tableVisible = await table.isVisible().catch(() => false)
 
         if (tableVisible) {
             await page.mouse.wheel(0, 200)
@@ -245,8 +245,8 @@ test.describe('Split Pane & Viewport Edge Cases', () => {
         // Mock insert to fail — beforeEach already loaded the page via gotoApp,
         // so we set up the route mock before interacting with the ghost row
         await page.route('**/api/execute', async (route) => {
-            const postData = route.request().postDataJSON() || {}
-            const sql = postData.sql || ''
+            const postData = route.request().postDataJSON() ?? {}
+            const sql = postData.sql ?? ''
 
             // If this looks like an INSERT (contains INSERT INTO departments), fail it
             if (sql.includes('INSERT INTO departments')) {

@@ -357,13 +357,13 @@ describe('KnowledgeGraph', () => {
 
         // Dispatch Ctrl+0 from within an input — guard should ignore it
         const input = document.createElement('input')
-        document.body.appendChild(input)
+        document.body.append(input)
         input.dispatchEvent(
             new KeyboardEvent('keydown', { key: '0', ctrlKey: true, bubbles: true })
         )
         await wrapper.vm.$nextTick()
         expect(wrapper.vm.showSearch).toBe(true) // Still open — Ctrl+0 was ignored
-        document.body.removeChild(input)
+        input.remove()
     })
 
     it('Escape 关闭搜索框并清空搜索词', async () => {
@@ -752,7 +752,9 @@ describe('KnowledgeGraph events', () => {
 
     it('attaches a capture dblclick listener on the viewport and resets state', async () => {
         const wrapper = mountGraph()
-        await new Promise((r) => setTimeout(r, 0))
+        await new Promise((r) => {
+            setTimeout(r, 0)
+        })
 
         // Hover a node, then dblclick the viewport element — state resets
         wrapper.vm.setHoveredNode('sql-basics')
@@ -765,7 +767,9 @@ describe('KnowledgeGraph events', () => {
 
     it('removes the dblclick listener on unmount', async () => {
         const wrapper = mountGraph()
-        await new Promise((r) => setTimeout(r, 0))
+        await new Promise((r) => {
+            setTimeout(r, 0)
+        })
         const vpEl = wrapper.element.querySelector('.vue-flow__viewport') as HTMLElement
         wrapper.unmount()
         // No error thrown and no lingering handlers fire

@@ -175,7 +175,7 @@ function onNext() {
     border: 1px solid #cbd5e1;
     border-radius: 8px;
     padding: 2px 4px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 12%);
     min-width: 280px;
 }
 
@@ -243,14 +243,16 @@ function onNext() {
 }
 
 /* <Transition name="findbar-slide"> 运行时生成的过渡类，静态检查器无法识别，不可删除 */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .findbar-slide-enter-active,
 .findbar-slide-leave-active {
     transition: all 0.2s ease;
 }
 
 /* 同上：Transition 运行时生成的进入起始态与离开结束态 */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .findbar-slide-enter-from,
 .findbar-slide-leave-to {
     opacity: 0;

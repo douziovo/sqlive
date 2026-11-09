@@ -7,28 +7,26 @@ export function useInlineEdit(
     emit: (event: 'update-cell', payload: CellUpdateEvent) => void
 ) {
     function autoResizeGhost(e: Event) {
-        const target = e.target as HTMLTextAreaElement
-        const ghost = target.parentElement?.querySelector('[data-ghost]') as HTMLElement | null
+        const target = e.target
+        if (!(target instanceof HTMLTextAreaElement)) return
+        const ghost = target.parentElement?.querySelector<HTMLElement>('[data-ghost]')
         if (ghost) ghost.textContent = `${target.value} `
     }
 
     function handleBlur(e: FocusEvent, row: Row, col: string) {
-        const target = e.target as HTMLTextAreaElement
+        const target = e.target
+        if (!(target instanceof HTMLTextAreaElement)) return
         const newVal = target.value
         const oldVal = row[col]
 
-        if (String(newVal) === String(oldVal)) return
+        if (newVal === String(oldVal)) return
 
         const typeInfo = columnTypes[col] || ''
         const typeUpper = typeInfo.toUpperCase()
 
-        if (isNumericType(typeUpper) && newVal !== '') {
-            if (Number.isNaN(Number(newVal))) return
-        }
+        if (isNumericType(typeUpper) && newVal !== '' && Number.isNaN(Number(newVal))) return
 
-        if (typeUpper.includes('NOT NULL')) {
-            if (newVal === '' || newVal.trim() === '') return
-        }
+        if (typeUpper.includes('NOT NULL') && newVal.trim() === '') return
 
         emit('update-cell', { tableName, oldRow: row, newRow: { ...row, [col]: newVal } })
     }

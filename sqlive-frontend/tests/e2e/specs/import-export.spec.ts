@@ -19,10 +19,10 @@ test.describe('Import / Export', () => {
         const downloadPromise = page.waitForEvent('download')
         await sqlEditor.clickContextMenuAction('导出当前标签页')
         const download = await downloadPromise
-        expect(download.suggestedFilename()).toMatch(/\.sql$/)
+        expect(download.suggestedFilename()).toMatch(/\.sql$/u)
         const filePath = await download.path()
         expect(filePath).not.toBeNull()
-        expect(await readFile(filePath!, 'utf8')).toContain('CREATE TABLE')
+        expect(await readFile(filePath, 'utf8')).toContain('CREATE TABLE')
         await expect(page.locator('.monaco-editor')).toBeVisible()
     })
 
@@ -37,7 +37,7 @@ test.describe('Import / Export', () => {
         await expect.poll(() => downloads.length).toBe(2)
         expect(new Set(downloads.map((download) => download.suggestedFilename())).size).toBe(2)
         for (const download of downloads) {
-            expect(download.suggestedFilename()).toMatch(/\.sql$/)
+            expect(download.suggestedFilename()).toMatch(/\.sql$/u)
             expect(await download.failure()).toBeNull()
         }
         await expect(page.locator('.monaco-editor')).toBeVisible()
@@ -80,7 +80,7 @@ test.describe('Import / Export', () => {
 
         // Monaco context menu may not always show custom actions in test
         const importOption = page.locator('text=导入 .sql 文件')
-        const importVisible = await importOption.isVisible({ timeout: 3_000 }).catch(() => false)
+        const importVisible = await importOption.isVisible().catch(() => false)
 
         if (importVisible) {
             // Set up file chooser interception

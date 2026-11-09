@@ -81,7 +81,7 @@ const { autoResizeGhost, handleBlur } = useInlineEdit(
 )
 
 // --- Highlight helpers ---
-const getRowId = (row: any) => (row.id !== undefined ? row.id : row._highlightId)
+const getRowId = (row: any) => (row.id === undefined ? row._highlightId : row.id)
 const rowKey = (row: any) => `${props.table.name}:${getRowId(row)}`
 
 const activeRowSet = computed(() => new Set(highlight.activeRows))
@@ -113,25 +113,29 @@ const getCellClasses = (row: any, col: string) => {
 
 <style scoped>
 /* noinspection CssUnusedSymbol */
+
 /* .flash-overlay 由 script 中 classes.push('flash-overlay') 动态添加（闪烁高亮行），并非未使用 */
 .flash-overlay {
     position: relative;
     overflow: hidden;
 }
+
 /* noinspection CssUnusedSymbol */
 .flash-overlay::after {
     content: '';
     position: absolute;
     inset: 0;
-    background-color: #ff6600;
+    background-color: #f60;
     z-index: 5;
     animation: fade-out 1.2s ease-out forwards;
     pointer-events: none;
 }
+
 @keyframes fade-out {
     0% {
         opacity: 0.8;
     }
+
     100% {
         opacity: 0;
     }

@@ -150,6 +150,7 @@ describe('useMultiTabs', () => {
         })
 
         const clickSpy = vi.fn()
+        // oxlint-disable-next-line typescript/no-deprecated -- DOM overload selection on bind falsely selects the deprecated tag-name overload.
         const originalCreateElement = document.createElement.bind(document)
         vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
             const el = originalCreateElement(tag)
@@ -164,7 +165,7 @@ describe('useMultiTabs', () => {
 
         exportTab()
         expect(createObjectURLSpy).toHaveBeenCalledTimes(1)
-        const blob = createObjectURLSpy.mock.calls[0][0] as Blob
+        const blob = createObjectURLSpy.mock.calls[0][0]
         expect(blob).toBeInstanceOf(Blob)
         expect(blob.type).toBe('text/sql;charset=utf-8')
 
@@ -245,6 +246,7 @@ describe('useMultiTabs', () => {
                 revokeObjectURL: revokeObjectURLSpy
             })
             const clickSpy = vi.fn()
+            // oxlint-disable-next-line typescript/no-deprecated -- DOM overload selection on bind falsely selects the deprecated tag-name overload.
             const originalCreateElement = document.createElement.bind(document)
             const createSpy = vi
                 .spyOn(document, 'createElement')

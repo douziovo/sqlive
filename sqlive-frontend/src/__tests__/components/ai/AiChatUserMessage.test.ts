@@ -23,7 +23,7 @@ function mountMessage(props: { msg?: AiMessage; isEditing?: boolean; isLast?: bo
     // Parent with inline overflow style so the edit-mode scroll logic finds its container
     host = document.createElement('div')
     host.style.overflow = 'auto'
-    document.body.appendChild(host)
+    document.body.append(host)
     wrapper = mount(AiChatUserMessage, {
         props: {
             msg: props.msg ?? makeMessage(),

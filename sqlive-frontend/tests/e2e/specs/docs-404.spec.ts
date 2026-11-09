@@ -10,7 +10,7 @@ test.describe('Docs 404', () => {
         // Error Handling 4.1: /docs/nonexistent → redirect to /docs/not-found
         await page.goto('/docs/nonexistent')
 
-        await expect(page).toHaveURL(/\/docs\/not-found/)
+        await expect(page).toHaveURL(/\/docs\/not-found/u)
         await expect(page.getByText('文档不存在')).toBeVisible()
 
         // Recommendation list with 5 items
@@ -27,6 +27,6 @@ test.describe('Docs 404', () => {
 
         const cta = page.getByRole('button', { name: '返回主玩法' })
         await cta.click()
-        await expect(page).toHaveURL(/\/$/)
+        await expect(page).toHaveURL(/\/$/u)
     })
 })

@@ -7,14 +7,11 @@ import type { KnowledgeNode } from '@/composables/useKnowledgeGraph'
 
 // ── Test fixtures ──────────────────────────────────────────────
 
-function makeNode(
-    topicId: string,
-    position: { x: number; y: number } = { x: 0, y: 0 }
-): KnowledgeNode {
+function makeNode(topicId: string, position?: { x: number; y: number }): KnowledgeNode {
     return {
         id: `topic-${topicId}`,
         type: 'knowledge-node',
-        position,
+        position: position ?? { x: 0, y: 0 },
         data: {
             topicId,
             label: topicId.toUpperCase(),

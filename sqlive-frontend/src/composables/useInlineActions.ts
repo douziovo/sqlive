@@ -40,10 +40,13 @@ export function useInlineActions(state: {
         }))
     )
 
-    async function apiCall<T>(endpoint: string, body: unknown): Promise<AiResponse<T>> {
+    async function apiCall<T>(
+        endpoint: string,
+        body: Record<string, unknown>
+    ): Promise<AiResponse<T>> {
         return aiClient<AiResponse<T>>(endpoint, {
             method: 'POST',
-            body: body as Record<string, unknown>
+            body
         })
     }
 
@@ -223,7 +226,7 @@ export function useInlineActions(state: {
 
             if (resp.success && resp.data) {
                 const generatedCode =
-                    resp.data.content?.match(/```sql\n([\s\S]*?)\n```/)?.[1] ||
+                    resp.data.content?.match(/```sql\n([\s\S]*?)\n```/u)?.[1] ||
                     resp.data.fixedCode ||
                     resp.data.content ||
                     undefined

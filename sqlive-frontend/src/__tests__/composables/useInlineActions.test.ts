@@ -68,9 +68,9 @@ function makeState(
     // D-R2-004: composable now takes tablesSource getter instead of whole DatabaseModel
     const db = makeDb()
     return {
-        isLoading: ref(false) as Ref<boolean>,
+        isLoading: ref(false),
         messages: ref([]) as Ref<AiMessage[]>,
-        code: ref(overrides?.code ?? 'SELECT 1;') as Ref<string>,
+        code: ref(overrides?.code ?? 'SELECT 1;'),
         tablesSource: () => db.tables,
         error: ref(overrides?.error ?? null) as Ref<{ line: number; message: string } | null>
     }

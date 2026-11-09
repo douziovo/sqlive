@@ -98,9 +98,10 @@ const {
 <style scoped>
 @keyframes flash-bg {
     0% {
-        background-color: rgba(250, 204, 21, 0.6);
+        background-color: rgb(250 204 21 / 60%);
         transform: scale(1.02);
     }
+
     100% {
         background-color: transparent;
         transform: scale(1);

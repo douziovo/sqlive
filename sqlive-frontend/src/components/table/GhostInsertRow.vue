@@ -147,8 +147,10 @@ onUnmounted(() => {
 .ghost-failure {
     position: relative;
     border: 2px solid var(--destructive) !important;
+
     /* border-opacity 不是标准 CSS 属性（浏览器会忽略），删除以消除 CssUnknownProperty；边框渲染不变 */
 }
+
 .ghost-failure::after {
     content: '';
     position: absolute;
@@ -158,10 +160,12 @@ onUnmounted(() => {
     animation: ghost-fade-out 1.2s ease-out forwards;
     pointer-events: none;
 }
+
 @keyframes ghost-fade-out {
     0% {
         opacity: 0.7;
     }
+
     100% {
         opacity: 0;
     }

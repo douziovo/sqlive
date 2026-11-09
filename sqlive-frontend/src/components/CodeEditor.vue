@@ -308,7 +308,7 @@ function handleSubmit() {
         dbName = prompt('输入数据库名称以保存当前状态:')
         if (!dbName?.trim()) return
         dbName = dbName.trim()
-        if (!/^[a-zA-Z0-9_-]{1,64}$/.test(dbName)) {
+        if (!/^[a-zA-Z0-9_-]{1,64}$/u.test(dbName)) {
             alert('数据库名称只能包含字母、数字、下划线和连字符，长度 1-64 个字符')
             return
         }
@@ -328,9 +328,10 @@ function confirmDeleteDb() {
 
 <style scoped>
 /* Referenced at runtime via Monaco decoration inlineClassName (useMonacoEditor.ts). */
+
 /* noinspection CssUnusedSymbol */
 :deep(.flash-highlight) {
-    background-color: rgba(202, 138, 4, 0.6);
+    background-color: rgb(202 138 4 / 60%);
     border-radius: 2px;
 }
 </style>

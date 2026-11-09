@@ -133,10 +133,11 @@ describe('DocsSearchBox', () => {
 
         const item = w
             .findAll('li, [class*="result"], button')
-            .filter((el) => el.text().includes('编辑器'))[0]
+            .find((el) => el.text().includes('编辑器'))!
         await item.trigger('click')
         // Rejection swallowed — no unhandled error
         await Promise.resolve()
+        expect(push).toHaveBeenCalledWith('/docs/usage/editor')
     })
 
     it('removes the global keydown listener on unmount', async () => {

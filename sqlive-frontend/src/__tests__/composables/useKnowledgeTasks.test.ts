@@ -59,7 +59,7 @@ describe('addTask', () => {
         expect(typeof task.id).toBe('string')
         expect(task.status).toBe('todo')
         expect(task.createdAt).toBeTruthy()
-        expect(() => new Date(task.createdAt!)).not.toThrow()
+        expect(() => new Date(task.createdAt)).not.toThrow()
         expect(task.completedAt).toBeUndefined()
     })
 
@@ -779,9 +779,7 @@ describe('seedPresetTasksIfFirstRun', () => {
         expect(dailyTasks.length).toBeGreaterThan(0)
         // Verify format: YYYY-MM-DD
         for (const task of dailyTasks) {
-            if (task.dueDate) {
-                expect(/^\d{4}-\d{2}-\d{2}$/.test(task.dueDate)).toBe(true)
-            }
+            expect(task.dueDate).toMatch(/^\d{4}-\d{2}-\d{2}$/u)
         }
         // Spot-check first daily task: dueDate should match local tomorrow, not UTC
         const today = new Date()

@@ -28,7 +28,7 @@ const routes: RouteRecordRaw[] = [
             {
                 path: 'usage/:article',
                 component: () => import('@/pages/docs/ArticlePage.vue'),
-                props: (route) => ({ slug: 'usage/' + route.params.article })
+                props: (route) => ({ slug: 'usage/' + String(route.params.article) })
             },
             {
                 path: 'api',

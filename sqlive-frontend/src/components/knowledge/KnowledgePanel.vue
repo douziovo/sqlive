@@ -331,7 +331,7 @@ defineExpose({
 .knowledge-panel__backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgb(0 0 0 / 60%);
     backdrop-filter: blur(4px);
 }
 
@@ -365,6 +365,7 @@ defineExpose({
 }
 
 /* Transitions — expand from / collapse to companion button (bottom-right) */
+
 /* Level-up celebration toast */
 .level-up-toast {
     position: fixed;
@@ -381,7 +382,7 @@ defineExpose({
     display: flex;
     align-items: center;
     gap: 12px;
-    box-shadow: 0 8px 32px rgba(109, 40, 217, 0.35);
+    box-shadow: 0 8px 32px rgb(109 40 217 / 35%);
     pointer-events: none;
 }
 
@@ -390,24 +391,32 @@ defineExpose({
 }
 
 /* Slide transition for level-up toast */
+
 /* <Transition name="toast-slide"> 运行时生成的过渡类，静态检查器无法识别，不可删除 */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .toast-slide-enter-active {
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
 /* 同上：Transition 运行时生成的离开过渡类 */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .toast-slide-leave-active {
     transition: all 0.2s ease-in;
 }
+
 /* 同上：Transition 运行时生成的进入起始态 */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .toast-slide-enter-from {
     opacity: 0;
     transform: translateX(-50%) translateY(-16px);
 }
+
 /* 同上：Transition 运行时生成的离开结束态 */
-/*noinspection CssUnusedSymbol*/
+
+/* noinspection CssUnusedSymbol */
 .toast-slide-leave-to {
     opacity: 0;
     transform: translateX(-50%) translateY(-16px);
@@ -418,15 +427,18 @@ defineExpose({
         clip-path 0.35s cubic-bezier(0.4, 0, 0.2, 1),
         opacity 0.25s ease-out;
 }
+
 .panel-expand-leave-active .knowledge-panel__content {
     transition:
         clip-path 0.3s cubic-bezier(0.4, 0, 1, 1),
         opacity 0.2s ease-in;
 }
+
 .panel-expand-enter-from .knowledge-panel__content {
     clip-path: circle(28px at calc(100% - 52px) calc(100% - 52px));
     opacity: 0;
 }
+
 .panel-expand-leave-to .knowledge-panel__content {
     clip-path: circle(28px at calc(100% - 52px) calc(100% - 52px));
     opacity: 0;

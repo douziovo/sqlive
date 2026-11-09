@@ -159,7 +159,7 @@ describe('ErSearchBar — count formats and focus', () => {
 
     it('focuses and selects the input when becoming visible', async () => {
         const el = document.createElement('div')
-        document.body.appendChild(el)
+        document.body.append(el)
         const wrapper = mount(ErSearchBar, {
             props: { ...baseProps, visible: false, modelValue: '' },
             attachTo: el

@@ -165,8 +165,8 @@ describe('useDagreLayout', () => {
         el.dataset.id = 'a'
         // jsdom reports 0 for offsetWidth/Height — the fallbacks (200/120) apply,
         // but the element map lookup path itself is exercised here.
-        container.appendChild(el)
-        document.body.appendChild(container)
+        container.append(el)
+        document.body.append(container)
 
         const nodes: Node[] = [{ id: 'a', type: 't', position: { x: 0, y: 0 }, data: {} }]
         const result = layoutNodes(nodes, [], container)

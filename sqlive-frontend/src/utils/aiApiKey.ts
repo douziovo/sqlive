@@ -9,9 +9,9 @@ import { STORAGE_KEYS } from '../constants/storageKeys'
 export function resolveAiApiKey(): string | null {
     if (import.meta.env.VITE_AI_API_KEY) return import.meta.env.VITE_AI_API_KEY
     try {
-        return typeof localStorage !== 'undefined'
-            ? localStorage.getItem(STORAGE_KEYS.aiApiKey)
-            : null
+        return typeof localStorage === 'undefined'
+            ? null
+            : localStorage.getItem(STORAGE_KEYS.aiApiKey)
     } catch {
         return null
     }

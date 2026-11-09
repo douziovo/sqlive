@@ -18,7 +18,10 @@ describe('SQL request ownership and recovery', () => {
         async (kind) => {
             let resolve!: (response: Response) => void
             setup.fetchSpy.mockImplementationOnce(
-                () => new Promise<Response>((done) => (resolve = done))
+                () =>
+                    new Promise<Response>((done) => {
+                        resolve = done
+                    })
             )
             const engine = setup.useSqlEngine()
             await tick()
@@ -48,7 +51,10 @@ describe('SQL request ownership and recovery', () => {
     it('ignores an old source response while new text is still being debounced', async () => {
         let resolve!: (response: Response) => void
         setup.fetchSpy.mockImplementationOnce(
-            () => new Promise<Response>((done) => (resolve = done))
+            () =>
+                new Promise<Response>((done) => {
+                    resolve = done
+                })
         )
         const engine = setup.useSqlEngine()
         await tick()
@@ -67,7 +73,10 @@ describe('SQL request ownership and recovery', () => {
         await tick()
         let resolve!: (response: Response) => void
         setup.fetchSpy.mockImplementationOnce(
-            () => new Promise<Response>((done) => (resolve = done))
+            () =>
+                new Promise<Response>((done) => {
+                    resolve = done
+                })
         )
         engine.updateRow('t', { id: 1 }, { id: 2 })
         await tick(0)
@@ -114,7 +123,10 @@ describe('SQL request ownership and recovery', () => {
 
             let resolveOld!: (response: Response) => void
             setup.fetchSpy.mockImplementationOnce(
-                () => new Promise<Response>((done) => (resolveOld = done))
+                () =>
+                    new Promise<Response>((done) => {
+                        resolveOld = done
+                    })
             )
             engine.updateRow('t', { id: 1 }, { id: 2 })
             await tick(0)
@@ -145,7 +157,10 @@ describe('SQL request ownership and recovery', () => {
         await tick()
         let resolveOld!: (response: Response) => void
         setup.fetchSpy.mockImplementationOnce(
-            () => new Promise<Response>((done) => (resolveOld = done))
+            () =>
+                new Promise<Response>((done) => {
+                    resolveOld = done
+                })
         )
         engine.insertRowUI('t', { id: 2 })
         await tick(0)

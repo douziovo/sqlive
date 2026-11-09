@@ -68,14 +68,10 @@ describe('CreateTableModal', () => {
         const wrapper = mountOpen()
         const buttons = wrapper.findAll('button')
         // Cancel button contains "取消"
-        for (const btn of buttons) {
-            if (btn.text().includes('取消')) {
-                await btn.trigger('click')
-                expect(wrapper.emitted('update:open')?.[0]).toEqual([false])
-                return
-            }
-        }
-        expect.fail('Cancel button not found')
+        const cancel = buttons.find((btn) => btn.text().includes('取消'))
+        expect(cancel).toBeDefined()
+        await cancel!.trigger('click')
+        expect(wrapper.emitted('update:open')?.[0]).toEqual([false])
     })
 
     it('emits submit with correct payload', async () => {

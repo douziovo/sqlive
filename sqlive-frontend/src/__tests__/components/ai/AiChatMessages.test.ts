@@ -159,8 +159,8 @@ describe('AiChatMessages', () => {
         const scrollTo = vi.fn()
         scroller.scrollTo = scrollTo
         Object.defineProperty(scroller, 'scrollHeight', { value: 800, configurable: true })
-        panel.appendChild(scroller)
-        document.body.appendChild(panel)
+        panel.append(scroller)
+        document.body.append(panel)
 
         const wrapper = mountMessages([makeMessage({ id: 'u1', role: 'user' })])
         await wrapper.setProps({
@@ -181,7 +181,7 @@ describe('AiChatMessages', () => {
         panel.setAttribute('style', 'overflow: hidden; width: 500px')
         const scrollTo = vi.fn()
         panel.scrollTo = scrollTo
-        document.body.appendChild(panel)
+        document.body.append(panel)
 
         const first = makeMessage({ id: 'u1', role: 'user' })
         const wrapper = mountMessages([first])

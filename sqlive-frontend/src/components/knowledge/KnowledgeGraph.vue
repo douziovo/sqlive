@@ -290,15 +290,17 @@ defineExpose({
 
 @keyframes knowledge-pulse {
     0% {
-        outline: 2px solid rgba(59, 130, 246, 0.7);
+        outline: 2px solid rgb(59 130 246 / 70%);
         outline-offset: 2px;
     }
+
     50% {
-        outline: 4px solid rgba(59, 130, 246, 0);
+        outline: 4px solid rgb(59 130 246 / 0%);
         outline-offset: 6px;
     }
+
     100% {
-        outline: 2px solid rgba(59, 130, 246, 0.7);
+        outline: 2px solid rgb(59 130 246 / 70%);
         outline-offset: 2px;
     }
 }
@@ -312,6 +314,7 @@ defineExpose({
         stroke-width 0.25s ease,
         stroke-dasharray 0.25s ease;
 }
+
 .knowledge-graph-container.is-settling .vue-flow__edge path {
     transition: none;
 }

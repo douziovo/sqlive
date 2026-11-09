@@ -108,7 +108,7 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
 
     const selectedNodeData = computed(() => {
         if (!selectedNode.value || !graphData.value) return null
-        return graphData.value.topics.find((t) => t.id === selectedNode.value) || null
+        return graphData.value.topics.find((t) => t.id === selectedNode.value) ?? null
     })
 
     const progress = computed(() => {
@@ -163,7 +163,7 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
 
             const patternMatch = (topic.patterns || []).some((pat) => {
                 try {
-                    return new RegExp(pat, 'i').test(sql)
+                    return new RegExp(pat, 'iu').test(sql)
                 } catch {
                     return false
                 }
@@ -341,13 +341,12 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
             const leveledUp = applyLevelUp()
 
             return { action: 'master', xpGained: awardedXp, leveledUp, streak: sessionStreak.value }
-        } else {
-            current.delete(topicId)
-            masteredTopics.value = [...current]
-            sessionStreak.value = 0
-
-            return { action: 'unmaster', xpGained: 0, leveledUp: false, streak: 0 }
         }
+        current.delete(topicId)
+        masteredTopics.value = [...current]
+        sessionStreak.value = 0
+
+        return { action: 'unmaster', xpGained: 0, leveledUp: false, streak: 0 }
     }
 
     function resetSessionStreak(): void {

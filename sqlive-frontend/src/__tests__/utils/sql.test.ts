@@ -23,7 +23,7 @@ describe('toSqlLiteral', () => {
     })
 
     it('returns NULL for undefined', () => {
-        expect(toSqlLiteral(undefined)).toBe('NULL')
+        expect(toSqlLiteral()).toBe('NULL')
     })
 
     it('returns NULL for empty string', () => {

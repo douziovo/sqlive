@@ -42,6 +42,7 @@ describe('useDocArticle', () => {
         expect(html.value).toBe('<h1>Intro</h1><p>content</p>')
         // marked.parse called with the raw markdown content (contains H1 '项目介绍')
         expect(marked.parse).toHaveBeenCalledWith(expect.stringContaining('# 项目介绍'), {
+            async: false,
             breaks: true,
             gfm: true
         })

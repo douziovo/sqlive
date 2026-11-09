@@ -5,6 +5,7 @@ import { useAiStreaming } from '../composables/useAiStreaming'
 import { API_BASE } from '../config'
 import { STORAGE_KEYS } from '../constants/storageKeys'
 import type { TableSchema } from '../model/DatabaseTypes'
+import { isRecord } from '../utils/guards'
 import type { DisplayHandler } from './useInlineActions'
 
 export interface AiMessage {
@@ -145,7 +146,7 @@ export function useAiChat(ctx: {
             metadata: { type }
         }
         messages.value.push(msg)
-        return messages.value[messages.value.length - 1]
+        return messages.value.at(-1)!
     }
 
     async function sendMessage(text: string, reuseUser = false): Promise<void> {
@@ -183,19 +184,22 @@ export function useAiChat(ctx: {
                 },
                 (chunk) => {
                     if (requestGeneration !== generation) return
-                    let parsed: {
-                        type?: string
-                        content?: string
-                        prompt?: number
-                        completion?: number
-                        total?: number
-                    }
+                    let payload: unknown
                     try {
-                        parsed = JSON.parse(chunk)
+                        payload = JSON.parse(chunk)
                     } catch {
                         return
                     }
-                    switch (parsed.type) {
+                    if (!isRecord(payload)) return
+                    const parsed = {
+                        type: typeof payload.type === 'string' ? payload.type : undefined,
+                        content: typeof payload.content === 'string' ? payload.content : undefined,
+                        prompt: typeof payload.prompt === 'number' ? payload.prompt : undefined,
+                        completion:
+                            typeof payload.completion === 'number' ? payload.completion : undefined,
+                        total: typeof payload.total === 'number' ? payload.total : undefined
+                    }
+                    switch (parsed.type ?? 'text') {
                         case 'done':
                             return
                         case 'usage':
@@ -211,7 +215,7 @@ export function useAiChat(ctx: {
                         case 'reasoning':
                             aiMsg.isReasoning = true
                             aiMsg.reasoning = (aiMsg.reasoning || '') + (parsed.content || '')
-                            if (!aiMsg.firstTokenTime) aiMsg.firstTokenTime = Date.now()
+                            aiMsg.firstTokenTime ??= Date.now()
                             break
                         case 'error':
                             aiMsg.content = parsed.content || ''

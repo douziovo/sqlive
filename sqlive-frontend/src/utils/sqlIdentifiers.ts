@@ -1,14 +1,14 @@
 /** SQLite identifier helpers for editing known INSERT statements, not a SQL grammar. */
 export function quoteSqlIdentifier(name: string): string {
-    return `"${name.replace(/"/g, '""')}"`
+    return `"${name.replaceAll('"', '""')}"`
 }
 
 export function maskSqlComments(sql: string): string {
-    return sql.replace(
-        /'(?:[^']|'')*'|"(?:[^"]|"")*"|`(?:[^`]|``)*`|\[[^\]]*\]|--[^\r\n]*|\/\*[\s\S]*?\*\//g,
+    return sql.replaceAll(
+        /'(?:[^']|'')*'|"(?:[^"]|"")*"|`(?:[^`]|``)*`|\[[^\]]*\]|--[^\r\n]*|\/\*[\s\S]*?\*\//gu,
         (token) =>
             token.startsWith('--') || token.startsWith('/*')
-                ? token.replace(/[^\r\n]/g, ' ')
+                ? token.replaceAll(/[^\r\n]/gu, ' ')
                 : token
     )
 }
@@ -22,7 +22,7 @@ interface SqlToken {
 
 /** Reads one token from comment-masked SQL while preserving original UTF-16 offsets. */
 export function readSqlToken(sql: string, from = 0): SqlToken | null {
-    const match = /\S/.exec(sql.slice(from))
+    const match = /\S/u.exec(sql.slice(from))
     if (!match) return null
     const start = from + match.index
     const first = sql[start]
@@ -61,7 +61,7 @@ function isKeyword(token: SqlToken | null, keyword: string): boolean {
 }
 
 export function sameSqlIdentifier(first: string, second: string): boolean {
-    const fold = (value: string) => value.replace(/[A-Z]/g, (letter) => letter.toLowerCase())
+    const fold = (value: string) => value.replaceAll(/[A-Z]/gu, (letter) => letter.toLowerCase())
     return fold(first) === fold(second)
 }
 
@@ -79,7 +79,7 @@ export function parseInsertTarget(sql: string): {
         if (
             !conflict ||
             conflict.quoted ||
-            !/^(ROLLBACK|ABORT|FAIL|IGNORE|REPLACE)$/i.test(conflict.value)
+            !/^(ROLLBACK|ABORT|FAIL|IGNORE|REPLACE)$/iu.test(conflict.value)
         )
             return null
         token = readSqlToken(masked, conflict.end)
@@ -100,7 +100,7 @@ export function parseInsertTarget(sql: string): {
         columns = []
         for (;;) {
             const column = readSqlToken(masked, next.end)
-            if (!column || (!column.quoted && /^[(),;]$/.test(column.value))) return null
+            if (!column || (!column.quoted && /^[(),;]$/u.test(column.value))) return null
             columns.push(column.value)
             next = readSqlToken(masked, column.end)
             if (next?.value === ')' && !next.quoted) {

@@ -181,13 +181,15 @@ function handleStepClick(substepId: string): void {
 
 @keyframes step-pulse {
     0% {
-        box-shadow: 0 0 0 0 oklch(0.488 0.243 264.376 / 0.4);
+        box-shadow: 0 0 0 0 oklch(48.8% 0.243 264.376deg / 40%);
     }
+
     70% {
-        box-shadow: 0 0 0 6px oklch(0.488 0.243 264.376 / 0);
+        box-shadow: 0 0 0 6px oklch(48.8% 0.243 264.376deg / 0%);
     }
+
     100% {
-        box-shadow: 0 0 0 0 oklch(0.488 0.243 264.376 / 0);
+        box-shadow: 0 0 0 0 oklch(48.8% 0.243 264.376deg / 0%);
     }
 }
 </style>
