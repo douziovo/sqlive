@@ -11,8 +11,13 @@ description = 'sqlive-backend'
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(25)
     }
+}
+
+jacoco {
+    // 0.8.14 is the first release with official Java 25 support.
+    toolVersion = '0.8.14'
 }
 
 configurations {
@@ -62,9 +67,15 @@ tasks.named('test') {
     // - -XX:TieredStopAtLevel=1 (C1 only): short-lived test JVMs warm up faster;
     //   interleaved A/B (3 paired runs): 52/28/38s vs 57/42/46s with original flags
     maxParallelForks = Math.max(1, Math.min((cpu / 2) as int, 4))
-    jvmArgs '-Xshare:auto', '-XX:+UseParallelGC', '-XX:MaxRAMPercentage=12.0',
+    jvmArgs '--enable-native-access=ALL-UNNAMED',
+            '-Xshare:auto', '-XX:+UseParallelGC', '-XX:MaxRAMPercentage=12.0',
             '-XX:TieredStopAtLevel=1'
     finalizedBy jacocoTestReport
+}
+
+tasks.named('bootRun') {
+    // SQLite JDBC loads its native library on Java 25.
+    jvmArgs '--enable-native-access=ALL-UNNAMED'
 }
 
 jacocoTestReport {
