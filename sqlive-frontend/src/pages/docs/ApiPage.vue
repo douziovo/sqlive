@@ -1,7 +1,7 @@
 <!--
-  ApiPage.vue — @scalar/api-reference dynamic import + fetch /v3/api-docs.
+  ApiPage.vue — @scalar/api-reference dynamic import + fetch /v3/api-docs (D-04).
 
-  `dist/style.css` confirmed present post-install —
+  W7 fix (RESEARCH.md A10): `dist/style.css` confirmed present post-install —
   CSS imported at top of script block. Resolves the "Scalar CSS path" assumption.
 
   Error Handling:
@@ -10,7 +10,7 @@
 
   UI-SPEC FLAG 1: retry button text is "重新加载 API 文档" (verb+noun, not "重试").
 
-  AGENTS.md gotcha: handleRetry is a handler function, not inline @click.
+  CLAUDE.md gotcha: handleRetry is a handler function, not inline @click.
 -->
 <template>
     <div class="p-4 min-h-full">
@@ -48,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-// dist/style.css confirmed present (Step 1a verified post-install).
+// W7 fix: dist/style.css confirmed present (Step 1a verified post-install).
 import '@scalar/api-reference/style.css'
 
 import { onMounted, ref, shallowRef } from 'vue'
@@ -60,7 +60,7 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 
 /**
- * Dynamically import @scalar/api-reference (— ~150KB gzip lazy load).
+ * Dynamically import @scalar/api-reference (D-04 — ~150KB gzip lazy load).
  * A2 assumption verified: `ApiReference` is a named export (confirmed via
  * `grep index.d.ts` post-install).
  * On failure, falls back to <pre> JSON rendering (Error Handling 4.7).
@@ -76,7 +76,7 @@ async function loadScalar() {
 }
 
 /**
- * Fetch /v3/api-docs with retry-once after 500ms (Error Handling 4.2).
+ * Fetch /v3/api-docs with retry-once after 500ms (D-04 Error Handling 4.2).
  * On both failures, sets error.value (does NOT throw).
  */
 async function fetchOpenApi() {
@@ -84,6 +84,8 @@ async function fetchOpenApi() {
     error.value = null
     try {
         const res = await fetch('/v3/api-docs')
+        // 此处 throw 用于跳转下方 catch 执行重试/兜底逻辑，catch 内有附加逻辑而非单纯 rethrow，故保留
+        //noinspection ExceptionCaughtLocallyJS
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         openApiJson.value = await res.json()
     } catch (e: any) {
@@ -91,6 +93,8 @@ async function fetchOpenApi() {
         await new Promise((r) => setTimeout(r, 500))
         try {
             const res = await fetch('/v3/api-docs')
+            // 同上：throw 交由 catch 写入 error.value 并结束加载态
+            //noinspection ExceptionCaughtLocallyJS
             if (!res.ok) throw new Error(`HTTP ${res.status}`, { cause: e })
             openApiJson.value = await res.json()
         } catch (e2: any) {
@@ -101,7 +105,7 @@ async function fetchOpenApi() {
     }
 }
 
-// AGENTS.md gotcha: handler function, not inline @click="fetchOpenApi"
+// CLAUDE.md gotcha: handler function, not inline @click="fetchOpenApi"
 function handleRetry() {
     void fetchOpenApi()
 }

@@ -27,15 +27,15 @@ body,
 }
 
 ::-webkit-scrollbar-thumb {
-    /* (Rule 3 deviation): converted slate-300 hex to oklch to satisfy
-       "no hex from palette in input.css" acceptance criterion. Tailwind
+    /* D-04 (Rule 3 deviation): converted slate-300 hex to oklch to satisfy
+       "no hex from D-04 palette in input.css" acceptance criterion. Tailwind
        canonical oklch value. Visual appearance unchanged. */
     background-color: oklch(0.869 0.015 252);
     border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    /* (Rule 3 deviation): converted slate-400 hex to oklch. Tailwind
+    /* D-04 (Rule 3 deviation): converted slate-400 hex to oklch. Tailwind
        canonical oklch value. */
     background-color: oklch(0.707 0.022 261);
 }
@@ -121,7 +121,7 @@ body,
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
 
-    /* Knowledge node status colors (3 states × 3 difficulties × 3 props = 27, unlearned merged to 3) */
+    /* D-04: Knowledge node status colors (3 states × 3 difficulties × 3 props = 27, unlearned merged to 3) */
     --node-mastered-d1-bg: oklch(0.97 0.04 145);
     --node-mastered-d1-border: oklch(0.85 0.13 145);
     --node-mastered-d1-text: oklch(0.45 0.11 145);
@@ -144,12 +144,12 @@ body,
     --node-unlearned-border: oklch(0.85 0.01 250);
     --node-unlearned-text: oklch(0.65 0.015 250);
 
-    /* Task category colors */
+    /* D-04: Task category colors */
     --task-core: oklch(0.85 0.17 85);
     --task-deep: oklch(0.62 0.15 250);
     --task-daily: oklch(0.65 0.15 350);
 
-    /* Achievement toast gradients */
+    /* D-04: Achievement toast gradients */
     --toast-gradient-default: linear-gradient(135deg, oklch(0.25 0.02 250), oklch(0.4 0.03 250));
     --toast-gradient-high-diff: linear-gradient(135deg, oklch(0.4 0.12 280), oklch(0.55 0.15 280));
     --toast-gradient-task: linear-gradient(135deg, oklch(0.55 0.12 160), oklch(0.65 0.15 160));
@@ -168,25 +168,35 @@ body,
 }
 
 /* Prevent splitpanes slide-in animation on initial page load */
+/* splitpanes__pane 是第三方库 splitpanes 在运行时渲染的类名，静态检查器无法识别，不可删除 */
+/*noinspection CssUnusedSymbol*/
 .splitpanes.no-animate .splitpanes__pane {
     transition: none !important;
 }
 
 /* Splitpanes splitter customization */
+/* splitpanes__splitter 是第三方库 splitpanes 在运行时渲染的类名，静态检查器无法识别，不可删除 */
+/*noinspection CssUnusedSymbol*/
 .splitpanes.default-theme .splitpanes__splitter {
     background-color: var(--border);
     transition: background-color 0.2s ease;
     position: relative;
 }
 
+/* 同上：splitter 的悬停态，类名来自第三方库 splitpanes */
+/*noinspection CssUnusedSymbol*/
 .splitpanes.default-theme .splitpanes__splitter:hover {
     background-color: color-mix(in srgb, var(--primary) 30%, transparent);
 }
 
+/* 同上：splitter 的按下态，类名来自第三方库 splitpanes */
+/*noinspection CssUnusedSymbol*/
 .splitpanes.default-theme .splitpanes__splitter:active {
     background-color: var(--primary);
 }
 
+/* 同上：splitter 中心的拖拽提示条，类名来自第三方库 splitpanes */
+/*noinspection CssUnusedSymbol*/
 .splitpanes.default-theme .splitpanes__splitter::after {
     content: '';
     position: absolute;
@@ -201,6 +211,8 @@ body,
     transition: opacity 0.2s ease;
 }
 
+/* 同上：splitter 悬停时显示提示条，类名来自第三方库 splitpanes */
+/*noinspection CssUnusedSymbol*/
 .splitpanes.default-theme .splitpanes__splitter:hover::after {
     opacity: 0.6;
 }

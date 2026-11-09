@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
- * useDocsSearch test suite (— MiniSearch lazy index + error fallback).
+ * useDocsSearch test suite (D-07 — MiniSearch lazy index + error fallback).
  *
- * Module singleton pattern (useAiChat.ts lines 59-81):
+ * Module singleton pattern (per RESEARCH.md Example 3 + useAiChat.ts lines 59-81):
  * `let index`, `indexReady`, `indexError` live at module scope and survive
  * across `useDocsSearch()` calls. To isolate tests, each test loads a fresh
  * module instance via `vi.resetModules()` + dynamic `import()`.
@@ -27,6 +27,7 @@ const mockMinisearch = vi.hoisted(() => {
                 if (shouldThrow.value) throw new Error('MiniSearch init failed')
             }
 
+            //noinspection JSUnusedGlobalSymbols -- MiniSearch mock 形状：useDocsSearch 建索引时调用 index.addAll，静态分析看不到该调用
             addAll() {}
 
             search(q: string) {
@@ -65,7 +66,7 @@ async function loadUseDocsSearch() {
 
 describe('useDocsSearch', () => {
     it('builds index on first ensureIndex call', async () => {
-        // ensureIndex lazily builds MiniSearch index; indexReady becomes true
+        // D-07: ensureIndex lazily builds MiniSearch index; indexReady becomes true
         const useDocsSearch = await loadUseDocsSearch()
         const { ensureIndex, indexReady, indexError } = useDocsSearch()
         await ensureIndex()
@@ -75,7 +76,7 @@ describe('useDocsSearch', () => {
     })
 
     it('does not rebuild on second ensureIndex call', async () => {
-        // singleton: second ensureIndex is a no-op (index already built)
+        // D-07 singleton: second ensureIndex is a no-op (index already built)
         const useDocsSearch = await loadUseDocsSearch()
         const { ensureIndex } = useDocsSearch()
         await ensureIndex()
@@ -84,7 +85,7 @@ describe('useDocsSearch', () => {
     })
 
     it('prefix match "edit" hits editor article', async () => {
-        // prefix search returns results with title/slug/category/score
+        // D-07: prefix search returns results with title/slug/category/score
         const useDocsSearch = await loadUseDocsSearch()
         const { ensureIndex, search } = useDocsSearch()
         await ensureIndex()
@@ -97,7 +98,7 @@ describe('useDocsSearch', () => {
     })
 
     it('empty query returns empty array', async () => {
-        // empty/whitespace query returns [] without calling index.search
+        // D-07: empty/whitespace query returns [] without calling index.search
         const useDocsSearch = await loadUseDocsSearch()
         const { ensureIndex, search } = useDocsSearch()
         await ensureIndex()
@@ -106,7 +107,7 @@ describe('useDocsSearch', () => {
     })
 
     it('marks unavailable when minisearch init fails', async () => {
-        // error fallback: if MiniSearch import or instantiation throws,
+        // D-07 error fallback: if MiniSearch import or instantiation throws,
         // indexError becomes true (does NOT throw to caller). Sidebar nav still works.
         vi.spyOn(console, 'error').mockImplementation(() => {})
         mockMinisearch.shouldThrow.value = true

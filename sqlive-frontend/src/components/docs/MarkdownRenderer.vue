@@ -3,11 +3,11 @@
 </template>
 
 <script setup lang="ts">
-// MarkdownRenderer receives sanitized HTML and renders via v-html.
+// D-09: MarkdownRenderer receives sanitized HTML and renders via v-html.
 // Sanitization happens in useDocArticle (shared sanitizeConfig); this
 // component is a pure presentation layer with .md-body scoped styles.
 //
-// Scoped style block adapts AiChatPanel.vue's .md-body CSS ( kept
+// Scoped style block adapts AiChatPanel.vue's .md-body CSS (Plan 01 kept
 // AiChatPanel's block; this is a copy for the docs article context with
 // larger H1/H2/H3 sizing per UI-SPEC Typography — H2/H3 same 20px size,
 // differentiated by margin, avoiding a 5th type size per UI-SPEC FLAG 2).
@@ -77,7 +77,7 @@ defineProps<{ html: string }>()
     white-space: pre-wrap;
 }
 .md-body code {
-    font-family: var(--font-mono);
+    font-family: var(--font-mono), monospace;
     font-size: 0.9em;
 }
 .md-body :not(pre) > code {

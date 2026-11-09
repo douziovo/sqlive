@@ -20,9 +20,10 @@ describe('DocsSidebar', () => {
     })
 
     it('renders all 6 navigation item titles', () => {
-        // sidebar renders every NavItem from navigation.ts
+        // D-05: sidebar renders every NavItem from navigation.ts
         const w = mount(DocsSidebar)
         const text = w.text()
+        //noinspection DuplicatedCode -- 与 tests/e2e/specs/docs-navigation.spec.ts 的导航标题断言字面相同，但一处是 jsdom 单测、一处是真实浏览器 e2e，跨层抽 helper 会把两套断言耦合在一起
         expect(text).toContain('项目介绍')
         expect(text).toContain('编辑器')
         expect(text).toContain('数据可视化')
@@ -32,7 +33,7 @@ describe('DocsSidebar', () => {
     })
 
     it('highlights the current route with bg-primary/10 class', () => {
-        // active item gets 'bg-primary/10 text-primary font-semibold'
+        // D-05: active item gets 'bg-primary/10 text-primary font-semibold'
         mockRoute.path = '/docs/intro'
         const w = mount(DocsSidebar)
         const introBtn = w.find('[data-testid="nav-intro"]')
@@ -42,7 +43,7 @@ describe('DocsSidebar', () => {
     })
 
     it('calls router.push with correct path when nav button clicked', async () => {
-        // clicking a nav item calls router.push (handler function, not inline)
+        // D-05: clicking a nav item calls router.push (handler function, not inline)
         const w = mount(DocsSidebar)
         const editorBtn = w.find('[data-testid="nav-usage-editor"]')
         expect(editorBtn.exists()).toBe(true)
@@ -51,7 +52,7 @@ describe('DocsSidebar', () => {
     })
 
     it('renders category headers (项目介绍, 使用手册, 变更日志)', () => {
-        // items grouped by category; 'api' category has no items → skipped
+        // D-05: items grouped by category; 'api' category has no items → skipped
         const w = mount(DocsSidebar)
         const text = w.text()
         // 使用手册 is the usage category header (not an item title) — proves grouping

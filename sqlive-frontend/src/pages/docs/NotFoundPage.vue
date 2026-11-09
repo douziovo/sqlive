@@ -1,11 +1,11 @@
 <!--
   NotFoundPage.vue — 404 page with recommended articles + back-to-playground.
 
-  recommendations = navigation.ts top 5.
+  Per Claude's Discretion (CONTEXT.md): recommendations = navigation.ts top 5.
   Heading "文档不存在" + body + list + CTA per UI-SPEC contract.
 
-  AGENTS.md gotcha: handleOpen/handleBackHome are handler functions.
-  NavigationFailure silenced (aborted/duplicated/cancelled).
+  CLAUDE.md gotcha: handleOpen/handleBackHome are handler functions.
+  NavigationFailure silenced per Pitfall 6 (aborted/duplicated/cancelled).
 -->
 <template>
     <div class="flex flex-col items-center justify-center min-h-[60vh] px-4 text-center">
@@ -33,13 +33,15 @@ import { navigation } from '@/content/docs/navigation'
 
 const router = useRouter()
 
-// top 5 from navigation.ts
+// Claude's Discretion (CONTEXT.md): top 5 from navigation.ts
 const recommendations = navigation.slice(0, 5)
 
-// Handler functions (NOT inline @click="$emit" — per AGENTS.md gotcha).
-// NavigationFailure silenced per .
+// Handler functions (NOT inline @click="$emit" — per CLAUDE.md gotcha).
+// NavigationFailure silenced per Pitfall 6.
 function handleOpen(path: string) {
     router.push(path).catch(() => {
+        // vue-router 的 NavigationFailureType 中该值官方拼写即为 cancelled，此处指代该 API 值，保留原词
+        //noinspection GrazieStyle
         // NavigationFailure (aborted/duplicated/cancelled) — silent per spec §4.6
     })
 }

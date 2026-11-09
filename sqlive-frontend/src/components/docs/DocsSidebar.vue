@@ -39,7 +39,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { navigation, type NavCategory } from '@/content/docs/navigation'
 import DocsSearchBox from './DocsSearchBox.vue'
 
-// data-driven sidebar. Adding an article = drop .md + add navigation.ts entry.
+// D-05: data-driven sidebar. Adding an article = drop .md + add navigation.ts entry.
 // Category labels for sidebar grouping (Chinese display).
 const categoryLabels: Record<NavCategory, string> = {
     intro: '项目介绍',
@@ -66,8 +66,10 @@ const router = useRouter()
 
 const emit = defineEmits<{ navigate: [path: string] }>()
 
-// Handler function (NOT inline @click="$emit" — per AGENTS.md <script setup> gotcha).
-// NavigationFailure silenced (aborted/duplicated/cancelled are normal).
+// Handler function (NOT inline @click="$emit" — per CLAUDE.md <script setup> gotcha).
+// vue-router 的 NavigationFailureType 中该值官方拼写即为 cancelled，此处指代该 API 值，保留原词
+//noinspection GrazieStyle
+// NavigationFailure silenced per Pitfall 6 (aborted/duplicated/cancelled are normal).
 function handleNavigate(path: string) {
     router.push(path).catch(() => {})
     emit('navigate', path)

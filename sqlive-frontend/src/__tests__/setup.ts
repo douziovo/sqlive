@@ -13,10 +13,13 @@ if (!('queryCommandSupported' in document)) {
 // Polyfill ResizeObserver for VueFlow/jsdom compatibility
 if (typeof globalThis.ResizeObserver === 'undefined') {
     globalThis.ResizeObserver = class ResizeObserver {
+        //noinspection JSUnusedGlobalSymbols -- 必须与 ResizeObserver 接口形状一致，由 VueFlow/组件代码在运行时调用
         observe() {}
 
+        //noinspection JSUnusedGlobalSymbols -- 同上，接口形状必需
         unobserve() {}
 
+        //noinspection JSUnusedGlobalSymbols -- 同上，接口形状必需
         disconnect() {}
     }
 }

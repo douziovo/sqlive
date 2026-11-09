@@ -1,5 +1,5 @@
 <template>
-    <!-- Ctrl+K global + `/` docs-scoped + Esc closes dropdown -->
+    <!-- D-13: Ctrl+K global + `/` docs-scoped + Esc closes dropdown -->
     <div class="relative">
         <Search
             class="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none"
@@ -53,19 +53,21 @@ const inputRef = ref<HTMLInputElement | null>(null)
 const results = computed(() => (query.value.trim() ? search(query.value) : []))
 
 function onInput() {
-    // results is computed reactively; no-op handler for clarity (AGENTS.md gotcha —
+    // results is computed reactively; no-op handler for clarity (CLAUDE.md gotcha —
     // use handler functions, not inline ref assignment in template).
 }
 
-// first focus triggers ensureIndex (lazy index build). Also triggered by
+// D-07: first focus triggers ensureIndex (lazy index build). Also triggered by
 // Ctrl+K and `/` shortcuts, but @focus covers direct click/Tab focus too.
 function onInputFocus() {
     void ensureIndex()
 }
 
-// Click result → navigate. NavigationFailure silenced per .
+// Click result → navigate. NavigationFailure silenced per Pitfall 6.
 function handleOpen(slug: string) {
     router.push('/docs/' + slug).catch(() => {
+        // vue-router 的 NavigationFailureType 中该值官方拼写即为 cancelled，此处指代该 API 值，保留原词
+        //noinspection GrazieStyle
         // NavigationFailure (aborted/duplicated/cancelled) — silent per spec §4.6
     })
     query.value = ''
@@ -73,11 +75,11 @@ function handleOpen(slug: string) {
 }
 
 /**
- * Global keydown handler.
+ * Global keydown handler (D-13).
  *
  * Ctrl+K / Cmd+K: focus search input on any route (global).
  * `/`: focus search input only when route.path.startsWith('/docs') AND
- *      target is not INPUT/TEXTAREA/contenteditable ( — avoids
+ *      target is not INPUT/TEXTAREA/contenteditable (Pitfall 10 — avoids
  *      conflict with editor input).
  * Escape: blur input (closes dropdown).
  */
@@ -90,7 +92,7 @@ function handleKeydown(e: KeyboardEvent) {
         return
     }
 
-    // `/` — docs subtree only, not in inputs
+    // `/` — docs subtree only, not in inputs (Pitfall 10, T-14-12)
     if (e.key === '/' && route.path.startsWith('/docs')) {
         const target = e.target as HTMLElement
         if (!['INPUT', 'TEXTAREA'].includes(target.tagName) && !target.isContentEditable) {

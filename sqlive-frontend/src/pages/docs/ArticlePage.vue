@@ -11,7 +11,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useDocArticle } from '@/composables/useDocArticle'
 import MarkdownRenderer from '@/components/docs/MarkdownRenderer.vue'
 
-// ArticlePage accepts optional slug prop (static from router for
+// D-05: ArticlePage accepts optional slug prop (static from router for
 // /docs/intro and /docs/changelog; dynamic for /docs/usage/:article).
 // Falls back to route.params.article when no prop is passed.
 const props = defineProps<{ slug?: string }>()
@@ -24,7 +24,9 @@ const slugRef = computed(() => props.slug ?? (route.params.article as string) ??
 const { html } = useDocArticle(slugRef)
 
 // Error Handling 4.1: slug not found → redirect to /docs/not-found.
-// NavigationFailure silenced (aborted/duplicated/cancelled).
+// vue-router 的 NavigationFailureType 中该值官方拼写即为 cancelled，此处指代该 API 值，保留原词
+//noinspection GrazieStyle
+// NavigationFailure silenced per Pitfall 6 (aborted/duplicated/cancelled).
 watch(
     () => html.value,
     (val) => {

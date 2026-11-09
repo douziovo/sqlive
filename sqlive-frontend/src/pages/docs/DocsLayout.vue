@@ -1,11 +1,11 @@
 <template>
     <div class="flex h-full min-h-0">
-        <!-- Desktop sidebar: CSS-driven visibility (visible ≥768px via
+        <!-- Desktop sidebar: CSS-driven visibility (W6 fix — visible ≥768px via
          md:flex, hidden below 768px via hidden; NOT v-if conditional render).
          AppHeader is NOT rendered here — RootLayout already provides it. -->
         <DocsSidebar class="hidden md:flex w-[240px] shrink-0 border-r border-border bg-sidebar" />
 
-        <!-- Mobile drawer: Reka-ui Dialog. Trigger visible only below 768px
+        <!-- Mobile drawer: Reka-ui Dialog (D-12). Trigger visible only below 768px
          via md:hidden. Drawer auto-closes on navigate (@navigate handler). -->
         <Dialog v-model:open="drawerOpen">
             <DialogTrigger as-child>
@@ -27,6 +27,8 @@
         </Dialog>
 
         <main class="flex-1 min-w-0 overflow-auto bg-background">
+            <!-- router-view 是 Vue Router 的内置组件而非 HTML 标签，非错误 -->
+            <!--suppress HtmlUnknownTag -->
             <router-view />
         </main>
     </div>
@@ -40,7 +42,7 @@ import { Menu } from '@lucide/vue'
 import DocsSidebar from '@/components/docs/DocsSidebar.vue'
 import { Dialog, DialogTrigger, DialogContent } from '@/components/ui/dialog'
 
-// responsive: isMobile is used ONLY for drawer auto-reset on resize
+// D-12 responsive: isMobile is used ONLY for drawer auto-reset on resize
 // (when viewport grows from mobile to desktop, close any stale drawer state).
 // Desktop sidebar / hamburger button visibility is CSS-driven (md:flex / md:hidden).
 const isMobile = useMediaQuery('(max-width: 767px)')
@@ -56,7 +58,7 @@ watch(isMobile, (m) => {
 
 const route = useRoute()
 
-// document.title per route — '{H1} · sqlive docs' or 'sqlive docs' fallback.
+// D-12: document.title per route — '{H1} · sqlive docs' or 'sqlive docs' fallback.
 // Reads H1 from rendered DOM (after nextTick so ArticlePage + MarkdownRenderer
 // have flushed v-html). Falls back when no article H1 (e.g. ApiPage, NotFoundPage).
 watch(

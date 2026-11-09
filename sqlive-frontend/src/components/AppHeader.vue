@@ -52,10 +52,12 @@ import { useRoute, useRouter } from 'vue-router'
 const route = useRoute()
 const router = useRouter()
 
-// active highlight: Docs button shows muted "you are here" on /docs/* routes.
+// D-05 active highlight: Docs button shows muted "you are here" on /docs/* routes.
 const isDocsRoute = computed(() => route.path.startsWith('/docs'))
 
-// Handler functions (NOT inline @click="$emit" — per AGENTS.md <script setup> gotcha).
+// Handler functions (NOT inline @click="$emit" — per CLAUDE.md <script setup> gotcha).
+// vue-router 的 NavigationFailureType 中该值官方拼写即为 cancelled，此处指代该 API 值，保留原词
+//noinspection GrazieStyle
 // router.push rejections are NavigationFailure (aborted/duplicated/cancelled) —
 // silent per design spec §4.6.
 function handleDocsClick() {

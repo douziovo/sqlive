@@ -74,19 +74,27 @@ onUnmounted(() => {
     font-size: 13px;
 }
 
+/* <Transition name="toast-pop"> 运行时生成的进入过渡类，静态检查器无法识别，不可删除 */
+/*noinspection CssUnusedSymbol*/
 .toast-pop-enter-active {
     transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* 同上：Transition 运行时生成的离开过渡类 */
+/*noinspection CssUnusedSymbol*/
 .toast-pop-leave-active {
     transition: all 0.2s ease-in;
 }
 
+/* 同上：Transition 运行时生成的进入起始态 */
+/*noinspection CssUnusedSymbol*/
 .toast-pop-enter-from {
     opacity: 0;
     transform: translateX(-50%) translateY(-12px) scale(0.9);
 }
 
+/* 同上：Transition 运行时生成的离开结束态 */
+/*noinspection CssUnusedSymbol*/
 .toast-pop-leave-to {
     opacity: 0;
     transform: translateX(-50%) translateY(-8px);

@@ -1,3 +1,4 @@
+//noinspection JSAnnotator -- vitest/config 的 triple-slash 类型引用是 vitest 官方约定，该库不在本 tsconfig 的 project 范围内
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import { fileURLToPath, URL } from 'node:url'
@@ -51,19 +52,18 @@ export default defineConfig({
         },
         coverage: {
             provider: 'v8',
+            reporter: ['text', 'json-summary'],
             thresholds: {
-                statements: 60,
-                branches: 50,
-                functions: 60,
-                lines: 60
+                statements: 98,
+                branches: 91,
+                functions: 98,
+                lines: 98
             },
             include: ['src/composables/**', 'src/utils/**', 'src/components/**'],
             exclude: [
                 'src/__tests__/**',
                 'src/main.ts',
                 '**/*.d.ts',
-                'src/components/CodeEditor.vue',
-                'src/components/AiChatPanel.vue',
                 'src/components/ai-elements/**'
             ]
         }
