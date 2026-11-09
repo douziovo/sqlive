@@ -46,3 +46,9 @@ export interface AiSchemaInfo {
     columns: string[]
     columnTypes: Record<string, string>
 }
+
+export interface AiResponse<T> {
+    success: boolean
+    data?: T
+    error?: { message: string; line?: number } | string
+}

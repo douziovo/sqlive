@@ -4,20 +4,15 @@ import type { useSqlEngine } from '../composables/useSqlEngine'
 import { API_URL } from '../config'
 
 export function jsonOk(data: any) {
-    return Promise.resolve({
-        status: 200,
-        ok: true,
-        json: () => Promise.resolve(data),
-        headers: { get: () => null }
-    })
+    return Promise.resolve(Response.json(data))
 }
 
 export function mockSuccess(fetchSpy: ReturnType<typeof vi.fn>, data: any) {
-    fetchSpy.mockResolvedValue(jsonOk({ success: true, data }))
+    fetchSpy.mockImplementation(() => jsonOk({ success: true, data }))
 }
 
 export function mockError(fetchSpy: ReturnType<typeof vi.fn>, message: string, line: number) {
-    fetchSpy.mockResolvedValue(jsonOk({ success: false, error: { message, line } }))
+    fetchSpy.mockImplementation(() => jsonOk({ success: false, error: { message, line } }))
 }
 
 export function mockReject(fetchSpy: ReturnType<typeof vi.fn>, err: Error) {
