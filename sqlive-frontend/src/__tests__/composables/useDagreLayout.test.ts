@@ -158,4 +158,20 @@ describe('useDagreLayout', () => {
         // TB layout: target should be below source
         expect(result[1].position.y).toBeGreaterThan(result[0].position.y)
     })
+    it('measures node sizes from container [data-id] elements', () => {
+        const container = document.createElement('div')
+        const el = document.createElement('div')
+        el.dataset.id = 'a'
+        // jsdom reports 0 for offsetWidth/Height — the fallbacks (200/120) apply,
+        // but the element map lookup path itself is exercised here.
+        container.appendChild(el)
+        document.body.appendChild(container)
+
+        const nodes: Node[] = [{ id: 'a', type: 't', position: { x: 0, y: 0 }, data: {} }]
+        const result = layoutNodes(nodes, [], container)
+
+        expect(result).toHaveLength(1)
+        expect(result[0].position.x).toBeGreaterThanOrEqual(0)
+        container.remove()
+    })
 })

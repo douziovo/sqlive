@@ -5,7 +5,7 @@ import { useTimeoutFn } from '@vueuse/core'
 import type { KnowledgeNode } from '@/composables/useKnowledgeGraph'
 import { STORAGE_KEYS } from '@/constants/storageKeys'
 
-// extracted node half-dimensions for centering math.
+// D-19 (IN-08): extracted node half-dimensions for centering math.
 // Node size assumed 120x60 (KnowledgeNode.vue width/height).
 // focusNode uses these directly; flyToNode uses +75/+20 offsets because
 // zoom 1.5 crops tighter and a slight upward shift keeps the node label
@@ -21,7 +21,7 @@ const NODE_HALF_H = 30
  *   - zoomLevel / viewportPos / isSettling reactive state
  *   - onMove handler (throttles zoomLevel updates, debounces
  *     localStorage kg-viewport writes)
- *   - fitView / focusNode / flyToNode (with flowRef null guards — )
+ *   - fitView / focusNode / flyToNode (with flowRef null guards — T-10-11)
  *   - onMounted: restore localStorage kg-viewport OR fitView if none
  *   - VueUse timers automatically stop when the effect scope is disposed
  *
@@ -86,9 +86,9 @@ export function useGraphViewport(
     }
 
     function fitView(): void {
-        // guard against null flowRef (composable mounted before VueFlow)
+        // T-10-11: guard against null flowRef (composable mounted before VueFlow)
         if (!flowRef.value) return
-        flowRef.value?.fitView?.({ duration: 300 })
+        void flowRef.value?.fitView?.({ duration: 300 })
     }
 
     function focusNode(topicId: string): void {
@@ -96,7 +96,7 @@ export function useGraphViewport(
         const nodeId = `topic-${topicId}`
         const node = displayNodes.value.find((n) => n.id === nodeId)
         if (node) {
-            flowRef.value?.setCenter?.(
+            void flowRef.value?.setCenter?.(
                 node.position.x + NODE_HALF_W,
                 node.position.y + NODE_HALF_H,
                 {
@@ -113,8 +113,8 @@ export function useGraphViewport(
         const node = displayNodes.value.find((n) => n.id === nodeId)
         if (!node) return
 
-        flowRef.value?.setCenter?.(
-            // zoom 1.5 crops tighter — +75/+20 shifts node slightly up-left
+        void flowRef.value?.setCenter?.(
+            // D-19: zoom 1.5 crops tighter — +75/+20 shifts node slightly up-left
             // so the label stays visible below center. focusNode (zoom 1.2) uses
             // NODE_HALF_W/H directly; flyToNode's offset is intentionally different.
             node.position.x + 75,
@@ -128,17 +128,17 @@ export function useGraphViewport(
     const instance = getCurrentInstance()
     if (instance) {
         onMounted(async () => {
-            // auto-fit on first visit when no saved viewport exists.
+            // D-31: auto-fit on first visit when no saved viewport exists.
             // Viewport restore (when saved) happens in onPaneReady after layout.
             try {
                 const saved = localStorage.getItem(STORAGE_KEYS.graphViewport)
                 if (!saved) {
                     await nextTick()
-                    flowRef.value?.fitView?.({ duration: 300 })
+                    void flowRef.value?.fitView?.({ duration: 300 })
                 }
             } catch {
                 await nextTick()
-                flowRef.value?.fitView?.({ duration: 300 })
+                void flowRef.value?.fitView?.({ duration: 300 })
             }
         })
     }

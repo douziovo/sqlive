@@ -116,3 +116,64 @@ describe('ErSearchBar', () => {
         expect(wrapper.find('.er-findbar-count').text()).toBe('')
     })
 })
+
+describe('ErSearchBar — count formats and focus', () => {
+    const baseProps = {
+        modelValue: 'join',
+        visible: true,
+        totalCount: 10,
+        matchCount: 0,
+        currentIndex: -1
+    }
+
+    it('shows "n/total" count when currentIndex is -1 with matches', async () => {
+        const wrapper = mount(ErSearchBar, {
+            props: { ...baseProps, matchCount: 3 },
+            attachTo: document.body
+        })
+        await nextTick()
+        expect(wrapper.find('.er-findbar-count').text()).toBe('3/10')
+        wrapper.unmount()
+    })
+
+    it('shows "i+1/n" count when currentIndex is set', async () => {
+        const wrapper = mount(ErSearchBar, {
+            props: { ...baseProps, matchCount: 3, currentIndex: 1 }
+        })
+        await nextTick()
+        expect(wrapper.find('.er-findbar-count').text()).toBe('2/3')
+    })
+
+    it('clears the count when modelValue is emptied', async () => {
+        const wrapper = mount(ErSearchBar, {
+            props: { ...baseProps, matchCount: 3, currentIndex: 1 }
+        })
+        await nextTick()
+        expect(wrapper.find('.er-findbar-count').text()).toBe('2/3')
+        await wrapper.setProps({ modelValue: '' })
+        await nextTick()
+        // v-if="modelValue" removes the whole count span
+        expect(wrapper.find('.er-findbar-count').exists()).toBe(false)
+    })
+
+    it('focuses and selects the input when becoming visible', async () => {
+        const el = document.createElement('div')
+        document.body.appendChild(el)
+        const wrapper = mount(ErSearchBar, {
+            props: { ...baseProps, visible: false, modelValue: '' },
+            attachTo: el
+        })
+        // Input does not exist yet (v-if="visible") — spy on the prototype
+        const focusSpy = vi.spyOn<HTMLInputElement, 'focus'>(HTMLInputElement.prototype, 'focus')
+        const selectSpy = vi.spyOn<HTMLInputElement, 'select'>(HTMLInputElement.prototype, 'select')
+
+        await wrapper.setProps({ visible: true })
+        await nextTick()
+        await nextTick()
+
+        expect(focusSpy).toHaveBeenCalled()
+        expect(selectSpy).toHaveBeenCalled()
+        wrapper.unmount()
+        el.remove()
+    })
+})

@@ -1,5 +1,6 @@
+import { mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
-import { effectScope, ref, shallowRef } from 'vue'
+import { defineComponent, effectScope, ref, shallowRef } from 'vue'
 import type { KnowledgeNode } from '@/composables/useKnowledgeGraph'
 import { useGraphViewport } from '@/composables/useGraphViewport'
 
@@ -112,9 +113,9 @@ describe('useGraphViewport', () => {
         expect(viewportPos.y).toBe(20)
     })
 
-    // ── NODE_HALF_W/H constants extracted ──
+    // ── IN-08 (D-19): NODE_HALF_W/H constants extracted ──
 
-    it('focusNode centers on node.position + 60/30 via constants', () => {
+    it('IN-08 focusNode centers on node.position + 60/30 via constants', () => {
         const setCenterMock = vi.fn()
         const flowRef = ref<any>({ setCenter: setCenterMock })
         const displayNodes = shallowRef<KnowledgeNode[]>([makeNode('X', { x: 100, y: 50 })])
@@ -126,5 +127,35 @@ describe('useGraphViewport', () => {
         expect(setCenterMock.mock.calls[0][0]).toBe(160)
         // node.position.y + NODE_HALF_H (30) = 80
         expect(setCenterMock.mock.calls[0][1]).toBe(80)
+    })
+    it('focusNode and flyToNode are no-ops without a flow ref', () => {
+        const flowRef = ref<any>(null)
+        const displayNodes = shallowRef<KnowledgeNode[]>([makeNode('X')])
+        const { focusNode, flyToNode } = useGraphViewport(flowRef, displayNodes)
+        expect(() => focusNode('X')).not.toThrow()
+        expect(() => flyToNode('X')).not.toThrow()
+    })
+
+    it('falls back to fitting the view when saved viewport loading throws', async () => {
+        const getItem = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+            throw new Error('storage locked')
+        })
+        const fitView = vi.fn()
+        const flowRef = ref<any>({ fitView })
+        try {
+            const Host = defineComponent({
+                setup() {
+                    useGraphViewport(flowRef, shallowRef([]))
+                    return () => null
+                }
+            })
+            const wrapper = mount(Host)
+            await Promise.resolve()
+            await Promise.resolve()
+            expect(fitView).toHaveBeenCalled()
+            wrapper.unmount()
+        } finally {
+            getItem.mockRestore()
+        }
     })
 })

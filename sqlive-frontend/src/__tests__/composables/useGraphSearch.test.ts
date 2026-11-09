@@ -103,7 +103,7 @@ describe('useGraphSearch', () => {
         const { showSearch, onGlobalKeydown } = useGraphSearch(flowRef, displayNodes)
 
         expect(showSearch.value).toBe(false)
-        // must use a real HTMLInputElement (not a plain object) because
+        // D-15: must use a real HTMLInputElement (not a plain object) because
         // instanceof HTMLElement is now the guard — plain objects fail the check.
         const inputEl = document.createElement('input')
         onGlobalKeydown(
@@ -128,9 +128,9 @@ describe('useGraphSearch', () => {
         expect(searchQuery.value).toBe('')
     })
 
-    // ── instanceof type guard — Ctrl+F works when e.target is Document ──
+    // ── IN-04 (D-15): instanceof type guard — Ctrl+F works when e.target is Document ──
 
-    it('Ctrl+F works when e.target is Document (no focused element)', () => {
+    it('IN-04 Ctrl+F works when e.target is Document (no focused element)', () => {
         const flowRef = ref<any>({ getViewport: () => ({ x: 0, y: 0, zoom: 1 }) })
         const displayNodes = shallowRef<KnowledgeNode[]>([])
         const { showSearch, onGlobalKeydown } = useGraphSearch(flowRef, displayNodes)
@@ -147,7 +147,7 @@ describe('useGraphSearch', () => {
         expect(showSearch.value).toBe(true)
     })
 
-    it('input guard still works — Ctrl+F in input is no-op', () => {
+    it('IN-04 input guard still works — Ctrl+F in input is no-op', () => {
         const flowRef = ref<any>(null)
         const displayNodes = shallowRef<KnowledgeNode[]>([])
         const { showSearch, onGlobalKeydown } = useGraphSearch(flowRef, displayNodes)
@@ -163,9 +163,9 @@ describe('useGraphSearch', () => {
         expect(showSearch.value).toBe(false)
     })
 
-    // ── null-safe flowRef when Ctrl+F fires before VueFlow mounts ──
+    // ── IN-03 (D-14): null-safe flowRef when Ctrl+F fires before VueFlow mounts ──
 
-    it('Ctrl+F does not crash when flowRef is null', () => {
+    it('IN-03 Ctrl+F does not crash when flowRef is null', () => {
         const flowRef = ref<any>(null)
         const displayNodes = shallowRef<KnowledgeNode[]>([])
         const { showSearch, onGlobalKeydown, closeSearch } = useGraphSearch(flowRef, displayNodes)
@@ -182,5 +182,35 @@ describe('useGraphSearch', () => {
         expect(showSearch.value).toBe(true)
         // closeSearch should also handle null previousViewport gracefully
         expect(() => closeSearch()).not.toThrow()
+    })
+    it('restores the viewport saved when Ctrl+F opened the search', () => {
+        const setViewport = vi.fn()
+        const flowRef = ref<any>({
+            getViewport: () => ({ x: 11, y: 22, zoom: 0.9 }),
+            setViewport
+        })
+        const displayNodes = shallowRef<KnowledgeNode[]>([])
+        const { showSearch, onGlobalKeydown, closeSearch } = useGraphSearch(flowRef, displayNodes)
+
+        onGlobalKeydown(makeFakeEvent({ key: 'f', ctrlKey: true, target: document.body }))
+        expect(showSearch.value).toBe(true)
+
+        closeSearch()
+        expect(setViewport).toHaveBeenCalledWith(
+            { x: 11, y: 22, zoom: 0.9 },
+            { duration: 200 }
+        )
+        // Closing twice does not restore again
+        setViewport.mockClear()
+        closeSearch()
+        expect(setViewport).not.toHaveBeenCalled()
+    })
+
+    it('navigateMatch with no matches is a no-op', () => {
+        const flowRef = ref<any>(null)
+        const displayNodes = shallowRef<KnowledgeNode[]>([])
+        const { navigateMatch, currentIndex } = useGraphSearch(flowRef, displayNodes)
+        expect(() => navigateMatch(1)).not.toThrow()
+        expect(currentIndex.value).toBe(-1)
     })
 })
