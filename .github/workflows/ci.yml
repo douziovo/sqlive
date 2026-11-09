@@ -50,6 +50,10 @@ jobs:
         working-directory: sqlive-frontend
         run: pnpm run lint
 
+      - name: Run frontend type check
+        working-directory: sqlive-frontend
+        run: pnpm run typecheck
+
       - name: Run frontend tests
         working-directory: sqlive-frontend
         run: pnpm run test
