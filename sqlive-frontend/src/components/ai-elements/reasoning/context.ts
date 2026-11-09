@@ -4,7 +4,6 @@ import { inject } from 'vue'
 export interface ReasoningContextValue {
     isStreaming: Ref<boolean>
     isOpen: Ref<boolean>
-    setIsOpen: (open: boolean) => void
     duration: Ref<number | undefined>
 }
 

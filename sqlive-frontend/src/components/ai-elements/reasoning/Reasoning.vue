@@ -89,9 +89,6 @@ watch(
 provide(ReasoningKey, {
     isStreaming: computed(() => props.isStreaming),
     isOpen,
-    setIsOpen: (val: boolean) => {
-        isOpen.value = val
-    },
     duration: computed(() => internalDuration.value)
 })
 </script>

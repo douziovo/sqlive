@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reactiveOmit } from '@vueuse/core'
 import { X } from '@lucide/vue'
-import type { DialogContentEmits, DialogContentProps } from 'reka-ui'
+import type { DialogContentEmits, DialogContentProps, PointerDownOutsideEvent } from 'reka-ui'
 import {
     DialogClose,
     DialogContent,
@@ -22,6 +22,16 @@ const emits = defineEmits<DialogContentEmits>()
 const delegatedProps = reactiveOmit(props, 'class')
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits)
+
+// 由模板内联 handler 抽出的命名函数（逻辑完全不变）：点击落在滚动内容可见区域之外时
+// 阻止 pointer-down-outside 关闭对话框。抽成脚本函数也避免了 IDE 对内联多语句的误判。
+function onPointerDownOutside(event: PointerDownOutsideEvent): void {
+    const originalEvent = event.detail.originalEvent
+    const target = originalEvent.target as HTMLElement
+    if (originalEvent.offsetX > target.clientWidth || originalEvent.offsetY > target.clientHeight) {
+        event.preventDefault()
+    }
+}
 </script>
 
 <template>
@@ -37,18 +47,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
                     )
                 "
                 v-bind="{ ...$attrs, ...forwarded }"
-                @pointer-down-outside="
-                    (event) => {
-                        const originalEvent = event.detail.originalEvent
-                        const target = originalEvent.target as HTMLElement
-                        if (
-                            originalEvent.offsetX > target.clientWidth ||
-                            originalEvent.offsetY > target.clientHeight
-                        ) {
-                            event.preventDefault()
-                        }
-                    }
-                "
+                @pointer-down-outside="onPointerDownOutside"
             >
                 <slot />
 
