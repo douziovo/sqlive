@@ -191,7 +191,7 @@ function renderMd(text: string): string {
     white-space: pre-wrap;
 }
 .md-body code {
-    font-family: var(--font-mono);
+    font-family: var(--font-mono), monospace;
     font-size: 0.8em;
 }
 .md-body :not(pre) > code {

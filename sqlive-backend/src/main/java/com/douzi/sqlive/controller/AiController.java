@@ -27,6 +27,13 @@ public class AiController {
 
 	private final AiService aiService;
 
+	@PostMapping(value = "/chat", produces = MediaType.APPLICATION_JSON_VALUE)
+	@Operation(summary = "AI 非流式对话", description = "返回完整 JSON 响应，用于 SQL 生成等非流式请求")
+	public AiChatResponse chatJson(@Valid @RequestBody AiChatRequest request) {
+		request.setStream(false);
+		return executeMode(request, "chat");
+	}
+
 	/**
 	 * General chat — streaming SSE.
 	 */

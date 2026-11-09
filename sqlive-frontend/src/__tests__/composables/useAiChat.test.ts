@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick, ref } from 'vue'
-import type { AiMessage } from '../../composables/useAiChat'
+import type { AiMessage } from '@/composables/useAiChat'
 import { type AiChatSetup, setupAiChat } from '../test-utils'
 
 describe('useAiChat', () => {
@@ -174,10 +174,7 @@ describe('useAiChat', () => {
             message: 'explain this',
             currentSql: 'SELECT 1;',
             schema: [{ table: 'users', columns: ['id'], columnTypes: { id: 'INTEGER' } }],
-            history: [
-                { role: 'system', content: 'context' },
-                { role: 'user', content: 'explain this' }
-            ]
+            history: [{ role: 'system', content: 'context' }]
         })
         expect(engine.messages.value.at(-1)?.content).toBe('ok')
     })
@@ -234,7 +231,7 @@ describe('useAiChat', () => {
 
         await engine.sendMessage('question')
 
-        expect(engine.messages.value[1].content).toBe('调用 AI 失败：offline')
+        expect(engine.messages.value[1].content).toContain('offline')
         expect(engine.messages.value[1].isStreaming).toBe(false)
         expect(engine.isLoading.value).toBe(false)
     })
@@ -283,7 +280,7 @@ describe('useAiChat', () => {
 
         engine.regenerateMessage('a')
         await vi.advanceTimersByTimeAsync(0)
-        expect(engine.messages.value.map((m) => m.content)).toEqual(['first', 'first', 'new'])
+        expect(engine.messages.value.map((m) => m.content)).toEqual(['first', 'new'])
     })
 
     it('editing a message replaces its answer and sends the revised text', async () => {

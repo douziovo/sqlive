@@ -61,6 +61,37 @@ class AiControllerTest {
 		assertTrue(resp.getBody().contains("world"), "SSE response should contain 'world' chunk content");
 	}
 
+	@Test
+	void chatAcceptsTheFrontendNonStreamingJsonContract() {
+		AiChatRequest req = new AiChatRequest();
+		req.setMessage("Generate a SQLite table");
+		req.setStream(false);
+		HttpHeaders headers = jsonHeaders();
+		headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+		ResponseEntity<AiChatResponse> resp = restTemplate.exchange(
+				url("/api/ai/chat"), HttpMethod.POST, new HttpEntity<>(req, headers), AiChatResponse.class);
+		assertEquals(HttpStatus.OK, resp.getStatusCode());
+		assertTrue(resp.getHeaders().getContentType().isCompatibleWith(MediaType.APPLICATION_JSON));
+		assertTrue(resp.getBody().isSuccess());
+		assertEquals("AI response", resp.getBody().getData().getContent());
+	}
+
+	@Test
+	void chatJsonPreservesProviderErrorPayload() {
+		AiChatRequest req = new AiChatRequest();
+		req.setMessage("json error contract");
+		req.setStream(false);
+		when(aiService.executeNonStreaming(argThat(r -> r != null && "json error contract".equals(r.getMessage()))))
+				.thenReturn(AiChatResponse.error("provider unavailable"));
+		HttpHeaders headers = jsonHeaders();
+		headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+		var resp = restTemplate.exchange(url("/api/ai/chat"), HttpMethod.POST,
+				new HttpEntity<>(req, headers), AiChatResponse.class);
+		assertEquals(HttpStatus.OK, resp.getStatusCode());
+		assertFalse(resp.getBody().isSuccess());
+		assertEquals("provider unavailable", resp.getBody().getError().getMessage());
+	}
+
 	// ── /api/ai/chat (streaming) ─────────────────────────────
 
 	@Test

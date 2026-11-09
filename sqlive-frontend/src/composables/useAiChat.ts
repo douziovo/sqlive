@@ -1,4 +1,4 @@
-import { useLocalStorage, watchDebounced } from '@vueuse/core'
+import { tryOnScopeDispose, useLocalStorage, watchDebounced } from '@vueuse/core'
 import { computed, type Ref, ref } from 'vue'
 import { useAiStreaming } from '../composables/useAiStreaming'
 import { API_BASE } from '../config'
@@ -57,23 +57,13 @@ export type AiPanelMode =
     | 'generate-sql'
     | 'general-chat'
 
-export const AI_MODE_LABELS: Record<AiPanelMode, string> = {
-    chat: '🤖 AI 助手',
-    'error-analysis': '🤖 AI 错误分析',
-    'fix-code': '🔧 代码修复',
-    explain: '📖 SQL 解释',
-    optimize: '⚡ SQL 优化',
-    'generate-sql': '✨ AI 生成 SQL',
-    'general-chat': '🤖 AI 助手'
-}
-
 let msgCounter = 0
 
 /**
  * Core AI chat composable. Must be instantiated once in App.vue.
  * Handles SSE streaming chat, error auto-analysis, and learning suggestions.
  */
-// previously received the whole DatabaseModel but only read db.tables.
+// D-R2-004: previously received the whole DatabaseModel but only read db.tables.
 // Narrowed to a `tablesSource: () => TableSchema[]` getter (matches the
 // useErDiagram L92 范式) so this composable no longer couples to the whole DatabaseModel shape.
 export function useAiChat(ctx: {
@@ -92,7 +82,25 @@ export function useAiChat(ctx: {
         }
     })
     const autoAnalysisEnabled = ref(true)
-    const { streamCall, cancelStream } = useAiStreaming(API_BASE, isLoading)
+    const { streamCall, cancelStream: cancelTransport } = useAiStreaming(API_BASE, isLoading)
+    let generation = 0
+    let activeMessage: AiMessage | null = null
+
+    function finishMessage(message: AiMessage) {
+        message.isStreaming = false
+        message.isReasoning = false
+        message.endTime = Date.now()
+        if (!message.content && message.reasoning) message.content = message.reasoning
+    }
+
+    function cancelStream() {
+        generation++
+        cancelTransport()
+        if (activeMessage) finishMessage(activeMessage)
+        activeMessage = null
+    }
+
+    tryOnScopeDispose(cancelStream)
 
     const currentSchema = computed(() => {
         return (ctx.tablesSource() ?? []).map((t) => ({
@@ -139,10 +147,15 @@ export function useAiChat(ctx: {
         return messages.value[messages.value.length - 1]
     }
 
-    async function sendMessage(text: string): Promise<void> {
+    async function sendMessage(text: string, reuseUser = false): Promise<void> {
         if (!text.trim()) return
         if (isLoading.value) return
 
+        const history = messages.value.map((message) => ({
+            role: message.role,
+            content: message.content
+        }))
+        if (reuseUser) history.pop()
         const userMsg: AiMessage = {
             id: `user-${++msgCounter}`,
             role: 'user',
@@ -150,9 +163,11 @@ export function useAiChat(ctx: {
             timestamp: Date.now(),
             metadata: { type: 'general-chat' }
         }
-        messages.value.push(userMsg)
+        if (!reuseUser) messages.value.push(userMsg)
 
         const aiMsg = addAssistantMessage('general-chat')
+        const requestGeneration = ++generation
+        activeMessage = aiMsg
         isLoading.value = true
 
         try {
@@ -161,13 +176,12 @@ export function useAiChat(ctx: {
                 {
                     mode: 'chat',
                     message: text,
-                    history: messages.value
-                        .slice(0, -1)
-                        .map((m) => ({ role: m.role, content: m.content })),
+                    history,
                     currentSql: ctx.code.value,
                     schema: currentSchema.value
                 },
                 (chunk) => {
+                    if (requestGeneration !== generation) return
                     let parsed: {
                         type?: string
                         content?: string
@@ -210,16 +224,15 @@ export function useAiChat(ctx: {
                 }
             )
         } catch (e: unknown) {
+            if (requestGeneration !== generation) return
             const errMsg = e instanceof Error ? e.message : '未知错误'
             aiMsg.content = `调用 AI 失败：${errMsg}`
         } finally {
-            aiMsg.isStreaming = false
-            aiMsg.isReasoning = false
-            aiMsg.endTime = Date.now()
-            if (!aiMsg.content && aiMsg.reasoning) {
-                aiMsg.content = aiMsg.reasoning
+            finishMessage(aiMsg)
+            if (requestGeneration === generation) {
+                activeMessage = null
+                isLoading.value = false
             }
-            isLoading.value = false
         }
     }
 
@@ -233,6 +246,7 @@ export function useAiChat(ctx: {
     }
 
     function clearMessages(): void {
+        cancelStream()
         messages.value = []
     }
 
@@ -242,25 +256,24 @@ export function useAiChat(ctx: {
         const msg = messages.value[idx]
         if (msg.role !== 'assistant') return
         const userMsg = messages.value[idx - 1]
-        messages.value.splice(idx, 1)
-        sendMessage(userMsg.content)
+        if (userMsg.role !== 'user') return
+        cancelStream()
+        messages.value.splice(idx)
+        void sendMessage(userMsg.content, true)
     }
 
     function editMessage(messageId: string, newText: string): void {
         const idx = messages.value.findIndex((m) => m.id === messageId)
-        if (idx < 0) return
-        const nextMsg = messages.value[idx + 1]
-        if (nextMsg?.role === 'assistant') {
-            messages.value.splice(idx, 2)
-        } else {
-            messages.value.splice(idx, 1)
-        }
-        sendMessage(newText)
+        if (idx < 0 || messages.value[idx].role !== 'user' || !newText.trim()) return
+        cancelStream()
+        messages.value.splice(idx)
+        void sendMessage(newText)
     }
 
     function deleteMessage(messageId: string): void {
         const idx = messages.value.findIndex((m) => m.id === messageId)
         if (idx < 0) return
+        cancelStream()
         const msg = messages.value[idx]
         if (msg.role === 'assistant') {
             const prevMsg = messages.value[idx - 1]
