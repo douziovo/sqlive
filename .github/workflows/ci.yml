@@ -18,10 +18,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
+        # IDE 离线无法解析 action.yml，with 输入会被误报为未定义形参
+        #noinspection UndefinedParamsPresent
         with:
           java-version: '25'
           distribution: 'zulu'
       - uses: gradle/actions/setup-gradle@v4
+        # IDE 离线无法解析 action.yml，with 输入会被误报为未定义形参
+        #noinspection UndefinedParamsPresent
         with:
           build-root-directory: sqlive-backend
           cache-read-only: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/future' }}
@@ -33,10 +37,14 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v6
+        # IDE 离线无法解析 action.yml，with 输入会被误报为未定义形参
+        #noinspection UndefinedParamsPresent
         with:
           version: 12.6.0
 
       - uses: actions/setup-node@v4
+        # IDE 离线无法解析 action.yml，with 输入会被误报为未定义形参
+        #noinspection UndefinedParamsPresent
         with:
           node-version: 'lts/*'
           cache: 'pnpm'
@@ -67,20 +75,28 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-java@v4
+        # IDE 离线无法解析 action.yml，with 输入会被误报为未定义形参
+        #noinspection UndefinedParamsPresent
         with:
           java-version: '25'
           distribution: 'zulu'
 
       - uses: gradle/actions/setup-gradle@v4
+        # IDE 离线无法解析 action.yml，with 输入会被误报为未定义形参
+        #noinspection UndefinedParamsPresent
         with:
           build-root-directory: sqlive-backend
           cache-read-only: true
 
       - uses: pnpm/action-setup@v6
+        # IDE 离线无法解析 action.yml，with 输入会被误报为未定义形参
+        #noinspection UndefinedParamsPresent
         with:
           version: 12.6.0
 
       - uses: actions/setup-node@v4
+        # IDE 离线无法解析 action.yml，with 输入会被误报为未定义形参
+        #noinspection UndefinedParamsPresent
         with:
           node-version: 'lts/*'
           cache: 'pnpm'
@@ -92,6 +108,8 @@ jobs:
 
       - name: Cache Playwright browsers
         uses: actions/cache@v4
+        # IDE 离线无法解析 action.yml，with 输入会被误报为未定义形参
+        #noinspection UndefinedParamsPresent
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('sqlive-frontend/pnpm-lock.yaml') }}

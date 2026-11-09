@@ -1,6 +1,6 @@
 # 测试与验证
 
-运行环境：Node.js LTS、pnpm 12.6.0、JDK 21。先在 `sqlive-frontend` 执行 `pnpm install --frozen-lockfile`。后端使用 Gradle wrapper；Windows 将 `./gradlew` 换为 `.\gradlew.bat`，确保 `JAVA_HOME` 指向 JDK。
+运行环境：Node.js LTS、pnpm 12.6.0、JDK 25。先在 `sqlive-frontend` 执行 `pnpm install --frozen-lockfile`。后端使用 Gradle wrapper 9.2.1 和 JaCoCo 0.8.14（正式支持 Java 25）；Windows 将 `./gradlew` 换为 `.\gradlew.bat`，确保 `JAVA_HOME` 指向 JDK 25。
 
 ## 入口
 
@@ -9,7 +9,7 @@
 | `sqlive-frontend` | `pnpm run lint` | oxlint 静态检查（`.oxlintrc.json`） |
 | `sqlive-frontend` | `pnpm run format:check` | oxfmt 格式检查（`.oxfmtrc.json`），`pnpm format` 写入 |
 | `sqlive-frontend` | `pnpm test` | Vitest 单元/组件测试 |
-| `sqlive-frontend` | `pnpm run typecheck` | 独立类型检查 |
+| `sqlive-frontend` | `pnpm run typecheck` | vue-tsc 检查应用和 Vue 模板，TS7 原生 tsc 检查 Vite/E2E |
 | `sqlive-frontend` | `pnpm run build` | Vite 生产构建，不含类型检查 |
 | `sqlive-frontend` | `pnpm run test:e2e` | 本机 Chrome + Edge E2E，自动启停前后端 |
 | `sqlive-frontend` | `pnpm run test:e2e -- --grep '@smoke'` | SQL 执行、建表、多标签冒烟测试 |
@@ -34,11 +34,11 @@ CI 安装 Chromium 和 Edge，运行 `--project=chromium --project=edge`。浏�
 
 ## CI 与覆盖率
 
-[CI 配置](../.github/workflows/ci.yml) 在 push 到 `main`/`future`、PR 目标为 `main` 时运行前端 lint、前后端单测和 Chromium + Edge E2E。部署分支另见 `render.yaml`。
+[CI 配置](../.github/workflows/ci.yml) 在 push 到 `main`/`future`、PR 目标为 `main` 时运行前端 lint、类型检查、前后端单测和 Chromium + Edge E2E。部署分支另见 `render.yaml`。
 
-- CI 当前不执行格式检查、前端构建、类型检查或覆盖率门禁；不能把单测通过称为这些检查通过。
+- CI 当前不执行格式检查、前端构建或覆盖率门禁；不能把单测通过称为这些检查通过。
 - 格式化工具为 oxfmt，风格对齐现有代码（无分号、单引号、4 空格缩进）。存量文件尚未全量格式化，`pnpm format:check` 会列出全部待格式化文件，因此 CI 暂不执行；全量 `pnpm format` 后可再纳入。
-- 前端覆盖率阈值在 `vite.config.ts`，默认 `pnpm test` 不启用 coverage。手动运行 `pnpm exec vitest run --coverage` 前需要匹配 Vitest 版本的 `@vitest/coverage-v8`，当前 manifest 未安装该包。
-- 后端 `test` 在 `CI=true` 或 `-Djacoco=true` 时生成报告。要执行配置中的覆盖率门禁，运行 `./gradlew test jacocoTestCoverageVerification -Djacoco=true`；CI 的 `test` 不执行门禁。
+- 前端覆盖率阈值在 `vite.config.ts`，默认 `pnpm test` 不启用 coverage。manifest 已安装与 Vitest 5.0.5 匹配的 `@vitest/coverage-v8`，运行 `pnpm exec vitest run --coverage` 生成报告并执行阈值检查。
+- 后端 `test` 在 `CI=true`、`-Djacoco=true` 或 `-Pjacoco=true` 时生成报告。运行 `./gradlew build -Pjacoco=true` 编译、测试、打包并执行覆盖率门禁；当前行/分支阈值均为 98%，仅排除启动类。CI 的 `test` 不执行门禁。
 
 验证记录只写实际命令、结果和未覆盖范围；UI 操作与布局时序按需做真实浏览器验证，不以 mock 单测替代。

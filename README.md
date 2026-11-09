@@ -114,9 +114,14 @@
 
 不是普通 tooltip，而是 Teleport 到 body 的浮窗，带标题栏 + 内嵌过滤器 + 键盘导航，IDE 风格的"hover 即查"体验。
 
-## 版本演进
+## 演进路线
 
-按版本迭代，详细变更见前端文档站 `src/content/docs/changelog.md`。
+11 个 phase / 43 个 plan / 100% 完成（2026-05-29 → 2026-06-25），覆盖后端基础设施、解析器统一、前端可靠性、安全加固、知识图谱 UX、测试债务修复、E2E 用户流、覆盖率提升、知识任务追踪、知识图谱重构、代码审查修复。
+
+使用 GSD（Get Stuff Done）工作流：research → requirements → roadmap → 每 phase `CONTEXT → RESEARCH → PLAN → 实施 → VERIFICATION → REVIEW`，带自动 code review + security audit 闭环，分支策略 `gsd/phase-{N}-{slug}`。
+
+<!--suppress MarkdownUnresolvedHeaderReference-->
+维护者从[当前焦点](docs/DEVELOPMENT.md#当前焦点)查看当前阶段、计划和阻塞项。状态以本机规划文件为准；文档中保留的阶段完成统计是历史记录。
 
 ## 技术栈
 
@@ -124,6 +129,7 @@
 |---|------|------|
 | 前端框架 | Vue 3 (Composition API) | 3.5 |
 | 构建工具 | Vite | 8.x |
+| 类型检查 | TypeScript 7 + vue-tsc（Vue 模板兼容 API） | 7.0.2 / 3.3.14 |
 | 样式 | Tailwind CSS | 4.x |
 | 代码编辑器 | Monaco Editor | 0.55 |
 | UI 组件 | Reka-ui (Radix Vue) | 2.x |
@@ -131,7 +137,7 @@
 | 图表 | ECharts | 5.x |
 | AI 流式 | Vercel AI SDK | 6.x |
 | 后端框架 | Spring Boot | 4.0.6 |
-| JDK | Java 21 (Zulu) | 21 |
+| JDK | Java 25 (Zulu) | 25 |
 | 数据库 | SQLite (内存模式) | 3.51 |
 | 连接池 | HikariCP | — |
 | 响应式 | Spring WebFlux (Project Reactor) | — |
@@ -141,20 +147,23 @@
 
 ### 环境要求
 
-- **JDK 21**（推荐 Zulu JDK 21）
+- **JDK 25**（推荐 Zulu JDK 25）
 - **Node.js** 22+ (LTS)
 - **pnpm** 12.6.0
 
 ### 1. 启动后端
 
-```bash
+```pwsh
 cd sqlive-backend
 
-# Windows（指定 JDK 路径）
-set JAVA_HOME=C:\Program Files\Zulu\zulu-21
-gradlew.bat bootRun
+# Windows（pwsh，指定 JDK 路径）
+$env:JAVA_HOME = 'C:\Program Files\Zulu\zulu-25'
+.\gradlew.bat bootRun
+```
 
+```sh
 # Linux / macOS
+cd sqlive-backend
 ./gradlew bootRun
 ```
 
@@ -189,9 +198,11 @@ ai:
 
 默认使用 DeepSeek，需设置环境变量 `DEEPSEEK_API_KEY`。仅使用 SQL 执行功能则可跳过此步骤。
 
+
 ## 测试
 
-验证范围和 CI 说明见 [docs/TESTING.md](docs/TESTING.md)，agent 工作约定见 [docs/agents/README.md](docs/agents/README.md)。
+<!--suppress MarkdownUnresolvedHeaderReference-->
+验证范围和 CI 说明见 [docs/TESTING.md](docs/TESTING.md)，开发与维护入口见 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#当前焦点)。
 
 ```bash
 # 前端单元测试
@@ -211,12 +222,12 @@ cd sqlive-backend
 ```bash
 cd sqlive-backend
 ./gradlew bootJar      # 产物在 build/libs/，含前端静态资源
-java -jar build/libs/*.jar
+java --enable-native-access=ALL-UNNAMED -jar build/libs/*.jar
 ```
 
 ### Docker
 
-根目录 `Dockerfile` 多阶段构建（前端 `dist/` → Spring Boot `static/` → `eclipse-temurin:21-jre` 运行 jar），无需本地 JDK/Node：
+根目录 `Dockerfile` 多阶段构建（前端 `dist/` → Java 25 + Gradle wrapper 构建 Spring Boot `static/` → `eclipse-temurin:25-jre` 运行 jar），无需本地 JDK/Node：
 
 ```bash
 docker build -t sqlive .
