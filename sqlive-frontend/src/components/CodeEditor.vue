@@ -1,12 +1,12 @@
 <template>
     <div
-        class="h-full flex flex-col bg-muted pt-6 px-3 pb-3 relative"
+        class="relative flex h-full flex-col bg-muted px-3 pt-6 pb-3"
         @dragover.prevent="dragOver = true"
         @dragleave="dragOver = false"
         @drop.prevent="onDrop"
     >
-        <div class="flex items-center justify-between mb-3">
-            <h2 class="text-xl font-bold text-foreground flex items-center gap-2">
+        <div class="mb-3 flex items-center justify-between">
+            <h2 class="flex items-center gap-2 text-xl font-bold text-foreground">
                 <span> </span> SQL 编辑器
             </h2>
             <div class="flex items-center gap-2">
@@ -21,7 +21,7 @@
                                 ($event.target as HTMLSelectElement).value
                             )
                         "
-                        class="text-xs font-medium border border-border rounded px-2 py-1 bg-card text-black outline-none cursor-pointer hover:border-primary/60"
+                        class="cursor-pointer rounded border border-border bg-card px-2 py-1 text-xs font-medium text-black outline-none hover:border-primary/60"
                     >
                         <option value="">实时模式</option>
                         <option v-for="name in dbList" :key="name" :value="name">{{ name }}</option>
@@ -29,7 +29,7 @@
                     <button
                         v-if="activeDbName"
                         @click="confirmDeleteDb"
-                        class="text-muted-foreground/70 hover:text-destructive text-sm px-1 transition-colors"
+                        class="px-1 text-sm text-muted-foreground/70 transition-colors hover:text-destructive"
                         title="删除数据库"
                     >
                         &#x1F5D1;
@@ -38,7 +38,7 @@
                 <!-- Submit button -->
                 <button
                     @click="handleSubmit"
-                    class="flex items-center gap-1 px-3 py-1 text-xs font-medium bg-primary text-white rounded hover:bg-primary/90 transition-colors shadow-sm"
+                    class="flex items-center gap-1 rounded bg-primary px-3 py-1 text-xs font-medium text-white shadow-sm transition-colors hover:bg-primary/90"
                     title="提交到数据库 (Ctrl+Shift+T)"
                 >
                     提交
@@ -48,17 +48,17 @@
                     v-if="ai"
                     data-testid="ai-toggle-btn"
                     @click="ai.onTogglePanel()"
-                    class="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors shadow-sm"
+                    class="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium shadow-sm transition-colors"
                     :class="
                         ai.isLoading.value
-                            ? 'bg-primary text-primary-foreground animate-pulse'
-                            : 'bg-linear-to-r from-primary/10 to-primary/5 text-primary border border-primary/20 hover:bg-primary/10'
+                            ? 'animate-pulse bg-primary text-primary-foreground'
+                            : 'border border-primary/20 bg-linear-to-r from-primary/10 to-primary/5 text-primary hover:bg-primary/10'
                     "
                     title="AI 助手 (Alt+Enter QuickFix)"
                 >
                     <span
                         v-if="ai.isLoading.value"
-                        class="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"
+                        class="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent"
                     ></span>
                     <span v-else>AI助手</span>
                 </button>
@@ -75,12 +75,12 @@
         />
 
         <!-- Tab bar -->
-        <div class="flex items-center gap-1 mb-1">
+        <div class="mb-1 flex items-center gap-1">
             <!-- Tab search button -->
             <div class="relative shrink-0">
                 <button
                     @click.stop="showTabSearch = !showTabSearch"
-                    class="px-2 py-2 text-xs text-muted-foreground/70 hover:text-primary hover:bg-secondary rounded transition-colors"
+                    class="rounded px-2 py-2 text-xs text-muted-foreground/70 transition-colors hover:bg-secondary hover:text-primary"
                     title="搜索标签页"
                 >
                     &#x25BC;
@@ -88,15 +88,15 @@
                 <!-- Search dropdown -->
                 <div
                     v-if="showTabSearch"
-                    class="absolute left-0 top-full mt-1 bg-card border border-border rounded-md shadow-lg z-40 w-64"
+                    class="absolute top-full left-0 z-40 mt-1 w-64 rounded-md border border-border bg-card shadow-lg"
                 >
-                    <div class="p-2 border-b border-border">
+                    <div class="border-b border-border p-2">
                         <input
                             ref="tabSearchInput"
                             v-model="tabSearchText"
                             type="text"
                             placeholder="搜索标签页..."
-                            class="w-full text-xs border border-border rounded-lg px-2 py-1 outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20"
+                            class="w-full rounded-lg border border-border px-2 py-1 text-xs outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20"
                             @keydown.esc="showTabSearch = false"
                             @keydown.enter="switchToFirstMatch"
                         />
@@ -106,28 +106,28 @@
                             v-for="tab in filteredTabs"
                             :key="tab.id"
                             @click="switchToTab(tab.id)"
-                            class="flex items-center justify-between px-3 py-2 text-sm cursor-pointer hover:bg-primary/10 transition-colors"
+                            class="flex cursor-pointer items-center justify-between px-3 py-2 text-sm transition-colors hover:bg-primary/10"
                             :class="{ 'bg-primary/10 text-primary': tab.id === activeTabId }"
                         >
                             <span class="truncate">
                                 <span v-html="highlightTabName(tab.name)"></span>
                                 <span
                                     v-if="tab.dbName"
-                                    class="text-[10px] text-muted-foreground/70 ml-1"
+                                    class="ml-1 text-[10px] text-muted-foreground/70"
                                     >· {{ tab.dbName }}</span
                                 >
                             </span>
                             <button
                                 v-if="tabs.length > 1"
                                 @click.stop="emit('close-tab', tab.id)"
-                                class="text-muted-foreground/50 hover:text-muted-foreground text-sm leading-none ml-2 shrink-0"
+                                class="ml-2 shrink-0 text-sm leading-none text-muted-foreground/50 hover:text-muted-foreground"
                             >
                                 &#x2715;
                             </button>
                         </div>
                         <div
                             v-if="filteredTabs.length === 0"
-                            class="px-3 py-3 text-xs text-muted-foreground/70 text-center"
+                            class="px-3 py-3 text-center text-xs text-muted-foreground/70"
                         >
                             无匹配标签页
                         </div>
@@ -136,24 +136,24 @@
             </div>
 
             <!-- Tabs -->
-            <div class="flex items-center gap-1 overflow-x-auto flex-1 min-w-0">
+            <div class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
                 <div
                     v-for="tab in tabs"
                     :key="tab.id"
                     @click.stop="emit('switch-tab', tab.id)"
-                    class="group flex items-center gap-1 px-2 py-2 text-xs rounded-t-md cursor-pointer transition-colors border-b-[3px] shrink"
+                    class="group flex shrink cursor-pointer items-center gap-1 rounded-t-md border-b-[3px] px-2 py-2 text-xs transition-colors"
                     style="min-width: 52px; max-width: 180px"
                     :class="
                         tab.id === activeTabId
-                            ? 'bg-card text-primary border-primary font-medium shrink-0'
-                            : 'text-muted-foreground border-transparent hover:bg-secondary hover:text-secondary-foreground'
+                            ? 'shrink-0 border-primary bg-card font-medium text-primary'
+                            : 'border-transparent text-muted-foreground hover:bg-secondary hover:text-secondary-foreground'
                     "
                     :title="tab.name + (tab.dbName ? ' · ' + tab.dbName : '')"
                 >
-                    <span class="truncate leading-none min-w-[1ch]">{{ tab.name }}</span>
+                    <span class="min-w-[1ch] truncate leading-none">{{ tab.name }}</span>
                     <span
                         v-if="tab.dbName"
-                        class="text-[9px] text-muted-foreground/50 bg-secondary rounded-full px-1 shrink-0 hidden sm:inline"
+                        class="hidden shrink-0 rounded-full bg-secondary px-1 text-[9px] text-muted-foreground/50 sm:inline"
                         >{{ tab.dbName }}</span
                     >
                     <button
@@ -163,16 +163,16 @@
                         :class="
                             tab.id === activeTabId
                                 ? 'text-muted-foreground hover:text-secondary-foreground'
-                                : 'text-muted-foreground/70 hover:text-muted-foreground opacity-0 group-hover:opacity-100'
+                                : 'text-muted-foreground/70 opacity-0 group-hover:opacity-100 hover:text-muted-foreground'
                         "
-                        class="transition-opacity text-sm leading-none px-1 font-bold shrink-0"
+                        class="shrink-0 px-1 text-sm leading-none font-bold transition-opacity"
                     >
                         &#x2715;
                     </button>
                 </div>
                 <button
                     @click="emit('add-tab')"
-                    class="px-2 py-1 text-xs text-muted-foreground/70 hover:text-primary hover:bg-secondary rounded transition-colors shrink-0"
+                    class="shrink-0 rounded px-2 py-1 text-xs text-muted-foreground/70 transition-colors hover:bg-secondary hover:text-primary"
                     title="新建标签页"
                 >
                     &#x2795;
@@ -183,17 +183,17 @@
         <!-- Click-outside overlay for tab search -->
         <div v-if="showTabSearch" class="fixed inset-0 z-30" @click="showTabSearch = false"></div>
 
-        <div class="flex-1 relative w-full flex flex-col">
-            <div ref="editorContainer" class="flex-1 min-h-0"></div>
+        <div class="relative flex w-full flex-1 flex-col">
+            <div ref="editorContainer" class="min-h-0 flex-1"></div>
         </div>
 
         <!-- Drop overlay -->
         <div
             v-if="dragOver"
-            class="absolute inset-0 bg-primary/10 border-2 border-dashed border-primary/60 rounded-lg z-20 flex items-center justify-center pointer-events-none"
+            class="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-lg border-2 border-dashed border-primary/60 bg-primary/10"
         >
-            <div class="bg-card rounded-lg shadow-lg px-6 py-4 text-center">
-                <div class="text-3xl mb-2">&#x1F4E5;</div>
+            <div class="rounded-lg bg-card px-6 py-4 text-center shadow-lg">
+                <div class="mb-2 text-3xl">&#x1F4E5;</div>
                 <p class="text-sm text-muted-foreground">释放以导入 .sql 文件</p>
             </div>
         </div>
@@ -202,6 +202,7 @@
 
 <script setup lang="ts">
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+
 import { useMonacoEditor } from '../composables/useMonacoEditor'
 import { AI_ACTIONS_KEY, SQL_CONTEXT_KEY } from '../model/injectionKeys'
 import { highlightMatch } from '../utils/html'

@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue'
+
 import type { Row } from '../model/DatabaseTypes'
 import { isNumericType } from '../utils/sql'
 import { useSortFilter } from './useSortFilter'

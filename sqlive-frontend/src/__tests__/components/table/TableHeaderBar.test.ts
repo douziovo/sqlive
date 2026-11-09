@@ -1,7 +1,14 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
-import type { HighlightState, IndexInfo, TableSchema, TriggerInfo, ViewInfo } from '@/model/DatabaseTypes'
+
 import TableHeaderBar from '@/components/table/TableHeaderBar.vue'
+import type {
+    HighlightState,
+    IndexInfo,
+    TableSchema,
+    TriggerInfo,
+    ViewInfo
+} from '@/model/DatabaseTypes'
 import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
 
 const table: TableSchema = {
@@ -99,10 +106,7 @@ describe('TableHeaderBar', () => {
     })
 
     it('shows the DDL highlight ring when the table is the active DDL target', () => {
-        const wrapper = mountBar(
-            {},
-            makeHighlight({ actionType: 'ddl', activeTables: ['users'] })
-        )
+        const wrapper = mountBar({}, makeHighlight({ actionType: 'ddl', activeTables: ['users'] }))
         expect(wrapper.find('.ring-2').classes()).toContain('text-purple-700')
     })
 

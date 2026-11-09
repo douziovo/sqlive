@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import { buildEChartsOption, decideDualAxis } from '@/components/chart/chartOptionBuilder'
 
 describe('decideDualAxis', () => {

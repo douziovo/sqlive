@@ -13,11 +13,11 @@
             @badge-leave="onBadgeLeave"
         />
 
-        <div class="overflow-x-auto shadow-lg border border-border rounded-lg bg-card relative">
+        <div class="relative overflow-x-auto rounded-lg border border-border bg-card shadow-lg">
             <TableFilterBar v-model="filterText" />
 
             <table
-                class="min-w-full text-sm text-left text-muted-foreground table-auto border-collapse"
+                class="min-w-full table-auto border-collapse text-left text-sm text-muted-foreground"
             >
                 <TableHeadRow
                     :table="table"
@@ -73,6 +73,7 @@
 
 <script setup lang="ts">
 import { computed, inject, onUnmounted, ref, watch } from 'vue'
+
 import { useTablePipeline } from '../composables/useTablePipeline'
 import type { IndexInfo, TableSchema, TriggerInfo, ViewInfo } from '../model/DatabaseTypes'
 import { SQL_CONTEXT_KEY } from '../model/injectionKeys'

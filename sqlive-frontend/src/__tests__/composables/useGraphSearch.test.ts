@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import { nextTick, ref, shallowRef } from 'vue'
-import type { KnowledgeNode } from '@/composables/useKnowledgeGraph'
+
 import { useGraphSearch } from '@/composables/useGraphSearch'
+import type { KnowledgeNode } from '@/composables/useKnowledgeGraph'
 
 // ── Test fixtures ──────────────────────────────────────────────
 
@@ -196,10 +197,7 @@ describe('useGraphSearch', () => {
         expect(showSearch.value).toBe(true)
 
         closeSearch()
-        expect(setViewport).toHaveBeenCalledWith(
-            { x: 11, y: 22, zoom: 0.9 },
-            { duration: 200 }
-        )
+        expect(setViewport).toHaveBeenCalledWith({ x: 11, y: 22, zoom: 0.9 }, { duration: 200 })
         // Closing twice does not restore again
         setViewport.mockClear()
         closeSearch()

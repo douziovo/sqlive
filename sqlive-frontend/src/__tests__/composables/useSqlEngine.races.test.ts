@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { effectScope } from 'vue'
+
 import { jsonOk, setupSqlEngine, teardownSqlEngine, tick, type SqlEngineSetup } from '../test-utils'
 
 const table = { name: 't', columns: ['id'], columnTypes: { id: 'INTEGER' }, data: [{ id: 1 }] }

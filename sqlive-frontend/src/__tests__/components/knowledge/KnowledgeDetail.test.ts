@@ -1,6 +1,7 @@
 import { enableAutoUnmount, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { nextTick } from 'vue'
+
 import KnowledgeDetail from '@/components/knowledge/KnowledgeDetail.vue'
 import type { KnowledgeTopic } from '@/composables/useKnowledgeGraph'
 import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'

@@ -1,9 +1,10 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
-import type { TriggerInfo } from '@/model/DatabaseTypes'
-import TriggersTab from '@/components/visualizer/TriggersTab.vue'
+
 import SortFilterToolbar from '@/components/SortFilterToolbar.vue'
+import TriggersTab from '@/components/visualizer/TriggersTab.vue'
+import type { TriggerInfo } from '@/model/DatabaseTypes'
 
 const triggers: TriggerInfo[] = [
     {
@@ -37,9 +38,7 @@ describe('TriggersTab', () => {
     it('emits navigate to the owning table when a card is clicked', async () => {
         const wrapper = mountTab()
         await wrapper.find('#trigger-trg_b').trigger('click')
-        expect(wrapper.emitted('navigate')).toEqual([
-            [{ tab: 'tables', targetId: 'table-users' }]
-        ])
+        expect(wrapper.emitted('navigate')).toEqual([[{ tab: 'tables', targetId: 'table-users' }]])
     })
 
     it('does not navigate when clicking the SQL preview (click.stop)', async () => {

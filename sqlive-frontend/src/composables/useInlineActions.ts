@@ -1,7 +1,7 @@
 import { computed, type Ref } from 'vue'
+
 import { createAiClient } from '../lib/http'
 import type { AiResponse, AiSchemaInfo } from '../model/ApiTypes'
-import { apiErrorMessage } from '../utils/apiError'
 import type { TableSchema } from '../model/DatabaseTypes'
 import {
     formatErrorAnalysis,
@@ -10,6 +10,7 @@ import {
     formatGenerateSql,
     formatOptimize
 } from '../utils/aiFormatter'
+import { apiErrorMessage } from '../utils/apiError'
 import type { AiMessage, AiPanelMode } from './useAiChat'
 
 let msgCounter = 0

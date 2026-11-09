@@ -33,8 +33,10 @@
 
 <script setup lang="ts">
 import { ClipboardList } from '@lucide/vue'
+
 import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'
 import { TASK_CATEGORY_COLORS, TASK_CATEGORY_LABELS } from '@/data/taskCategories'
+
 import RedDotBadge from '../RedDotBadge.vue'
 import { priorityDotClass } from './taskPresentation'
 import type { JournalCategory } from './taskPresentation'

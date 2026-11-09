@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { effectScope, nextTick, ref, shallowRef } from 'vue'
+
 import type { KnowledgeNode } from '@/composables/useKnowledgeGraph'
 
 const { layoutMock } = vi.hoisted(() => ({ layoutMock: vi.fn() }))

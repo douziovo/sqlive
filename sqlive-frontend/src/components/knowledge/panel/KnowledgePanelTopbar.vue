@@ -64,6 +64,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+
 import RedDotBadge from '../RedDotBadge.vue'
 import KnowledgePanelFilters from './KnowledgePanelFilters.vue'
 

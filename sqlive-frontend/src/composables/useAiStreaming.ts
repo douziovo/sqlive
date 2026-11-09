@@ -1,5 +1,6 @@
-import { type Ref, ref } from 'vue'
 import { tryOnScopeDispose } from '@vueuse/core'
+import { type Ref, ref } from 'vue'
+
 import { createAiClient } from '../lib/http'
 import { readSseStream } from '../utils/sse'
 

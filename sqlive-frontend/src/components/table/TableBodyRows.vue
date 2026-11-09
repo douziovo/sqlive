@@ -2,7 +2,7 @@
     <tr v-if="paginatedData.length === 0 && filterText" class="border-b">
         <td
             :colspan="table.columns.length + 1"
-            class="px-4 py-8 text-center text-muted-foreground/70 text-sm italic"
+            class="px-4 py-8 text-center text-sm text-muted-foreground/70 italic"
         >
             无匹配数据
         </td>
@@ -10,18 +10,18 @@
     <tr
         v-for="(row, idx) in paginatedData"
         :key="row._rawSql || idx"
-        class="border-b last:border-b-0 transition-colors duration-200 hover:bg-muted group"
+        class="group border-b transition-colors duration-200 last:border-b-0 hover:bg-muted"
     >
         <td
             v-for="col in table.columns"
             :key="col"
-            class="px-4 py-2 border-r last:border-r-0 border-border transition-colors duration-200 relative align-top"
+            class="relative border-r border-border px-4 py-2 align-top transition-colors duration-200 last:border-r-0"
             :class="getCellClasses(row, col)"
         >
-            <div class="grid place-items-start w-full relative">
+            <div class="relative grid w-full place-items-start">
                 <div
                     data-ghost
-                    class="invisible whitespace-pre-wrap break-all border border-transparent px-1 py-1 min-h-[1.5em]"
+                    class="invisible min-h-[1.5em] border border-transparent px-1 py-1 break-all whitespace-pre-wrap"
                     style="grid-area: 1/1/2/2"
                 >
                     {{ row[col] || ' ' }}
@@ -31,7 +31,7 @@
                     @input="(e) => autoResizeGhost(e)"
                     @blur="(e) => handleBlur(e, row, col)"
                     @keydown.enter.prevent="(e) => (e.target as HTMLElement).blur()"
-                    class="w-full h-full bg-transparent outline-none border-b border-transparent px-1 py-1 resize-none overflow-hidden absolute inset-0 z-10 whitespace-pre-wrap break-all"
+                    class="absolute inset-0 z-10 h-full w-full resize-none overflow-hidden border-b border-transparent bg-transparent px-1 py-1 break-all whitespace-pre-wrap outline-none"
                     :class="{
                         'focus:border-primary': true,
                         'font-bold text-black': isRowHighlighted(row) && isColumnActive(col)
@@ -44,7 +44,7 @@
         <td class="px-2 text-center align-middle">
             <button
                 @click="emit('delete-row', { row, tableName: table.name })"
-                class="text-muted-foreground/50 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100 transform scale-90 group-hover:scale-100"
+                class="scale-90 transform text-muted-foreground/50 opacity-0 transition-colors group-hover:scale-100 group-hover:opacity-100 hover:text-destructive"
                 title="删除此行"
             >
                 &#x1F5D1;&#xFE0F;
@@ -55,6 +55,7 @@
 
 <script setup lang="ts">
 import { computed, inject } from 'vue'
+
 import { useInlineEdit } from '@/composables/useInlineEdit'
 import type { CellUpdateEvent, Row, RowDeleteEvent, TableSchema } from '@/model/DatabaseTypes'
 import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'

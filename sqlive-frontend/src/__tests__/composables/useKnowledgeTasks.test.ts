@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { effectScope, nextTick } from 'vue'
+
 import { useKnowledgeTasks as useSharedKnowledgeTasks } from '@/composables/useKnowledgeTasks'
 import { useRedDot } from '@/composables/useRedDot'
 

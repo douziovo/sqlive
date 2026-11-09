@@ -1,7 +1,8 @@
+import * as monaco from 'monaco-editor/editor/editor.api'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Ref } from 'vue'
 import { nextTick, ref } from 'vue'
-import * as monaco from 'monaco-editor/editor/editor.api'
+
 import { useMonacoEditor } from '@/composables/useMonacoEditor'
 
 // Mock monaco-editor completely before importing the composable

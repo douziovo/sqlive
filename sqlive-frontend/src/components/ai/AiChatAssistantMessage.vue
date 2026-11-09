@@ -1,6 +1,6 @@
 <template>
     <div class="flex">
-        <div class="flex-1 min-w-0">
+        <div class="min-w-0 flex-1">
             <Reasoning
                 v-if="msg.reasoning || msg.isReasoning"
                 :is-streaming="msg.isReasoning || false"
@@ -12,30 +12,30 @@
             </Reasoning>
             <div
                 v-if="msg.isStreaming && !msg.content && !msg.isReasoning"
-                class="flex items-center gap-2 text-muted-foreground/70 py-1"
+                class="flex items-center gap-2 py-1 text-muted-foreground/70"
             >
                 <Loader class="size-3.5" /><span class="text-sm">Thinking...</span>
             </div>
             <!-- Markdown rendered with marked -->
             <div
                 v-if="msg.content"
-                class="md-body text-sm text-foreground leading-relaxed w-full overflow-hidden"
+                class="md-body w-full overflow-hidden text-sm leading-relaxed text-foreground"
                 v-html="renderMd(msg.content)"
             />
             <div
                 v-if="msg.content && !msg.isStreaming"
                 :class="[
-                    'flex items-center gap-1 mt-1 -ml-1 transition-opacity duration-150',
+                    'mt-1 -ml-1 flex items-center gap-1 transition-opacity duration-150',
                     isLast ? 'opacity-100' : 'opacity-0 group-hover/row:opacity-100'
                 ]"
             >
                 <button
                     @click="emit('regenerate', msg.id)"
-                    class="p-1.5 rounded-lg text-muted-foreground/70 hover:text-muted-foreground hover:bg-secondary transition-colors"
+                    class="rounded-lg p-1.5 text-muted-foreground/70 transition-colors hover:bg-secondary hover:text-muted-foreground"
                     title="重新回答"
                 >
                     <svg
-                        class="w-3.5 h-3.5"
+                        class="h-3.5 w-3.5"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
@@ -47,12 +47,12 @@
                 </button>
                 <button
                     @click="emit('copy', msg.content)"
-                    class="p-1.5 rounded-lg text-muted-foreground/70 hover:text-muted-foreground hover:bg-secondary transition-colors"
+                    class="rounded-lg p-1.5 text-muted-foreground/70 transition-colors hover:bg-secondary hover:text-muted-foreground"
                     :title="copied ? '已复制' : '复制'"
                 >
                     <svg
                         v-if="!copied"
-                        class="w-3.5 h-3.5"
+                        class="h-3.5 w-3.5"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
@@ -63,7 +63,7 @@
                     </svg>
                     <svg
                         v-else
-                        class="w-3.5 h-3.5 text-green-500"
+                        class="h-3.5 w-3.5 text-green-500"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
@@ -74,11 +74,11 @@
                 </button>
                 <button
                     @click="emit('delete', msg.id)"
-                    class="p-1.5 rounded-lg text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    class="rounded-lg p-1.5 text-muted-foreground/70 transition-colors hover:bg-destructive/10 hover:text-destructive"
                     title="删除"
                 >
                     <svg
-                        class="w-3.5 h-3.5"
+                        class="h-3.5 w-3.5"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
@@ -105,11 +105,12 @@
 <script setup lang="ts">
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
-import AiMessageFooter from '@/components/AiMessageFooter.vue'
+
 import { Loader } from '@/components/ai-elements/loader'
 import { Reasoning, ReasoningContent, ReasoningTrigger } from '@/components/ai-elements/reasoning'
-import { sanitizeConfig } from '@/utils/sanitize'
+import AiMessageFooter from '@/components/AiMessageFooter.vue'
 import type { AiMessage } from '@/composables/useAiChat'
+import { sanitizeConfig } from '@/utils/sanitize'
 
 defineProps<{
     msg: AiMessage

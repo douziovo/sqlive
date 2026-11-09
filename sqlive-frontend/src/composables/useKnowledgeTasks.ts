@@ -1,9 +1,11 @@
 import { createSharedComposable, useLocalStorage } from '@vueuse/core'
-import { computed } from 'vue'
 import { nanoid } from 'nanoid'
-import { useRedDot } from './useRedDot'
-import { buildPresetTasks } from '@/data/presetTasks'
+import { computed } from 'vue'
+
 import { STORAGE_KEYS } from '@/constants/storageKeys'
+import { buildPresetTasks } from '@/data/presetTasks'
+
+import { useRedDot } from './useRedDot'
 
 // ── TaskSubstep interface ────────────────────────────────────────
 

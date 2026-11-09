@@ -1,6 +1,7 @@
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
 import { computed, type Ref } from 'vue'
+
 import { sanitizeConfig } from '@/utils/sanitize'
 
 /**

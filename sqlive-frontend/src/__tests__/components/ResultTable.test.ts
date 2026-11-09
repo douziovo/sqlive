@@ -1,7 +1,9 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
+
 import type { TableSchema } from '@/model/DatabaseTypes'
+
 import ResultTable from '../../components/ResultTable.vue'
 
 function makeResult(overrides: Partial<TableSchema> = {}): TableSchema {

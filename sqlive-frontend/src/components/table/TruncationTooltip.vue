@@ -4,12 +4,12 @@
         <div
             v-show="truncTooltip.visible"
             ref="tooltipRef"
-            class="fixed z-50 bg-amber-50 border border-amber-200 rounded-lg shadow-lg text-sm overflow-hidden"
+            class="fixed z-50 overflow-hidden rounded-lg border border-amber-200 bg-amber-50 text-sm shadow-lg"
             :style="tooltipStyle"
         >
             <div class="px-3 py-2">
                 <div class="text-sm font-semibold text-amber-900">值已截断</div>
-                <div class="text-xs text-amber-800 mt-1">
+                <div class="mt-1 text-xs text-amber-800">
                     原始长度 {{ truncTooltip.originalLen }} 字符，已截断为
                     {{ truncTooltip.truncatedLen }} 字符（列最大长度: {{ truncTooltip.maxLen }}）
                 </div>
@@ -20,6 +20,7 @@
 
 <script setup lang="ts">
 import { inject, nextTick, onUnmounted, ref, watch } from 'vue'
+
 import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
 
 const { lastTruncations } = inject(SQL_CONTEXT_KEY)!

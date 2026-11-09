@@ -1,7 +1,8 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
-import type { AiMessage } from '@/composables/useAiChat'
+
 import AiChatAssistantMessage from '@/components/ai/AiChatAssistantMessage.vue'
+import type { AiMessage } from '@/composables/useAiChat'
 
 // Wrap marked.parse in a controllable passthrough (ESM namespace cannot be spied on)
 const { mockParse } = vi.hoisted(() => ({ mockParse: vi.fn() }))

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { DatabaseModel, TableSchema } from '@/model/DatabaseTypes'
+
 import { useHighlight } from '@/composables/useHighlight'
+import type { DatabaseModel, TableSchema } from '@/model/DatabaseTypes'
 
 vi.mock('@/utils/sqlStatements', () => ({
     extractSqlStatements: vi.fn((script: string) => {

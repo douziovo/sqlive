@@ -21,7 +21,7 @@
 
         <div
             v-if="idxFiltered.length === 0"
-            class="flex flex-col items-center justify-center h-24 text-muted-foreground/70"
+            class="flex h-24 flex-col items-center justify-center text-muted-foreground/70"
         >
             <p class="text-sm">&#x1F50D; 无匹配的索引</p>
         </div>
@@ -30,46 +30,45 @@
             v-for="idx in idxFiltered"
             :key="idx.name"
             :id="'index-' + idx.name"
-            class="mb-4 border border-border rounded-lg bg-card shadow-sm hover:shadow-md hover:border-primary p-4 cursor-pointer"
+            class="mb-4 cursor-pointer rounded-lg border border-border bg-card p-4 shadow-sm hover:border-primary hover:shadow-md"
             :class="{ 'animate-flash': flashTarget === 'index-' + idx.name }"
             @click="emit('navigate', { tab: 'tables', targetId: 'table-' + idx.tableName })"
         >
-            <div class="flex items-center gap-2 mb-2">
+            <div class="mb-2 flex items-center gap-2">
                 <span class="text-lg">&#x1F4C7;</span>
                 <span class="font-bold text-secondary-foreground">{{ idx.name }}</span>
                 <span
                     v-if="idx.unique"
-                    class="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded font-medium"
+                    class="rounded bg-yellow-100 px-1.5 py-0.5 text-xs font-medium text-yellow-700"
                     >唯一</span
                 >
                 <span
                     v-if="idx.columns.length > 1"
-                    class="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium"
+                    class="rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700"
                     >复合</span
                 >
                 <span
                     v-if="idx.sql && /lower\s*\(/i.test(idx.sql)"
-                    class="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-medium"
+                    class="rounded bg-purple-100 px-1.5 py-0.5 text-xs font-medium text-purple-700"
                     >表达式</span
                 >
                 <span
                     v-if="idx.sql && /\bWHERE\b/i.test(idx.sql)"
-                    class="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium"
+                    class="rounded bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-700"
                     >部分</span
                 >
             </div>
-            <div class="text-xs text-muted-foreground mb-1">
-                表：<span class="text-secondary-foreground font-medium">{{ idx.tableName }}</span>
+            <div class="mb-1 text-xs text-muted-foreground">
+                表：<span class="font-medium text-secondary-foreground">{{ idx.tableName }}</span>
             </div>
-            <div class="text-xs text-muted-foreground mb-3">
+            <div class="mb-3 text-xs text-muted-foreground">
                 列：<span class="text-secondary-foreground">{{ idx.columns.join(', ') }}</span>
             </div>
             <pre
                 v-if="idx.sql"
-                class="text-xs font-mono bg-secondary rounded p-3 text-muted-foreground overflow-x-auto whitespace-pre-wrap"
+                class="overflow-x-auto rounded bg-secondary p-3 font-mono text-xs whitespace-pre-wrap text-muted-foreground"
                 @click.stop
-                >{{ idx.sql }}</pre
-            >
+                >{{ idx.sql }}</pre>
         </div>
     </template>
 </template>
@@ -77,6 +76,7 @@
 <script setup lang="ts">
 import { type SortField, useSortFilter } from '@/composables/useSortFilter'
 import type { IndexInfo } from '@/model/DatabaseTypes'
+
 import EmptyState from '../EmptyState.vue'
 import type { SortFieldDef } from '../SortFilterToolbar.vue'
 import SortFilterToolbar from '../SortFilterToolbar.vue'

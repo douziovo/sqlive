@@ -1,8 +1,9 @@
-import { makeKnowledgeTopic } from '@/__tests__/fixtures/knowledge'
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
-import type { KnowledgeTopic } from '@/composables/useKnowledgeGraph'
+
+import { makeKnowledgeTopic } from '@/__tests__/fixtures/knowledge'
 import KnowledgeGraphDetailCard from '@/components/knowledge/graph/KnowledgeGraphDetailCard.vue'
+import type { KnowledgeTopic } from '@/composables/useKnowledgeGraph'
 
 const topic = makeKnowledgeTopic({ id: 'basics', label: '基础', difficulty: 1 })
 

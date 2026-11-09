@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
 import { useMultiTabs } from '@/composables/useMultiTabs'
 
 describe('useMultiTabs', () => {
@@ -245,11 +246,13 @@ describe('useMultiTabs', () => {
             })
             const clickSpy = vi.fn()
             const originalCreateElement = document.createElement.bind(document)
-            const createSpy = vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
-                const el = originalCreateElement(tag)
-                if (tag === 'a') Object.defineProperty(el, 'click', { value: clickSpy })
-                return el
-            })
+            const createSpy = vi
+                .spyOn(document, 'createElement')
+                .mockImplementation((tag: string) => {
+                    const el = originalCreateElement(tag)
+                    if (tag === 'a') Object.defineProperty(el, 'click', { value: clickSpy })
+                    return el
+                })
 
             const { tabs, addTab, exportAllTabs } = useMultiTabs(defaultCode)
             addTab('second')

@@ -18,6 +18,7 @@
 
 <script setup lang="ts">
 import type { LearningChapter } from '@/data/learningChapters'
+
 import ChapterCard from '../ChapterCard.vue'
 
 // One ChapterCard's worth of precomputed props (built by KnowledgePanel so

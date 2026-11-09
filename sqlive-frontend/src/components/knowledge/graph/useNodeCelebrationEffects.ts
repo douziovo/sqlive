@@ -1,5 +1,6 @@
 import { triggerRef } from 'vue'
 import type { Ref } from 'vue'
+
 import type { KnowledgeNode as KnowledgeFlowNode } from '@/composables/useKnowledgeGraph'
 
 /**

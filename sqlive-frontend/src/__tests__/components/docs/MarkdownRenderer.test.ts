@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
+
 import MarkdownRenderer from '@/components/docs/MarkdownRenderer.vue'
 
 describe('MarkdownRenderer', () => {

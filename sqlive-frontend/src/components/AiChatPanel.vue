@@ -1,6 +1,6 @@
 <template>
     <div
-        class="ai-chat-panel fixed z-50 flex flex-col bg-card border border-border rounded-2xl shadow-xl overflow-hidden"
+        class="ai-chat-panel fixed z-50 flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xl"
         :class="{ 'ai-chat-panel--minimized': isMinimized }"
         :style="panelStyle"
     >
@@ -33,11 +33,11 @@
         />
 
         <div
-            class="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize z-10"
+            class="absolute right-0 bottom-0 z-10 h-4 w-4 cursor-nwse-resize"
             @mousedown.stop="onResizeStart"
         >
             <svg
-                class="absolute bottom-1 right-1 w-3 h-3 text-muted-foreground/50"
+                class="absolute right-1 bottom-1 h-3 w-3 text-muted-foreground/50"
                 viewBox="0 0 12 12"
             >
                 <path
@@ -53,10 +53,12 @@
 
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue'
+
 import AiChatHeader from '@/components/ai/AiChatHeader.vue'
 import AiChatInput from '@/components/ai/AiChatInput.vue'
 import AiChatMessages from '@/components/ai/AiChatMessages.vue'
 import { useAiPanelGeometry } from '@/components/ai/useAiPanelGeometry'
+
 import type { AiMessage } from '../composables/useAiChat'
 
 defineProps<{

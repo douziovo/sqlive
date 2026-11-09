@@ -1,7 +1,8 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
-import type { HighlightState, TableSchema } from '@/model/DatabaseTypes'
+
 import TableHeadRow from '@/components/table/TableHeadRow.vue'
+import type { HighlightState, TableSchema } from '@/model/DatabaseTypes'
 import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
 
 const table: TableSchema = {

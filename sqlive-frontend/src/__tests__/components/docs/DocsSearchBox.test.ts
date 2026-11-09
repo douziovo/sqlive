@@ -115,9 +115,9 @@ describe('DocsSearchBox', () => {
         await input.setValue('edit')
         await input.trigger('input')
 
-        const items = w.findAll('li, [class*="result"], button').filter((el) =>
-            el.text().includes('编辑器')
-        )
+        const items = w
+            .findAll('li, [class*="result"], button')
+            .filter((el) => el.text().includes('编辑器'))
         expect(items.length).toBeGreaterThan(0)
 
         await items[0].trigger('click')
@@ -131,9 +131,9 @@ describe('DocsSearchBox', () => {
         await input.setValue('edit')
         await input.trigger('input')
 
-        const item = w.findAll('li, [class*="result"], button').filter((el) =>
-            el.text().includes('编辑器')
-        )[0]
+        const item = w
+            .findAll('li, [class*="result"], button')
+            .filter((el) => el.text().includes('编辑器'))[0]
         await item.trigger('click')
         // Rejection swallowed — no unhandled error
         await Promise.resolve()

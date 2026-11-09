@@ -1,9 +1,10 @@
 //noinspection JSAnnotator -- vitest/config 的 triple-slash 类型引用是 vitest 官方约定，该库不在本 tsconfig 的 project 范围内
 /// <reference types="vitest/config" />
-import { defineConfig } from 'vite'
 import { fileURLToPath, URL } from 'node:url'
-import vue from '@vitejs/plugin-vue'
+
 import tailwindcss from '@tailwindcss/vite'
+import vue from '@vitejs/plugin-vue'
+import { defineConfig } from 'vite'
 
 export default defineConfig({
     plugins: [vue(), tailwindcss()],

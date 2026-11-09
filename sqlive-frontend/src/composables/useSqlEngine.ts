@@ -1,12 +1,13 @@
 import { tryOnScopeDispose, useDebounceFn } from '@vueuse/core'
-import { http } from '../lib/http'
 import { computed, reactive, ref, watch } from 'vue'
+
 import { DEFAULT_SQL } from '../assets/default-sql'
 import { useBidirectionalSync } from '../composables/useBidirectionalSync'
 import { useDatabaseLifecycle } from '../composables/useDatabaseLifecycle'
 import { useHighlight } from '../composables/useHighlight'
 import { useMultiTabs } from '../composables/useMultiTabs'
 import { API_URL, DEBOUNCE_MS } from '../config'
+import { http } from '../lib/http'
 import type { ExecuteRequest, ExecuteResponse } from '../model/ApiTypes'
 import type { CanonicalStatement, DatabaseModel, InsertResult, Row } from '../model/DatabaseTypes'
 

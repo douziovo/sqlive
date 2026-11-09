@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
+
 import { useInlineActions, type DisplayHandler } from '@/composables/useInlineActions'
 
 afterEach(() => vi.unstubAllGlobals())

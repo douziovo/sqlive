@@ -1,4 +1,5 @@
 import path from 'node:path'
+
 import { defineConfig } from '@playwright/test'
 
 const isWindows = process.platform === 'win32'

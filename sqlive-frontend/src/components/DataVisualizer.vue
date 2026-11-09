@@ -1,22 +1,22 @@
 <template>
-    <div class="h-full bg-muted px-3 py-6 overflow-auto custom-scrollbar flex flex-col relative">
+    <div class="custom-scrollbar relative flex h-full flex-col overflow-auto bg-muted px-3 py-6">
         <!--    <h2 class="text-xl font-bold mb-4 text-foreground flex items-center gap-2">-->
-        <h2 class="text-xl font-bold text-foreground flex items-center gap-2">
+        <h2 class="flex items-center gap-2 text-xl font-bold text-foreground">
             &#x1F4CA; 视图展示区
         </h2>
 
         <!-- Tab bar -->
-        <div class="flex border-b border-border mb-2">
+        <div class="mb-2 flex border-b border-border">
             <button
                 v-for="tab in tabs"
                 :key="tab.key"
                 :data-testid="'tab-' + tab.key"
                 @click="activeTab = tab.key"
-                class="px-4 py-2 text-sm font-medium transition-colors border-b-[3px]"
+                class="border-b-[3px] px-4 py-2 text-sm font-medium transition-colors"
                 :class="
                     activeTab === tab.key
-                        ? 'text-primary border-primary'
-                        : 'text-muted-foreground border-transparent hover:text-secondary-foreground'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-muted-foreground hover:text-secondary-foreground'
                 "
             >
                 {{ tab.label }}
@@ -24,7 +24,7 @@
         </div>
 
         <!-- Metadata bar -->
-        <div v-if="metadata" class="text-xs text-muted-foreground/70 mb-3 px-1">
+        <div v-if="metadata" class="mb-3 px-1 text-xs text-muted-foreground/70">
             &#x26A1; {{ metadata.durationMs }}ms | {{ metadata.statementCount }} 条语句
         </div>
 
@@ -46,17 +46,17 @@
         </div>
 
         <!-- Tab: ER 图 -->
-        <div v-show="activeTab === 'er'" class="flex-1 min-h-0">
-            <ErDiagram :tables="tables" :foreign-keys="foreignKeys" @navigate-tab="handleNavigate" />
+        <div v-show="activeTab === 'er'" class="min-h-0 flex-1">
+            <ErDiagram
+                :tables="tables"
+                :foreign-keys="foreignKeys"
+                @navigate-tab="handleNavigate"
+            />
         </div>
 
         <!-- Tab: 索引 -->
         <div v-show="activeTab === 'indexes'">
-            <IndexesTab
-                :indexes="indexes"
-                :flash-target="flashTarget"
-                @navigate="handleNavigate"
-            />
+            <IndexesTab :indexes="indexes" :flash-target="flashTarget" @navigate="handleNavigate" />
         </div>
 
         <!-- Tab: 视图 -->
@@ -71,7 +71,11 @@
 
         <!-- Tab: 触发器 -->
         <div v-show="activeTab === 'triggers'">
-            <TriggersTab :triggers="triggers" :flash-target="flashTarget" @navigate="handleNavigate" />
+            <TriggersTab
+                :triggers="triggers"
+                :flash-target="flashTarget"
+                @navigate="handleNavigate"
+            />
         </div>
 
         <!-- Tab: 查询结果 -->
@@ -90,6 +94,7 @@
 
 <script setup lang="ts">
 import { computed, inject, nextTick, onUnmounted, provide, ref, watch } from 'vue'
+
 import type {
     CellUpdateEvent,
     CreateTableEvent,

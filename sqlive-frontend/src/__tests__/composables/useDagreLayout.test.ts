@@ -1,5 +1,6 @@
 import type { Edge, Node } from '@vue-flow/core'
 import { describe, expect, it } from 'vitest'
+
 import { layoutNodes } from '@/composables/useDagreLayout'
 
 describe('useDagreLayout', () => {

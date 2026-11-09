@@ -1,8 +1,9 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
-import type { AiMessage } from '@/composables/useAiChat'
+
 import AiChatMessages from '@/components/ai/AiChatMessages.vue'
+import type { AiMessage } from '@/composables/useAiChat'
 
 function makeMessage(overrides: Partial<AiMessage> = {}): AiMessage {
     return {
@@ -85,7 +86,9 @@ describe('AiChatMessages', () => {
         await nextTick()
         expect(wrapper.findComponent({ name: 'AiChatUserMessage' }).props('isEditing')).toBe(false)
 
-        await wrapper.findComponent({ name: 'AiChatUserMessage' }).vm.$emit('startEdit', wrapper.props('messages')[0])
+        await wrapper
+            .findComponent({ name: 'AiChatUserMessage' })
+            .vm.$emit('startEdit', wrapper.props('messages')[0])
         await nextTick()
         await wrapper.findComponent({ name: 'AiChatUserMessage' }).vm.$emit('cancelEdit')
         await nextTick()
@@ -96,22 +99,30 @@ describe('AiChatMessages', () => {
         const assistant = makeMessage({ id: 'a1', role: 'assistant', content: 'answer text' })
         const wrapper = mountMessages([assistant])
 
-        await wrapper.findComponent({ name: 'AiChatAssistantMessage' }).vm.$emit('copy', 'answer text')
+        await wrapper
+            .findComponent({ name: 'AiChatAssistantMessage' })
+            .vm.$emit('copy', 'answer text')
         await nextTick()
         expect(wrapper.findComponent({ name: 'AiChatAssistantMessage' }).props('copied')).toBe(true)
 
         vi.advanceTimersByTime(2100)
         await nextTick()
-        expect(wrapper.findComponent({ name: 'AiChatAssistantMessage' }).props('copied')).toBe(false)
+        expect(wrapper.findComponent({ name: 'AiChatAssistantMessage' }).props('copied')).toBe(
+            false
+        )
     })
 
     it('copy of unknown text does not mark any message as copied', async () => {
         const assistant = makeMessage({ id: 'a1', role: 'assistant', content: 'answer' })
         const wrapper = mountMessages([assistant])
 
-        await wrapper.findComponent({ name: 'AiChatAssistantMessage' }).vm.$emit('copy', 'not in list')
+        await wrapper
+            .findComponent({ name: 'AiChatAssistantMessage' })
+            .vm.$emit('copy', 'not in list')
         await nextTick()
-        expect(wrapper.findComponent({ name: 'AiChatAssistantMessage' }).props('copied')).toBe(false)
+        expect(wrapper.findComponent({ name: 'AiChatAssistantMessage' }).props('copied')).toBe(
+            false
+        )
     })
 
     it('swallows clipboard write failures', async () => {
@@ -152,7 +163,12 @@ describe('AiChatMessages', () => {
         document.body.appendChild(panel)
 
         const wrapper = mountMessages([makeMessage({ id: 'u1', role: 'user' })])
-        await wrapper.setProps({ messages: [makeMessage({ id: 'u1', role: 'user' }), makeMessage({ id: 'a1', role: 'assistant' })] })
+        await wrapper.setProps({
+            messages: [
+                makeMessage({ id: 'u1', role: 'user' }),
+                makeMessage({ id: 'a1', role: 'assistant' })
+            ]
+        })
         await nextTick()
         await nextTick()
 

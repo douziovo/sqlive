@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
+
 import CreateTableModal from '../../components/CreateTableModal.vue'
 
 // Dialog (reka-ui) uses Teleport / v-if — stub so content renders inline for testing

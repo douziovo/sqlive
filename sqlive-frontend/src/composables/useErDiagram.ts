@@ -1,6 +1,7 @@
 import type { Edge, Node } from '@vue-flow/core'
 import { MarkerType } from '@vue-flow/core'
 import { computed, nextTick, ref, shallowRef, watch } from 'vue'
+
 import { layoutNodes } from '../composables/useDagreLayout'
 import type {
     ColumnMeta,

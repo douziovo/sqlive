@@ -1,5 +1,6 @@
 import type { Ref, WritableComputedRef } from 'vue'
 import { ref } from 'vue'
+
 import type { CanonicalStatement, Row, TableSchema, TruncationInfo } from '../model/DatabaseTypes'
 import { parsePrimaryType, toSqlLiteral } from '../utils/sql'
 import {

@@ -1,9 +1,10 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
-import type { IndexInfo } from '@/model/DatabaseTypes'
-import IndexesTab from '@/components/visualizer/IndexesTab.vue'
+
 import SortFilterToolbar from '@/components/SortFilterToolbar.vue'
+import IndexesTab from '@/components/visualizer/IndexesTab.vue'
+import type { IndexInfo } from '@/model/DatabaseTypes'
 
 const indexes: IndexInfo[] = [
     {
@@ -41,9 +42,7 @@ describe('IndexesTab', () => {
     it('emits navigate to the owning table when a card is clicked', async () => {
         const wrapper = mountTab()
         await wrapper.find('#index-idx_b_users').trigger('click')
-        expect(wrapper.emitted('navigate')).toEqual([
-            [{ tab: 'tables', targetId: 'table-users' }]
-        ])
+        expect(wrapper.emitted('navigate')).toEqual([[{ tab: 'tables', targetId: 'table-users' }]])
     })
 
     it('does not navigate when clicking the SQL preview (click.stop)', async () => {
@@ -55,8 +54,7 @@ describe('IndexesTab', () => {
     it('sorts by name, table, column count and unique flag', async () => {
         const wrapper = mountTab()
         const toolbar = wrapper.findComponent(SortFilterToolbar)
-        const cardIds = () =>
-            wrapper.findAll('[id^="index-"]').map((c) => c.attributes('id'))
+        const cardIds = () => wrapper.findAll('[id^="index-"]').map((c) => c.attributes('id'))
 
         // name asc: idx_a_orders before idx_b_users
         toolbar.vm.$emit('toggle-sort', 'name')

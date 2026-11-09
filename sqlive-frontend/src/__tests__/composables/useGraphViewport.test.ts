@@ -1,8 +1,9 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
 import { defineComponent, effectScope, ref, shallowRef } from 'vue'
-import type { KnowledgeNode } from '@/composables/useKnowledgeGraph'
+
 import { useGraphViewport } from '@/composables/useGraphViewport'
+import type { KnowledgeNode } from '@/composables/useKnowledgeGraph'
 
 // ── Test fixtures ──────────────────────────────────────────────
 

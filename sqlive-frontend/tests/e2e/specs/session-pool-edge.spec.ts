@@ -1,5 +1,6 @@
-import { expect, gotoApp, test } from '../fixtures/sql-editor.fixture'
 import type { Page } from '@playwright/test'
+
+import { expect, gotoApp, test } from '../fixtures/sql-editor.fixture'
 
 /**
  * Navigate to app and wait for editor, but do NOT wait for #table-departments.

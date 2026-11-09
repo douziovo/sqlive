@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { nextTick, ref } from 'vue'
+
 import { type PreviewItem, useFilteredList } from '@/composables/useFilteredList'
 
 function makeItems(): PreviewItem[] {

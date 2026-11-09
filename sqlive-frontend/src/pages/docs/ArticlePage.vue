@@ -1,5 +1,5 @@
 <template>
-    <article class="p-6 max-w-3xl mx-auto">
+    <article class="mx-auto max-w-3xl p-6">
         <MarkdownRenderer v-if="html" :html="html" />
         <div v-else class="text-muted-foreground">加载中...</div>
     </article>
@@ -8,8 +8,9 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useDocArticle } from '@/composables/useDocArticle'
+
 import MarkdownRenderer from '@/components/docs/MarkdownRenderer.vue'
+import { useDocArticle } from '@/composables/useDocArticle'
 
 // D-05: ArticlePage accepts optional slug prop (static from router for
 // /docs/intro and /docs/changelog; dynamic for /docs/usage/:article).

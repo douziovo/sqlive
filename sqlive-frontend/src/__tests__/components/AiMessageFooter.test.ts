@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
+
 import AiMessageFooter from '../../components/AiMessageFooter.vue'
 
 describe('AiMessageFooter', () => {

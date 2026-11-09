@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
+
 import KnowledgeNode from '@/components/knowledge/KnowledgeNode.vue'
 import type { KnowledgeNodeData } from '@/composables/useKnowledgeGraph'
 

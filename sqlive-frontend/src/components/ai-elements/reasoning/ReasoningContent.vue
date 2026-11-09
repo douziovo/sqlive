@@ -2,8 +2,10 @@
 import type { HTMLAttributes } from 'vue'
 import { computed } from 'vue'
 import { Markdown } from 'vue-stream-markdown'
+
 import { CollapsibleContent } from '@/components/ui/collapsible'
 import { cn } from '@/lib/utils'
+
 import 'vue-stream-markdown/index.css'
 
 interface Props {
@@ -22,7 +24,7 @@ const md = computed(() => props.content)
             cn(
                 'mt-4 text-sm',
                 'data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2',
-                'data-[state=open]:slide-in-from-top-2 text-muted-foreground',
+                'text-muted-foreground data-[state=open]:slide-in-from-top-2',
                 'outline-none data-[state=closed]:animate-out data-[state=open]:animate-in',
                 props.class
             )

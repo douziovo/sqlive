@@ -101,20 +101,22 @@
 
 <script setup lang="ts">
 import { computed, inject, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+
 import { useKnowledgeGraph } from '@/composables/useKnowledgeGraph'
+import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
+import { useRedDot } from '@/composables/useRedDot'
+import { CHAPTERS, getChapterById } from '@/data/learningChapters'
 import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
+
 import AchievementToast from './AchievementToast.vue'
 import ConfettiOverlay from './ConfettiOverlay.vue'
+import { getTaskXp } from './journal/taskPresentation'
 import KnowledgeGraph from './KnowledgeGraph.vue'
-import TaskJournalPanel from './TaskJournalPanel.vue'
-import KnowledgePanelTopbar from './panel/KnowledgePanelTopbar.vue'
 import KnowledgePanelChapters from './panel/KnowledgePanelChapters.vue'
+import KnowledgePanelTopbar from './panel/KnowledgePanelTopbar.vue'
 import { useKnowledgePanelFilters } from './panel/useKnowledgePanelFilters'
 import { usePanelCelebration } from './panel/usePanelCelebration'
-import { CHAPTERS, getChapterById } from '@/data/learningChapters'
-import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
-import { getTaskXp } from './journal/taskPresentation'
-import { useRedDot } from '@/composables/useRedDot'
+import TaskJournalPanel from './TaskJournalPanel.vue'
 
 const props = defineProps<{
     isOpen: boolean

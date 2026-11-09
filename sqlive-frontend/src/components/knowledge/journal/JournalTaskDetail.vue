@@ -68,11 +68,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import { ClipboardList } from '@lucide/vue'
+import { ref } from 'vue'
+
 import type { KnowledgeTopic } from '@/composables/useKnowledgeGraph'
 import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'
 import { TASK_CATEGORY_COLORS, TASK_CATEGORY_LABELS } from '@/data/taskCategories'
+
 import StepProgress from '../StepProgress.vue'
 import TaskCreateForm from '../TaskCreateForm.vue'
 import { DIFFICULTY_LABELS, allSubstepsDone, getTaskXp } from './taskPresentation'

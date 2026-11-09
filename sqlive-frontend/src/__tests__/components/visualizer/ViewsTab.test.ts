@@ -1,9 +1,10 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
-import type { TableSchema, ViewInfo } from '@/model/DatabaseTypes'
-import ViewsTab from '@/components/visualizer/ViewsTab.vue'
+
 import SortFilterToolbar from '@/components/SortFilterToolbar.vue'
+import ViewsTab from '@/components/visualizer/ViewsTab.vue'
+import type { TableSchema, ViewInfo } from '@/model/DatabaseTypes'
 
 const views: ViewInfo[] = [
     { name: 'v_beta', sql: 'CREATE VIEW v_beta AS SELECT * FROM orders' },
@@ -15,7 +16,9 @@ const tables: TableSchema[] = [
     { name: 'orders', columns: [], columnTypes: {}, data: [] }
 ]
 
-function mountTab(props: Partial<{ views: ViewInfo[]; tables: TableSchema[]; flashTarget: string | null }> = {}) {
+function mountTab(
+    props: Partial<{ views: ViewInfo[]; tables: TableSchema[]; flashTarget: string | null }> = {}
+) {
     return mount(ViewsTab, {
         props: { views, tables, flashTarget: null, ...props }
     })

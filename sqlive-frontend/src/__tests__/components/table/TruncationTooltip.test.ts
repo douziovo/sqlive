@@ -1,8 +1,9 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick, ref } from 'vue'
-import type { TruncationInfo } from '@/model/DatabaseTypes'
+
 import TruncationTooltip from '@/components/table/TruncationTooltip.vue'
+import type { TruncationInfo } from '@/model/DatabaseTypes'
 import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
 
 function mountTooltip(truncations: TruncationInfo[] = []) {
@@ -81,9 +82,7 @@ describe('TruncationTooltip', () => {
         cell.getBoundingClientRect = () =>
             ({ top: 340, bottom: 360, left: 100, width: 50 }) as DOMRect
         document.body.appendChild(cell)
-        const innerHeightSpy = vi
-            .spyOn(window, 'innerHeight', 'get')
-            .mockReturnValue(400)
+        const innerHeightSpy = vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(400)
         const innerWidthSpy = vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(800)
         try {
             const { wrapper, lastTruncations } = mountTooltip()
@@ -116,13 +115,25 @@ describe('TruncationTooltip', () => {
         try {
             const { wrapper, lastTruncations } = mountTooltip()
             lastTruncations.value = [
-                { value: 'x', wasTruncated: true, originalValue: 'yy', maxLength: 1, column: 'a' } as TruncationInfo
+                {
+                    value: 'x',
+                    wasTruncated: true,
+                    originalValue: 'yy',
+                    maxLength: 1,
+                    column: 'a'
+                } as TruncationInfo
             ]
             await nextTick()
             // Second truncation 2s later resets the 3s timer
             await vi.advanceTimersByTimeAsync(2000)
             lastTruncations.value = [
-                { value: 'z', wasTruncated: true, originalValue: 'zzz', maxLength: 1, column: 'a' } as TruncationInfo
+                {
+                    value: 'z',
+                    wasTruncated: true,
+                    originalValue: 'zzz',
+                    maxLength: 1,
+                    column: 'a'
+                } as TruncationInfo
             ]
             await nextTick()
             expect(wrapper.text()).toContain('原始长度 3 字符')
@@ -142,7 +153,13 @@ describe('TruncationTooltip', () => {
         try {
             const { wrapper, lastTruncations } = mountTooltip()
             lastTruncations.value = [
-                { value: 'x', wasTruncated: true, originalValue: 'yy', maxLength: 1, column: 'b' } as TruncationInfo
+                {
+                    value: 'x',
+                    wasTruncated: true,
+                    originalValue: 'yy',
+                    maxLength: 1,
+                    column: 'b'
+                } as TruncationInfo
             ]
             await nextTick()
             wrapper.unmount()

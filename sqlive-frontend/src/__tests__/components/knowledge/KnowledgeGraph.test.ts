@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
+
 import KnowledgeGraph from '@/components/knowledge/KnowledgeGraph.vue'
 import type { KnowledgeNode } from '@/composables/useKnowledgeGraph'
 
@@ -693,8 +694,7 @@ describe('KnowledgeGraph', () => {
 const flowStubs = {
     ...stubs,
     VueFlow: {
-        template:
-            '<div class="vue-flow-stub"><div class="vue-flow__viewport"></div><slot /></div>',
+        template: '<div class="vue-flow-stub"><div class="vue-flow__viewport"></div><slot /></div>',
         methods: {
             fitView: vi.fn(),
             setViewport: vi.fn(),

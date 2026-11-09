@@ -1,17 +1,14 @@
 <template>
-    <div class="flex items-center gap-3 mb-3 group">
+    <div class="group mb-3 flex items-center gap-3">
         <div
-            class="text-lg font-bold px-3 py-2 rounded-md inline-flex items-center gap-2 transition-colors shadow-sm border"
+            class="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-lg font-bold shadow-sm transition-colors"
             :class="[
                 {
-                    'bg-purple-100 text-purple-700 border-purple-300 ring-2 ring-purple-200':
-                        highlight.actionType === 'ddl' &&
-                        highlight.activeTables[0] === table.name,
-                    'bg-blue-100 text-primary border-blue-300 ring-2 ring-blue-200':
-                        highlight.actionType !== 'ddl' &&
-                        highlight.activeTables[0] === table.name,
-                    'bg-card text-black border-border':
-                        highlight.activeTables[0] !== table.name,
+                    'border-purple-300 bg-purple-100 text-purple-700 ring-2 ring-purple-200':
+                        highlight.actionType === 'ddl' && highlight.activeTables[0] === table.name,
+                    'border-blue-300 bg-blue-100 text-primary ring-2 ring-blue-200':
+                        highlight.actionType !== 'ddl' && highlight.activeTables[0] === table.name,
+                    'border-border bg-card text-black': highlight.activeTables[0] !== table.name,
                     'animate-flash':
                         (isAnimating &&
                             highlight.actionType === 'ddl' &&
@@ -29,7 +26,7 @@
                 @click.stop="navigateTo('indexes')"
                 @mouseenter="emit('badge-enter', $event, 'index')"
                 @mouseleave="emit('badge-leave')"
-                class="text-xs px-2 py-1 rounded-full bg-blue-50 text-primary border border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors font-normal"
+                class="cursor-pointer rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-normal text-primary transition-colors hover:bg-blue-100"
             >
                 &#x1F4C7; {{ tableIndexes.length }}
             </span>
@@ -38,7 +35,7 @@
                 @click.stop="navigateTo('triggers')"
                 @mouseenter="emit('badge-enter', $event, 'trigger')"
                 @mouseleave="emit('badge-leave')"
-                class="text-xs px-2 py-1 rounded-full bg-amber-50 text-amber-600 border border-amber-200 cursor-pointer hover:bg-amber-100 transition-colors font-normal"
+                class="cursor-pointer rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-normal text-amber-600 transition-colors hover:bg-amber-100"
             >
                 &#x26A1; {{ tableTriggers.length }}
             </span>
@@ -47,7 +44,7 @@
                 @click.stop="navigateTo('views')"
                 @mouseenter="emit('badge-enter', $event, 'view')"
                 @mouseleave="emit('badge-leave')"
-                class="text-xs px-2 py-1 rounded-full bg-purple-50 text-purple-600 border border-purple-200 cursor-pointer hover:bg-purple-100 transition-colors font-normal"
+                class="cursor-pointer rounded-full border border-purple-200 bg-purple-50 px-2 py-1 text-xs font-normal text-purple-600 transition-colors hover:bg-purple-100"
             >
                 &#x1F440; {{ tableViews.length }}
             </span>
@@ -55,7 +52,7 @@
 
         <button
             @click="emit('drop-table', table.name)"
-            class="p-2 text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 rounded-full transition-colors opacity-0 group-hover:opacity-100"
+            class="rounded-full p-2 text-muted-foreground/70 opacity-0 transition-colors group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive"
             title="删除表格"
         >
             <span class="text-xl leading-none">&#x1F5D1;&#xFE0F;</span>
@@ -65,8 +62,10 @@
 
 <script setup lang="ts">
 import { inject } from 'vue'
+
 import type { IndexInfo, TableSchema, TriggerInfo, ViewInfo } from '@/model/DatabaseTypes'
 import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
+
 import type { HoverType } from './useTableHoverPreview'
 
 defineProps<{

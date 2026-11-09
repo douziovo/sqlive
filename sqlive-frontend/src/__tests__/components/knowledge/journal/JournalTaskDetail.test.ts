@@ -1,9 +1,10 @@
-import { makeKnowledgeTopic } from '@/__tests__/fixtures/knowledge'
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
+
+import { makeKnowledgeTopic } from '@/__tests__/fixtures/knowledge'
+import JournalTaskDetail from '@/components/knowledge/journal/JournalTaskDetail.vue'
 import type { KnowledgeTopic } from '@/composables/useKnowledgeGraph'
 import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'
-import JournalTaskDetail from '@/components/knowledge/journal/JournalTaskDetail.vue'
 
 const topics: KnowledgeTopic[] = [
     makeKnowledgeTopic({ id: 'basics', label: '基础', difficulty: 1 }),

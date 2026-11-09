@@ -1,7 +1,9 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { defineComponent, nextTick } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
+import { defineComponent, nextTick } from 'vue'
+
 import type { TableSchema } from '@/model/DatabaseTypes'
+
 import ErDiagram from '../../components/er/ErDiagram.vue'
 
 const mockTables: TableSchema[] = [

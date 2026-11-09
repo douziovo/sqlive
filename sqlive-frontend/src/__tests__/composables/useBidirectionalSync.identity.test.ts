@@ -1,6 +1,8 @@
 import { DatabaseSync } from 'node:sqlite'
-import { computed, ref } from 'vue'
+
 import { describe, expect, it, vi } from 'vitest'
+import { computed, ref } from 'vue'
+
 import { useBidirectionalSync } from '@/composables/useBidirectionalSync'
 import type { TableSchema } from '@/model/DatabaseTypes'
 

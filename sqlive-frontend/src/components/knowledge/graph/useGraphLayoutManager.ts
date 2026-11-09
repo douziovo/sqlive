@@ -2,9 +2,10 @@ import type { VueFlowStore } from '@vue-flow/core'
 import type { Edge } from '@vue-flow/core'
 import { nextTick, watch } from 'vue'
 import type { Ref } from 'vue'
+
 import { layoutNodes } from '@/composables/useDagreLayout'
-import { STORAGE_KEYS } from '@/constants/storageKeys'
 import type { KnowledgeNode as KnowledgeFlowNode } from '@/composables/useKnowledgeGraph'
+import { STORAGE_KEYS } from '@/constants/storageKeys'
 
 /**
  * useGraphLayoutManager — dagre TB layout + saved-viewport restore

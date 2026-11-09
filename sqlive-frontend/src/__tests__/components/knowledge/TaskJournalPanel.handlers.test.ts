@@ -1,10 +1,11 @@
-import { makeKnowledgeTopic } from '@/__tests__/fixtures/knowledge'
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
+
+import { makeKnowledgeTopic } from '@/__tests__/fixtures/knowledge'
+import TaskJournalPanel from '@/components/knowledge/TaskJournalPanel.vue'
 import type { KnowledgeTopic } from '@/composables/useKnowledgeGraph'
 import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'
-import TaskJournalPanel from '@/components/knowledge/TaskJournalPanel.vue'
 
 // ── Mocks with exposed spies for handler assertions ──────────────
 const { state } = vi.hoisted(() => ({

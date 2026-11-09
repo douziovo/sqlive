@@ -1,6 +1,7 @@
 import type { VueFlowStore } from '@vue-flow/core'
 import type { ComputedRef, Ref } from 'vue'
 import { computed, getCurrentInstance, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+
 import type { KnowledgeNode } from '@/composables/useKnowledgeGraph'
 
 /**

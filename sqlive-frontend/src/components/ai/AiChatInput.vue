@@ -1,12 +1,12 @@
 <template>
-    <div v-show="!isMinimized" class="px-4 py-2 border-t border-border shrink-0 bg-card">
+    <div v-show="!isMinimized" class="shrink-0 border-t border-border bg-card px-4 py-2">
         <div
-            class="relative flex items-end bg-muted rounded-2xl border border-border focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/20 pl-4 pr-12 py-2 transition-colors transition-shadow"
+            class="relative flex items-end rounded-2xl border border-border bg-muted py-2 pr-12 pl-4 transition-colors transition-shadow focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/20"
         >
             <textarea
                 v-model="inputText"
                 ref="inputRef"
-                class="flex-1 resize-none bg-transparent text-sm text-foreground placeholder-muted-foreground/70 outline-none min-h-[20px] max-h-[120px] py-0"
+                class="max-h-[120px] min-h-[20px] flex-1 resize-none bg-transparent py-0 text-sm text-foreground placeholder-muted-foreground/70 outline-none"
                 placeholder="输入消息..."
                 rows="1"
                 :disabled="isLoading"
@@ -18,11 +18,11 @@
             <button
                 v-if="isLoading"
                 @click="emit('cancelStream')"
-                class="absolute right-0 bottom-0 w-8 h-8 rounded-full bg-secondary flex items-center justify-center cursor-pointer group"
+                class="group absolute right-0 bottom-0 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-secondary"
                 title="停止生成"
             >
                 <svg
-                    class="w-3 h-3 text-muted-foreground group-hover:text-destructive transition-colors"
+                    class="h-3 w-3 text-muted-foreground transition-colors group-hover:text-destructive"
                     viewBox="0 0 24 24"
                     fill="currentColor"
                 >
@@ -34,15 +34,15 @@
                 v-else
                 @click="send()"
                 :disabled="!inputText.trim()"
-                class="absolute right-0 bottom-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors cursor-pointer"
+                class="absolute right-0 bottom-0 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition-colors"
                 :class="
                     !inputText.trim()
-                        ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                        ? 'cursor-not-allowed bg-muted text-muted-foreground'
                         : 'bg-primary text-primary-foreground hover:bg-primary/90'
                 "
             >
                 <svg
-                    class="w-5 h-5"
+                    class="h-5 w-5"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"

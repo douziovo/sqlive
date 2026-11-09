@@ -2,18 +2,18 @@
     <!-- Ghost row -->
     <tr
         data-testid="ghost-row"
-        class="bg-muted/50 opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200 border-t border-dashed border-border group/ghost"
+        class="group/ghost border-t border-dashed border-border bg-muted/50 opacity-0 transition-opacity duration-200 focus-within:opacity-100 hover:opacity-100"
         :class="{ 'ghost-failure': ghostFailureVisible }"
     >
         <td
             v-for="col in table.columns"
             :key="'ghost-' + col"
-            class="px-4 py-2 border-r border-border/50 align-top"
+            class="border-r border-border/50 px-4 py-2 align-top"
         >
-            <div class="grid place-items-start w-full relative">
+            <div class="relative grid w-full place-items-start">
                 <div
                     data-ghost
-                    class="invisible whitespace-pre-wrap break-all border border-transparent px-1 py-1 min-h-[1.5em]"
+                    class="invisible min-h-[1.5em] border border-transparent px-1 py-1 break-all whitespace-pre-wrap"
                     style="grid-area: 1/1/2/2"
                 >
                     {{ getGhostValue(col) || ' ' }}
@@ -23,15 +23,12 @@
                     @input="
                         (e) => {
                             autoResizeGhost(e)
-                            updateGhostState(
-                                col,
-                                (e.target as HTMLTextAreaElement).value
-                            )
+                            updateGhostState(col, (e.target as HTMLTextAreaElement).value)
                         }
                     "
                     @keydown.enter.prevent="onGhostSubmit()"
                     placeholder="+"
-                    class="w-full h-full bg-transparent outline-none border-b border-transparent focus:border-primary focus:bg-background px-1 py-1 resize-none overflow-hidden absolute inset-0 z-10 whitespace-pre-wrap break-all placeholder:text-muted-foreground/50 text-secondary-foreground"
+                    class="absolute inset-0 z-10 h-full w-full resize-none overflow-hidden border-b border-transparent bg-transparent px-1 py-1 break-all whitespace-pre-wrap text-secondary-foreground outline-none placeholder:text-muted-foreground/50 focus:border-primary focus:bg-background"
                     style="grid-area: 1/1/2/2"
                     spellcheck="false"
                 ></textarea>
@@ -41,10 +38,10 @@
             <button
                 v-if="hasGhostInput()"
                 @click="onGhostSubmit()"
-                class="text-primary hover:bg-primary/10 p-1 rounded-full transition-colors transition-transform hover:scale-110"
+                class="rounded-full p-1 text-primary transition-colors transition-transform hover:scale-110 hover:bg-primary/10"
                 title="确认添加"
             >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                         stroke-linecap="round"
                         stroke-linejoin="round"
@@ -58,13 +55,14 @@
     <!-- Ghost row error -->
     <tr v-if="ghostFailureVisible" class="ghost-error-row">
         <td :colspan="table.columns.length + 1" class="px-4 py-2">
-            <p class="text-xs text-destructive mt-1">{{ ghostErrorText }}</p>
+            <p class="mt-1 text-xs text-destructive">{{ ghostErrorText }}</p>
         </td>
     </tr>
 </template>
 
 <script setup lang="ts">
 import { inject, onUnmounted, reactive, ref, watch } from 'vue'
+
 import { useInlineEdit } from '@/composables/useInlineEdit'
 import type { Row, RowInsertEvent, TableSchema } from '@/model/DatabaseTypes'
 import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'

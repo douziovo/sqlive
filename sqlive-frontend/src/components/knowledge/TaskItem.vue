@@ -72,9 +72,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'
-import { useRedDot } from '@/composables/useRedDot'
 import {
     AlertDialogRoot,
     AlertDialogPortal,
@@ -85,7 +82,12 @@ import {
     AlertDialogCancel,
     AlertDialogAction
 } from 'reka-ui'
+import { computed, ref } from 'vue'
+
+import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'
+import { useRedDot } from '@/composables/useRedDot'
 import { TASK_CATEGORY_COLORS } from '@/data/taskCategories'
+
 import RedDotBadge from './RedDotBadge.vue'
 
 const props = defineProps<{

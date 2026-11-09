@@ -21,7 +21,7 @@
 
         <div
             v-if="viewFiltered.length === 0"
-            class="flex flex-col items-center justify-center h-24 text-muted-foreground/70"
+            class="flex h-24 flex-col items-center justify-center text-muted-foreground/70"
         >
             <p class="text-sm">&#x1F50D; 无匹配的视图</p>
         </div>
@@ -30,19 +30,18 @@
             v-for="v in viewFiltered"
             :key="v.name"
             :id="'view-' + v.name"
-            class="mb-4 border border-border rounded-lg bg-card shadow-sm hover:shadow-md hover:border-primary p-4 cursor-pointer"
+            class="mb-4 cursor-pointer rounded-lg border border-border bg-card p-4 shadow-sm hover:border-primary hover:shadow-md"
             :class="{ 'animate-flash': flashTarget === 'view-' + v.name }"
             @click="navigateToViewTable(v)"
         >
-            <div class="flex items-center gap-2 mb-2">
+            <div class="mb-2 flex items-center gap-2">
                 <span class="text-lg">&#x1F440;</span>
                 <span class="font-bold text-secondary-foreground">{{ v.name }}</span>
             </div>
             <pre
-                class="text-xs font-mono bg-secondary rounded p-3 text-muted-foreground overflow-x-auto whitespace-pre-wrap"
+                class="overflow-x-auto rounded bg-secondary p-3 font-mono text-xs whitespace-pre-wrap text-muted-foreground"
                 @click.stop
-                >{{ v.sql }}</pre
-            >
+                >{{ v.sql }}</pre>
         </div>
     </template>
 </template>
@@ -50,6 +49,7 @@
 <script setup lang="ts">
 import { type SortField, useSortFilter } from '@/composables/useSortFilter'
 import type { TableSchema, ViewInfo } from '@/model/DatabaseTypes'
+
 import EmptyState from '../EmptyState.vue'
 import type { SortFieldDef } from '../SortFilterToolbar.vue'
 import SortFilterToolbar from '../SortFilterToolbar.vue'

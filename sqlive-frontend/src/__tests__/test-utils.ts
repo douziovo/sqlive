@@ -1,4 +1,5 @@
 import { vi } from 'vitest'
+
 import type { useAiChat } from '../composables/useAiChat'
 import type { useSqlEngine } from '../composables/useSqlEngine'
 import { API_URL } from '../config'

@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { defineComponent, nextTick } from 'vue'
 import { describe, expect, it } from 'vitest'
+import { defineComponent, nextTick } from 'vue'
+
 import {
     Command,
     CommandDialog,

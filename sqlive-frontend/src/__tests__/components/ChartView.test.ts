@@ -1,9 +1,11 @@
 import { mount } from '@vue/test-utils'
+import * as echarts from 'echarts'
 import { describe, expect, it, vi } from 'vitest'
 import { h, nextTick } from 'vue'
-import * as echarts from 'echarts'
+
 import { useECharts } from '@/components/chart/useECharts'
 import type { TableSchema } from '@/model/DatabaseTypes'
+
 import ChartView from '../../components/ChartView.vue'
 
 // Mock echarts: jsdom has no canvas support, so prevent ECharts from trying to init

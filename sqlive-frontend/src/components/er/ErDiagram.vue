@@ -2,9 +2,9 @@
     <div ref="wrapperRef" class="er-diagram-wrapper" tabindex="-1">
         <div
             v-if="tables.length === 0"
-            class="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground/70 z-10 pointer-events-none"
+            class="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center text-muted-foreground/70"
         >
-            <div class="text-3xl mb-2">&#x1F4ED;</div>
+            <div class="mb-2 text-3xl">&#x1F4ED;</div>
             <p class="text-sm">暂无数据表，无法生成 ER 图</p>
         </div>
 
@@ -60,12 +60,14 @@ import { VueFlow } from '@vue-flow/core'
 import type { Node, NodeMouseEvent, VueFlowStore } from '@vue-flow/core'
 import { MiniMap } from '@vue-flow/minimap'
 import { computed, markRaw, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import '@vue-flow/minimap/dist/style.css'
 
 import { useErDiagram } from '@/composables/useErDiagram'
 import type { ForeignKeyInfo, TableSchema } from '@/model/DatabaseTypes'
+
 import ErSearchBar from './ErSearchBar.vue'
 import ErTableNode from './ErTableNode.vue'
 import ErToolbar from './ErToolbar.vue'

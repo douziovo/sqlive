@@ -1,10 +1,11 @@
 import type { Edge, Node } from '@vue-flow/core'
 import { useLocalStorage } from '@vueuse/core'
 import { computed, ref, watch } from 'vue'
+
 import { KNOWLEDGE_API_BASE } from '@/config'
-import { http } from '@/lib/http'
-import { getChapterById } from '@/data/learningChapters'
 import { STORAGE_KEYS } from '@/constants/storageKeys'
+import { getChapterById } from '@/data/learningChapters'
+import { http } from '@/lib/http'
 
 export interface KnowledgeTopic {
     id: string

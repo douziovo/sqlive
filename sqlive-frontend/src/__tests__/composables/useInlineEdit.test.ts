@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import { useInlineEdit } from '@/composables/useInlineEdit'
 import type { CellUpdateEvent } from '@/model/DatabaseTypes'
 

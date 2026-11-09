@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils'
-import { defineComponent } from 'vue'
 import { describe, expect, it } from 'vitest'
+import { defineComponent } from 'vue'
+
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
 
 describe('InputGroupAddon', () => {

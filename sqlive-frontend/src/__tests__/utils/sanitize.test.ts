@@ -1,5 +1,6 @@
 import DOMPurify from 'dompurify'
 import { describe, expect, it } from 'vitest'
+
 import { sanitizeConfig } from '@/utils/sanitize'
 
 describe('sanitizeConfig', () => {

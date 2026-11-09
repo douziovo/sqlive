@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import { computed, ref } from 'vue'
-import type { DatabaseModel, TableSchema } from '@/model/DatabaseTypes'
+
 import { useBidirectionalSync } from '@/composables/useBidirectionalSync'
+import type { DatabaseModel, TableSchema } from '@/model/DatabaseTypes'
 
 type EngineMode = 'user' | 'reconciling' | 'rollback'
 

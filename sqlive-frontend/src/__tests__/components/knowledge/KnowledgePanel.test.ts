@@ -1,15 +1,17 @@
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { jsonOk } from '../../test-utils'
 import { effectScope, nextTick } from 'vue'
-import KnowledgePanel from '@/components/knowledge/KnowledgePanel.vue'
-import KnowledgeGraph from '@/components/knowledge/KnowledgeGraph.vue'
-import TaskJournalPanel from '@/components/knowledge/TaskJournalPanel.vue'
+
 import AchievementToast from '@/components/knowledge/AchievementToast.vue'
-import ConfettiOverlay from '@/components/knowledge/ConfettiOverlay.vue'
 import ChapterCard from '@/components/knowledge/ChapterCard.vue'
-import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
+import ConfettiOverlay from '@/components/knowledge/ConfettiOverlay.vue'
+import KnowledgeGraph from '@/components/knowledge/KnowledgeGraph.vue'
+import KnowledgePanel from '@/components/knowledge/KnowledgePanel.vue'
+import TaskJournalPanel from '@/components/knowledge/TaskJournalPanel.vue'
 import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
+import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
+
+import { jsonOk } from '../../test-utils'
 
 enableAutoUnmount(afterEach)
 let taskConsumerScope: ReturnType<typeof effectScope> | undefined

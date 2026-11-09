@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
+
 import { useAiStreaming } from '@/composables/useAiStreaming'
 import { readSseStream } from '@/utils/sse'
 

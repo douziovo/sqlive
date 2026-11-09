@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
+
 import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'
 // Import after mocks are registered
 import TaskJournalPanel from '@/components/knowledge/TaskJournalPanel.vue'

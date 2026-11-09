@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Ref } from 'vue'
 import { ref } from 'vue'
-import type { DatabaseModel } from '@/model/DatabaseTypes'
+
 import type { AiMessage } from '@/composables/useAiChat'
 import type { DisplayHandler } from '@/composables/useInlineActions'
 import { useInlineActions } from '@/composables/useInlineActions'
+import type { DatabaseModel } from '@/model/DatabaseTypes'
+
 import { jsonOk } from '../test-utils'
 
 vi.mock('@/utils/aiFormatter', () => ({

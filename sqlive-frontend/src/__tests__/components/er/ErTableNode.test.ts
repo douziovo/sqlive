@@ -1,11 +1,18 @@
+import { Position } from '@vue-flow/core'
 import { mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
-import { Position } from '@vue-flow/core'
+
 import ErTableNode from '@/components/er/ErTableNode.vue'
 
 vi.mock('@vue-flow/core', async (importOriginal) => {
     const actual = await importOriginal<typeof import('@vue-flow/core')>()
-    return { ...actual, Handle: { name: 'Handle', props: ['id', 'type', 'position'], template: '<div class="handle-stub" />' }
+    return {
+        ...actual,
+        Handle: {
+            name: 'Handle',
+            props: ['id', 'type', 'position'],
+            template: '<div class="handle-stub" />'
+        }
     }
 })
 
@@ -19,7 +26,10 @@ const baseData = {
     ]
 }
 
-function mountNode(dataOverrides: Record<string, unknown> = {}, props: Record<string, unknown> = {}) {
+function mountNode(
+    dataOverrides: Record<string, unknown> = {},
+    props: Record<string, unknown> = {}
+) {
     return mount(ErTableNode, {
         props: {
             id: 'node-1',

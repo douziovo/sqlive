@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { type SortField, useSortFilter } from '@/composables/useSortFilter'
 import { ref } from 'vue'
+
+import { type SortField, useSortFilter } from '@/composables/useSortFilter'
 
 interface Item {
     id: number

@@ -1,7 +1,8 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
-import type { HighlightState, TableSchema } from '@/model/DatabaseTypes'
+
 import TableBodyRows from '@/components/table/TableBodyRows.vue'
+import type { HighlightState, TableSchema } from '@/model/DatabaseTypes'
 import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
 
 const table: TableSchema = {
@@ -10,7 +11,7 @@ const table: TableSchema = {
     columnTypes: {
         id: 'INTEGER',
         name: 'TEXT',
-        full_name: 'TEXT GENERATED ALWAYS AS (name || \'!\') VIRTUAL'
+        full_name: "TEXT GENERATED ALWAYS AS (name || '!') VIRTUAL"
     },
     data: [
         { id: 1, name: 'Alice' },

@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
+
 import CommandShortcut from '@/components/ui/command/CommandShortcut.vue'
 
 describe('CommandShortcut', () => {

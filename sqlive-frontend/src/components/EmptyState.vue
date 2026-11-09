@@ -1,14 +1,14 @@
 <template>
     <div
-        class="flex flex-col items-center justify-center h-40 border-2 border-dashed border-border rounded-lg text-muted-foreground/70 bg-card"
+        class="flex h-40 flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-card text-muted-foreground/70"
     >
         <div
-            class="text-3xl mb-1 w-14 h-14 rounded-xl bg-linear-to-br from-primary/10 to-primary/5 flex items-center justify-center shadow-sm"
+            class="mb-1 flex h-14 w-14 items-center justify-center rounded-xl bg-linear-to-br from-primary/10 to-primary/5 text-3xl shadow-sm"
         >
             {{ icon }}
         </div>
         <p class="text-sm">{{ title }}</p>
-        <p v-if="subtitle" class="text-xs text-muted-foreground/50 mt-1">{{ subtitle }}</p>
+        <p v-if="subtitle" class="mt-1 text-xs text-muted-foreground/50">{{ subtitle }}</p>
     </div>
 </template>
 

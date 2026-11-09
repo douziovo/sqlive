@@ -1,8 +1,9 @@
+import type { Edge } from '@vue-flow/core'
 import { describe, expect, it } from 'vitest'
 import { shallowRef } from 'vue'
-import type { Edge } from '@vue-flow/core'
-import type { KnowledgeNode, KnowledgeNodeData } from '@/composables/useKnowledgeGraph'
+
 import { useGraphHover } from '@/composables/useGraphHover'
+import type { KnowledgeNode, KnowledgeNodeData } from '@/composables/useKnowledgeGraph'
 
 // ── Test fixtures ──────────────────────────────────────────────
 

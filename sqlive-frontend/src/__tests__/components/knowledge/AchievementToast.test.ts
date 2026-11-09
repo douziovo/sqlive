@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
 import AchievementToast from '@/components/knowledge/AchievementToast.vue'
 
 function getToastEl(): Element | null {

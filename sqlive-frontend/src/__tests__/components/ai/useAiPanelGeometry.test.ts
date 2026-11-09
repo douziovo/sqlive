@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { nextTick } from 'vue'
+
 import { useAiPanelGeometry } from '@/components/ai/useAiPanelGeometry'
 
 function fireMouse(type: string, x: number, y: number) {

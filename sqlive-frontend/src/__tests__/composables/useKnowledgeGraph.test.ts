@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
-import { jsonOk } from '../test-utils'
+
 import { LEVEL_NAMES, useKnowledgeGraph } from '@/composables/useKnowledgeGraph'
+
+import { jsonOk } from '../test-utils'
 
 const mockFetch = vi.fn()
 globalThis.fetch = mockFetch

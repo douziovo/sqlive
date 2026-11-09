@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import { extractTriggerTiming, isNumericType, toSqlLiteral } from '@/utils/sql'
 
 describe('extractTriggerTiming', () => {

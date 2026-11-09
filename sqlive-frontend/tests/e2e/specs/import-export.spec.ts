@@ -1,5 +1,7 @@
 import { readFile } from 'node:fs/promises'
+
 import type { Download } from '@playwright/test'
+
 import { expect, gotoApp, test } from '../fixtures/sql-editor.fixture'
 import { openNewTab } from '../helpers/tabs'
 

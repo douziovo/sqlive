@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
+
 import StepProgress from '@/components/knowledge/StepProgress.vue'
 import type { TaskSubstep } from '@/composables/useKnowledgeTasks'
 

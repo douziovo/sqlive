@@ -4,22 +4,22 @@
         <textarea
             v-model="editText"
             ref="editTextareaRef"
-            class="text-sm bg-card border border-border rounded-lg px-3 py-2 outline-none focus:border-border focus:ring-2 focus:ring-ring w-full min-h-[40px]"
+            class="min-h-[40px] w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-border focus:ring-2 focus:ring-ring"
             rows="1"
             @input="autoResizeEdit"
             @keydown.enter.exact.prevent="submitEdit"
             @keydown.esc="cancelEdit"
         ></textarea>
-        <div class="flex items-center gap-2 justify-end">
+        <div class="flex items-center justify-end gap-2">
             <button
                 @click="cancelEdit"
-                class="px-2 py-1 text-[11px] bg-secondary text-secondary-foreground hover:text-secondary-foreground hover:bg-secondary rounded-lg transition-colors"
+                class="rounded-lg bg-secondary px-2 py-1 text-[11px] text-secondary-foreground transition-colors hover:bg-secondary hover:text-secondary-foreground"
             >
                 取消
             </button>
             <button
                 @click="submitEdit"
-                class="px-2 py-1 text-[11px] font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                class="rounded-lg bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground transition-colors hover:bg-primary/90"
             >
                 更新
             </button>
@@ -29,24 +29,24 @@
     <div v-else class="flex justify-end">
         <div class="max-w-[85%]">
             <div
-                class="text-foreground text-sm whitespace-pre-wrap break-words bg-secondary rounded-2xl px-3 py-2"
+                class="rounded-2xl bg-secondary px-3 py-2 text-sm break-words whitespace-pre-wrap text-foreground"
             >
                 {{ msg.content }}
             </div>
             <div
                 v-if="!msg.isStreaming"
                 :class="[
-                    'flex items-center gap-1 mt-1 justify-end',
+                    'mt-1 flex items-center justify-end gap-1',
                     isLast ? 'opacity-100' : 'opacity-0 group-hover/row:opacity-100'
                 ]"
             >
                 <button
                     @click="emit('startEdit')"
-                    class="p-1.5 rounded-lg text-muted-foreground/70 hover:text-muted-foreground hover:bg-secondary transition-colors"
+                    class="rounded-lg p-1.5 text-muted-foreground/70 transition-colors hover:bg-secondary hover:text-muted-foreground"
                     title="编辑"
                 >
                     <svg
-                        class="w-3.5 h-3.5"
+                        class="h-3.5 w-3.5"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
@@ -58,11 +58,11 @@
                 </button>
                 <button
                     @click="emit('delete', msg.id)"
-                    class="p-1.5 rounded-lg text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    class="rounded-lg p-1.5 text-muted-foreground/70 transition-colors hover:bg-destructive/10 hover:text-destructive"
                     title="删除"
                 >
                     <svg
-                        class="w-3.5 h-3.5"
+                        class="h-3.5 w-3.5"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
@@ -81,6 +81,7 @@
 
 <script setup lang="ts">
 import { nextTick, ref, watch } from 'vue'
+
 import type { AiMessage } from '@/composables/useAiChat'
 
 const props = defineProps<{

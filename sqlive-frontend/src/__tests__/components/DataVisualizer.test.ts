@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
+
 import type {
     DatabaseModel,
     HighlightState,
@@ -8,11 +9,12 @@ import type {
     TriggerInfo,
     ViewInfo
 } from '@/model/DatabaseTypes'
-import DataVisualizer from '../../components/DataVisualizer.vue'
-import TableSection from '../../components/TableSection.vue'
-import CreateTableModal from '../../components/CreateTableModal.vue'
-import SortFilterToolbar from '../../components/SortFilterToolbar.vue'
 import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
+
+import CreateTableModal from '../../components/CreateTableModal.vue'
+import DataVisualizer from '../../components/DataVisualizer.vue'
+import SortFilterToolbar from '../../components/SortFilterToolbar.vue'
+import TableSection from '../../components/TableSection.vue'
 
 const mockDb: DatabaseModel = {
     tables: [
@@ -715,7 +717,11 @@ describe('DataVisualizer', () => {
         const wrapper = mount(DataVisualizer, {
             global: {
                 provide: provideContext(
-                    makeDb({ views: [{ name: 'v_standalone', sql: 'CREATE VIEW v_standalone AS SELECT 1' }] }),
+                    makeDb({
+                        views: [
+                            { name: 'v_standalone', sql: 'CREATE VIEW v_standalone AS SELECT 1' }
+                        ]
+                    }),
                     defaultHighlight
                 ),
                 stubs: minimalStubs

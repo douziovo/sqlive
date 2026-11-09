@@ -1,8 +1,10 @@
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { jsonOk } from '../../test-utils'
+
 import LearningCompanion from '@/components/knowledge/LearningCompanion.vue'
 import { useKnowledgeGraph } from '@/composables/useKnowledgeGraph'
+
+import { jsonOk } from '../../test-utils'
 
 enableAutoUnmount(afterEach)
 

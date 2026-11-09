@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
+
 import type { SortFieldDef } from '../../components/SortFilterToolbar.vue'
 import SortFilterToolbar from '../../components/SortFilterToolbar.vue'
 

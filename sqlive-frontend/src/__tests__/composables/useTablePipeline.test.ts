@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
+
 import { useTablePipeline } from '@/composables/useTablePipeline'
 import type { Row } from '@/model/DatabaseTypes'
 

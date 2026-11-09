@@ -2,6 +2,7 @@
 
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
 import ChapterCard from '@/components/knowledge/ChapterCard.vue'
 import type { LearningChapter } from '@/data/learningChapters'
 

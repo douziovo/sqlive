@@ -22,10 +22,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
 import { GraduationCap } from '@lucide/vue'
-import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
+import { computed, onMounted } from 'vue'
+
 import { useKnowledgeGraph } from '@/composables/useKnowledgeGraph'
+import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
+
 import ActiveTaskTracker from './ActiveTaskTracker.vue'
 
 const props = withDefaults(

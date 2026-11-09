@@ -1,7 +1,9 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
+
 import type { PreviewItem } from '@/composables/useFilteredList'
+
 import HoverPreview from '../../components/HoverPreview.vue'
 
 const sampleItems: PreviewItem[] = [
@@ -334,9 +336,7 @@ describe('HoverPreview', () => {
         const items = wrapper.findAll('[class*="cursor-pointer"]')
         await items[1].trigger('mouseenter')
         // Re-query: DOMWrapper caches classes at creation time
-        expect(wrapper.findAll('[class*="cursor-pointer"]')[1].classes()).toContain(
-            'bg-primary/10'
-        )
+        expect(wrapper.findAll('[class*="cursor-pointer"]')[1].classes()).toContain('bg-primary/10')
 
         // Moving to the other item moves the highlight (hoveredIndex + keyboardIndex)
         await wrapper.findAll('[class*="cursor-pointer"]')[0].trigger('mouseleave')

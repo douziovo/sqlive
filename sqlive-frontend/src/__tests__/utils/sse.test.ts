@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+
 import { readSseStream } from '@/utils/sse'
 
 function createMockResponse(chunks: (string | Uint8Array)[]): Response {

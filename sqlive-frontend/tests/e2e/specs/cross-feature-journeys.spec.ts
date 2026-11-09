@@ -1,6 +1,7 @@
+import type { Page } from '@playwright/test'
+
 import { expect, gotoApp, test } from '../fixtures/sql-editor.fixture'
 import type { SqlEditor } from '../fixtures/sql-editor.fixture'
-import type { Page } from '@playwright/test'
 import { openFirstNodeAndTeach, openKnowledgePanel } from '../helpers/knowledge-graph'
 
 /**

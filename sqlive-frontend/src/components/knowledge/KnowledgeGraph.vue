@@ -63,29 +63,32 @@
 
 <script setup lang="ts">
 import { Background } from '@vue-flow/background'
-import { MiniMap } from '@vue-flow/minimap'
 import { VueFlow } from '@vue-flow/core'
 import type { VueFlowStore } from '@vue-flow/core'
-import { markRaw, nextTick, onMounted, onUnmounted, provide, shallowRef } from 'vue'
+import type { Edge } from '@vue-flow/core'
+import { MiniMap } from '@vue-flow/minimap'
+
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import '@vue-flow/minimap/dist/style.css'
-import type { Edge } from '@vue-flow/core'
+import { markRaw, nextTick, onMounted, onUnmounted, provide, shallowRef } from 'vue'
+
+import ErSearchBar from '@/components/er/ErSearchBar.vue'
 import { useGraphHover } from '@/composables/useGraphHover'
-import { useGraphViewport } from '@/composables/useGraphViewport'
-import { useGraphSearch } from '@/composables/useGraphSearch'
 import { useGraphLOD } from '@/composables/useGraphLOD'
+import { useGraphSearch } from '@/composables/useGraphSearch'
+import { useGraphViewport } from '@/composables/useGraphViewport'
 import type {
     KnowledgeNode as KnowledgeFlowNode,
     KnowledgeTopic
 } from '@/composables/useKnowledgeGraph'
-import ErSearchBar from '@/components/er/ErSearchBar.vue'
-import KnowledgeNode from './KnowledgeNode.vue'
+
 import KnowledgeGraphDetailCard from './graph/KnowledgeGraphDetailCard.vue'
 import { useGraphEdgeStyling } from './graph/useGraphEdgeStyling'
+import { useGraphLayoutManager } from './graph/useGraphLayoutManager'
 import { useGraphNodeStyling } from './graph/useGraphNodeStyling'
 import { useNodeCelebrationEffects } from './graph/useNodeCelebrationEffects'
-import { useGraphLayoutManager } from './graph/useGraphLayoutManager'
+import KnowledgeNode from './KnowledgeNode.vue'
 
 const props = defineProps<{
     nodes: KnowledgeFlowNode[]

@@ -1,7 +1,8 @@
+import { useResizeObserver, useTimeoutFn } from '@vueuse/core'
 import type { EChartsOption } from 'echarts'
 import * as echarts from 'echarts'
 import { onBeforeUnmount, onMounted, ref } from 'vue'
-import { useResizeObserver, useTimeoutFn } from '@vueuse/core'
+
 import { registerChartTheme, THEME_NAME } from './chartTheme'
 
 registerChartTheme()

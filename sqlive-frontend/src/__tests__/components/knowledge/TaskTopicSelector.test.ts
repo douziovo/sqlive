@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
+
 import TaskTopicSelector from '@/components/knowledge/TaskTopicSelector.vue'
 import type { KnowledgeTopic } from '@/composables/useKnowledgeGraph'
 

@@ -1,13 +1,13 @@
 <template>
     <div
-        class="flex items-center justify-between px-4 py-2 border-b border-border select-none shrink-0"
+        class="flex shrink-0 items-center justify-between border-b border-border px-4 py-2 select-none"
         :class="isMinimized ? 'cursor-pointer' : 'cursor-move'"
         @mousedown="emit('dragStart', $event)"
         @dblclick="emit('toggle')"
     >
-        <span class="text-sm font-medium text-muted-foreground flex items-center gap-2">
+        <span class="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <span
-                class="w-5 h-5 rounded-full bg-linear-to-br from-primary to-primary/60 flex items-center justify-center text-[10px] text-white"
+                class="flex h-5 w-5 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary/60 text-[10px] text-white"
                 >AI</span
             >
             SQL 助手
@@ -15,11 +15,11 @@
         <div class="flex items-center gap-1">
             <button
                 @click="emit('clear')"
-                class="text-xs text-muted-foreground/70 hover:text-muted-foreground px-2 py-1 rounded-lg hover:bg-secondary cursor-pointer transition-colors"
+                class="cursor-pointer rounded-lg px-2 py-1 text-xs text-muted-foreground/70 transition-colors hover:bg-secondary hover:text-muted-foreground"
                 title="清空对话"
             >
                 <svg
-                    class="w-4 h-4"
+                    class="h-4 w-4"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -33,11 +33,11 @@
             <button
                 data-testid="ai-chat-close"
                 @click="emit('close')"
-                class="text-xs text-muted-foreground/70 hover:text-muted-foreground px-2 py-1 rounded-lg hover:bg-secondary cursor-pointer transition-colors"
+                class="cursor-pointer rounded-lg px-2 py-1 text-xs text-muted-foreground/70 transition-colors hover:bg-secondary hover:text-muted-foreground"
                 title="关闭"
             >
                 <svg
-                    class="w-4 h-4"
+                    class="h-4 w-4"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"

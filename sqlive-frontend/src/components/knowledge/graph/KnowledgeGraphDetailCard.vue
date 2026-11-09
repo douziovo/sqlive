@@ -17,6 +17,7 @@
 
 <script setup lang="ts">
 import type { KnowledgeTopic } from '@/composables/useKnowledgeGraph'
+
 import KnowledgeDetail from '../KnowledgeDetail.vue'
 
 defineProps<{

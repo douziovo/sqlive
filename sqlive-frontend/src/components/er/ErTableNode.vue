@@ -2,7 +2,7 @@
     <div
         class="er-table-node"
         :class="{
-            'opacity-30 pointer-events-none': data.isFiltered,
+            'pointer-events-none opacity-30': data.isFiltered,
             'er-table-node-match': data.isMatchHighlight,
             'er-table-node-active': data.isActiveMatch
         }"
@@ -66,6 +66,7 @@
 
 <script setup lang="ts">
 import { Handle, Position } from '@vue-flow/core'
+
 import type { ErTableNodeData } from '@/model/DatabaseTypes'
 
 const props = defineProps({

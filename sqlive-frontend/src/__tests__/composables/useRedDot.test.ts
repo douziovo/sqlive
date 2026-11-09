@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { nextTick } from 'vue'
+
 import { useRedDot } from '@/composables/useRedDot'
 
 beforeEach(() => {

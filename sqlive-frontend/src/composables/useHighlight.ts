@@ -1,4 +1,5 @@
 import { reactive, ref } from 'vue'
+
 import type { CanonicalStatement, HighlightState, TableSchema } from '../model/DatabaseTypes'
 import { compareValuesForHighlight, extractSqlStatements } from '../utils/sqlStatements'
 

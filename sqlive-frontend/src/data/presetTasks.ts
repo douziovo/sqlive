@@ -1,5 +1,6 @@
-import type { KnowledgeTask, TaskSubstep } from '@/composables/useKnowledgeTasks'
 import { nanoid } from 'nanoid'
+
+import type { KnowledgeTask, TaskSubstep } from '@/composables/useKnowledgeTasks'
 
 // ── Preset substep helper ─────────────────────────────────────────
 // Seeds substeps so the first one is active, the rest are locked.

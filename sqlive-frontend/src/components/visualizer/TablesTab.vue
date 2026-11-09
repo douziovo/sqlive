@@ -16,10 +16,10 @@
         @navigate-tab="emit('navigate', $event)"
     />
 
-    <div class="mt-4 pb-8 flex justify-center">
+    <div class="mt-4 flex justify-center pb-8">
         <button
             @click="showCreateModal = true"
-            class="flex items-center gap-2 px-6 py-3 border-2 border-dashed border-border rounded-lg text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/10 transition-colors font-semibold"
+            class="flex items-center gap-2 rounded-lg border-2 border-dashed border-border px-6 py-3 font-semibold text-muted-foreground transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary"
         >
             <span>&#x2795;</span> 添加新表格
         </button>
@@ -33,6 +33,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+
 import type {
     CellUpdateEvent,
     CreateTableEvent,
@@ -43,6 +44,7 @@ import type {
     TriggerInfo,
     ViewInfo
 } from '@/model/DatabaseTypes'
+
 import CreateTableModal from '../CreateTableModal.vue'
 import EmptyState from '../EmptyState.vue'
 import TableSection from '../TableSection.vue'

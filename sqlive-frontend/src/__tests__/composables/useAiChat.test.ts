@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick, ref } from 'vue'
+
 import type { AiMessage } from '@/composables/useAiChat'
+
 import { type AiChatSetup, setupAiChat } from '../test-utils'
 
 describe('useAiChat', () => {

@@ -31,8 +31,9 @@
 </template>
 
 <script setup lang="ts">
-import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'
 import { computed } from 'vue'
+
+import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'
 
 const props = defineProps<{
     pinnedTask: KnowledgeTask | null

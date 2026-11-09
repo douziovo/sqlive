@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
+
 import JournalCategoryTabs from '@/components/knowledge/journal/JournalCategoryTabs.vue'
 import RedDotBadge from '@/components/knowledge/RedDotBadge.vue'
 

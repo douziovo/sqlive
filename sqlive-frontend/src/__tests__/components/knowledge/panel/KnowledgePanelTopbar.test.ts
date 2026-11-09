@@ -1,7 +1,8 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
-import KnowledgePanelTopbar from '@/components/knowledge/panel/KnowledgePanelTopbar.vue'
+
 import KnowledgePanelFilters from '@/components/knowledge/panel/KnowledgePanelFilters.vue'
+import KnowledgePanelTopbar from '@/components/knowledge/panel/KnowledgePanelTopbar.vue'
 
 const progress = {
     count: 3,

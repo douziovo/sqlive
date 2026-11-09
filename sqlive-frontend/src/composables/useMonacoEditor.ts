@@ -1,10 +1,11 @@
-import * as monaco from 'monaco-editor/editor/editor.api'
-import 'monaco-editor/features/contextmenu/register'
-import { type Ref, watch } from 'vue'
 import { useTimeoutFn } from '@vueuse/core'
-import 'monaco-editor/languages/definitions/sql/register'
+import 'monaco-editor/features/contextmenu/register'
+import * as monaco from 'monaco-editor/editor/editor.api'
 import editorWorker from 'monaco-editor/editor/editor.worker?worker'
+import 'monaco-editor/languages/definitions/sql/register'
 import { format } from 'sql-formatter'
+import { type Ref, watch } from 'vue'
+
 import type { AiActions } from './useAiChat'
 
 self.MonacoEnvironment = {

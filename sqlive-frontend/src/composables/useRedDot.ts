@@ -72,9 +72,7 @@ export function useRedDot() {
 
     // D-03: prefix query for parent-level visibility checks
     function hasDotInPrefix(prefix: string): boolean {
-        return Object.entries(redDots.value).some(
-            ([k, v]) => Boolean(v) && k.startsWith(prefix)
-        )
+        return Object.entries(redDots.value).some(([k, v]) => Boolean(v) && k.startsWith(prefix))
     }
 
     return { redDots, keyParents, show, clear, isVisible, clearAll, hasAnyDot, hasDotInPrefix }

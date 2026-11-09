@@ -1,10 +1,8 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { defineComponent, nextTick } from 'vue'
-import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DialogContent } from 'reka-ui'
-import { Dialog, DialogScrollContent } from '@/components/ui/dialog'
-import DialogFooter from '@/components/ui/dialog/DialogFooter.vue'
-import CommandItem from '@/components/ui/command/CommandItem.vue'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { defineComponent, nextTick } from 'vue'
+
 import {
     Command,
     CommandEmpty,
@@ -12,6 +10,9 @@ import {
     CommandInput,
     CommandList
 } from '@/components/ui/command'
+import CommandItem from '@/components/ui/command/CommandItem.vue'
+import { Dialog, DialogScrollContent } from '@/components/ui/dialog'
+import DialogFooter from '@/components/ui/dialog/DialogFooter.vue'
 // NOTE: SelectScrollUpButton/SelectScrollDownButton fallback icons are NOT covered
 // here: reka-ui mounts them through <Presence :present="canScrollUp">, and jsdom
 // reports zero scroll metrics, so the buttons never become present. Verified by

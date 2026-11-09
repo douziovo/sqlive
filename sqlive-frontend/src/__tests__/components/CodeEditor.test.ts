@@ -2,8 +2,9 @@ import { mount } from '@vue/test-utils'
 import type { VueWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick, ref } from 'vue'
-import { AI_ACTIONS_KEY, SQL_CONTEXT_KEY } from '@/model/injectionKeys'
+
 import type { AiActions } from '@/composables/useAiChat'
+import { AI_ACTIONS_KEY, SQL_CONTEXT_KEY } from '@/model/injectionKeys'
 
 // The monaco-backed composable is covered by its own test file; here we only
 // need to observe how the component drives it.

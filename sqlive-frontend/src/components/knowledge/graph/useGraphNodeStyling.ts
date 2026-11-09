@@ -1,5 +1,6 @@
 import { computed } from 'vue'
 import type { ComputedRef, Ref } from 'vue'
+
 import type { KnowledgeNode as KnowledgeFlowNode } from '@/composables/useKnowledgeGraph'
 
 /**

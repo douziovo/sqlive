@@ -38,13 +38,15 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+
 import type { KnowledgeTopic } from '@/composables/useKnowledgeGraph'
 import type { TaskSubstep } from '@/composables/useKnowledgeTasks'
 import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
 import { useRedDot } from '@/composables/useRedDot'
+
 import JournalCategoryTabs from './journal/JournalCategoryTabs.vue'
-import JournalTaskList from './journal/JournalTaskList.vue'
 import JournalTaskDetail from './journal/JournalTaskDetail.vue'
+import JournalTaskList from './journal/JournalTaskList.vue'
 import type { JournalCategory, TaskCreatePayload } from './journal/taskPresentation'
 
 // ── Props / Emits ───────────────────────────────────────────────

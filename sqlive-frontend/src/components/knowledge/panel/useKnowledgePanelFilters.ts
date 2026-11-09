@@ -1,6 +1,7 @@
 import type { Edge } from '@vue-flow/core'
 import { computed, ref } from 'vue'
 import type { ComputedRef, Ref } from 'vue'
+
 import type { KnowledgeNode } from '@/composables/useKnowledgeGraph'
 
 /**

@@ -1,33 +1,35 @@
 <template>
-    <thead class="text-xs text-secondary-foreground uppercase bg-secondary border-b border-border">
+    <thead class="border-b border-border bg-secondary text-xs text-secondary-foreground uppercase">
         <tr>
             <th
                 v-for="col in table.columns"
                 :key="col"
                 @click="emit('toggle-sort', col)"
-                class="px-4 py-3 border-b-2 transition-colors duration-200 align-top cursor-pointer select-none hover:bg-secondary/50"
+                class="cursor-pointer border-b-2 px-4 py-3 align-top transition-colors duration-200 select-none hover:bg-secondary/50"
                 style="min-width: 150px"
                 :class="[
                     isColumnActive(col)
-                        ? 'bg-primary/10 text-primary border-primary'
+                        ? 'border-primary bg-primary/10 text-primary'
                         : sortColumn === col
-                          ? 'bg-primary/10 text-primary border-primary/30'
+                          ? 'border-primary/30 bg-primary/10 text-primary'
                           : 'border-transparent'
                 ]"
             >
-                <div class="text-sm font-bold whitespace-nowrap flex items-center gap-1">
+                <div class="flex items-center gap-1 text-sm font-bold whitespace-nowrap">
                     {{ col }}
-                    <span v-if="sortColumn === col && sortDir === 'asc'" class="text-primary text-xs"
+                    <span
+                        v-if="sortColumn === col && sortDir === 'asc'"
+                        class="text-xs text-primary"
                         >&#x25B2;</span
                     >
                     <span
                         v-if="sortColumn === col && sortDir === 'desc'"
-                        class="text-primary text-xs"
+                        class="text-xs text-primary"
                         >&#x25BC;</span
                     >
                 </div>
                 <div
-                    class="text-[10px] text-muted-foreground/70 font-mono mt-1 lowercase whitespace-nowrap overflow-hidden text-ellipsis"
+                    class="mt-1 overflow-hidden font-mono text-[10px] text-ellipsis whitespace-nowrap text-muted-foreground/70 lowercase"
                     :title="table.columnTypes[col]"
                 >
                     {{ table.columnTypes[col] || 'unknown' }}
@@ -37,18 +39,19 @@
                     @click.stop="navigateTo('indexes')"
                     @mouseenter.stop="emit('column-idx-enter', $event, col)"
                     @mouseleave="emit('badge-leave')"
-                    class="mt-1 text-[10px] text-primary cursor-pointer hover:text-primary hover:underline font-normal"
+                    class="mt-1 cursor-pointer text-[10px] font-normal text-primary hover:text-primary hover:underline"
                 >
                     &#x1F4C7; {{ columnIndexes[col].length }}
                 </div>
             </th>
-            <th class="px-2 py-3 w-10 border-b-2 border-transparent"></th>
+            <th class="w-10 border-b-2 border-transparent px-2 py-3"></th>
         </tr>
     </thead>
 </template>
 
 <script setup lang="ts">
 import { computed, inject } from 'vue'
+
 import type { TableSchema } from '@/model/DatabaseTypes'
 import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
 

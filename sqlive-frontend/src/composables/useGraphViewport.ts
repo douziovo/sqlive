@@ -1,7 +1,8 @@
 import type { VueFlowStore, ViewportTransform } from '@vue-flow/core'
+import { useTimeoutFn } from '@vueuse/core'
 import type { Ref } from 'vue'
 import { getCurrentInstance, nextTick, onMounted, reactive, ref } from 'vue'
-import { useTimeoutFn } from '@vueuse/core'
+
 import type { KnowledgeNode } from '@/composables/useKnowledgeGraph'
 import { STORAGE_KEYS } from '@/constants/storageKeys'
 

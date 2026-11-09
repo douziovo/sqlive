@@ -2,8 +2,9 @@ import { mount } from '@vue/test-utils'
 import type { VueWrapper } from '@vue/test-utils'
 import { afterEach, describe, expect, it } from 'vitest'
 import { nextTick } from 'vue'
-import type { AiMessage } from '@/composables/useAiChat'
+
 import AiChatUserMessage from '@/components/ai/AiChatUserMessage.vue'
+import type { AiMessage } from '@/composables/useAiChat'
 
 function makeMessage(overrides: Partial<AiMessage> = {}): AiMessage {
     return {

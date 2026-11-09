@@ -11,7 +11,7 @@
             <span v-for="i in 3" :key="i" :class="{ 'opacity-20': i > topic.difficulty }"
                 >&#9733;</span
             >
-            <span class="text-xs text-muted-foreground ml-1">{{ diffLabel }}</span>
+            <span class="ml-1 text-xs text-muted-foreground">{{ diffLabel }}</span>
         </span>
 
         <p class="knowledge-detail__desc">{{ topic.description }}</p>
@@ -112,9 +112,11 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+
 import type { KnowledgeTopic } from '@/composables/useKnowledgeGraph'
 import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'
 import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
+
 import TaskCreateForm from './TaskCreateForm.vue'
 import TaskItem from './TaskItem.vue'
 

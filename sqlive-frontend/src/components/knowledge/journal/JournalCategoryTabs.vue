@@ -18,6 +18,7 @@
 
 <script setup lang="ts">
 import { TASK_CATEGORY_COLORS, TASK_CATEGORY_LABELS } from '@/data/taskCategories'
+
 import RedDotBadge from '../RedDotBadge.vue'
 import type { JournalCategory } from './taskPresentation'
 

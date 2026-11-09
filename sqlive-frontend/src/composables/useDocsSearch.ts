@@ -1,5 +1,6 @@
 import type MiniSearchType from 'minisearch'
 import { ref } from 'vue'
+
 import { extractH1, stripMarkdown, pathToSlug } from '@/utils/markdown'
 
 /**

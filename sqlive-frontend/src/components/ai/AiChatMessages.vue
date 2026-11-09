@@ -1,5 +1,5 @@
 <template>
-    <Conversation v-show="!isMinimized" class="flex-1 min-h-0 bg-muted/50" :anchor="'none'">
+    <Conversation v-show="!isMinimized" class="min-h-0 flex-1 bg-muted/50" :anchor="'none'">
         <ConversationContent>
             <ConversationEmptyState
                 v-if="messages.length === 0"
@@ -8,19 +8,19 @@
             >
                 <template #icon>
                     <div
-                        class="w-16 h-16 rounded-2xl bg-linear-to-br from-primary to-primary/60 flex items-center justify-center text-2xl shadow-lg shadow-primary/20"
+                        class="flex h-16 w-16 items-center justify-center rounded-2xl bg-linear-to-br from-primary to-primary/60 text-2xl shadow-lg shadow-primary/20"
                     >
                         🤖
                     </div>
                 </template>
                 <template #default>
-                    <div class="w-full max-w-xs space-y-2 mt-4">
+                    <div class="mt-4 w-full max-w-xs space-y-2">
                         <Suggestion
                             v-for="p in prompts"
                             :key="p"
                             :suggestion="p"
                             variant="outline"
-                            class="w-full justify-start text-sm font-normal text-muted-foreground border-border hover:border-primary/40 hover:text-primary hover:bg-primary/5 transition-colors rounded-xl"
+                            class="w-full justify-start rounded-xl border-border text-sm font-normal text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
                             @click="emit('send', p)"
                             >{{ p }}</Suggestion
                         >
@@ -31,7 +31,7 @@
             <div v-for="(msg, idx) in messages" :key="msg.id">
                 <div
                     v-if="msg.role === 'system'"
-                    class="w-full bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-2 text-xs text-destructive"
+                    class="w-full rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-2 text-xs text-destructive"
                 >
                     ⚠️ {{ msg.content }}
                 </div>
@@ -68,6 +68,7 @@
 
 <script setup lang="ts">
 import { nextTick, onUnmounted, ref, watch } from 'vue'
+
 import {
     Conversation,
     ConversationContent,
@@ -75,6 +76,7 @@ import {
 } from '@/components/ai-elements/conversation'
 import { Suggestion } from '@/components/ai-elements/suggestion'
 import type { AiMessage } from '@/composables/useAiChat'
+
 import AiChatAssistantMessage from './AiChatAssistantMessage.vue'
 import AiChatUserMessage from './AiChatUserMessage.vue'
 

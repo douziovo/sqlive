@@ -1,16 +1,18 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick, reactive, ref } from 'vue'
+
 import type {
     HighlightState,
     InsertResult,
     TableSchema,
     TruncationInfo
 } from '@/model/DatabaseTypes'
-import TableSection from '../../components/TableSection.vue'
+import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
+
 import HoverPreview from '../../components/HoverPreview.vue'
 import TablePagination from '../../components/table/TablePagination.vue'
-import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
+import TableSection from '../../components/TableSection.vue'
 
 const mockTable: TableSchema = {
     name: 'users',

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
+
 import { setupAiChat, tick, type AiChatSetup } from '../test-utils'
 
 const response = (text = 'answer') =>

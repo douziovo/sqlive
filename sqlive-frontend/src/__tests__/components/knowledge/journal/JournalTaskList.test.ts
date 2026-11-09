@@ -1,7 +1,8 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
-import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'
+
 import JournalTaskList from '@/components/knowledge/journal/JournalTaskList.vue'
+import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'
 
 function makeTask(overrides: Partial<KnowledgeTask> = {}): KnowledgeTask {
     return {

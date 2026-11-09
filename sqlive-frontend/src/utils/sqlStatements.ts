@@ -1,6 +1,6 @@
+import type { TruncationInfo } from '../model/DatabaseTypes'
 import { parsePrimaryType } from './sql'
 import { parseInsertTarget } from './sqlIdentifiers'
-import type { TruncationInfo } from '../model/DatabaseTypes'
 
 /**
  * Utility functions for SQL statement parsing, type enforcement, and value comparison.

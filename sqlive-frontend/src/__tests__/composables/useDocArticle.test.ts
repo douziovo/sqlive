@@ -21,9 +21,10 @@ vi.mock('dompurify', () => ({
     }
 }))
 
-import { useDocArticle } from '@/composables/useDocArticle'
-import { marked } from 'marked'
 import DOMPurify from 'dompurify'
+import { marked } from 'marked'
+
+import { useDocArticle } from '@/composables/useDocArticle'
 
 describe('useDocArticle', () => {
     beforeEach(() => {

@@ -1,6 +1,7 @@
-import { nextTick } from 'vue'
-import { afterEach, describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { afterEach, describe, expect, it } from 'vitest'
+import { nextTick } from 'vue'
+
 import ConfettiOverlay from '@/components/knowledge/ConfettiOverlay.vue'
 
 function getOverlay(): Element | null {
