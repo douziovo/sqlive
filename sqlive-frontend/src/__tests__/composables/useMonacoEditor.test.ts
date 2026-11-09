@@ -57,6 +57,7 @@ vi.mock('monaco-editor/editor/editor.worker', () => ({
 }))
 
 vi.mock('monaco-editor/languages/definitions/sql/register', () => ({}))
+vi.mock('monaco-editor/features/contextmenu/register', () => ({}))
 
 const mockFormat = vi.fn((sql: string) => `formatted: ${sql}`)
 vi.mock('sql-formatter', () => ({

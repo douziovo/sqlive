@@ -1,4 +1,5 @@
 import * as monaco from 'monaco-editor/editor/editor.api'
+import 'monaco-editor/features/contextmenu/register'
 import { type Ref, watch } from 'vue'
 import { useTimeoutFn } from '@vueuse/core'
 import 'monaco-editor/languages/definitions/sql/register'
