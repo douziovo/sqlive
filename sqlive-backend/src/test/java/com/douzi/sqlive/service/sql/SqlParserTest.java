@@ -9,14 +9,36 @@ class SqlParserTest {
 
 	private final SqlParser parser = new SqlParser();
 
+	@Test
+	void sqliteBackslashesDoNotEscapeQuotesOrHideLaterStatements() {
+		String script = "SELECT 'C:\\';\nSELECT 'it''s\\'; SELECT 2;";
+		var statements = parser.parseStatementsPrecise(script);
+		assertEquals(3, statements.size());
+		assertEquals(2, statements.get(1).startLine());
+		assertEquals("SELECT 2;", statements.getLast().sql());
+		for (var statement : statements) {
+			assertEquals(statement.sql(), script.substring(statement.startPos(), statement.endPos()));
+		}
+	}
+
+	@Test
+	void sqliteBracketAndBacktickIdentifiersProtectSemicolonsAndKeywords() {
+		for (String identifier : new String[]{"[a;BEGIN]", "`a``;CASE`", "\"a\"\";END\""}) {
+			String script = "CREATE TABLE " + identifier + "(id); INSERT INTO " + identifier + " VALUES(1); SELECT 2;";
+			var statements = parser.parseStatementsPrecise(script);
+			assertEquals(3, statements.size(), identifier);
+			assertEquals("SELECT 2;", statements.getLast().sql());
+		}
+	}
+
 	// ── parseStatementsPrecise ──────────────────────────────
 
 	@Test
 	void shouldParseSingleStatement() {
 		var stmts = parser.parseStatementsPrecise("SELECT 1;");
 		assertEquals(1, stmts.size());
-		assertTrue(stmts.get(0).sql().contains("SELECT 1"));
-		assertEquals(1, stmts.get(0).startLine());
+		assertTrue(stmts.getFirst().sql().contains("SELECT 1"));
+		assertEquals(1, stmts.getFirst().startLine());
 	}
 
 	@Test
@@ -38,13 +60,13 @@ class SqlParserTest {
 	}
 
 	@Test
-	void shouldNotSplitSemicolonsInsideBeginEndBlock() {
+	void shouldSplitTransactionBeginAndEndIntoSeparateStatements() {
 		var stmts = parser.parseStatementsPrecise("""
 				BEGIN;
 				SELECT 1;
 				SELECT 2;
 				END;""");
-		assertEquals(1, stmts.size());
+		assertEquals(4, stmts.size());
 	}
 
 	@Test
@@ -94,7 +116,7 @@ class SqlParserTest {
 	void shouldHandleSqlWithoutSemicolon() {
 		var stmts = parser.parseStatementsPrecise("SELECT 1");
 		assertEquals(1, stmts.size());
-		assertTrue(stmts.get(0).sql().contains("SELECT 1"));
+		assertTrue(stmts.getFirst().sql().contains("SELECT 1"));
 	}
 
 	@Test
@@ -127,7 +149,7 @@ class SqlParserTest {
 		assertEquals(2, statements.getLast().startLine());
 	}
 
-	// ── endPos char-offset contract ───────────────────
+	// ── D-03a: endPos char-offset contract ───────────────────
 
 	@Test
 	void shouldPopulateEndPosAsCharOffsetAfterSemicolon() {

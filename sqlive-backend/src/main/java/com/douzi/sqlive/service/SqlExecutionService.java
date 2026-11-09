@@ -11,10 +11,14 @@ import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.ConnectionCallback;
+import org.springframework.jdbc.datasource.SingleConnectionDataSource;
+import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.stereotype.Service;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
@@ -82,28 +86,65 @@ public class SqlExecutionService {
 			}
 
 			try {
-				if (reset || poolEntry.isNew()) {
-					clearDatabase(jdbc);
-				}
-				SqlResponse scriptError = runScript(sqlScript, jdbc, response);
-				if (scriptError != null) {
-					return scriptError;
-				}
+				return jdbc.execute((ConnectionCallback<SqlResponse>) connection ->
+						executeOnConnection(sqlScript, reset || poolEntry.isNew(), jdbc, connection, response));
 			} catch (Exception e) {
 				log.error("Failed to execute SQL script", e);
-				return SqlResponse.error("Internal server error", 0);
+				return withSessionMetadata(SqlResponse.error("Internal server error", 0), response);
 			} finally {
 				poolManager.release(dbName);
 			}
-
-			return response;
 		}
+	}
+
+	private SqlResponse executeOnConnection(String script, boolean reset, JdbcTemplate poolJdbc,
+	                                       Connection connection, SqlResponse response) {
+		// Borrow once for reset, script execution, recovery and the metadata snapshot.
+		var jdbc = new JdbcTemplate(new SingleConnectionDataSource(connection, true));
+		SqlResponse result = response;
+		try {
+			if (reset) clearDatabase(jdbc);
+			SqlResponse scriptError = runScript(script, jdbc, response);
+			if (scriptError != null) result = scriptError;
+		} catch (Exception e) {
+			log.error("Failed to execute SQL script", e);
+			result = SqlResponse.error("Internal server error", 0);
+		} finally {
+			try {
+				if (rollbackOpenTransaction(connection) && result.getError() == null) {
+					result = SqlResponse.error("Transactions must be committed or rolled back within one request", 0);
+				}
+			} catch (SQLException e) {
+				log.error("Failed to clean up SQL transaction; discarding connection", e);
+				if (poolJdbc.getDataSource() instanceof HikariDataSource pool) {
+					pool.evictConnection(connection);
+				}
+				result = SqlResponse.error("Failed to clean up SQL transaction", 0);
+			}
+		}
+		return withSessionMetadata(result, response);
+	}
+
+	private boolean rollbackOpenTransaction(Connection connection) throws SQLException {
+		// SQL BEGIN/SAVEPOINT do not change JDBC getAutoCommit(), so ask SQLite itself.
+		try (Statement statement = connection.createStatement()) {
+			statement.execute("ROLLBACK");
+			return true;
+		} catch (SQLException e) {
+			if (e.getMessage() != null && e.getMessage().contains("no transaction is active")) return false;
+			throw e;
+		}
+	}
+
+	private SqlResponse withSessionMetadata(SqlResponse result, SqlResponse requestState) {
+		result.setSessionRecreated(requestState.isSessionRecreated());
+		return result;
 	}
 
 	/**
 	 * Runs every parsed statement, then fills {@code response} with the post-execution
-	 * metadata snapshot. Returns null on success, or a fresh error response (without
-	 * metadata or the sessionRecreated flag) when a statement is blocked or fails.
+	 * metadata snapshot. Returns null on success, or an error response when a statement
+	 * is blocked or fails. The request boundary adds session metadata to either result.
 	 */
 	private SqlResponse runScript(String sqlScript, JdbcTemplate jdbc, SqlResponse response) {
 		List<SqlParser.SqlStatement> statements = sqlParser.parseStatementsPrecise(sqlScript);
@@ -138,7 +179,7 @@ public class SqlExecutionService {
 
 	private void executeStatement(JdbcTemplate jdbc, SqlParser.SqlStatement s, List<TableSchema> allQueryResults) {
 		jdbc.execute((Statement stmt) -> {
-			// / WARN-01: @SuppressWarnings narrowed from method-level to the actual SQL sink
+			// D-R0-004 / WARN-01: @SuppressWarnings narrowed from method-level to the actual SQL sink
 			// (local variable declaration — Java annotations can only target declarations, not statements).
 			@SuppressWarnings("SqlSourceToSinkFlow")
 			boolean hasResultSet = stmt.execute(s.sql());
@@ -167,8 +208,8 @@ public class SqlExecutionService {
 		payload.setTriggers(metadataExtractor.extractTriggers(jdbc));
 		payload.setForeignKeys(metadataExtractor.extractForeignKeys(jdbc));
 
-		// populate canonicalStatements with 1:1 mapping from parsed statements.
-		// Char offsets match JS String.prototype.substring (UTF-16 code unit indices).
+		// D-03b: populate canonicalStatements with 1:1 mapping from parsed statements.
+		// Char offsets match JS String.prototype.substring per Phase 2 D-01 (UTF-16 code unit indices).
 		List<SqlResponse.CanonicalStatement> canonical = statements.stream()
 				.map(s -> {
 					SqlResponse.CanonicalStatement cs = new SqlResponse.CanonicalStatement();
@@ -202,7 +243,11 @@ public class SqlExecutionService {
 
 	private void clearDatabase(JdbcTemplate jdbc) {
 		var objects = jdbc.queryForList(
-				"SELECT name, type FROM sqlite_master WHERE type IN ('view','trigger','table') AND name NOT LIKE 'sqlite_%'");
+				"SELECT * FROM (SELECT 'temp' AS schema_name, name, type FROM temp.sqlite_master " +
+				"WHERE type IN ('view','trigger','table') AND name NOT LIKE 'sqlite_%' " +
+				"UNION ALL SELECT 'main' AS schema_name, name, type FROM main.sqlite_master " +
+				"WHERE type IN ('view','trigger','table') AND name NOT LIKE 'sqlite_%') " +
+				"ORDER BY CASE type WHEN 'view' THEN 0 WHEN 'trigger' THEN 1 ELSE 2 END");
 		jdbc.execute((Connection con) -> {
 			try (Statement stmt = con.createStatement()) {
 				// A complete reset must also handle populated FK cycles. Only trusted reset code
@@ -216,7 +261,9 @@ public class SqlExecutionService {
 							case "table" -> "TABLE";
 							default -> throw new IllegalStateException("Unexpected schema object");
 						};
-						stmt.execute("DROP " + type + " IF EXISTS " + MetadataExtractor.quoteIdentifier((String) obj.get("name")));
+						stmt.execute("DROP " + type + " IF EXISTS " +
+								MetadataExtractor.quoteIdentifier((String) obj.get("schema_name")) + "." +
+								MetadataExtractor.quoteIdentifier((String) obj.get("name")));
 					}
 				} finally {
 					stmt.execute("PRAGMA foreign_keys = ON");

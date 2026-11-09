@@ -6,6 +6,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.UUID;
@@ -119,5 +124,23 @@ class SqlControllerTest {
 		assertNotNull(body.getData().getMetadata());
 		assertTrue(body.getData().getMetadata().getDurationMs() >= 0);
 		assertTrue(body.getData().getMetadata().getStatementCount() >= 2);
+	}
+
+	@Test
+	void failedRecreatedSessionExposesItsRecoveryHeaderAcrossOrigins() {
+		SqlRequest request = new SqlRequest();
+		request.setSql("SELECT * FROM missing;");
+		request.setDbName(db("recreated_cors"));
+		request.setReset(false);
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+		headers.setOrigin("http://localhost:5173");
+		var corsClient = new RestTemplate(new JdkClientHttpRequestFactory());
+		var response = corsClient.exchange(url(), HttpMethod.POST,
+				new HttpEntity<>(request, headers), SqlResponse.class);
+		assertNotNull(response.getBody().getError());
+		assertEquals("true", response.getHeaders().getFirst("X-Session-Recreated"));
+		assertTrue(response.getHeaders().getAccessControlExposeHeaders().contains("X-Session-Recreated"));
+		assertTrue(response.getHeaders().getAccessControlExposeHeaders().contains("Retry-After"));
 	}
 }

@@ -111,12 +111,17 @@ public class DatabasePoolManager {
 
 	private void checkHardLimit(String dbName, @Nullable String clientIp) {
 		if (pools.size() >= hardMax) {
+			evictIdlePools();
+			// A recently released pool is also safe to retire when admission would otherwise fail.
+			if (pools.size() >= hardMax) evictToTarget(hardMax - 1);
+		}
+		if (pools.size() >= hardMax) {
 			log.error("HARD_MAX reached: {} pools, refusing '{}' from IP {}", hardMax, dbName, clientIp);
 			throw new TooManyDatabasesException(
 					String.format("服务器繁忙，请稍后重试 (limit: %d)", hardMax));
 		}
 		if (pools.size() >= softMax) {
-			log.warn("SOFT_MAX reached: {} pools (current: {}), triggering eager eviction", softMax, pools.size());
+			log.warn("SOFT_MAX reached: {} pools (current: {}); idle pools will be reclaimed", softMax, pools.size());
 		}
 	}
 

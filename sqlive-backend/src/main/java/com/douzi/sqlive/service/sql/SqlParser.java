@@ -12,12 +12,12 @@ import java.util.List;
  * <ul>
  *   <li>{@code endPos} = cursor position <b>after</b> the trailing semicolon (i.e. {@code i} after {@code i++; break;})</li>
  *   <li>All offsets are <b>UTF-16 code unit indices</b>, matching JS String.prototype.substring</li>
- *   <li>Single-quote {@code ''} and double-quote {@code ""} escapes are <b>asymmetric</b>:
- *       single-quote supports backslash escape ({@code E'\'}}, PostgreSQL-compat),
- *       double-quote does not</li>
+ *   <li>SQLite quotes escape by doubling the delimiter; backslashes are ordinary characters.
+ *       Square-bracket identifiers close at the first {@code ]}.</li>
  * </ul>
  *
- * <p>Depth tracking: {@code beginDepth} (BEGIN/END), {@code caseDepth} (CASE/END).
+ * <p>Depth tracking: {@code beginDepth} (CREATE TRIGGER bodies only), {@code caseDepth} (CASE/END).
+ * Transaction BEGIN/COMMIT/ROLLBACK/END remain separate executable statements.
  * {@code END} resolves to CASE first when {@code caseDepth > 0}.
  */
 @Component
@@ -46,8 +46,10 @@ public class SqlParser {
 			int start = sc.i;
 			sc.inSingleQuote = false;
 			sc.inDoubleQuote = false;
+			sc.identifierQuote = 0;
 			sc.beginDepth = 0;
 			sc.caseDepth = 0;
+			sc.triggerStatement = isTriggerStatement(script, start);
 
 			// 2. 进入语句内部的动态扫描
 			scanStatementBody(sc, start);
@@ -80,6 +82,14 @@ public class SqlParser {
 				scanSingleQuotedString(sc);
 				continue;
 			}
+			if (sc.identifierQuote != 0) {
+				if (c == sc.identifierQuote) {
+					if (c == '`' && sc.i + 1 < len && script.charAt(sc.i + 1) == '`') sc.i++;
+					else sc.identifierQuote = 0;
+				}
+				sc.i++;
+				continue;
+			}
 			if (isLineCommentStart(script, sc.i)) {
 				skipLineComment(sc);
 				continue;
@@ -98,6 +108,11 @@ public class SqlParser {
 				sc.i++;
 				continue;
 			}
+			if (c == '`' || c == '[') {
+				sc.identifierQuote = c == '[' ? ']' : '`';
+				sc.i++;
+				continue;
+			}
 			if (advanceKeyword(sc, statementStart)) {
 				continue;
 			}
@@ -110,7 +125,7 @@ public class SqlParser {
 		}
 	}
 
-	// 处理双引号标识符 (PostgreSQL 里的 "column_name")
+	// 处理 SQLite 双引号标识符
 	private void scanDoubleQuotedIdentifier(Scanner sc) {
 		String script = sc.script;
 		if (script.charAt(sc.i) == '"') {
@@ -135,10 +150,6 @@ public class SqlParser {
 			} else {
 				sc.inSingleQuote = false;
 			}
-		} else if (c == '\\' && sc.i + 1 < script.length()) {
-			// 兼容 PostgreSQL 允许的反斜杠转义（如 E'abc\'def'）；
-			// 被转义的字符直接跳过，不参与换行统计（与逐字符扫描等价）
-			sc.i++;
 		}
 		sc.i++;
 	}
@@ -169,7 +180,7 @@ public class SqlParser {
 			return true;
 		}
 		if (isKeyword(script, sc.i, statementStart, "BEGIN")) {
-			sc.beginDepth++;
+			if (sc.triggerStatement) sc.beginDepth++;
 			sc.i += 5;
 			return true;
 		}
@@ -187,6 +198,18 @@ public class SqlParser {
 		return false;
 	}
 
+	private boolean isTriggerStatement(String script, int start) {
+		int cursor = skipWhitespaceAndComments(script, start);
+		if (!isKeyword(script, cursor, start, "CREATE")) return false;
+		cursor = skipWhitespaceAndComments(script, cursor + 6);
+		if (isKeyword(script, cursor, start, "TEMPORARY")) {
+			cursor = skipWhitespaceAndComments(script, cursor + 9);
+		} else if (isKeyword(script, cursor, start, "TEMP")) {
+			cursor = skipWhitespaceAndComments(script, cursor + 4);
+		}
+		return isKeyword(script, cursor, start, "TRIGGER");
+	}
+
 	private static boolean isLineCommentStart(String script, int i) {
 		return script.charAt(i) == '-' && i + 1 < script.length() && script.charAt(i + 1) == '-';
 	}
@@ -202,8 +225,10 @@ public class SqlParser {
 		int line = 1;
 		boolean inSingleQuote; // 判定 '字符串'
 		boolean inDoubleQuote; // 判定 "标识符"（如列名、表名）
+		char identifierQuote; // `identifier` or [identifier]
 		int beginDepth;
 		int caseDepth;
+		boolean triggerStatement;
 
 		Scanner(String script) {
 			this.script = script;
