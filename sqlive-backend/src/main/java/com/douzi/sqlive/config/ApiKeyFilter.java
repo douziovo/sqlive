@@ -5,8 +5,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -36,15 +35,14 @@ import java.util.List;
  * </ul>
  *
  * <p>Key comparison uses {@link MessageDigest#isEqual(byte[], byte[])} for constant-time
- * comparison to mitigate timing attacks against the configured key.
+ * comparison to mitigate timing attacks against the configured key (T-13-03b).
  */
+@Slf4j
 @Component
 public class ApiKeyFilter extends OncePerRequestFilter {
 
-	private static final Logger log = LoggerFactory.getLogger(ApiKeyFilter.class);
-
 	private static final String API_KEY_HEADER = "X-API-Key";
-	// drop the trailing slash so the filter matches both "/api/ai" and
+	// WR-02: drop the trailing slash so the filter matches both "/api/ai" and
 	// "/api/ai/..." consistently with SecurityConfig's requestMatchers("/api/ai/**")
 	// (AntPathMatcher ** matches the bare path too). With the trailing slash, a
 	// request to "/api/ai" would bypass the filter while Spring Security still
@@ -56,7 +54,7 @@ public class ApiKeyFilter extends OncePerRequestFilter {
 	public ApiKeyFilter(@Value("${AI_API_KEY:}") String apiKey,
 	                    @Value("${spring.profiles.active:}") String activeProfiles) {
 		this.expectedKey = apiKey;
-		// defense-in-depth — when AI_API_KEY is missing in a non-dev/test profile,
+		// WR-04: defense-in-depth — when AI_API_KEY is missing in a non-dev/test profile,
 		// /api/ai/** silently becomes publicly accessible (dev bypass below). A missing
 		// key in production (e.g. typo'd env var name on Render) would let anyone burn
 		// the DeepSeek quota. Log a loud warning at startup so operators catch this.

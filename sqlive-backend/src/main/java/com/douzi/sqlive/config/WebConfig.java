@@ -1,5 +1,6 @@
 package com.douzi.sqlive.config;
 
+import com.douzi.sqlive.service.ratelimit.RequestRateLimiter;
 import tools.jackson.databind.ObjectMapper;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -22,11 +23,12 @@ public class WebConfig implements WebMvcConfigurer {
 		registry.addMapping("/api/**")
 				.allowedOriginPatterns(sqliveProperties.getCors().getAllowedOriginPatterns().toArray(String[]::new))
 				.allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-				// include X-API-Key so the frontend can send it (wiring) and
+				// WR-05: include X-API-Key so the frontend can send it (CR-02 wiring) and
 				// the browser CORS preflight accepts it. Without this, cross-origin requests
 				// (Vite dev :5173 → backend :8080) would be rejected at preflight even if
 				// the frontend set the header.
 				.allowedHeaders("Content-Type", "Authorization", "Accept", "X-API-Key")
+				.exposedHeaders("X-Session-Recreated", "Retry-After")
 				.allowCredentials(false);
 	}
 
@@ -34,7 +36,8 @@ public class WebConfig implements WebMvcConfigurer {
 	public FilterRegistrationBean<RateLimitFilter> rateLimitFilter() {
 		var limits = sqliveProperties.getRateLimit();
 		FilterRegistrationBean<RateLimitFilter> registration = new FilterRegistrationBean<>();
-		registration.setFilter(new RateLimitFilter(limits.getAiPerMinute(), limits.getSqlPerMinute(), limits.getWindowMs()));
+		registration.setFilter(new RateLimitFilter(new RequestRateLimiter(
+				limits.getAiPerMinute(), limits.getSqlPerMinute(), limits.getWindowMs())));
 		registration.addUrlPatterns("/api/*");
 		registration.setOrder(1);
 		return registration;

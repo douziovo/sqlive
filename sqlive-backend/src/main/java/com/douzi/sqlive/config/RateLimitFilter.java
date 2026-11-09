@@ -1,120 +1,41 @@
 package com.douzi.sqlive.config;
 
+import com.douzi.sqlive.service.ratelimit.RequestRateLimiter;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class RateLimitFilter implements Filter {
 
-	private final long windowMs;
-	private final int aiPerMinute;
-	private final int sqlPerMinute;
+	private final RequestRateLimiter rateLimiter;
 
-	private final Map<String, long[]> aiCounters = new ConcurrentHashMap<>();
-	private final Map<String, long[]> sqlCounters = new ConcurrentHashMap<>();
-
-	private final ScheduledExecutorService cleanupScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-		Thread t = new Thread(r, "ratelimit-cleanup");
-		t.setDaemon(true);
-		return t;
-	});
-
-	private volatile boolean cleanupStarted = false;
-
-	// Limits and window come from application.yml (sqlive.rate-limit.*) — see WebConfig.
-	public RateLimitFilter(int aiPerMinute, int sqlPerMinute, long windowMs) {
-		this.aiPerMinute = aiPerMinute;
-		this.sqlPerMinute = sqlPerMinute;
-		this.windowMs = windowMs;
+	public RateLimitFilter(RequestRateLimiter rateLimiter) {
+		this.rateLimiter = rateLimiter;
 	}
 
 	@Override
 	public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
 			throws IOException, ServletException {
 		HttpServletRequest req = (HttpServletRequest) request;
-		HttpServletResponse resp = (HttpServletResponse) response;
-		String path = req.getRequestURI();
-		String clientIp = req.getRemoteAddr();
-
-		if (!cleanupStarted) {
-			synchronized (this) {
-				if (!cleanupStarted) {
-					cleanupScheduler.scheduleAtFixedRate(this::cleanupExpiredEntries, 5, 5, TimeUnit.MINUTES);
-					cleanupStarted = true;
-				}
-			}
-		}
-
-		int limit;
-		Map<String, long[]> counters;
-		if (path.startsWith("/api/ai/")) {
-			limit = aiPerMinute;
-			counters = aiCounters;
-		} else if (path.equals("/api/execute")) {
-			limit = sqlPerMinute;
-			counters = sqlCounters;
-		} else {
-			chain.doFilter(request, response);
-			return;
-		}
-
-		String key = clientIp + ":" + path;
-		long now = System.currentTimeMillis();
-		boolean[] rejected = {false};
-		long[] window = counters.compute(key, (ignored, current) -> {
-			if (current == null || now - current[0] > windowMs) {
-				current = new long[]{now, 0};
-			}
-			if (current[1] >= limit) {
-				rejected[0] = true;
-			} else {
-				current[1]++;
-			}
-			return current;
-		});
-		if (rejected[0]) {
-			log.warn("Rate limit exceeded: ip={}, path={}, count={}", clientIp, path, window[1]);
+		var decision = rateLimiter.tryAcquire(req.getRemoteAddr(), req.getRequestURI());
+		if (!decision.allowed()) {
+			log.warn("Rate limit exceeded: ip={}, path={}", req.getRemoteAddr(), req.getRequestURI());
+			HttpServletResponse resp = (HttpServletResponse) response;
 			resp.setStatus(429);
+			resp.setHeader("Retry-After", Long.toString(decision.retryAfterSeconds()));
 			resp.setContentType("application/json;charset=UTF-8");
 			resp.getWriter().write("{\"success\":false,\"error\":{\"message\":\"Too many requests, please slow down\"}}");
 			return;
 		}
-
 		chain.doFilter(request, response);
-	}
-
-	private void cleanupExpiredEntries() {
-		long now = System.currentTimeMillis();
-		cleanupMap(aiCounters, now);
-		cleanupMap(sqlCounters, now);
 	}
 
 	@Override
 	public void destroy() {
-		cleanupScheduler.shutdown();
-		try {
-			if (!cleanupScheduler.awaitTermination(5, TimeUnit.SECONDS)) {
-				cleanupScheduler.shutdownNow();
-			}
-		} catch (InterruptedException e) {
-			cleanupScheduler.shutdownNow();
-			Thread.currentThread().interrupt();
-		}
-	}
-
-	private void cleanupMap(Map<String, long[]> counters, long now) {
-		for (String key : counters.keySet()) {
-			counters.computeIfPresent(key, (ignored, window) ->
-					now - window[0] > windowMs ? null : window);
-		}
+		rateLimiter.close();
 	}
 }
