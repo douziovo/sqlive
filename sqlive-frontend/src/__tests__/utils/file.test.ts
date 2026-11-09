@@ -1,34 +1,50 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { downloadFile } from '@/utils/file'
 
-describe('downloadFile', () => {
-    let createObjectURLSpy: ReturnType<typeof vi.fn>
-    let revokeObjectURLSpy: ReturnType<typeof vi.fn>
-    let clickSpy: ReturnType<typeof vi.fn>
+type Spy = ReturnType<typeof vi.fn>
 
+interface DownloadSpies {
+    createObjectURLSpy: Spy
+    revokeObjectURLSpy: Spy
+    clickSpy: Spy
+}
+
+/** 安装 downloadFile 依赖的 URL 全局桩，返回各 spy 供断言使用 */
+function stubDownloadEnvironment(): DownloadSpies {
+    const createObjectURLSpy = vi.fn(() => 'blob:test')
+    const revokeObjectURLSpy = vi.fn()
+    const clickSpy = vi.fn()
+
+    vi.stubGlobal('URL', {
+        createObjectURL: createObjectURLSpy,
+        revokeObjectURL: revokeObjectURLSpy
+    })
+
+    return { createObjectURLSpy, revokeObjectURLSpy, clickSpy }
+}
+
+/** 拦截 document.createElement，为生成的 <a> 挂上 click spy；onAnchor 供需要记录锚点元素的用例使用 */
+function stubAnchorCreation(clickSpy: Spy, onAnchor?: (el: HTMLElement) => void) {
+    const originalCreateElement = document.createElement.bind(document)
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+        const el = originalCreateElement(tag)
+        if (tag === 'a') {
+            onAnchor?.(el as HTMLElement)
+            Object.defineProperty(el, 'click', { value: clickSpy })
+        }
+        return el
+    })
+}
+
+describe('downloadFile', () => {
     afterEach(() => {
         vi.unstubAllGlobals()
         vi.restoreAllMocks()
     })
 
     it('creates a blob and triggers download', () => {
-        createObjectURLSpy = vi.fn(() => 'blob:test')
-        revokeObjectURLSpy = vi.fn()
-        clickSpy = vi.fn()
-
-        vi.stubGlobal('URL', {
-            createObjectURL: createObjectURLSpy,
-            revokeObjectURL: revokeObjectURLSpy
-        })
-
-        const originalCreateElement = document.createElement.bind(document)
-        vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
-            const el = originalCreateElement(tag)
-            if (tag === 'a') {
-                Object.defineProperty(el, 'click', { value: clickSpy })
-            }
-            return el
-        })
+        const { createObjectURLSpy, revokeObjectURLSpy, clickSpy } = stubDownloadEnvironment()
+        stubAnchorCreation(clickSpy)
         vi.spyOn(document.body, 'appendChild').mockImplementation((node: Node) => node)
         vi.spyOn(document.body, 'removeChild').mockImplementation((child: Node) => child)
 
@@ -44,23 +60,8 @@ describe('downloadFile', () => {
     })
 
     it('uses default MIME type', () => {
-        createObjectURLSpy = vi.fn(() => 'blob:test')
-        revokeObjectURLSpy = vi.fn()
-        clickSpy = vi.fn()
-
-        vi.stubGlobal('URL', {
-            createObjectURL: createObjectURLSpy,
-            revokeObjectURL: revokeObjectURLSpy
-        })
-
-        const originalCreateElement = document.createElement.bind(document)
-        vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
-            const el = originalCreateElement(tag)
-            if (tag === 'a') {
-                Object.defineProperty(el, 'click', { value: clickSpy })
-            }
-            return el
-        })
+        const { createObjectURLSpy, clickSpy } = stubDownloadEnvironment()
+        stubAnchorCreation(clickSpy)
 
         downloadFile('data.csv', 'a,b,c')
 
@@ -69,23 +70,8 @@ describe('downloadFile', () => {
     })
 
     it('accepts custom MIME type', () => {
-        createObjectURLSpy = vi.fn(() => 'blob:test')
-        revokeObjectURLSpy = vi.fn()
-        clickSpy = vi.fn()
-
-        vi.stubGlobal('URL', {
-            createObjectURL: createObjectURLSpy,
-            revokeObjectURL: revokeObjectURLSpy
-        })
-
-        const originalCreateElement = document.createElement.bind(document)
-        vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
-            const el = originalCreateElement(tag)
-            if (tag === 'a') {
-                Object.defineProperty(el, 'click', { value: clickSpy })
-            }
-            return el
-        })
+        const { createObjectURLSpy, clickSpy } = stubDownloadEnvironment()
+        stubAnchorCreation(clickSpy)
 
         downloadFile('data.json', '{"a":1}', 'application/json')
 
@@ -94,25 +80,12 @@ describe('downloadFile', () => {
     })
 
     it('cleans up the anchor element after download', () => {
-        createObjectURLSpy = vi.fn(() => 'blob:test')
-        revokeObjectURLSpy = vi.fn()
-        clickSpy = vi.fn()
+        const { clickSpy } = stubDownloadEnvironment()
         const removedElements: HTMLElement[] = []
-
-        vi.stubGlobal('URL', {
-            createObjectURL: createObjectURLSpy,
-            revokeObjectURL: revokeObjectURLSpy
-        })
-
-        const originalCreateElement = document.createElement.bind(document)
         let createdAnchor: HTMLElement | null = null
-        vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
-            const el = originalCreateElement(tag)
-            if (tag === 'a') {
-                createdAnchor = el
-                Object.defineProperty(el, 'click', { value: clickSpy })
-            }
-            return el
+
+        stubAnchorCreation(clickSpy, (el) => {
+            createdAnchor = el
         })
         vi.spyOn(document.body, 'appendChild').mockImplementation((el: Node) => el)
         vi.spyOn(document.body, 'removeChild').mockImplementation((el: Node) => {

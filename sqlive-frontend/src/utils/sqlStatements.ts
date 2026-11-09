@@ -1,4 +1,5 @@
 import { parsePrimaryType } from './sql'
+import { parseInsertTarget } from './sqlIdentifiers'
 import type { TruncationInfo } from '../model/DatabaseTypes'
 
 /**
@@ -48,14 +49,16 @@ export const extractSqlStatements = (script: string) => {
         }
 
         // 处理字符串
-        if (c === "'" || c === '"') {
-            if (!inString) {
-                inString = true
-                quoteChar = c
-            } else if (c === quoteChar) {
-                if (next === quoteChar) i++
+        if (inString) {
+            if (c === quoteChar) {
+                if (quoteChar !== ']' && next === quoteChar) i++
                 else inString = false
             }
+            continue
+        }
+        if (c === "'" || c === '"' || c === '`' || c === '[') {
+            inString = true
+            quoteChar = c === '[' ? ']' : c
             continue
         }
 
@@ -120,11 +123,7 @@ export const normalizeAndCompare = (dbVal: any, sqlValRaw: string): boolean => {
 }
 
 export const parseExplicitColumns = (sql: string): string[] | null => {
-    const match = sql.match(/INSERT\s+INTO\s+[\w`"']+\s*\(([\w`"',\s]+)\)/i)
-    if (match) {
-        return match[1].split(',').map((c) => c.trim().replace(/[`"']/g, ''))
-    }
-    return null
+    return parseInsertTarget(sql)?.columns ?? null
 }
 
 export const compareValuesForHighlight = (rowVal: any, operator: string, queryVal: string) => {

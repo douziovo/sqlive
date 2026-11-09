@@ -40,7 +40,7 @@ export function useMultiTabs(defaultCode: string) {
     }
 
     function switchTab(id: string) {
-        activeTabId.value = id
+        if (findTab(id)) activeTabId.value = id
     }
 
     function addTab(name?: string, code?: string, dbName?: string) {
@@ -60,10 +60,11 @@ export function useMultiTabs(defaultCode: string) {
         if (tabs.value.length <= 1) return false
         const idx = tabs.value.findIndex((t) => t.id === id)
         if (idx === -1) return false
-        tabs.value.splice(idx, 1)
         if (activeTabId.value === id) {
-            activeTabId.value = tabs.value[Math.min(idx, tabs.value.length - 1)].id
+            // Keep the active-tab invariant true even for synchronous reactive consumers.
+            activeTabId.value = tabs.value[idx + 1]?.id ?? tabs.value[idx - 1].id
         }
+        tabs.value.splice(idx, 1)
         return true
     }
 
@@ -91,8 +92,8 @@ export function useMultiTabs(defaultCode: string) {
         }
     }
 
-    function markClean() {
-        const tab = findTab(activeTabId.value)
+    function markClean(id = activeTabId.value) {
+        const tab = findTab(id)
         if (tab) tab.isModified = false
     }
 

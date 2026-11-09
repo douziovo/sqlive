@@ -193,4 +193,73 @@ describe('useMultiTabs', () => {
         expect(tabs.value).toHaveLength(50)
         expect(activeTabId.value).toBe(tabs.value[49].id)
     })
+    describe('edge branches', () => {
+        it('closeTab rejects unknown ids and guards the last tab', () => {
+            const { tabs, closeTab, addTab } = useMultiTabs(defaultCode)
+            expect(closeTab('does-not-exist')).toBe(false)
+            addTab('extra')
+            expect(closeTab('does-not-exist')).toBe(false)
+            expect(tabs.value).toHaveLength(2)
+        })
+
+        it('rename/setDbName tolerate unknown tab ids', () => {
+            const { tabs, renameTab, setTabDbName } = useMultiTabs(defaultCode)
+            renameTab('nope', 'x')
+            setTabDbName('nope', 'db')
+            expect(tabs.value[0].name).not.toBe('x')
+            expect(tabs.value[0].dbName).toBe('')
+        })
+
+        it('markClean clears the modified flag of the active tab', () => {
+            const { tabs, updateCode, markClean } = useMultiTabs(defaultCode)
+            updateCode('SELECT 2;')
+            expect(tabs.value[0].isModified).toBe(true)
+            markClean()
+            expect(tabs.value[0].isModified).toBe(false)
+        })
+
+        it('importFile falls back to the default name for a bare .sql file', async () => {
+            const { tabs, importFile } = useMultiTabs(defaultCode)
+            const file = new File(['SELECT 1;'], '.sql')
+            await importFile(file)
+            expect(tabs.value).toHaveLength(2)
+            expect(tabs.value[1].name).toBe('导入')
+        })
+
+        it('exportTab with an unknown id does not download', () => {
+            const createObjectURLSpy = vi.fn(() => 'blob:x')
+            vi.stubGlobal('URL', { ...URL, createObjectURL: createObjectURLSpy })
+            const { exportTab } = useMultiTabs(defaultCode)
+            exportTab('missing-id')
+            expect(createObjectURLSpy).not.toHaveBeenCalled()
+            vi.unstubAllGlobals()
+        })
+
+        it('exportAllTabs downloads one file per tab', () => {
+            const createObjectURLSpy = vi.fn(() => 'blob:x')
+            const revokeObjectURLSpy = vi.fn()
+            vi.stubGlobal('URL', {
+                ...URL,
+                createObjectURL: createObjectURLSpy,
+                revokeObjectURL: revokeObjectURLSpy
+            })
+            const clickSpy = vi.fn()
+            const originalCreateElement = document.createElement.bind(document)
+            const createSpy = vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+                const el = originalCreateElement(tag)
+                if (tag === 'a') Object.defineProperty(el, 'click', { value: clickSpy })
+                return el
+            })
+
+            const { tabs, addTab, exportAllTabs } = useMultiTabs(defaultCode)
+            addTab('second')
+            exportAllTabs()
+
+            expect(createObjectURLSpy).toHaveBeenCalledTimes(tabs.value.length)
+            expect(clickSpy).toHaveBeenCalledTimes(tabs.value.length)
+
+            vi.unstubAllGlobals()
+            createSpy.mockRestore()
+        })
+    })
 })

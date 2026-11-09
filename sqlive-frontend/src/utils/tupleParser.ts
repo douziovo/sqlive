@@ -1,19 +1,29 @@
+import { maskSqlComments, readSqlToken } from './sqlIdentifiers'
+
 /**
  * Parse VALUES tuples from SQL INSERT statements, correctly handling
  * nested parentheses (function calls) and quoted strings.
  */
 
 export function extractTuplesWithDepth(
-    sql: string
+    sql: string,
+    valuesStart?: number
 ): { content: string; start: number; end: number }[] {
     const tuples: { content: string; start: number; end: number }[] = []
-    const valuesIdx = sql.toUpperCase().indexOf('VALUES')
-    if (valuesIdx === -1) return tuples
+    const masked = maskSqlComments(sql)
+    if (valuesStart === undefined) {
+        let token = readSqlToken(masked)
+        while (token && (token.quoted || token.value.toUpperCase() !== 'VALUES')) {
+            token = readSqlToken(masked, token.end)
+        }
+        if (!token) return tuples
+        valuesStart = token.end
+    }
 
-    let i = valuesIdx + 6
+    let i = valuesStart
     while (i < sql.length) {
-        while (i < sql.length && /\s/.test(sql[i])) i++
-        if (i >= sql.length || sql[i] !== '(') break
+        while (i < sql.length && /\s/.test(masked[i])) i++
+        if (i >= sql.length || masked[i] !== '(') break
 
         const tupleStart = i
         let depth = 0
@@ -21,11 +31,11 @@ export function extractTuplesWithDepth(
         let quoteChar = ''
 
         while (i < sql.length) {
-            const c = sql[i]
+            const c = masked[i]
 
             if (inString) {
                 if (c === quoteChar) {
-                    if (i + 1 < sql.length && sql[i + 1] === quoteChar) {
+                    if (quoteChar !== ']' && i + 1 < sql.length && masked[i + 1] === quoteChar) {
                         i += 2
                         continue
                     }
@@ -35,9 +45,9 @@ export function extractTuplesWithDepth(
                 continue
             }
 
-            if (c === "'" || c === '"') {
+            if (c === "'" || c === '"' || c === '`' || c === '[') {
                 inString = true
-                quoteChar = c
+                quoteChar = c === '[' ? ']' : c
                 i++
                 continue
             }
@@ -64,13 +74,14 @@ export function extractTuplesWithDepth(
             i++
         }
 
-        while (i < sql.length && (sql[i] === ',' || /\s/.test(sql[i]))) i++
+        while (i < sql.length && (masked[i] === ',' || /\s/.test(masked[i]))) i++
     }
 
     return tuples
 }
 
 export function splitTupleContent(content: string): string[] {
+    content = maskSqlComments(content)
     const values: string[] = []
     let current = ''
     let depth = 0
@@ -83,7 +94,7 @@ export function splitTupleContent(content: string): string[] {
         if (inString) {
             current += c
             if (c === quoteChar) {
-                if (i + 1 < content.length && content[i + 1] === quoteChar) {
+                if (quoteChar !== ']' && i + 1 < content.length && content[i + 1] === quoteChar) {
                     current += content[i + 1]
                     i++
                     continue
@@ -93,9 +104,9 @@ export function splitTupleContent(content: string): string[] {
             continue
         }
 
-        if (c === "'" || c === '"') {
+        if (c === "'" || c === '"' || c === '`' || c === '[') {
             inString = true
-            quoteChar = c
+            quoteChar = c === '[' ? ']' : c
             current += c
             continue
         }

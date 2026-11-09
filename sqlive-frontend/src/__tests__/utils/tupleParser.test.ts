@@ -28,6 +28,16 @@ describe('extractTuplesWithDepth', () => {
 
         expect(extractTuplesWithDepth(sql).map((t) => t.content)).toEqual(['1'])
     })
+
+    it('ignores comment parentheses and quoted VALUES while retaining raw tuple offsets', () => {
+        const sql = `-- VALUES (1, 'a--b')\nINSERT INTO "VALUES" ("VALUES", x) VALUES /* (9) */ (1, 'a--b'), -- (8)\n(2, 'c');`
+        const tuples = extractTuplesWithDepth(sql)
+        expect(tuples.map((tuple) => sql.slice(tuple.start, tuple.end))).toEqual([
+            "(1, 'a--b')",
+            "(2, 'c')"
+        ])
+        expect(tuples[0].start).toBe(sql.indexOf("(1, 'a--b')", sql.indexOf('INSERT')))
+    })
 })
 
 describe('splitTupleContent', () => {
@@ -46,5 +56,11 @@ describe('splitTupleContent', () => {
     it('keeps doubled double quotes and ignores an empty trailing value', () => {
         expect(splitTupleContent('"a""b,c", 2,   ')).toEqual(['"a""b,c"', '2'])
         expect(splitTupleContent('')).toEqual([])
+    })
+
+    it('ignores comments without removing comment markers inside literals or identifiers', () => {
+        expect(
+            splitTupleContent(`1 /* , ) */, 'hello--world', -- ignored, )\n 2, [a,b], \`c,d\``)
+        ).toEqual(['1', "'hello--world'", '2', '[a,b]', '`c,d`'])
     })
 })

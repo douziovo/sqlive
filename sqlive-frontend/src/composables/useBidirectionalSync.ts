@@ -3,16 +3,22 @@ import { ref } from 'vue'
 import type { CanonicalStatement, Row, TableSchema, TruncationInfo } from '../model/DatabaseTypes'
 import { parsePrimaryType, toSqlLiteral } from '../utils/sql'
 import {
+    parseColumnDefinition,
+    parseInsertTarget,
+    quoteSqlIdentifier,
+    sameSqlIdentifier,
+    maskSqlComments
+} from '../utils/sqlIdentifiers'
+import {
     enforceTypeConstraints,
     extractSqlStatements,
-    normalizeAndCompare,
-    parseExplicitColumns
+    normalizeAndCompare
 } from '../utils/sqlStatements'
 import { extractTuplesWithDepth, splitTupleContent } from '../utils/tupleParser'
 
 type EngineMode = 'user' | 'reconciling' | 'rollback'
 
-// previously received the whole DatabaseModel but only read db.tables.
+// D-R2-004: previously received the whole DatabaseModel but only read db.tables.
 // Narrowed to a `tablesSource: () => TableSchema[]` getter (matches the
 // useErDiagram L92 范式) so this composable no longer couples to the whole DatabaseModel shape.
 export function useBidirectionalSync(
@@ -21,13 +27,14 @@ export function useBidirectionalSync(
     mode: Ref<EngineMode>,
     flashCode: (sql: string) => void,
     transitionFn: (from: EngineMode, to: EngineMode, ctx: string) => EngineMode,
-    canonicalStatements?: Ref<CanonicalStatement[] | undefined>
+    canonicalStatements?: Ref<CanonicalStatement[] | undefined>,
+    onError?: (message: string) => void
 ) {
     let lastValidCode = code.value
     const lastTruncations = ref<TruncationInfo[]>([])
 
-    // prefer backend canonicalStatements (single source of truth ).
-    // Falls back to extractSqlStatements(code.value) when canonical list is absent
+    // D-03c: prefer backend canonicalStatements (single source of truth per Phase 2 CORE-01).
+    // Falls back to extractSqlStatements(code.value) per D-03d when canonical list is absent
     // (backward compat for responses without canonicalStatements).
     const getStatements = () => {
         const canonical = canonicalStatements?.value
@@ -63,25 +70,29 @@ export function useBidirectionalSync(
         return { sql: `(${values.join(', ')})`, truncations }
     }
 
-    const findTupleInBatch = (stmtText: string, tableName: string, rowData: Row) => {
-        const cleanStmt = stmtText.replace(/--.*$/gm, '')
-        const insertRegex = new RegExp(
-            `INSERT\\s+INTO\\s+(?:[\`"']?)${tableName}(?:[\`"']?)\\b`,
-            'i'
+    const findTuplesInBatch = (stmtText: string, tableName: string, rowData: Row) => {
+        const target = parseInsertTarget(stmtText)
+        if (
+            !target ||
+            !sameSqlIdentifier(target.tableName, tableName) ||
+            target.valuesStart === null
         )
-        if (!insertRegex.test(cleanStmt)) return null
+            return []
 
+        const table = tablesSource().find((t) => sameSqlIdentifier(t.name, tableName))
         let compareCols: string[] = []
-        const explicitCols = parseExplicitColumns(cleanStmt)
+        const explicitCols = target.columns
         if (explicitCols) {
-            compareCols = explicitCols
+            compareCols = explicitCols.map(
+                (column) => table?.columns.find((name) => sameSqlIdentifier(name, column)) ?? column
+            )
         } else {
-            const table = tablesSource().find((t) => t.name === tableName)
-            if (!table) return null
+            if (!table) return []
             compareCols = table.columns.filter((c) => !table.columnTypes[c]?.includes('VIRTUAL'))
         }
 
-        const tuples = extractTuplesWithDepth(cleanStmt)
+        const tuples = extractTuplesWithDepth(stmtText, target.valuesStart)
+        const matches = []
 
         for (const tuple of tuples) {
             const sqlValues = splitTupleContent(tuple.content)
@@ -95,48 +106,88 @@ export function useBidirectionalSync(
             })
 
             if (isMatch) {
-                const realStart = stmtText.indexOf(`(${tuple.content})`)
-                if (realStart !== -1) {
-                    const originalTupleStr = `(${tuple.content})`
-                    return {
-                        start: realStart,
-                        end: realStart + originalTupleStr.length,
-                        explicitCols: compareCols
-                    }
-                }
+                matches.push({
+                    start: tuple.start,
+                    end: tuple.end,
+                    explicitCols: compareCols
+                })
             }
         }
+        return matches
+    }
+
+    const rowTarget = (tableName: string, row: Row) => {
+        const table = tablesSource().find((t) => sameSqlIdentifier(t.name, tableName))
+        const matches = getStatements().flatMap((stmt) =>
+            findTuplesInBatch(stmt.text, tableName, row).map((match) => ({ stmt, match }))
+        )
+        const keys =
+            table?.columns.filter((col) => /\bPRIMARY\s+KEY\b/i.test(table.columnTypes[col])) ?? []
+        const candidate = matches.length === 1 ? matches[0] : undefined
+        // An omitted/generated key cannot identify a VALUES tuple. Preserve the source
+        // and append a database operation addressed to the actual, unique primary key.
+        const hasAllKeys =
+            candidate && keys.every((key) => candidate.match.explicitCols.includes(key))
+        if (candidate && hasAllKeys) return { ...candidate, table, where: null }
+        if (
+            table &&
+            keys.length > 0 &&
+            keys.every((key) => row[key] != null) &&
+            table.data.filter((item) => keys.every((key) => item[key] === row[key])).length === 1
+        ) {
+            const where = keys
+                .map(
+                    (key) =>
+                        `${quoteSqlIdentifier(key)} = ${toSqlLiteral(row[key], parsePrimaryType(table.columnTypes[key]))}`
+                )
+                .join(' AND ')
+            return { table, where }
+        }
+        const message =
+            matches.length > 1
+                ? '多条源记录匹配此行，且没有可用的唯一主键。请在 SQL 编辑器中修改。'
+                : '无法定位原始代码行，且没有可用的唯一主键。请在 SQL 编辑器中修改。'
+        console.warn(message)
+        onError?.(message)
         return null
     }
 
     const updateRow = (tableName: string, oldRow: Row, newRowData: Row) => {
-        beginReconcile()
-
-        const statements = getStatements()
-        for (const stmt of statements) {
-            const match = findTupleInBatch(stmt.text, tableName, oldRow)
-            if (match) {
-                const absoluteStart = stmt.start + match.start
-                const absoluteEnd = stmt.start + match.end
-                const { sql: newTupleSql, truncations } = generateValuesTuple(
-                    tableName,
-                    newRowData,
-                    match.explicitCols
-                )
-                if (truncations.length > 0) lastTruncations.value = truncations
-                code.value =
-                    code.value.substring(0, absoluteStart) +
-                    newTupleSql +
-                    code.value.substring(absoluteEnd)
-                flashCode(newTupleSql)
-                return
-            }
+        const target = rowTarget(tableName, oldRow)
+        if (!target) return
+        if (target.where) {
+            const columns = target.table.columns.filter(
+                (col) => !target.table.columnTypes[col]?.includes('VIRTUAL')
+            )
+            const { sql, truncations } = generateValuesTuple(tableName, newRowData, columns)
+            beginReconcile()
+            lastTruncations.value = truncations
+            const update = `UPDATE ${quoteSqlIdentifier(tableName)} SET (${columns.map(quoteSqlIdentifier).join(', ')}) = ${sql} WHERE ${target.where};`
+            appendSql(update)
+            flashCode(update)
+            return
         }
-        console.warn('无法定位原始代码行 (Batch Mode)')
+        if ('stmt' in target && target.stmt && target.match) {
+            const { stmt, match } = target
+            beginReconcile()
+            const absoluteStart = stmt.start + match.start
+            const absoluteEnd = stmt.start + match.end
+            const { sql: newTupleSql, truncations } = generateValuesTuple(
+                tableName,
+                newRowData,
+                match.explicitCols
+            )
+            if (truncations.length > 0) lastTruncations.value = truncations
+            code.value =
+                code.value.substring(0, absoluteStart) +
+                newTupleSql +
+                code.value.substring(absoluteEnd)
+            flashCode(newTupleSql)
+            return
+        }
     }
 
     const deleteRow = (row: Row, tableName?: string) => {
-        beginReconcile()
         let targetTableName = tableName || ''
         if (!targetTableName) {
             for (const t of tablesSource()) {
@@ -148,37 +199,40 @@ export function useBidirectionalSync(
         }
         if (!targetTableName) return
 
-        const statements = getStatements()
-        for (const stmt of statements) {
-            const match = findTupleInBatch(stmt.text, targetTableName, row)
-            if (match) {
-                const absoluteStart = stmt.start + match.start
-                const absoluteEnd = stmt.start + match.end
-                let deleteStart = absoluteStart
-                let deleteEnd = absoluteEnd
-                const charAfter = code.value.substring(absoluteEnd).match(/^\s*,/)
-                const charBefore = code.value.substring(0, absoluteStart).match(/,\s*$/)
-                if (charAfter) deleteEnd += charAfter[0].length
-                else if (charBefore) deleteStart -= charBefore[0].length
-                else {
-                    const contentAfter = stmt.text.substring(match.end).trim()
-                    if (contentAfter === ';' || contentAfter === '') {
-                        code.value = (
-                            code.value.substring(0, stmt.start) + code.value.substring(stmt.end)
-                        ).replace(/\n{3,}/g, '\n\n')
-                        return
-                    }
-                }
-                code.value = code.value.substring(0, deleteStart) + code.value.substring(deleteEnd)
+        const target = rowTarget(targetTableName, row)
+        if (!target) return
+        if (target.where) {
+            beginReconcile()
+            appendSql(`DELETE FROM ${quoteSqlIdentifier(targetTableName)} WHERE ${target.where};`)
+            return
+        }
+        if ('stmt' in target && target.stmt && target.match) {
+            const { stmt, match } = target
+            beginReconcile()
+            const absoluteStart = stmt.start + match.start
+            const absoluteEnd = stmt.start + match.end
+            let deleteStart = absoluteStart
+            let deleteEnd = absoluteEnd
+            const masked = maskSqlComments(stmt.text)
+            const charAfter = masked.substring(match.end).match(/^\s*,/)
+            const charBefore = masked.substring(0, match.start).match(/,\s*$/)
+            if (charAfter) deleteEnd += charAfter[0].length
+            else if (charBefore) deleteStart -= charBefore[0].length
+            else {
+                code.value = (
+                    code.value.substring(0, stmt.start) + code.value.substring(stmt.end)
+                ).replace(/\n{3,}/g, '\n\n')
                 return
             }
+            code.value = code.value.substring(0, deleteStart) + code.value.substring(deleteEnd)
+            return
         }
     }
 
     const insertRowUI = (tableName: string, newRowData: Row) => {
-        beginReconcile()
         const table = tablesSource().find((t) => t.name === tableName)
         if (!table) return
+        beginReconcile()
         const physicalColumns = table.columns.filter(
             (c) => !table.columnTypes[c].includes('VIRTUAL')
         )
@@ -188,49 +242,49 @@ export function useBidirectionalSync(
             physicalColumns
         )
         if (truncations.length > 0) lastTruncations.value = truncations
-        const newSql = `INSERT INTO ${tableName} (${physicalColumns.join(', ')}) VALUES ${valuesSql};`
-        let currentCode = code.value.trimEnd()
-        if (!currentCode.endsWith(';')) currentCode += ';'
-        code.value = `${currentCode}\n${newSql}`
+        const newSql = `INSERT INTO ${quoteSqlIdentifier(tableName)} (${physicalColumns.map(quoteSqlIdentifier).join(', ')}) VALUES ${valuesSql};`
+        appendSql(newSql)
         flashCode(newSql)
     }
 
     const addNewTable = (name: string, columns: string[], data: Record<string, unknown>[]) => {
+        const definitions = columns.map(parseColumnDefinition)
         beginReconcile()
-        const colDefs = columns.join(',\n  ')
-        let sql = `CREATE TABLE ${name} (\n  ${colDefs}\n);`
+        const colDefs = definitions
+            .map(
+                (column) =>
+                    `${quoteSqlIdentifier(column.name)}${column.type ? ` ${column.type}` : ''}`
+            )
+            .join(',\n  ')
+        let sql = `CREATE TABLE ${quoteSqlIdentifier(name)} (\n  ${colDefs}\n);`
         if (data && data.length > 0) {
             for (const row of data) {
-                const vals = columns.map((col) => {
-                    const rawType = col.split(/\s+/).slice(1).join(' ')
-                    return toSqlLiteral(row[col], rawType)
+                const vals = definitions.map((column, index) => {
+                    const value = Object.hasOwn(row, column.name)
+                        ? row[column.name]
+                        : row[columns[index]]
+                    return toSqlLiteral(value, column.type)
                 })
-                sql += `\nINSERT INTO ${name} VALUES (${vals.join(', ')});`
+                sql += `\nINSERT INTO ${quoteSqlIdentifier(name)} VALUES (${vals.join(', ')});`
             }
         }
-        const trimmed = code.value.trimEnd()
-        code.value = `${trimmed.endsWith(';') ? trimmed : `${trimmed};`}\n${sql}`
+        appendSql(sql)
         flashCode(sql)
     }
 
     const dropTableUI = (tableName: string) => {
         beginReconcile()
+        // Preserve the script's statements and dependencies; SQLite owns DROP semantics.
+        // A table name in a string, comment, column or CTE is not a safe deletion signal.
+        const sql = `DROP TABLE ${quoteSqlIdentifier(tableName)};`
+        appendSql(sql)
+        flashCode(sql)
+    }
 
-        const escaped = tableName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-        const tableRefRe = new RegExp(`\\b${escaped}\\b`, 'i')
-
-        const statements = getStatements()
-        let newCode = code.value
-        for (let i = statements.length - 1; i >= 0; i--) {
-            if (tableRefRe.test(statements[i].text)) {
-                const s = statements[i]
-                newCode = newCode.substring(0, s.start) + newCode.substring(s.end)
-            }
-        }
-        code.value = `${newCode
-            .replace(/\n{2,}/g, '\n')
-            .replace(/^\n+/, '')
-            .trimEnd()}\n`
+    const appendSql = (sql: string) => {
+        const current = code.value.trimEnd()
+        const separator = current && !maskSqlComments(current).trimEnd().endsWith(';') ? '\n;' : ''
+        code.value = `${current}${separator}${current ? '\n' : ''}${sql}`
     }
 
     return {

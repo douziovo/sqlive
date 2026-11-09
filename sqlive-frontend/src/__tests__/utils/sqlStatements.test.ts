@@ -27,6 +27,12 @@ describe('extractSqlStatements', () => {
         expect(stmts[0].text).toBe('SELECT 1;')
     })
 
+    it('skips semicolons inside block comments', () => {
+        const stmts = extractSqlStatements('SELECT 1 /* ; not a separator */;')
+        expect(stmts).toHaveLength(1)
+        expect(stmts[0].text).toContain('/* ; not a separator */')
+    })
+
     it('handles multiple statements', () => {
         const stmts = extractSqlStatements(
             'CREATE TABLE t (x INTEGER);\nINSERT INTO t VALUES (1);\nSELECT * FROM t;'
@@ -312,10 +318,17 @@ describe('parseExplicitColumns', () => {
         expect(cols).toEqual(['col one', 'col two'])
     })
 
-    it('returns null when table name contains spaces', () => {
-        // The regex [\w`\"']+ does not match spaces in table names
+    it('extracts columns when the quoted table name contains spaces', () => {
         const cols = parseExplicitColumns("INSERT INTO 'My Table' (a, b) VALUES (1, 2);")
-        expect(cols).toBeNull()
+        expect(cols).toEqual(['a', 'b'])
+    })
+
+    it('does not split statements at semicolons inside SQLite identifier quotes', () => {
+        const script = 'INSERT INTO [a;b] ([x;y]) VALUES (1);INSERT INTO `a;b` VALUES (2);'
+        expect(extractSqlStatements(script).map((statement) => statement.text)).toEqual([
+            'INSERT INTO [a;b] ([x;y]) VALUES (1);',
+            'INSERT INTO `a;b` VALUES (2);'
+        ])
     })
 
     it('returns null for non-INSERT SQL', () => {
@@ -424,6 +437,21 @@ describe('compareValuesForHighlight', () => {
 
         it('compares empty strings', () => {
             expect(compareValuesForHighlight('', '=', "''")).toBe(true)
+        })
+    })
+    describe('string comparison fallback — remaining operators', () => {
+        it('compares strings with !=', () => {
+            expect(compareValuesForHighlight('abc', '!=', "'abc'")).toBe(false)
+            expect(compareValuesForHighlight('abc', '<>', "'xyz'")).toBe(true)
+        })
+        it('compares strings with <', () => {
+            expect(compareValuesForHighlight('apple', '<', "'banana'")).toBe(true)
+        })
+        it('compares strings with >=', () => {
+            expect(compareValuesForHighlight('b', '>=', "'a'")).toBe(true)
+        })
+        it('compares strings with <=', () => {
+            expect(compareValuesForHighlight('a', '<=', "'b'")).toBe(true)
         })
     })
 })

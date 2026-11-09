@@ -11,7 +11,7 @@ import {
     tick
 } from '../test-utils'
 
-// spy on extractSqlStatements to verify canonicalStatements consumption.
+// D-03c: spy on extractSqlStatements to verify canonicalStatements consumption.
 // vi.mock is hoisted by vitest; factory wraps the real impl so existing tests
 // (which don't reference extractSqlStatements directly) continue to work, while
 // tests in this file can assert call counts on the spy.
@@ -37,14 +37,36 @@ describe('useSqlEngine', () => {
         teardownSqlEngine()
     })
 
+    it('shows an execution error when an ambiguous visual edit has no stable key', async () => {
+        const row = { name: 'same' }
+        mockSuccess(fetchSpy, {
+            tables: [
+                {
+                    name: 't',
+                    columns: ['name'],
+                    columnTypes: { name: 'TEXT' },
+                    data: [row, { ...row }]
+                }
+            ]
+        })
+        const engine = useSqlEngine()
+        engine.code.value = "INSERT INTO t VALUES ('same'); INSERT INTO t VALUES ('same');"
+        await tick()
+        const original = engine.code.value
+        engine.updateRow('t', row, { name: 'changed' })
+        expect(engine.code.value).toBe(original)
+        expect(engine.executionError.value?.message).toContain('多条源记录')
+        engine.deleteRow(row, 't')
+        expect(engine.executionError.value?.message).toContain('多条源记录')
+        expect(engine.code.value).toBe(original)
+    })
+
     it('should set isLoading to true during execution', async () => {
         let resolveLater!: () => void
         const delayed = new Promise<void>((r) => {
             resolveLater = r
         })
-        fetchSpy.mockReturnValue(
-            delayed.then(() => jsonOk({ data: { tables: [] } }))
-        )
+        fetchSpy.mockReturnValue(delayed.then(() => jsonOk({ data: { tables: [] } })))
 
         const engine = useSqlEngine()
 
@@ -377,7 +399,7 @@ describe('useSqlEngine', () => {
         const call = fetchSpy.mock.calls[0]!
         expect(call[0]).toBe(API_URL)
         expect(call[1].method).toBe('POST')
-        expect(call[1].headers['Content-Type']).toBe('application/json')
+        expect(new Headers(call[1].headers).get('Content-Type')).toBe('application/json')
         expect(JSON.parse(call[1].body)).toHaveProperty('sql')
     })
 
@@ -469,7 +491,7 @@ describe('useSqlEngine', () => {
         expect(engine.code.value).toContain('INSERT')
     })
 
-    it('should handle dropTableUI by removing table-related statements', async () => {
+    it('drops a table explicitly while preserving the original script', async () => {
         mockSuccess(fetchSpy, { tables: [] })
         const engine = useSqlEngine()
         await tick()
@@ -481,7 +503,8 @@ describe('useSqlEngine', () => {
         const oldCode = engine.code.value
         engine.dropTableUI('t')
         expect(engine.code.value).not.toBe(oldCode)
-        expect(engine.code.value).not.toContain('CREATE TABLE t')
+        expect(engine.code.value).toContain(oldCode)
+        expect(engine.code.value).toContain('DROP TABLE "t";')
     })
 
     it('handles malformed JSON response gracefully', async () => {
@@ -516,7 +539,7 @@ describe('useSqlEngine', () => {
         expect(engine.isLoading.value).toBe(false)
     })
 
-    // --- frontend consumes backend canonicalStatements ---
+    // --- D-03c: frontend consumes backend canonicalStatements ---
 
     it('consumes backend canonicalStatements for updateRow', async () => {
         // After setupSqlEngine's vi.resetModules(), a fresh dynamic import returns
