@@ -12,7 +12,7 @@ From `sqlive-frontend/`:
 
 - `pnpm install --frozen-lockfile`: install locked dependencies.
 - `pnpm dev`: start Vite on port 5173.
-- `pnpm build`: produce `dist/`; run `pnpm typecheck` separately (vue-tsc for Vue SFCs, native TypeScript 7 for Vite/E2E).
+- `pnpm build`: check types with the TypeScript 7 Go engine, then produce `dist/`; `pnpm typecheck` runs the same checks alone (vue-tsc uses typescript-native-bridge for Vue SFCs, native TypeScript 7 checks Vite/E2E).
 - `pnpm lint` / `pnpm format:check`: run oxlint / oxfmt checks.
 - `pnpm test`: run Vitest.
 - `pnpm test:e2e`: run Playwright against installed Chrome and Edge; starts both services.

@@ -129,7 +129,7 @@
 |---|------|------|
 | 前端框架 | Vue 3 (Composition API) | 3.5 |
 | 构建工具 | Vite | 8.x |
-| 类型检查 | TypeScript 7 + vue-tsc（Vue 模板兼容 API） | 7.0.2 / 3.3.14 |
+| 类型检查 | TypeScript 7 Go 引擎 + vue-tsc（native bridge 接入 Vue 模板） | 7.0.2 / 3.3.14 |
 | 样式 | Tailwind CSS | 4.x |
 | 代码编辑器 | Monaco Editor | 0.55 |
 | UI 组件 | Reka-ui (Radix Vue) | 2.x |

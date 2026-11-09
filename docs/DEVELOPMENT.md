@@ -38,12 +38,18 @@ Windows 使用 `pwsh` 和 `.\gradlew.bat bootRun`，`JAVA_HOME` 指向 JDK 25（
 
 SQLite JDBC 需要加载本地库。`bootRun`、测试任务和 Docker 启动命令已配置 `--enable-native-access=ALL-UNNAMED`；直接运行 JAR 时也需传入此 JVM 参数。
 
-- 前端：`pnpm run build` 生成 `dist/`；`pnpm run typecheck` 单独检查类型；`pnpm run preview` 预览构建。
+- 前端：`pnpm run build` 先检查类型再生成 `dist/`；`pnpm run typecheck` 单独检查类型；`pnpm run preview` 预览构建。
 - 后端：`./gradlew build` 编译、测试并打包。
 - 测试命令、CI 范围和覆盖率见 [TESTING.md](TESTING.md)。
 - 部署与排错见 [RUNBOOK.md](RUNBOOK.md)。
 
-前端采用 [TypeScript 官方的 6/7 并行配置](https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/#running-side-by-side-with-typescript-6-0)：`@typescript/native` 是 TypeScript 7.0.2 的 npm 别名，提供原生 `tsc`；`typescript` 是 `@typescript/typescript6` 6.0.2 的别名，为 `vue-tsc` 3.3.14 提供 Vue 单文件组件所需的编译器 API。`pnpm run typecheck` 先检查应用代码和 Vue 模板，再使用 TS7 检查 Vite 配置与 E2E 测试。CI 运行同一命令。
+前端类型检查统一使用 TypeScript 7.0.2 的 Go 引擎：`@typescript/native` 是官方 `typescript@7.0.2` 的 npm 别名，直接检查 Vite 配置和 E2E 测试；`typescript` 是 [`typescript-native-bridge`](https://github.com/johnsoncodehk/typescript-native-bridge) 的别名，固定版本 `6.0.3-bridge.19.tsgo.7.0.2`。桥接包保留 `vue-tsc` 3.3.14 所需的 JavaScript 编译器 API，将应用代码和 Vue 模板的类型检查交给进程内 Go 引擎，不再安装 `@typescript/typescript6` 或 `@typescript/old`。Vue Language Tools 本身已[采用同一方案构建和测试](https://github.com/vuejs/language-tools/pull/6129)。
+
+`pnpm-workspace.yaml` 的 override 使传递依赖也使用桥接包；`peerDependencyRules.allowedVersions` 仅放行固定的桥接预发布版本，避免版本号导致的 peer 误报。`pnpm run typecheck`、生产构建和 CI 使用同一检查链。强制完整复查时运行 `pnpm exec vue-tsc -b tsconfig.app.json --force`，应看到 `TNB ACTIVE`；工具配置可用 `node node_modules/@typescript/native/bin/tsc --version` 核对版本。Vite 8 的 Oxc/Rolldown 转换打包、Vitest 和浏览器运行方式保持各工具的原生实现；Go 引擎负责类型检查。
+
+编辑器需选择工作区的 `sqlive-frontend/node_modules/typescript`，才能让语言服务使用 Go 桥接引擎。在仓库根目录打开 VS Code/Cursor 时，本机设置 `js/ts.tsdk.path` 为 `sqlive-frontend/node_modules/typescript/lib` 并选择 **Use Workspace Version**；在前端目录打开时路径为 `node_modules/typescript/lib`。JetBrains 的 TypeScript package 指向同一包。IDE 设置目录按仓库规则忽略，不随代码提交。
+
+桥接包带 Windows/macOS/Linux 的预编译二进制，本地无需安装 Go。Linux 需要 glibc >= 2.35，Alpine/musl 不支持；CI 使用 Ubuntu，若增加容器内前端检查，应选择 glibc 基础镜像（如 `node:24-bookworm-slim`）。平台二进制缺失会直接报错，不会回退到旧 JavaScript 类型检查器。
 
 ## 修改约定
 
