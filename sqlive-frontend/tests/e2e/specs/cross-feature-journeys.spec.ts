@@ -1,4 +1,27 @@
 import { expect, gotoApp, test } from '../fixtures/sql-editor.fixture'
+import type { SqlEditor } from '../fixtures/sql-editor.fixture'
+import type { Page } from '@playwright/test'
+import { openFirstNodeAndTeach, openKnowledgePanel } from '../helpers/knowledge-graph'
+
+/**
+ * 启动应用后制造一次语法错误执行。
+ * 错误响应可能不触发，因此沿用 try/catch 兜底，避免旅程卡在等待上。
+ */
+async function openAppAndIntroduceSyntaxError(page: Page, sqlEditor: SqlEditor) {
+    await gotoApp(page)
+    await expect(page.locator('#table-departments')).toBeVisible({ timeout: 15_000 })
+
+    const errResp = page.waitForResponse(
+        (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',
+        { timeout: 15_000 }
+    )
+    await sqlEditor.replaceAll('SELECT * FORM departments;')
+    try {
+        await errResp
+    } catch {
+        /* may not fire for syntax error */
+    }
+}
 
 test.describe('Cross-Feature User Journeys', () => {
     test('T5.1 error → AI analyze → fix → recover journey', async ({ page, sqlEditor }) => {
@@ -32,20 +55,8 @@ test.describe('Cross-Feature User Journeys', () => {
             }
         })
 
-        await gotoApp(page)
-        await expect(page.locator('#table-departments')).toBeVisible({ timeout: 15_000 })
-
         // Step 1: Introduce error
-        const errResp = page.waitForResponse(
-            (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',
-            { timeout: 15_000 }
-        )
-        await sqlEditor.replaceAll('SELECT * FORM departments;')
-        try {
-            await errResp
-        } catch {
-            /* may not fire for syntax error */
-        }
+        await openAppAndIntroduceSyntaxError(page, sqlEditor)
 
         // Step 2: Verify error state (app didn't crash)
         await expect(page.locator('.monaco-editor')).toBeVisible()
@@ -236,7 +247,7 @@ test.describe('Cross-Feature User Journeys', () => {
         await responsePromise
 
         // Step 4: Right-click editor for export
-        await page.locator('.monaco-editor').first().click({ button: 'right' })
+        await sqlEditor.openContextMenu()
         // Wait for context menu
         await page
             .locator('.monaco-context-menu, .context-menu, [role="menu"]')
@@ -250,10 +261,11 @@ test.describe('Cross-Feature User Journeys', () => {
         // Export option should exist in context menu
         const exportOption = page.locator('text=导出当前标签页')
         await expect(exportOption).toBeVisible({ timeout: 3_000 })
-        // App uses Blob URL + a.click() for downloads — Playwright can't intercept.
-        // Verify clicking export doesn't crash.
-        await exportOption.click()
-        await page.waitForTimeout(500)
+        const downloadPromise = page.waitForEvent('download')
+        await sqlEditor.clickContextMenuAction('导出当前标签页')
+        const download = await downloadPromise
+        expect(download.suggestedFilename()).toMatch(/\.sql$/)
+        expect(await download.failure()).toBeNull()
 
         await expect(page.locator('.monaco-editor')).toBeVisible()
     })
@@ -314,19 +326,10 @@ test.describe('Cross-Feature User Journeys', () => {
         await expect(page.locator('#table-departments')).toBeVisible({ timeout: 15_000 })
 
         // Open knowledge panel
-        await page.locator('.learning-companion').click()
-        await expect(page.locator('.knowledge-panel')).toBeVisible({ timeout: 8_000 })
+        await openKnowledgePanel(page)
 
-        // Click first node → detail appears
-        const nodes = page.locator('.vue-flow__node')
-        await expect(nodes.first()).toBeVisible({ timeout: 5_000 })
-        await nodes.first().click()
-        await expect(page.locator('.knowledge-detail')).toBeVisible({ timeout: 5_000 })
-
-        // Click "让 AI 教我"
-        const teachBtn = page.locator('.knowledge-detail__btn--ai')
-        await expect(teachBtn).toBeVisible({ timeout: 5_000 })
-        await teachBtn.click()
+        // Click first node → detail appears, then "让 AI 教我"
+        await openFirstNodeAndTeach(page)
 
         // AI panel should open, knowledge panel should close
         await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({ timeout: 5_000 })
@@ -411,20 +414,8 @@ test.describe('Cross-Feature User Journeys', () => {
     })
 
     test('T5.8 fix error → re-execute → verify recovery', async ({ page, sqlEditor }) => {
-        await gotoApp(page)
-        await expect(page.locator('#table-departments')).toBeVisible({ timeout: 15_000 })
-
         // Step 1: Introduce syntax error
-        const errResp2 = page.waitForResponse(
-            (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',
-            { timeout: 15_000 }
-        )
-        await sqlEditor.replaceAll('SELECT * FORM departments;')
-        try {
-            await errResp2
-        } catch {
-            /* may not fire for syntax error */
-        }
+        await openAppAndIntroduceSyntaxError(page, sqlEditor)
 
         // Step 2: Fix the error
         const responsePromise = page.waitForResponse(

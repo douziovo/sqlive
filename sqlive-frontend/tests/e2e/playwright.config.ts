@@ -3,6 +3,7 @@ import { defineConfig } from '@playwright/test'
 
 const isWindows = process.platform === 'win32'
 
+//noinspection JSUnusedGlobalSymbols -- Playwright 配置文件约定：default export 由 @playwright/test CLI 读取，代码内无引用
 export default defineConfig({
     testDir: './specs',
     testMatch: '**/*.spec.ts',

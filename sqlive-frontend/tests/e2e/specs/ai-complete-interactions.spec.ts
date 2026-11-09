@@ -2,13 +2,13 @@ import { expect, gotoApp, test } from '../fixtures/sql-editor.fixture'
 
 test.describe('AI Complete Interactions', () => {
     test.beforeEach(async ({ page }) => {
-        // Mock all AI API endpoints — dispatch by AiChatRequest.mode field.
-        // SSE /chat retained with precise URL match; dead /suggest branch
-        // removed; fixedCode field aligned with backend DTO.
+        // Mock all AI API endpoints — dispatch by AiChatRequest.mode field (D-05a).
+        // SSE /chat retained with precise URL match (D-05d); dead /suggest branch
+        // removed (D-05b); fixedCode field aligned with backend DTO (D-05c).
         await page.route('**/api/ai/**', async (route) => {
             const url = route.request().url()
 
-            // SSE /chat — retained (precise URL match)
+            // SSE /chat — D-05d retained (precise URL match)
             if (url.endsWith('/api/ai/chat')) {
                 return route.fulfill({
                     status: 200,
@@ -26,8 +26,8 @@ test.describe('AI Complete Interactions', () => {
                 })
             }
 
-            // Non-streaming endpoints — dispatch by AiChatRequest.mode field
-            // : postData() returns null for empty bodies; guard with || '{}'.
+            // Non-streaming endpoints — dispatch by AiChatRequest.mode field (D-05a)
+            // Pitfall 5: postData() returns null for empty bodies; guard with || '{}'.
             const body = JSON.parse(route.request().postData() || '{}')
             switch (body.mode) {
                 case 'analyze-error':
@@ -162,7 +162,7 @@ test.describe('AI Complete Interactions', () => {
         await page.route('**/api/ai/chat', async (route) => {
             // Delay to simulate slow response
             await new Promise((r) => setTimeout(r, 3000))
-            route.fulfill({
+            await route.fulfill({
                 status: 200,
                 contentType: 'text/event-stream',
                 body: 'data: {"content":"Slow response"}\n\ndata: [DONE]\n'

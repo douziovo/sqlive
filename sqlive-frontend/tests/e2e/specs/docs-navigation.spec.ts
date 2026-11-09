@@ -2,7 +2,7 @@ import { expect, gotoApp, test } from '../fixtures/sql-editor.fixture'
 
 test.describe('Docs Navigation', () => {
     test('navigates from playground to docs and back', async ({ page }) => {
-        // AppHeader Docs button → /docs/intro; sidebar nav → /docs/usage/editor; wordmark → /
+        // D-06: AppHeader Docs button → /docs/intro; sidebar nav → /docs/usage/editor; wordmark → /
         await gotoApp(page)
 
         // Click AppHeader Docs button → navigate to /docs/intro
@@ -25,7 +25,7 @@ test.describe('Docs Navigation', () => {
     })
 
     test('sidebar highlights current route', async ({ page }) => {
-        // active nav item has bg-primary/10 class
+        // D-05: active nav item has bg-primary/10 class
         await page.goto('/docs/intro')
         await expect(page.locator('article h1').first()).toBeVisible({ timeout: 10_000 })
 
@@ -35,12 +35,13 @@ test.describe('Docs Navigation', () => {
     })
 
     test('all 6 navigation items visible in sidebar', async ({ page }) => {
-        // sidebar renders every NavItem from navigation.ts
+        // D-05: sidebar renders every NavItem from navigation.ts
         await page.goto('/docs/intro')
         await expect(page.locator('article h1').first()).toBeVisible({ timeout: 10_000 })
 
         const sidebar = page.locator('nav[aria-label="文档导航"]')
         const text = await sidebar.textContent()
+        //noinspection DuplicatedCode -- 与 src/__tests__/components/docs/DocsSidebar.test.ts 的导航标题断言字面相同，但这里是真实浏览器 e2e、那边是 jsdom 单测，跨层抽 helper 会把两套断言耦合在一起
         expect(text).toContain('项目介绍')
         expect(text).toContain('编辑器')
         expect(text).toContain('数据可视化')
