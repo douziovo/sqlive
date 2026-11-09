@@ -20,9 +20,28 @@ jacoco {
     toolVersion = '0.8.14'
 }
 
+// Security overrides for BOM-managed transitive dependencies.
+// Spring Boot 4.1.1 still pins releases that carry security advisories, so the
+// managed version of each affected artifact is raised to the latest patched
+// release of the same minor line (logback 1.5.x is EOL at 1.5.38, hence 1.6.x).
+// These are read by io.spring.dependency-management when it parses the BOM.
+ext['tomcat.version'] = '11.0.27'          // was 11.0.24
+ext['netty.version'] = '4.2.20.Final'      // was 4.2.17.Final
+ext['logback.version'] = '1.6.6'           // was 1.5.38
+ext['jackson-2-bom.version'] = '2.21.8'    // was 2.21.5
+ext['jackson-bom.version'] = '3.1.8'       // was 3.1.5 (tools.jackson 3.x)
+ext['json-smart.version'] = '2.6.1'        // was 2.6.0; also lifts asm to 9.11.1
+
+
 configurations {
     compileOnly {
         extendsFrom annotationProcessor
+    }
+    // jsonassert 1.5.3 depends on com.vaadin.external.google:android-json, a 2013
+    // fork of org.json that has no patched release. Drop it and use the
+    // maintained org.json artifact instead (same org.json.* API).
+    configureEach {
+        exclude group: 'com.vaadin.external.google', module: 'android-json'
     }
 }
 repositories {
@@ -52,6 +71,8 @@ dependencies {
     testAnnotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    // Replaces the excluded android-json fork required by jsonassert 1.5.3.
+    testImplementation 'org.json:json:20260814'
     testImplementation 'io.projectreactor:reactor-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
