@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Verifies springdoc 3.x auto-generates {@code /v3/api-docs} OpenAPI JSON
- * with the 4 controller tags (SQL/AI/Knowledge/Health,) and the
+ * with the 4 controller tags (SQL/AI/Knowledge/Health, per D-11) and the
  * {@code /api/execute} path.
  *
  * <p>Depends on Task 1 (springdoc 3.x dependency + OpenApiConfig) and Task 2
@@ -28,14 +28,14 @@ class OpenApiIntegrationTest {
 	@Value("${local.server.port}")
 	private int port;
 
-	private String url(String path) {
-		return "http://localhost:" + port + path;
+	private String url() {
+		return "http://localhost:" + port + "/v3/api-docs";
 	}
 
 	@Test
 	void shouldExposeOpenApiJson() {
 		ResponseEntity<String> resp = restTemplate.exchange(
-				url("/v3/api-docs"), HttpMethod.GET, HttpEntity.EMPTY, String.class);
+				url(), HttpMethod.GET, HttpEntity.EMPTY, String.class);
 
 		assertEquals(HttpStatus.OK, resp.getStatusCode(),
 				"/v3/api-docs should return 200");

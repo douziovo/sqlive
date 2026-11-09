@@ -178,6 +178,25 @@ class PromptBuilderTest {
 	// ── edge cases ──
 
 	@Test
+	void defaultConstructorShouldNotThrow() {
+		// PromptBuilder is a package-private holder of static methods; its
+		// implicit constructor must stay usable.
+		assertNotNull(new PromptBuilder());
+	}
+
+	@Test
+	void blankContextBlocksAreExcludedFromAllPrompts() {
+		var req = basicRequest();
+		req.setCurrentSql("   ");
+		req.setSelectedCode("   ");
+
+		assertFalse(PromptBuilder.buildErrorAnalysisPrompt(req).contains("```sql"));
+		assertFalse(PromptBuilder.buildFixCodePrompt(req).contains("```sql"));
+		assertFalse(PromptBuilder.buildExplainPrompt(req).contains("```sql"));
+		assertFalse(PromptBuilder.buildOptimizePrompt(req).contains("```sql"));
+	}
+
+	@Test
 	void promptsShouldNotBeNull() {
 		assertNotNull(PromptBuilder.buildChatPrompt(new AiChatRequest()));
 		assertNotNull(PromptBuilder.buildErrorAnalysisPrompt(new AiChatRequest()));

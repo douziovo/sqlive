@@ -32,7 +32,6 @@ ext['jackson-2-bom.version'] = '2.21.8'    // was 2.21.5
 ext['jackson-bom.version'] = '3.1.8'       // was 3.1.5 (tools.jackson 3.x)
 ext['json-smart.version'] = '2.6.1'        // was 2.6.0; also lifts asm to 9.11.1
 
-
 configurations {
     compileOnly {
         extendsFrom annotationProcessor
@@ -53,7 +52,6 @@ repositories {
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter'
-    //noinspection GrUnresolvedAccess
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-jdbc'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
@@ -80,16 +78,16 @@ dependencies {
 
 }
 
-tasks.named('test') {
-    //noinspection GrUnresolvedAccess
+tasks.named('test', Test) {
     useJUnitPlatform()
     def cpu = Runtime.runtime.availableProcessors()
+    int halfCpus = (cpu / 2) as int
     // Measured on this 24-core/16GB box (~4-5GB RAM typically free, heavy background load):
     // - more forks (6/8) don't help: memory-bound, 8 forks was clearly slower
     // - MaxRAMPercentage 50 -> 12 (4 x 12 = 48% worst-case aggregate heap cap, was 200%)
     // - -XX:TieredStopAtLevel=1 (C1 only): short-lived test JVMs warm up faster;
     //   interleaved A/B (3 paired runs): 52/28/38s vs 57/42/46s with original flags
-    maxParallelForks = Math.max(1, Math.min((cpu / 2) as int, 4))
+    maxParallelForks = Math.max(1, Math.min(halfCpus, 4))
     jvmArgs '--enable-native-access=ALL-UNNAMED',
             '-Xshare:auto', '-XX:+UseParallelGC', '-XX:MaxRAMPercentage=12.0',
             '-XX:TieredStopAtLevel=1'
@@ -101,9 +99,25 @@ tasks.named('bootRun') {
     jvmArgs '--enable-native-access=ALL-UNNAMED'
 }
 
+// Coverage gating. Enabled via CI=true, -Djacoco=true (JVM system property)
+// or -Pjacoco=true (Gradle project property — the documented local command).
+// The property is captured at configuration time (config-cache compatible).
+def jacocoGradleProp = providers.gradleProperty('jacoco').getOrElse('')
+Closure<Boolean>jacocoCoverageEnabled = {
+    System.getenv('CI') == 'true' || System.getProperty('jacoco') == 'true' ||
+            jacocoGradleProp == 'true'
+}
+
+// The only allowed exclusion: the Spring Boot launcher's main() cannot be
+// executed inside a test JVM. Everything else must stay covered.
+def jacocoClassExclusions = ['**/SqliveApplication.class']
+
 jacocoTestReport {
-    onlyIf { System.getenv('CI') == 'true' || System.getProperty('jacoco') == 'true' }
+    onlyIf jacocoCoverageEnabled
     dependsOn test
+    classDirectories.setFrom(files(sourceSets.main.output.collect {
+        fileTree(dir: it, exclude: jacocoClassExclusions)
+    }))
     reports {
         xml.required = true
         html.required = true
@@ -111,11 +125,23 @@ jacocoTestReport {
 }
 
 jacocoTestCoverageVerification {
-    onlyIf { System.getenv('CI') == 'true' || System.getProperty('jacoco') == 'true' }
+    onlyIf jacocoCoverageEnabled
+    classDirectories.setFrom(files(sourceSets.main.output.collect {
+        fileTree(dir: it, exclude: jacocoClassExclusions)
+    }))
     violationRules {
         rule {
+            // Keep line coverage at 98% or above.
             limit {
-                minimum = 0.50
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.98
+            }
+            // Keep branch coverage at 98% or above.
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.98
             }
         }
     }
