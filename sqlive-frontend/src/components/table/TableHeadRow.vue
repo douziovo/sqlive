@@ -49,8 +49,8 @@
 
 <script setup lang="ts">
 import { computed, inject } from 'vue'
-import type { TableSchema } from '../../model/DatabaseTypes'
-import { SQL_CONTEXT_KEY } from '../../model/injectionKeys'
+import type { TableSchema } from '@/model/DatabaseTypes'
+import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
 
 defineProps<{
     table: TableSchema

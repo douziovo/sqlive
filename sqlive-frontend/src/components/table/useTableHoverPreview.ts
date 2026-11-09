@@ -1,7 +1,7 @@
 import { computed, onUnmounted, ref } from 'vue'
-import type { PreviewItem } from '../../composables/useFilteredList'
-import type { IndexInfo, TriggerInfo, ViewInfo } from '../../model/DatabaseTypes'
-import { extractTriggerTiming } from '../../utils/sql'
+import type { PreviewItem } from '@/composables/useFilteredList'
+import type { IndexInfo, TriggerInfo, ViewInfo } from '@/model/DatabaseTypes'
+import { extractTriggerTiming } from '@/utils/sql'
 
 export type HoverType = 'index' | 'trigger' | 'view' | 'column-index'
 

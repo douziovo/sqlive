@@ -65,9 +65,9 @@
 
 <script setup lang="ts">
 import { inject, onUnmounted, reactive, ref, watch } from 'vue'
-import { useInlineEdit } from '../../composables/useInlineEdit'
-import type { Row, RowInsertEvent, TableSchema } from '../../model/DatabaseTypes'
-import { SQL_CONTEXT_KEY } from '../../model/injectionKeys'
+import { useInlineEdit } from '@/composables/useInlineEdit'
+import type { Row, RowInsertEvent, TableSchema } from '@/model/DatabaseTypes'
+import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
 
 const props = defineProps<{
     table: TableSchema
@@ -91,7 +91,7 @@ watch(
     () => insertResult?.value,
     (result) => {
         if (!result) return
-        // Only act on results for THIS table (prevents cross-table race condition)
+        // Only act on results for THIS table (prevents cross-table race condition per Pitfall 3)
         if (result.tableName !== props.table.name) return
 
         if (result.success) {
@@ -149,7 +149,7 @@ onUnmounted(() => {
 .ghost-failure {
     position: relative;
     border: 2px solid var(--destructive) !important;
-    border-opacity: 0.6;
+    /* border-opacity 不是标准 CSS 属性（浏览器会忽略），删除以消除 CssUnknownProperty；边框渲染不变 */
 }
 .ghost-failure::after {
     content: '';

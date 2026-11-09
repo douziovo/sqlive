@@ -42,7 +42,7 @@ import type {
     TableSchema,
     TriggerInfo,
     ViewInfo
-} from '../../model/DatabaseTypes'
+} from '@/model/DatabaseTypes'
 import CreateTableModal from '../CreateTableModal.vue'
 import EmptyState from '../EmptyState.vue'
 import TableSection from '../TableSection.vue'

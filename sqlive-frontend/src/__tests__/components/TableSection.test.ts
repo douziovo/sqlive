@@ -9,7 +9,8 @@ import type {
 } from '@/model/DatabaseTypes'
 import TableSection from '../../components/TableSection.vue'
 import HoverPreview from '../../components/HoverPreview.vue'
-import { SQL_CONTEXT_KEY } from '../../model/injectionKeys'
+import TablePagination from '../../components/table/TablePagination.vue'
+import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
 
 const mockTable: TableSchema = {
     name: 'users',
@@ -55,6 +56,31 @@ function mountTable(overrides: Record<string, any> = {}) {
 }
 
 describe('TableSection', () => {
+    it('keeps content visible when deleting the last page or replacing data hides pagination', async () => {
+        const table = reactive({
+            ...mockTable,
+            data: Array.from({ length: 21 }, (_, i) => ({
+                id: i + 1,
+                name: `User ${i + 1}`,
+                salary: i
+            }))
+        })
+        const wrapper = mountTable({ table })
+        const pagination = () => wrapper.findComponent(TablePagination)
+        pagination().vm.$emit('update:currentPage', 3)
+        await nextTick()
+        expect(wrapper.text()).toContain('User 21')
+        table.data.pop()
+        await nextTick()
+        expect(pagination().props('currentPage')).toBe(2)
+        expect(wrapper.text()).toContain('User 20')
+        table.data = table.data.slice(0, 3)
+        await nextTick()
+        expect(pagination().exists()).toBe(false)
+        expect(wrapper.text()).toContain('User 1')
+        expect(wrapper.text()).toContain('User 3')
+        wrapper.unmount()
+    })
     it('renders table name', () => {
         const wrapper = mountTable()
         expect(wrapper.text()).toContain('users')
@@ -345,16 +371,31 @@ describe('TableSection', () => {
             wrappers = []
         })
 
-        it('preserves ghost row inputs when insert fails', async () => {
+        /** 挂载表格并在幽灵行填入 value 后回车提交，返回 insertResult ref 与首次查到的幽灵行输入框 */
+        async function mountWithGhostRowFill(value = '4') {
             const insertResultRef = ref<InsertResult | null>(null)
             wrappers.push(mountTable({ insertResult: insertResultRef }))
 
             // Fill ghost row textareas
             const ghostTextareas = wrappers[0].findAll('textarea[placeholder="+"]')
             if (ghostTextareas.length > 0) {
-                await ghostTextareas[0].setValue('4')
+                await ghostTextareas[0].setValue(value)
                 await ghostTextareas[0].trigger('keydown.enter')
             }
+
+            return { insertResultRef, ghostTextareas }
+        }
+
+        /** 断言幽灵行首个输入框的值；与原先的 if(length>0) 写法一致，幽灵行不存在时不产生断言 */
+        function expectGhostRowValue(expected: string) {
+            const ghostTextareasAfter = wrappers[0].findAll('textarea[placeholder="+"]')
+            if (ghostTextareasAfter.length > 0) {
+                expect((ghostTextareasAfter[0].element as HTMLTextAreaElement).value).toBe(expected)
+            }
+        }
+
+        it('preserves ghost row inputs when insert fails', async () => {
+            const { insertResultRef } = await mountWithGhostRowFill()
 
             // Simulate failed insert
             insertResultRef.value = {
@@ -366,10 +407,7 @@ describe('TableSection', () => {
             await nextTick()
 
             // Ghost row inputs should still be present
-            const ghostTextareasAfter = wrappers[0].findAll('textarea[placeholder="+"]')
-            if (ghostTextareasAfter.length > 0) {
-                expect((ghostTextareasAfter[0].element as HTMLTextAreaElement).value).toBe('4')
-            }
+            expectGhostRowValue('4')
 
             // Verify failure styling
             const ghostRow = wrappers[0].find('[data-testid="ghost-row"]')
@@ -382,15 +420,7 @@ describe('TableSection', () => {
         })
 
         it('clears ghost row when insert succeeds', async () => {
-            const insertResultRef = ref<InsertResult | null>(null)
-            wrappers.push(mountTable({ insertResult: insertResultRef }))
-
-            // Fill ghost row textareas
-            const ghostTextareas = wrappers[0].findAll('textarea[placeholder="+"]')
-            if (ghostTextareas.length > 0) {
-                await ghostTextareas[0].setValue('4')
-                await ghostTextareas[0].trigger('keydown.enter')
-            }
+            const { insertResultRef } = await mountWithGhostRowFill()
 
             // Simulate successful insert
             insertResultRef.value = { success: true, tableName: 'users' }
@@ -398,22 +428,11 @@ describe('TableSection', () => {
             await nextTick()
 
             // Ghost row inputs should be cleared
-            const ghostTextareasAfter = wrappers[0].findAll('textarea[placeholder="+"]')
-            if (ghostTextareasAfter.length > 0) {
-                expect((ghostTextareasAfter[0].element as HTMLTextAreaElement).value).toBe('')
-            }
+            expectGhostRowValue('')
         })
 
         it('ignores insertResult for different tableName', async () => {
-            const insertResultRef = ref<InsertResult | null>(null)
-            wrappers.push(mountTable({ insertResult: insertResultRef }))
-
-            // Fill ghost row textareas
-            const ghostTextareas = wrappers[0].findAll('textarea[placeholder="+"]')
-            if (ghostTextareas.length > 0) {
-                await ghostTextareas[0].setValue('4')
-                await ghostTextareas[0].trigger('keydown.enter')
-            }
+            const { insertResultRef } = await mountWithGhostRowFill()
 
             // Simulate result for a different table
             insertResultRef.value = { success: false, tableName: 'products', error: 'test' }
@@ -421,10 +440,7 @@ describe('TableSection', () => {
             await nextTick()
 
             // Ghost row should NOT be cleared (wrong table)
-            const ghostTextareasAfter = wrappers[0].findAll('textarea[placeholder="+"]')
-            if (ghostTextareasAfter.length > 0) {
-                expect((ghostTextareasAfter[0].element as HTMLTextAreaElement).value).toBe('4')
-            }
+            expectGhostRowValue('4')
 
             // No failure styling should appear
             const ghostRow = wrappers[0].find('[data-testid="ghost-row"]')
@@ -432,15 +448,7 @@ describe('TableSection', () => {
         })
 
         it('auto-dismisses failure styling after typing in ghost row', async () => {
-            const insertResultRef = ref<InsertResult | null>(null)
-            wrappers.push(mountTable({ insertResult: insertResultRef }))
-
-            // Submit empty ghost row (just trigger failure)
-            const ghostTextareas = wrappers[0].findAll('textarea[placeholder="+"]')
-            if (ghostTextareas.length > 0) {
-                await ghostTextareas[0].setValue('test')
-                await ghostTextareas[0].trigger('keydown.enter')
-            }
+            const { insertResultRef, ghostTextareas } = await mountWithGhostRowFill('test')
 
             // Simulate failed insert
             insertResultRef.value = { success: false, tableName: 'users', error: 'test error' }
@@ -494,6 +502,38 @@ describe('TableSection', () => {
             // Find a td with flash-overlay class
             const flashTds = tds.filter((td) => td.classes().includes('flash-overlay'))
             expect(flashTds.length).toBeGreaterThan(0)
+        })
+
+        it('ends the flash animation after the 1s timer', async () => {
+            const highlight = reactive<HighlightState>({
+                ...defaultHighlight,
+                flashingRows: ['users:1']
+            })
+            const wrapper = mountTable({ highlight })
+            highlight.refreshSeed += 1
+            await nextTick()
+            expect(
+                wrapper.findAll('td').filter((td) => td.classes().includes('flash-overlay')).length
+            ).toBeGreaterThan(0)
+
+            vi.advanceTimersByTime(1100)
+            await nextTick()
+            expect(
+                wrapper.findAll('td').filter((td) => td.classes().includes('flash-overlay')).length
+            ).toBe(0)
+        })
+
+        it('clears a pending animation timer on unmount', async () => {
+            const highlight = reactive<HighlightState>({
+                ...defaultHighlight,
+                flashingRows: ['users:1']
+            })
+            const wrapper = mountTable({ highlight })
+            highlight.refreshSeed += 1
+            await nextTick()
+            // Unmount while the 1s animation timer is still pending
+            wrapper.unmount()
+            vi.advanceTimersByTime(1100)
         })
 
         it('VIRTUAL column gets bg-primary/10 class', () => {

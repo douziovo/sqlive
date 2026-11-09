@@ -61,4 +61,30 @@ describe('SortFilterToolbar', () => {
         expect(wrapper.text()).toContain('5')
         expect(wrapper.text()).toContain('10')
     })
+
+    it('hides the filtered-vs-total suffix when nothing is filtered out', () => {
+        const wrapper = mountToolbar({ filteredCount: 10 })
+        expect(wrapper.text()).not.toContain('过滤前')
+    })
+
+    it('shows the clear (✕) button only with filter text and emits an empty filter', async () => {
+        const findClear = (w: ReturnType<typeof mountToolbar>) =>
+            w.findAll('button').find((b) => b.text().includes('✕'))
+        const wrapper = mountToolbar({ filter: '' })
+        expect(findClear(wrapper)).toBeUndefined()
+
+        await wrapper.setProps({ filter: 'abc' })
+        const clearBtn = findClear(wrapper)
+        expect(clearBtn).toBeTruthy()
+        await clearBtn!.trigger('click')
+        expect(wrapper.emitted('update:filter')?.at(-1)).toEqual([''])
+    })
+
+    it('renders asc/desc arrows on the active sort field', async () => {
+        const wrapper = mountToolbar({ sortKey: 'name', sortDir: 'asc' })
+        expect(wrapper.text()).toContain('▲')
+        await wrapper.setProps({ sortDir: 'desc' })
+        expect(wrapper.text()).toContain('▼')
+        expect(wrapper.text()).not.toContain('▲')
+    })
 })

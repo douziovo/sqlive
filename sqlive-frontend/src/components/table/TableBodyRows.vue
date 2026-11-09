@@ -55,9 +55,9 @@
 
 <script setup lang="ts">
 import { computed, inject } from 'vue'
-import { useInlineEdit } from '../../composables/useInlineEdit'
-import type { CellUpdateEvent, Row, RowDeleteEvent, TableSchema } from '../../model/DatabaseTypes'
-import { SQL_CONTEXT_KEY } from '../../model/injectionKeys'
+import { useInlineEdit } from '@/composables/useInlineEdit'
+import type { CellUpdateEvent, Row, RowDeleteEvent, TableSchema } from '@/model/DatabaseTypes'
+import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
 
 const props = defineProps<{
     table: TableSchema
@@ -111,10 +111,13 @@ const getCellClasses = (row: any, col: string) => {
 </script>
 
 <style scoped>
+/* noinspection CssUnusedSymbol */
+/* .flash-overlay 由 script 中 classes.push('flash-overlay') 动态添加（闪烁高亮行），并非未使用 */
 .flash-overlay {
     position: relative;
     overflow: hidden;
 }
+/* noinspection CssUnusedSymbol */
 .flash-overlay::after {
     content: '';
     position: absolute;

@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
-import type { PreviewItem } from '../../composables/useFilteredList'
+import type { PreviewItem } from '@/composables/useFilteredList'
 import HoverPreview from '../../components/HoverPreview.vue'
 
 const sampleItems: PreviewItem[] = [
@@ -260,5 +260,150 @@ describe('HoverPreview', () => {
         const selectEvents = wrapper.emitted('select')
         expect(selectEvents).toBeTruthy()
         expect(selectEvents?.[0]).toEqual(['idx-2'])
+    })
+
+    it('cancels a pending show timer when hidden before the delay elapses', async () => {
+        const { wrapper } = mountPreview()
+        await wrapper.setProps({ show: true })
+        await vi.advanceTimersByTimeAsync(100) // show timer still pending
+        await wrapper.setProps({ show: false })
+        await vi.advanceTimersByTimeAsync(400)
+
+        // The 300ms show delay never completed, so the popup never appeared
+        const popupEl = wrapper.find('[class*="fixed"][class*="z-50"]')
+        expect((popupEl.element as HTMLElement).style.display).toBe('none')
+    })
+
+    it('re-showing within the hide delay cancels the pending hide', async () => {
+        const { wrapper } = mountPreview()
+        await showPreview(wrapper)
+        await wrapper.setProps({ show: false })
+        await vi.advanceTimersByTimeAsync(100) // hide timer pending, still visible
+        await wrapper.setProps({ show: true })
+        await vi.advanceTimersByTimeAsync(400)
+
+        const popupEl = wrapper.find('[class*="fixed"][class*="z-50"]')
+        expect((popupEl.element as HTMLElement).style.display).not.toBe('none')
+        expect(wrapper.text()).toContain('idx_employees_dept')
+    })
+
+    it('clears the cached display data after the hide delay', async () => {
+        const { wrapper } = mountPreview()
+        await showPreview(wrapper)
+        expect(wrapper.text()).toContain('索引 · employees 表')
+
+        await wrapper.setProps({ show: false, title: '', subtitle: '', items: [] })
+        await vi.advanceTimersByTimeAsync(250)
+
+        const popupEl = wrapper.find('[class*="fixed"][class*="z-50"]')
+        expect((popupEl.element as HTMLElement).style.display).toBe('none')
+        expect(wrapper.text()).not.toContain('索引 · employees 表')
+    })
+
+    it('clicking an item during the hide delay selects it and hides immediately', async () => {
+        const { wrapper } = mountPreview()
+        await showPreview(wrapper)
+        await wrapper.setProps({ show: false }) // hide pending, popup still visible
+
+        const item = wrapper.findAll('[class*="cursor-pointer"]')[0]
+        await item.trigger('click')
+        expect(wrapper.emitted('select')).toEqual([['idx-1']])
+
+        const popupEl = wrapper.find('[class*="fixed"][class*="z-50"]')
+        expect((popupEl.element as HTMLElement).style.display).toBe('none')
+    })
+
+    it('clear-filter button resets the filter and refocuses the input', async () => {
+        const { wrapper } = mountPreview()
+        await showPreview(wrapper)
+
+        await wrapper.find('input').setValue('email')
+        expect(wrapper.text()).toContain('1/2')
+
+        const clearBtn = wrapper.findAll('button').find((b) => b.text().includes('✕'))
+        await clearBtn!.trigger('click')
+        await nextTick()
+        expect(wrapper.text()).not.toContain('1/2')
+        expect(wrapper.text()).toContain('idx_employees_dept')
+    })
+
+    it('mouseenter drives the hovered highlight and mouseleave resets it', async () => {
+        const { wrapper } = mountPreview()
+        await showPreview(wrapper)
+
+        const items = wrapper.findAll('[class*="cursor-pointer"]')
+        await items[1].trigger('mouseenter')
+        // Re-query: DOMWrapper caches classes at creation time
+        expect(wrapper.findAll('[class*="cursor-pointer"]')[1].classes()).toContain(
+            'bg-primary/10'
+        )
+
+        // Moving to the other item moves the highlight (hoveredIndex + keyboardIndex)
+        await wrapper.findAll('[class*="cursor-pointer"]')[0].trigger('mouseleave')
+        await wrapper.findAll('[class*="cursor-pointer"]')[0].trigger('mouseenter')
+        const after = wrapper.findAll('[class*="cursor-pointer"]')
+        expect(after[0].classes()).toContain('bg-muted')
+        expect(after[1].classes()).not.toContain('bg-primary/10')
+    })
+
+    it('keyboard navigation with no matching items is a no-op', async () => {
+        const { wrapper } = mountPreview()
+        await showPreview(wrapper)
+
+        const input = wrapper.find('input')
+        await input.setValue('zzz_no_match')
+        await nextTick()
+        expect(wrapper.text()).toContain('无匹配项')
+
+        await input.trigger('keydown', { key: 'ArrowDown' })
+        await input.trigger('keydown', { key: 'Enter' })
+        expect(wrapper.emitted('select')).toBeUndefined()
+    })
+
+    it('Enter without a keyboard selection does not emit select', async () => {
+        const { wrapper } = mountPreview()
+        await showPreview(wrapper)
+        await wrapper.find('input').trigger('keydown', { key: 'Enter' })
+        expect(wrapper.emitted('select')).toBeUndefined()
+    })
+
+    it('Escape during the pending hide delay hides the popup immediately', async () => {
+        const { wrapper } = mountPreview()
+        await showPreview(wrapper)
+        // Start the delayed hide, then press Escape before the delay elapses
+        await wrapper.setProps({ show: false })
+        await wrapper.find('input').trigger('keydown', { key: 'Escape' })
+        const popupEl = wrapper.find('[class*="fixed"][class*="z-50"]')
+        expect((popupEl.element as HTMLElement).style.display).toBe('none')
+    })
+
+    it('forwards mouseenter/mouseleave from the popup body', async () => {
+        const { wrapper } = mountPreview()
+        await showPreview(wrapper)
+        const popup = wrapper.find('[class*="fixed"][class*="z-50"]')
+        await popup.trigger('mouseenter')
+        expect(wrapper.emitted('mouseenter')).toHaveLength(1)
+        await popup.trigger('mouseleave')
+        expect(wrapper.emitted('mouseleave')).toHaveLength(1)
+    })
+
+    it('emits navigate-all from the bottom action bar', async () => {
+        const { wrapper } = mountPreview()
+        await showPreview(wrapper)
+        const viewAllBtn = wrapper.findAll('button').find((b) => b.text().includes('查看全部'))
+        expect(viewAllBtn).toBeTruthy()
+        await viewAllBtn!.trigger('click')
+        expect(wrapper.emitted('navigate-all')).toHaveLength(1)
+    })
+
+    it('ArrowDown scrolls the highlighted item into view', async () => {
+        const { wrapper } = mountPreview()
+        await showPreview(wrapper)
+
+        const list = wrapper.find('[class*="max-h-[320px]"]')
+        const firstChild = list.element.children[0] as HTMLElement
+        const scrollSpy = vi.spyOn(firstChild, 'scrollIntoView').mockImplementation(() => {})
+        await wrapper.find('input').trigger('keydown', { key: 'ArrowDown' })
+        expect(scrollSpy).toHaveBeenCalledWith({ block: 'nearest' })
     })
 })

@@ -65,8 +65,8 @@
 
 <script setup lang="ts">
 import { inject } from 'vue'
-import type { IndexInfo, TableSchema, TriggerInfo, ViewInfo } from '../../model/DatabaseTypes'
-import { SQL_CONTEXT_KEY } from '../../model/injectionKeys'
+import type { IndexInfo, TableSchema, TriggerInfo, ViewInfo } from '@/model/DatabaseTypes'
+import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
 import type { HoverType } from './useTableHoverPreview'
 
 defineProps<{

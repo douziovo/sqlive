@@ -66,20 +66,12 @@ export function decideDualAxis(
         }
     }
 
-    // Tie-breaker: first occurrence of max gap
+    // Tie-breaker: first occurrence of max gap.
+    // cutIdx is always in [1, mags.length - 1]: indexOf returns a valid gaps
+    // index (< mags.length - 1), so both slices below are provably non-empty.
     const cutIdx = gaps.indexOf(maxGap) + 1
     const leftMags = mags.slice(0, cutIdx)
     const rightMags = mags.slice(cutIdx)
-
-    if (leftMags.length === 0 || rightMags.length === 0) {
-        return {
-            enabled: false,
-            leftIndices: [],
-            rightIndices: [],
-            leftAxisName: '',
-            rightAxisName: ''
-        }
-    }
 
     function axisName(entries: typeof leftMags): string {
         if (entries.length === 1) return entries[0].name

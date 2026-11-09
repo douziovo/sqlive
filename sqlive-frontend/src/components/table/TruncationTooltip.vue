@@ -20,7 +20,7 @@
 
 <script setup lang="ts">
 import { inject, nextTick, onUnmounted, ref, watch } from 'vue'
-import { SQL_CONTEXT_KEY } from '../../model/injectionKeys'
+import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
 
 const { lastTruncations } = inject(SQL_CONTEXT_KEY)!
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { toSqlLiteral } from '../utils/sql'
+import { quoteSqlIdentifier } from '../utils/sqlIdentifiers'
 import { Dialog, DialogContent } from './ui/dialog'
 
 const props = defineProps<{ open: boolean }>()
@@ -35,18 +36,18 @@ const isValid = computed(() => {
 const previewSql = computed(() => {
     if (!tableName.value) return ''
 
-    let sql = `CREATE TABLE ${tableName.value}(\n`
+    let sql = `CREATE TABLE ${quoteSqlIdentifier(tableName.value)}(\n`
 
     const validRows = rows.value.filter((r) => r.name && r.type)
     if (validRows.length === 0) return ''
 
-    const defs = validRows.map((r) => `  ${r.name} ${r.type}`)
+    const defs = validRows.map((r) => `  ${quoteSqlIdentifier(r.name)} ${r.type}`)
     sql += defs.join(',\n')
     sql += `\n);`
 
     const validValues = rows.value.filter((r) => r.name && r.value)
     if (validValues.length > 0) {
-        sql += `\n\nINSERT INTO ${tableName.value} VALUES (`
+        sql += `\n\nINSERT INTO ${quoteSqlIdentifier(tableName.value)} VALUES (`
         const vals = rows.value.map((r) => {
             const v = r.value.trim()
             if (!v) return 'NULL'
@@ -64,9 +65,9 @@ const close = () => {
 }
 
 const submit = () => {
-    const columns = rows.value.map((r) => `${r.name} ${r.type}`)
+    const columns = rows.value.map((r) => `${quoteSqlIdentifier(r.name)} ${r.type}`)
 
-    const rowData: any = {}
+    const rowData: Record<string, string> = {}
     rows.value.forEach((r) => {
         if (r.name) rowData[r.name] = r.value
     })

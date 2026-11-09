@@ -48,8 +48,8 @@
 </template>
 
 <script setup lang="ts">
-import { type SortField, useSortFilter } from '../../composables/useSortFilter'
-import type { TableSchema, ViewInfo } from '../../model/DatabaseTypes'
+import { type SortField, useSortFilter } from '@/composables/useSortFilter'
+import type { TableSchema, ViewInfo } from '@/model/DatabaseTypes'
 import EmptyState from '../EmptyState.vue'
 import type { SortFieldDef } from '../SortFilterToolbar.vue'
 import SortFilterToolbar from '../SortFilterToolbar.vue'

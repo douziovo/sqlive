@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { type SortField, useSortFilter } from '@/composables/useSortFilter'
+import { ref } from 'vue'
 
 interface Item {
     id: number
@@ -27,6 +28,33 @@ function nameFilter(item: Item, f: string): boolean {
 }
 
 describe('useSortFilter', () => {
+    it('clamps the last page immediately after deleting its final row or replacing data', () => {
+        const rows = ref(
+            Array.from({ length: 21 }, (_, i) => ({ id: i + 1, name: `Row ${i + 1}`, count: i }))
+        )
+        const pageSize = ref(10)
+        const state = useSortFilter(() => rows.value, makeFields(), nameFilter, { pageSize })
+        state.currentPage.value = 3
+        rows.value.pop()
+        expect(state.currentPage.value).toBe(2)
+        expect(state.result.value).toHaveLength(10)
+        rows.value = rows.value.slice(0, 3)
+        expect(state.totalPages.value).toBe(1)
+        expect(state.currentPage.value).toBe(1)
+        expect(state.result.value).toHaveLength(3)
+    })
+
+    it('returns to the first page when page size changes and pagination becomes hidden', () => {
+        const rows = Array.from({ length: 21 }, (_, i) => ({ id: i, name: `${i}`, count: i }))
+        const pageSize = ref(10)
+        const state = useSortFilter(() => rows, makeFields(), nameFilter, { pageSize })
+        state.currentPage.value = 3
+        pageSize.value = 50
+        expect(state.totalPages.value).toBe(1)
+        expect(state.currentPage.value).toBe(1)
+        expect(state.result.value).toHaveLength(21)
+    })
+
     beforeEach(() => {
         vi.useFakeTimers()
     })
