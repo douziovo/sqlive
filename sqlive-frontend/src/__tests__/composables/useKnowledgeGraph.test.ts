@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
+import { jsonOk } from '../test-utils'
 import { LEVEL_NAMES, useKnowledgeGraph } from '@/composables/useKnowledgeGraph'
 
 const mockFetch = vi.fn()
@@ -47,17 +48,17 @@ describe('useKnowledgeGraph', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         localStorage.clear()
-        // graphData/selectedNode hoisted to module scope — reset between tests
+        // D-02: graphData/selectedNode hoisted to module scope — reset between tests
         const kg = useKnowledgeGraph()
         kg.graphData.value = null
         kg.selectedNode.value = null
-        // sessionStreak hoisted to module scope — reset between tests so
+        // D-08: sessionStreak hoisted to module scope — reset between tests so
         // 'combo/streak increments with each mastery' starts from 0 regardless of
         // state left by prior toggleMastered calls in other tests.
         kg.sessionStreak.value = 0
     })
 
-    // ── LEVEL_NAMES exported as public constant ─────────────
+    // ── D-02: LEVEL_NAMES exported as public constant ─────────────
 
     it('exports LEVEL_NAMES constant with 4 levels', () => {
         expect(Array.isArray(LEVEL_NAMES)).toBe(true)
@@ -69,10 +70,7 @@ describe('useKnowledgeGraph', () => {
     })
 
     it('module-level graphData is shared across useKnowledgeGraph() calls (singleton)', async () => {
-        mockFetch.mockResolvedValueOnce({
-            ok: true,
-            json: () => Promise.resolve(mockGraphData)
-        })
+        mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
 
         const kg1 = useKnowledgeGraph()
         await kg1.fetchGraph()
@@ -86,10 +84,7 @@ describe('useKnowledgeGraph', () => {
     })
 
     it('fetchGraph loads data and computes nodes/edges', async () => {
-        mockFetch.mockResolvedValueOnce({
-            ok: true,
-            json: () => Promise.resolve(mockGraphData)
-        })
+        mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
 
         const kg = useKnowledgeGraph()
         await kg.fetchGraph()
@@ -104,10 +99,7 @@ describe('useKnowledgeGraph', () => {
     it('progress reflects mastered topics from localStorage', async () => {
         localStorage.setItem('ai-mastered-topics', JSON.stringify(['sql-basics', 'filtering']))
 
-        mockFetch.mockResolvedValueOnce({
-            ok: true,
-            json: () => Promise.resolve(mockGraphData)
-        })
+        mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
 
         const kg = useKnowledgeGraph()
         await kg.fetchGraph()
@@ -118,10 +110,7 @@ describe('useKnowledgeGraph', () => {
     })
 
     it('toggleMastered adds and removes topics', async () => {
-        mockFetch.mockResolvedValueOnce({
-            ok: true,
-            json: () => Promise.resolve(mockGraphData)
-        })
+        mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
 
         const kg = useKnowledgeGraph()
         await kg.fetchGraph()
@@ -139,10 +128,7 @@ describe('useKnowledgeGraph', () => {
     })
 
     it('selectedNode starts null and can be set', async () => {
-        mockFetch.mockResolvedValueOnce({
-            ok: true,
-            json: () => Promise.resolve(mockGraphData)
-        })
+        mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
 
         const kg = useKnowledgeGraph()
         await kg.fetchGraph()
@@ -153,10 +139,7 @@ describe('useKnowledgeGraph', () => {
     })
 
     it('selectedNodeData computed from graphData', async () => {
-        mockFetch.mockResolvedValueOnce({
-            ok: true,
-            json: () => Promise.resolve(mockGraphData)
-        })
+        mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
 
         const kg = useKnowledgeGraph()
         await kg.fetchGraph()
@@ -167,10 +150,7 @@ describe('useKnowledgeGraph', () => {
     })
 
     it('focusNode sets selectedNode', async () => {
-        mockFetch.mockResolvedValueOnce({
-            ok: true,
-            json: () => Promise.resolve(mockGraphData)
-        })
+        mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
 
         const kg = useKnowledgeGraph()
         await kg.fetchGraph()
@@ -198,10 +178,10 @@ describe('useKnowledgeGraph', () => {
         expect(kg.graphData.value).toBeNull()
     })
 
-    // ── fetchGraph response shape validation ────────
+    // ── CR-03 fetchGraph response shape validation (D-04) ────────
 
     it('fetchGraph with {} response does not set graphData', async () => {
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) })
+        mockFetch.mockResolvedValueOnce(jsonOk({}))
 
         const kg = useKnowledgeGraph()
         await kg.fetchGraph()
@@ -211,7 +191,7 @@ describe('useKnowledgeGraph', () => {
     })
 
     it('fetchGraph with { topics: null } does not set graphData', async () => {
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ topics: null }) })
+        mockFetch.mockResolvedValueOnce(jsonOk({ topics: null }))
 
         const kg = useKnowledgeGraph()
         await kg.fetchGraph()
@@ -220,10 +200,7 @@ describe('useKnowledgeGraph', () => {
     })
 
     it('fetchGraph with { topics: "not-array" } does not set graphData', async () => {
-        mockFetch.mockResolvedValueOnce({
-            ok: true,
-            json: () => Promise.resolve({ topics: 'not-array' })
-        })
+        mockFetch.mockResolvedValueOnce(jsonOk({ topics: 'not-array' }))
 
         const kg = useKnowledgeGraph()
         await kg.fetchGraph()
@@ -233,13 +210,13 @@ describe('useKnowledgeGraph', () => {
 
     it('fetchGraph preserves previous valid graphData on malformed response', async () => {
         // First fetch: valid
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockGraphData) })
+        mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
         const kg = useKnowledgeGraph()
         await kg.fetchGraph()
         expect(kg.graphData.value?.topics).toHaveLength(3)
 
         // Second fetch: malformed — graphData should stay as previous valid
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) })
+        mockFetch.mockResolvedValueOnce(jsonOk({}))
         await kg.fetchGraph()
         expect(kg.graphData.value?.topics).toHaveLength(3) // unchanged
     })
@@ -247,7 +224,7 @@ describe('useKnowledgeGraph', () => {
     // ── inProgressTopics ─────────────────────────────────────────
 
     it('inProgressTopics detects keywords in SQL (case-insensitive)', async () => {
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockGraphData) })
+        mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
         const kg = useKnowledgeGraph({ sqlSource: () => 'select * from users' })
         await kg.fetchGraph()
 
@@ -256,7 +233,7 @@ describe('useKnowledgeGraph', () => {
     })
 
     it('inProgressTopics detects regex patterns in SQL', async () => {
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockGraphData) })
+        mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
         const kg = useKnowledgeGraph({
             sqlSource: () => 'SELECT * FROM t1 INNER JOIN t2 ON t1.id = t2.id'
         })
@@ -268,7 +245,7 @@ describe('useKnowledgeGraph', () => {
     })
 
     it('inProgressTopics returns empty set when SQL is empty', async () => {
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockGraphData) })
+        mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
         const kg = useKnowledgeGraph({ sqlSource: () => '' })
         await kg.fetchGraph()
 
@@ -277,7 +254,7 @@ describe('useKnowledgeGraph', () => {
 
     it('inProgressTopics skips mastered topics (mastered takes priority)', async () => {
         localStorage.setItem('ai-mastered-topics', JSON.stringify(['sql-basics']))
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockGraphData) })
+        mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
         const kg = useKnowledgeGraph({ sqlSource: () => 'select * from users' })
         await kg.fetchGraph()
 
@@ -286,7 +263,7 @@ describe('useKnowledgeGraph', () => {
     })
 
     it('inProgressTopics handles no sqlSource gracefully', async () => {
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockGraphData) })
+        mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
         const kg = useKnowledgeGraph() // no opts
         await kg.fetchGraph()
 
@@ -295,7 +272,7 @@ describe('useKnowledgeGraph', () => {
 
     it('getNodeStatus returns correct status', async () => {
         localStorage.setItem('ai-mastered-topics', JSON.stringify(['sql-basics']))
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockGraphData) })
+        mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
         const kg = useKnowledgeGraph({ sqlSource: () => 'SELECT * FROM t WHERE a AND b' })
         await kg.fetchGraph()
 
@@ -307,7 +284,7 @@ describe('useKnowledgeGraph', () => {
     // ── Edge style ──────────────────────────────────────────────
 
     it('edges include nextTopics and prerequisites edges with distinct styles', async () => {
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockGraphData) })
+        mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
         const kg = useKnowledgeGraph()
         await kg.fetchGraph()
 
@@ -323,10 +300,10 @@ describe('useKnowledgeGraph', () => {
         }
     })
 
-    // ── XP/Level/Streak system (-03) ─────────────────────
+    // ── XP/Level/Streak system (Phase 05-03) ─────────────────────
 
     it('toggleMastered returns xpGained: 30 for difficulty-1, 50 for difficulty-2, 80 for difficulty-3', async () => {
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockGraphData) })
+        mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
         const kg = useKnowledgeGraph()
         await kg.fetchGraph()
 
@@ -338,7 +315,7 @@ describe('useKnowledgeGraph', () => {
     })
 
     it('toggleMastered returns leveledUp false when XP < 750', async () => {
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockGraphData) })
+        mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
         const kg = useKnowledgeGraph()
         await kg.fetchGraph()
 
@@ -347,7 +324,7 @@ describe('useKnowledgeGraph', () => {
     })
 
     it('every 750 XP levels up, level starts at 0', async () => {
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockGraphData) })
+        mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
         const kg = useKnowledgeGraph()
         await kg.fetchGraph()
 
@@ -367,7 +344,7 @@ describe('useKnowledgeGraph', () => {
                 category: 'basics'
             }))
         }
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockManyTopics) })
+        mockFetch.mockResolvedValueOnce(jsonOk(mockManyTopics))
         await kg.fetchGraph()
 
         // After 15 difficulty-2 topics (15*50=750)
@@ -378,7 +355,7 @@ describe('useKnowledgeGraph', () => {
     })
 
     it('progress returns level 0 with name 初级学者 initially', async () => {
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockGraphData) })
+        mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
         const kg = useKnowledgeGraph()
         await kg.fetchGraph()
 
@@ -390,7 +367,7 @@ describe('useKnowledgeGraph', () => {
     })
 
     it('level names: 0=初级学者, 1=进阶学者, 2=SQL 大师, 3=数据库传奇', async () => {
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockGraphData) })
+        mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
         const kg = useKnowledgeGraph()
         await kg.fetchGraph()
 
@@ -409,7 +386,7 @@ describe('useKnowledgeGraph', () => {
                 category: 'basics'
             }))
         }
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockManyTopics) })
+        mockFetch.mockResolvedValueOnce(jsonOk(mockManyTopics))
         await kg.fetchGraph()
 
         // Level 0
@@ -431,7 +408,7 @@ describe('useKnowledgeGraph', () => {
         expect(kg.progress.value.levelName).toBe('数据库传奇')
     })
 
-    // ── toggleMastered max-level guard ──────────────
+    // ── CR-02 toggleMastered max-level guard (D-03) ──────────────
 
     it('toggleMastered at max level returns leveledUp: false even when XP crosses threshold', async () => {
         // Start at max level (3) with totalXp=3000. Mastering 'sql-basics' (+30 XP)
@@ -446,7 +423,7 @@ describe('useKnowledgeGraph', () => {
                 masteredLog: []
             })
         )
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockGraphData) })
+        mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
         const kg = useKnowledgeGraph()
         await kg.fetchGraph()
 
@@ -469,7 +446,7 @@ describe('useKnowledgeGraph', () => {
                 masteredLog: []
             })
         )
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockGraphData) })
+        mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
         const kg = useKnowledgeGraph()
         await kg.fetchGraph()
 
@@ -479,7 +456,7 @@ describe('useKnowledgeGraph', () => {
     })
 
     it('combo/streak increments with each mastery, unmaster resets to 0', async () => {
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockGraphData) })
+        mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
         const kg = useKnowledgeGraph()
         await kg.fetchGraph()
 
@@ -494,7 +471,7 @@ describe('useKnowledgeGraph', () => {
     })
 
     it('masteredLog prevents double XP for same topic on page reload', async () => {
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockGraphData) })
+        mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
         const kg = useKnowledgeGraph()
         await kg.fetchGraph()
 
@@ -523,7 +500,7 @@ describe('useKnowledgeGraph', () => {
     })
 
     it('progress returns count, total, percentage, level, levelName, xp, xpForNext, streak', async () => {
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockGraphData) })
+        mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
         const kg = useKnowledgeGraph()
         await kg.fetchGraph()
 
@@ -538,7 +515,7 @@ describe('useKnowledgeGraph', () => {
         expect(p).toHaveProperty('streak')
     })
 
-    // ── addTaskXp unified XP entry ──────────────────────────
+    // ── D-14: addTaskXp unified XP entry ──────────────────────────
 
     describe('addTaskXp', () => {
         it('awards xp and logs task:topicId key', () => {
@@ -619,21 +596,18 @@ describe('useKnowledgeGraph', () => {
         })
     })
 
-    // ── getChapterProgress migrated from useKnowledgeTasks ──
+    // ── WR-01: getChapterProgress migrated from useKnowledgeTasks (D-05) ──
     // New semantic: counts MASTERED TOPICS under chapter.categoryKey, divided by
     // chapter.topicCount (from learningChapters.ts). Previously counted done tasks
     // / task.length — mixed user-created task count with chapter-defined topicCount,
     // producing >100% or understated progress.
 
-    describe('getChapterProgress (migration)', () => {
+    describe('getChapterProgress (D-05 migration)', () => {
         it('basics chapter counts only mastered basics-category topics', async () => {
             // basics.topicCount = 6 (learningChapters.ts). mockGraphData has sql-basics
             // and filtering in category='basics'. Mastering only sql-basics → completed=1.
             localStorage.setItem('ai-mastered-topics', JSON.stringify(['sql-basics']))
-            mockFetch.mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve(mockGraphData)
-            })
+            mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
             const kg = useKnowledgeGraph()
             await kg.fetchGraph()
 
@@ -643,10 +617,7 @@ describe('useKnowledgeGraph', () => {
         })
 
         it('unknown chapter returns 0/0', async () => {
-            mockFetch.mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve(mockGraphData)
-            })
+            mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
             const kg = useKnowledgeGraph()
             await kg.fetchGraph()
 
@@ -668,10 +639,7 @@ describe('useKnowledgeGraph', () => {
             // query.topicCount = 4 (learningChapters.ts). mockGraphData has joins in
             // category='query'. Mastering joins → completed=1.
             localStorage.setItem('ai-mastered-topics', JSON.stringify(['joins']))
-            mockFetch.mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve(mockGraphData)
-            })
+            mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
             const kg = useKnowledgeGraph()
             await kg.fetchGraph()
 
@@ -702,10 +670,7 @@ describe('useKnowledgeGraph', () => {
                 ])
             )
             // No mastered topics
-            mockFetch.mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve(mockGraphData)
-            })
+            mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
             const kg = useKnowledgeGraph()
             await kg.fetchGraph()
 
@@ -715,33 +680,27 @@ describe('useKnowledgeGraph', () => {
         })
     })
 
-    // ── sessionStreak hoisted to module scope ────────
+    // ── WR-04: sessionStreak hoisted to module scope (D-08) ────────
     // Previously per-instance — instance A's toggleMastered incremented streak
     // but instance B (e.g., LearningCompanion) read progress.value.streak = 0.
-    // Aligns with module-level singleton pattern (graphData/selectedNode).
+    // Aligns with D-02 module-level singleton pattern (graphData/selectedNode).
 
-    describe('sessionStreak module singleton', () => {
+    describe('sessionStreak module singleton (WR-04/D-08)', () => {
         it('sessionStreak is shared across useKnowledgeGraph() instances', async () => {
-            mockFetch.mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve(mockGraphData)
-            })
+            mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
             const kg1 = useKnowledgeGraph()
             await kg1.fetchGraph()
             kg1.toggleMastered('sql-basics') // streak → 1
             expect(kg1.progress.value.streak).toBe(1)
 
             // Second instance reads same module-level sessionStreak.
-            // Before fix, kg2.progress.value.streak was 0 (per-instance bug).
+            // Before D-08 fix, kg2.progress.value.streak was 0 (per-instance bug).
             const kg2 = useKnowledgeGraph()
             expect(kg2.progress.value.streak).toBe(1)
         })
 
         it('resetSessionStreak clears module-level sessionStreak', async () => {
-            mockFetch.mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve(mockGraphData)
-            })
+            mockFetch.mockResolvedValueOnce(jsonOk(mockGraphData))
             const kg1 = useKnowledgeGraph()
             await kg1.fetchGraph()
             kg1.toggleMastered('sql-basics')
@@ -756,12 +715,12 @@ describe('useKnowledgeGraph', () => {
         })
     })
 
-    // ── xpData.level clamp on load ──────────────────
+    // ── WR-06: xpData.level clamp on load (D-10) ──────────────────
     // Corrupted localStorage (e.g., level: 99 from manual edit or past bug)
     // would break nextLevelXp / xpBarPercent numeric semantics. The watch with
     // { immediate: true } clamps level to [0, LEVEL_NAMES.length - 1] on load.
 
-    describe('xpData level clamp', () => {
+    describe('xpData level clamp (WR-06/D-10)', () => {
         it('clamps level:99 to LEVEL_NAMES.length - 1 on load', async () => {
             localStorage.setItem(
                 'ai-knowledge-xp',
@@ -807,5 +766,40 @@ describe('useKnowledgeGraph', () => {
             await nextTick()
             expect(kg.xpData.value.level).toBe(1)
         })
+    })
+    it('inProgressTopics tolerates invalid regex patterns', async () => {
+        mockFetch.mockResolvedValueOnce(
+            jsonOk({
+                topics: [
+                    {
+                        id: 'broken',
+                        label: '坏模式',
+                        description: '',
+                        keywords: [],
+                        patterns: ['([unclosed'],
+                        difficulty: 1,
+                        prerequisites: [],
+                        nextTopics: [],
+                        category: 'basics'
+                    },
+                    {
+                        id: 'valid',
+                        label: '好模式',
+                        description: '',
+                        keywords: [],
+                        patterns: ['GROUP\\s+BY'],
+                        difficulty: 1,
+                        prerequisites: [],
+                        nextTopics: [],
+                        category: 'basics'
+                    }
+                ]
+            })
+        )
+        const kg = useKnowledgeGraph({ sqlSource: () => 'SELECT 1 GROUP BY x' })
+        await kg.fetchGraph()
+
+        expect(kg.inProgressTopics.value.has('broken')).toBe(false)
+        expect(kg.inProgressTopics.value.has('valid')).toBe(true)
     })
 })

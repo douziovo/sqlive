@@ -198,8 +198,8 @@ function handleTaskDelete(id: string): void {
 }
 
 function handleTaskComplete(id: string): void {
-    completeTask(id)
-    if (props.topic) emit('complete-task', props.topic.id)
+    const result = completeTask(id)
+    if (result) emit('complete-task', result.task.topicId)
 }
 
 function handleViewAllTasks(): void {

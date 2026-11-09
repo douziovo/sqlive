@@ -113,6 +113,7 @@ import { useKnowledgePanelFilters } from './panel/useKnowledgePanelFilters'
 import { usePanelCelebration } from './panel/usePanelCelebration'
 import { CHAPTERS, getChapterById } from '@/data/learningChapters'
 import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
+import { getTaskXp } from './journal/taskPresentation'
 import { useRedDot } from '@/composables/useRedDot'
 
 const props = defineProps<{
@@ -128,7 +129,7 @@ const sqlContext = inject(SQL_CONTEXT_KEY)!
 const searchQuery = ref('')
 const activeTab = ref<'graph' | 'tasks' | 'chapters'>('graph')
 
-// chapter → multi-category filter wiring. Non-null array triggers
+// D-09: chapter → multi-category filter wiring. Non-null array triggers
 // TaskJournalPanel union-list mode (displays tasks across all listed
 // categories). Cleared on manual category tab click (handleTabClick).
 const chapterCategoryFilter = ref<string[] | null>(null)
@@ -140,7 +141,7 @@ const kg = useKnowledgeGraph({
     }
 })
 
-// chapter-progress function migrated to useKnowledgeGraph.
+// WR-01 (D-05): chapter-progress function migrated to useKnowledgeGraph.
 // Chapter progress now reflects mastered topics (not done tasks) / topicCount.
 const { seedPresetTasksIfFirstRun } = useKnowledgeTasks()
 const { isVisible: isRedDotVisible, clear } = useRedDot()
@@ -224,15 +225,16 @@ function handleTaskComplete(topicId: string): void {
     const topic = kg.graphData.value?.topics.find((t) => t.id === topicId)
     if (!topic) return
 
-    const xpGained = (kg.xpForDifficulty(topic.difficulty) ?? 30) + 10
+    const xpGained = getTaskXp(topic.difficulty)
 
-    // delegate XP award + level-up detection to the unified entry
+    // D-14: delegate XP award + level-up detection to the unified entry
     // (no longer directly mutates kg.xpData.value.totalXp / masteredLog / level)
     const result = kg.addTaskXp(topicId, xpGained)
+    if (result.xpGained === 0) return
 
     graphRef.value?.triggerSparkBurst?.(topicId)
 
-    showTaskToastFor(topic.label, xpGained)
+    showTaskToastFor(topic.label, result.xpGained)
 
     if (result.leveledUp) {
         celebrateLevelUp()
@@ -253,7 +255,7 @@ function onDeselectNode(): void {
 
 function handleTabClick(tabName: 'graph' | 'tasks' | 'chapters'): void {
     activeTab.value = tabName
-    // Clear chapter filter on manual tab switch (user takes control)
+    // Clear chapter filter on manual tab switch (D-09: user takes control)
     if (tabName === 'tasks') {
         chapterCategoryFilter.value = null
         clear('tab:tasks')
@@ -261,7 +263,7 @@ function handleTabClick(tabName: 'graph' | 'tasks' | 'chapters'): void {
 }
 
 function handleOpenChapter(chapterId: string): void {
-    // wire multi-category filter — look up chapter.taskCategories
+    // D-09: wire multi-category filter — look up chapter.taskCategories
     // (e.g., ['core', 'deep-dive'] for query/ddl/dml/advanced chapters).
     // TaskJournalPanel enters union-list mode showing tasks across all
     // listed categories. Cleared on manual category tab click.
@@ -386,16 +388,24 @@ defineExpose({
 }
 
 /* Slide transition for level-up toast */
+/* <Transition name="toast-slide"> 运行时生成的过渡类，静态检查器无法识别，不可删除 */
+/*noinspection CssUnusedSymbol*/
 .toast-slide-enter-active {
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
+/* 同上：Transition 运行时生成的离开过渡类 */
+/*noinspection CssUnusedSymbol*/
 .toast-slide-leave-active {
     transition: all 0.2s ease-in;
 }
+/* 同上：Transition 运行时生成的进入起始态 */
+/*noinspection CssUnusedSymbol*/
 .toast-slide-enter-from {
     opacity: 0;
     transform: translateX(-50%) translateY(-16px);
 }
+/* 同上：Transition 运行时生成的离开结束态 */
+/*noinspection CssUnusedSymbol*/
 .toast-slide-leave-to {
     opacity: 0;
     transform: translateX(-50%) translateY(-16px);

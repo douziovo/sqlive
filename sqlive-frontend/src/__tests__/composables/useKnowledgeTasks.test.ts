@@ -1,10 +1,45 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { nextTick } from 'vue'
-import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { effectScope, nextTick } from 'vue'
+import { useKnowledgeTasks as useSharedKnowledgeTasks } from '@/composables/useKnowledgeTasks'
 import { useRedDot } from '@/composables/useRedDot'
+
+let taskScope: ReturnType<typeof effectScope>
+const useKnowledgeTasks = () => taskScope.run(() => useSharedKnowledgeTasks())!
 
 beforeEach(() => {
     localStorage.clear()
+    taskScope = effectScope()
+})
+afterEach(() => taskScope.stop())
+
+it('shares simultaneous adds, updates and pin operations across live instances', async () => {
+    const a = useKnowledgeTasks()
+    const b = useKnowledgeTasks()
+    const first = a.addTask({ topicId: 'select', title: 'A', notes: '', priority: 'low' })
+    const second = b.addTask({ topicId: 'select', title: 'B', notes: '', priority: 'low' })
+    a.updateTask(first.id, { notes: 'first updated' })
+    b.updateTask(second.id, { priority: 'high' })
+    a.pinTask(second.id)
+    expect(a.tasks).toBe(b.tasks)
+    await nextTick()
+    expect(a.tasks.value).toHaveLength(2)
+    expect(b.tasks.value[0]).toMatchObject({ title: 'A', notes: 'first updated', isPinned: false })
+    expect(b.tasks.value[1]).toMatchObject({ title: 'B', priority: 'high', isPinned: true })
+    expect(JSON.parse(localStorage.getItem('ai-knowledge-tasks')!)).toEqual(a.tasks.value)
+})
+
+it('releases shared storage after the last consumer scope stops', async () => {
+    const a = effectScope()
+    const b = effectScope()
+    const first = a.run(() => useSharedKnowledgeTasks())!
+    const second = b.run(() => useSharedKnowledgeTasks())!
+    a.stop()
+    second.addTask({ topicId: 'a', title: 'Still live', notes: '', priority: 'low' })
+    await nextTick()
+    expect(first.tasks.value).toHaveLength(1)
+    b.stop()
+    localStorage.removeItem('ai-knowledge-tasks')
+    expect(useKnowledgeTasks().tasks.value).toHaveLength(0)
 })
 
 // ── addTask ───────────────────────────────────────────────────────
@@ -189,9 +224,9 @@ describe('completeTask', () => {
     })
 })
 
-// ── tasksByTopic (plain array, not computed) ─────────
+// ── tasksByTopic (IN-07/D-18: plain array, not computed) ─────────
 
-describe('tasksByTopic returns plain array', () => {
+describe('tasksByTopic returns plain array (IN-07/D-18)', () => {
     it('returns plain array (not computed) for matching topicId', () => {
         const { addTask, tasksByTopic } = useKnowledgeTasks()
         addTask({ topicId: 'joins', title: 'T1', notes: '', priority: 'low' })
@@ -479,11 +514,11 @@ describe('substeps', () => {
 
         const updated = tasks.value.find((t) => t.id === task.id)!
         expect(updated.substeps[0].status).toBe('done')
-        expect(updated.substeps[1].status).toBe('locked')
+        expect(updated.substeps[1].status).toBe('active')
     })
 
-    it('auto-completes task when all substeps are done', () => {
-        const { addTask, updateSubstep, tasks } = useKnowledgeTasks()
+    it('keeps all steps ready for explicit completion, then reopens on undo', () => {
+        const { addTask, updateSubstep, completeTask, tasks } = useKnowledgeTasks()
         const task = addTask({
             topicId: 'joins',
             title: 'All done',
@@ -497,8 +532,14 @@ describe('substeps', () => {
         updateSubstep(task.id, task.substeps[1].id, 'done')
 
         const updated = tasks.value.find((t) => t.id === task.id)!
-        expect(updated.status).toBe('done')
-        expect(updated.completedAt).toBeTruthy()
+        expect(updated.status).toBe('in-progress')
+        expect(updated.completedAt).toBeUndefined()
+        expect(completeTask(task.id)?.task.status).toBe('done')
+        expect(completeTask(task.id)).toBeNull()
+        updateSubstep(task.id, task.substeps[0].id, 'active')
+        expect(tasks.value[0].status).toBe('in-progress')
+        expect(tasks.value[0].completedAt).toBeUndefined()
+        expect(completeTask(task.id)).toBeNull()
     })
 
     it('updateSubstep is a no-op for non-existent taskId', () => {
@@ -606,12 +647,12 @@ describe('pin/unpin', () => {
 })
 
 // ── chapter progress ─────────────────────────────────────────────
-// getChapterProgress migrated to useKnowledgeGraph.test.ts.
+// WR-01 (D-05): getChapterProgress migrated to useKnowledgeGraph.test.ts.
 // New semantic: counts mastered topics (not done tasks) under
-// chapter.categoryKey / chapter.topicCount. See 'getChapterProgress (migration)'
+// chapter.categoryKey / chapter.topicCount. See 'getChapterProgress (D-05 migration)'
 // describe block in useKnowledgeGraph.test.ts.
 
-// ── Preset task seeding (-07) ─────────────────────────────
+// ── Preset task seeding (Phase 09-07) ─────────────────────────────
 
 describe('seedPresetTasksIfFirstRun', () => {
     it('seeds preset tasks when localStorage flag is absent (first run)', () => {
@@ -728,7 +769,7 @@ describe('seedPresetTasksIfFirstRun', () => {
         }
     })
 
-    // ── daily-drill dueDate uses local YYYY-MM-DD, not UTC ──
+    // ── IN-02 (D-13): daily-drill dueDate uses local YYYY-MM-DD, not UTC ──
     it('daily-drill tasks use local YYYY-MM-DD for dueDate (not UTC)', () => {
         localStorage.removeItem('ai-knowledge-tasks-seeded')
         const { tasks, seedPresetTasksIfFirstRun } = useKnowledgeTasks()
@@ -813,9 +854,9 @@ describe('seedPresetTasksIfFirstRun', () => {
     })
 })
 
-// ── useRedDot hoist + deleteTask clears redDot ──
+// ── WR-07 useRedDot hoist + WR-03 deleteTask clears redDot (D-11/D-07) ──
 
-describe('useRedDot hoist + deleteTask clears redDot', () => {
+describe('WR-07 useRedDot hoist + WR-03 deleteTask clears redDot', () => {
     it('deleteTask clears task redDot and cascades to category/tab when last task', async () => {
         const { addTask, deleteTask } = useKnowledgeTasks()
         const { isVisible: isRedDotVisible } = useRedDot()

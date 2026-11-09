@@ -1,4 +1,4 @@
-import { useLocalStorage } from '@vueuse/core'
+import { createSharedComposable, useLocalStorage } from '@vueuse/core'
 import { computed } from 'vue'
 import { nanoid } from 'nanoid'
 import { useRedDot } from './useRedDot'
@@ -43,10 +43,10 @@ type AddTaskInput = Omit<
 
 // ── useKnowledgeTasks composable ─────────────────────────────────
 
-export function useKnowledgeTasks() {
+export const useKnowledgeTasks = createSharedComposable(() => {
     const tasks = useLocalStorage<KnowledgeTask[]>(STORAGE_KEYS.knowledgeTasks, [])
 
-    // hoist useRedDot to setup scope so useLocalStorage's storage event
+    // D-11: hoist useRedDot to setup scope so useLocalStorage's storage event
     // listener registers under the component's effect scope and cleans up on
     // unmount. Previously addTask/updateSubstep called useRedDot() inside
     // function bodies (invocation time, not setup time), leaking listeners and
@@ -84,7 +84,7 @@ export function useKnowledgeTasks() {
         }
         tasks.value = [...tasks.value, newTask]
 
-        // single show() with parent chain — clear('task:X') will auto-propagate
+        // D-03: single show() with parent chain — clear('task:X') will auto-propagate
         // up to category and tab when this is the last task under that category.
         redDot.show(`task:${newTask.id}`, [`category:${newTask.category}`, 'tab:tasks'])
 
@@ -95,12 +95,14 @@ export function useKnowledgeTasks() {
         const idx = tasks.value.findIndex((t) => t.id === id)
         if (idx !== -1) {
             tasks.value[idx] = { ...tasks.value[idx], ...updates }
+            if (updates.status && updates.status !== 'done')
+                tasks.value[idx].completedAt = undefined
             tasks.value = [...tasks.value]
         }
     }
 
     function deleteTask(id: string): void {
-        // clear task redDot before removing — triggers parent cascade
+        // D-07: clear task redDot before removing — triggers parent cascade
         // (category: / tab:tasks) via useRedDot.clear when this was the last
         // visible child. Previously deleteTask left tab:tasks badge stale.
         redDot.clear('task:' + id)
@@ -109,7 +111,12 @@ export function useKnowledgeTasks() {
 
     function completeTask(id: string): { task: KnowledgeTask; xpGained: number } | null {
         const idx = tasks.value.findIndex((t) => t.id === id)
-        if (idx === -1 || tasks.value[idx].status === 'done') return null
+        if (
+            idx === -1 ||
+            tasks.value[idx].status === 'done' ||
+            tasks.value[idx].substeps.some((step) => step.status !== 'done')
+        )
+            return null
 
         const task: KnowledgeTask = {
             ...tasks.value[idx],
@@ -135,22 +142,25 @@ export function useKnowledgeTasks() {
 
         const newSubsteps = [...task.substeps]
         newSubsteps[substepIdx] = { ...newSubsteps[substepIdx], status }
+        if (status === 'done' && newSubsteps[substepIdx + 1]?.status === 'locked') {
+            newSubsteps[substepIdx + 1] = { ...newSubsteps[substepIdx + 1], status: 'active' }
+        }
 
         // Mark red dots when substep transitions from locked → active
         if (oldStatus === 'locked' && status === 'active') {
-            // single show() with parent chain replaces the old triple-show +
+            // D-03: single show() with parent chain replaces the old triple-show +
             // first-active-substep check. show() is idempotent — repeating the same
             // key is a no-op. The parents chain lets clear('task:X') auto-propagate
             // to category and tab when the last task under that category is cleared.
-            // uses hoisted redDot (setup scope) — no per-call useRedDot().
+            // D-11: uses hoisted redDot (setup scope) — no per-call useRedDot().
             redDot.show(`task:${taskId}`, [`category:${task.category}`, 'tab:tasks'])
         }
 
         const allDone = newSubsteps.every((s) => s.status === 'done')
         const updates: Partial<KnowledgeTask> = { substeps: newSubsteps }
-        if (allDone && task.status !== 'done') {
-            updates.status = 'done'
-            updates.completedAt = new Date().toISOString()
+        if (task.status !== 'done' || !allDone) {
+            updates.status = 'in-progress'
+            updates.completedAt = undefined
         }
 
         tasks.value[taskIdx] = { ...task, ...updates }
@@ -174,14 +184,14 @@ export function useKnowledgeTasks() {
     }
 
     // ── Chapter progress ────────────────
-    // chapter-progress function migrated to useKnowledgeGraph.
+    // WR-01 (D-05): chapter-progress function migrated to useKnowledgeGraph.
     // New semantic: counts mastered topics (not done tasks) under
     // chapter.categoryKey / chapter.topicCount. Callers (KnowledgePanel)
     // now source it from kg (the useKnowledgeGraph return object).
 
     // ── Derived helpers ──────────────────
 
-    // return plain array instead of computed. Previously
+    // D-18 (IN-07): return plain array instead of computed. Previously
     // returned computed(() => tasks.value.filter(...)) — caller (KnowledgeDetail)
     // used .value inside another computed, creating a new inner computed on
     // every re-evaluation that was never cleaned up (computed-in-computed leak).
@@ -241,4 +251,4 @@ export function useKnowledgeTasks() {
         isOverdue,
         seedPresetTasksIfFirstRun
     }
-}
+})

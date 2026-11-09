@@ -72,7 +72,7 @@ const emit = defineEmits<{
 }
 
 .journal__list-empty-icon {
-    /* SVG icon (ClipboardList) replaces 📋 emoji */
+    /* D-06: SVG icon (ClipboardList) replaces 📋 emoji */
     color: var(--muted-foreground);
     opacity: 0.4;
 }
@@ -130,14 +130,20 @@ const emit = defineEmits<{
     flex-shrink: 0;
 }
 
+/* priorityDotClass() 在运行时拼接这些类名（taskPresentation.ts），静态检查器无法识别，不可删除 */
+/*noinspection CssUnusedSymbol*/
 .journal__dot--low {
     background: #9ca3af;
 }
 
+/* 同上：由 priorityDotClass() 动态返回 */
+/*noinspection CssUnusedSymbol*/
 .journal__dot--medium {
     background: #eab308;
 }
 
+/* 同上：由 priorityDotClass() 动态返回 */
+/*noinspection CssUnusedSymbol*/
 .journal__dot--high {
     background: #ef4444;
 }

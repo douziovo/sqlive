@@ -13,10 +13,10 @@
                 {{ pendingCount > 99 ? '99+' : pendingCount }}
             </span>
             <GraduationCap class="companion-ring-bg" :size="20" />
-            <div class="companion-info">
+            <span class="companion-info">
                 <span class="companion-count">{{ kgProgress.count }}/{{ kgProgress.total }}</span>
                 <span class="companion-level">{{ kgProgress.levelName }}</span>
-            </div>
+            </span>
         </button>
     </div>
 </template>
@@ -53,17 +53,17 @@ const currentStepLabel = computed(() => {
     return activeStep?.label ?? ''
 })
 
-// count/total/levelName all come from kg.progress (single source of truth).
+// D-02: count/total/levelName all come from kg.progress (single source of truth).
 // Removed local masteredTopics useLocalStorage, percentage-based level, and the
 // standalone /api/knowledge/graph request — LearningCompanion now reads from the
 // singleton graphData that KnowledgePanel populates.
 const kgProgress = computed(() => kg.progress.value)
 
-// (Rule 2 deviation): defensive fetch on mount if graphData is null.
+// D-02 (Rule 2 deviation): defensive fetch on mount if graphData is null.
 // In production, KnowledgePanel mounts first and populates graphData via its own
 // watch(isOpen) hook; this guard only fires when LearningCompanion mounts
 // standalone (e.g., in tests or before KnowledgePanel has opened). Avoids the
-// duplicate /api/knowledge/graph request that explicitly removed.
+// duplicate /api/knowledge/graph request that D-02 explicitly removed.
 onMounted(() => {
     if (!kg.graphData.value) {
         void kg.fetchGraph()
@@ -138,7 +138,7 @@ function handleTrackerNavigate(topicId: string): void {
 }
 
 .companion-ring-bg {
-    /* SVG icon (GraduationCap) replaces emoji — color via primary token */
+    /* D-05: SVG icon (GraduationCap) replaces emoji — color via primary token */
     color: var(--primary);
     display: flex;
     align-items: center;

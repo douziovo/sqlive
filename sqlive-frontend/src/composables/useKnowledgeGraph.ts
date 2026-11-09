@@ -2,6 +2,7 @@ import type { Edge, Node } from '@vue-flow/core'
 import { useLocalStorage } from '@vueuse/core'
 import { computed, ref, watch } from 'vue'
 import { KNOWLEDGE_API_BASE } from '@/config'
+import { http } from '@/lib/http'
 import { getChapterById } from '@/data/learningChapters'
 import { STORAGE_KEYS } from '@/constants/storageKeys'
 
@@ -50,7 +51,7 @@ export interface KnowledgeNodeData {
 
 export type KnowledgeNode = Node<KnowledgeNodeData> & { data: KnowledgeNodeData }
 
-// ── Module-level singletons ─────────────────────────────
+// ── D-02: Module-level singletons ─────────────────────────────
 // graphData and selectedNode are hoisted to module scope so all useKnowledgeGraph()
 // calls share the same ref instances. This lets LearningCompanion read graphData
 // that KnowledgePanel already fetched, avoiding a duplicate /api/knowledge/graph
@@ -59,13 +60,13 @@ export type KnowledgeNode = Node<KnowledgeNodeData> & { data: KnowledgeNodeData 
 const graphData = ref<KnowledgeGraphData | null>(null)
 const selectedNode = ref<string | null>(null)
 
-// sessionStreak hoisted to module scope (alongside graphData/selectedNode).
+// D-08: sessionStreak hoisted to module scope (alongside graphData/selectedNode).
 // Previously per-instance — instance A's toggleMastered incremented streak
 // but instance B (e.g., LearningCompanion) read progress.value.streak = 0.
-// Aligns with module-level singleton pattern.
+// Aligns with D-02 module-level singleton pattern.
 const sessionStreak = ref(0)
 
-// ── LEVEL_NAMES exported as public constant ─────────────
+// ── D-02: LEVEL_NAMES exported as public constant ─────────────
 // ChapterCard / KnowledgePanel / LearningCompanion all import this single
 // source of truth — no more local LEVEL_NAMES copies that drift apart.
 
@@ -74,7 +75,7 @@ export const LEVEL_NAMES = ['初级学者', '进阶学者', 'SQL 大师', '数�
 export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
     const masteredTopics = useLocalStorage<string[]>(STORAGE_KEYS.masteredTopics, [])
 
-    // ── XP/Level/Combo system (-03) ──────────────────────
+    // ── XP/Level/Combo system (Phase 05-03) ──────────────────────
 
     const XP_PER_DIFFICULTY: Record<number, number> = { 1: 30, 2: 50, 3: 80 }
     const XP_PER_LEVEL = 750
@@ -86,7 +87,7 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
         masteredLog: [] as string[]
     })
 
-    // ── xpData.level clamp on load ─────────────────
+    // ── D-10: xpData.level clamp on load (WR-06) ─────────────────
     // Corrupted localStorage (level: 99 / -5 from manual edit or past bug)
     // breaks nextLevelXp / xpBarPercent numeric semantics. Immediate watch
     // clamps level to [0, LEVEL_NAMES.length - 1] before any reader observes.
@@ -99,12 +100,8 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
         { immediate: true }
     )
 
-    // sessionStreak is module-level — see declaration above.
+    // sessionStreak is module-level (D-08) — see declaration above.
     const levelUpTriggered = ref(false)
-
-    function xpForDifficulty(difficulty: number): number {
-        return XP_PER_DIFFICULTY[difficulty] ?? 30
-    }
 
     // ── Selected node ────────────────────────────────────────────
 
@@ -178,9 +175,9 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
         return result
     })
 
-    // ── getChapterProgress migrated from useKnowledgeTasks ──
+    // ── WR-01 (D-05): getChapterProgress migrated from useKnowledgeTasks ──
     // New semantic: counts MASTERED TOPICS under chapter.categoryKey, divided
-    // by chapter.topicCount (from learningChapters.ts). Aligns with single
+    // by chapter.topicCount (from learningChapters.ts). Aligns with D-02 single
     // source of truth (masteredTopics + graphData owned by useKnowledgeGraph).
     // Previously counted done tasks / task.length — mixed user-created task
     // count with chapter-defined topicCount, producing >100% or understated progress.
@@ -275,12 +272,10 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
 
     async function fetchGraph(): Promise<void> {
         try {
-            const resp = await fetch(`${KNOWLEDGE_API_BASE}/graph`)
-            if (!resp.ok) return
-            // shape validation — malformed 200 response (e.g., {}, { topics: null },
+            // D-04: shape validation — malformed 200 response (e.g., {}, { topics: null },
             // CDN/proxy error page) must not crash nodes computed. Only assign graphData
             // when the response has a non-null array `topics` field.
-            const data = await resp.json()
+            const data = await http<KnowledgeGraphData>(`${KNOWLEDGE_API_BASE}/graph`)
             if (data && Array.isArray(data.topics)) {
                 graphData.value = data
             }
@@ -289,6 +284,26 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
         } catch {
             // Silently fail - non-critical feature
         }
+    }
+
+    /**
+     * 共用的等级提升判定（toggleMastered / addTaskXp 原本各有一份完全相同实现，
+     * 抽为文件内私有 helper；行为与逐字复制版一致）。
+     * D-03: max-level guard — 满级时存储等级无法再前进，即使 totalXp 越过下一阈值，
+     * leveledUp 也必须为 false（防止误触发 confetti）。
+     */
+    function applyLevelUp(): boolean {
+        const newLevel = Math.floor(xpData.value.totalXp / XP_PER_LEVEL)
+        const atMaxLevel = xpData.value.level >= LEVEL_NAMES.length - 1
+        const leveledUp = !atMaxLevel && newLevel > xpData.value.level
+        if (leveledUp) {
+            xpData.value.level = Math.min(newLevel, LEVEL_NAMES.length - 1)
+            levelUpTriggered.value = true
+            setTimeout(() => {
+                levelUpTriggered.value = false
+            }, 1000)
+        }
+        return leveledUp
     }
 
     function toggleMastered(topicId: string): {
@@ -322,19 +337,7 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
             xpData.value.streak = Math.max(xpData.value.streak, sessionStreak.value)
 
             // Check level up
-            const newLevel = Math.floor(xpData.value.totalXp / XP_PER_LEVEL)
-            // max-level guard — mirrors addTaskXp pattern.
-            // At max level the stored level cannot advance, so leveledUp must be false
-            // even when totalXp crosses the next threshold (prevents false confetti).
-            const atMaxLevel = xpData.value.level >= LEVEL_NAMES.length - 1
-            const leveledUp = !atMaxLevel && newLevel > xpData.value.level
-            if (leveledUp) {
-                xpData.value.level = Math.min(newLevel, LEVEL_NAMES.length - 1)
-                levelUpTriggered.value = true
-                setTimeout(() => {
-                    levelUpTriggered.value = false
-                }, 1000)
-            }
+            const leveledUp = applyLevelUp()
 
             return { action: 'master', xpGained: awardedXp, leveledUp, streak: sessionStreak.value }
         } else {
@@ -350,7 +353,7 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
         sessionStreak.value = 0
     }
 
-    // ── addTaskXp — unified XP entry for task completion ─────
+    // ── D-14: addTaskXp — unified XP entry for task completion ─────
     // KnowledgePanel.handleTaskComplete calls this instead of directly
     // mutating xpData. logKey uses task: prefix to namespace apart from
     // toggleMastered's topicId keys in the same masteredLog array.
@@ -370,19 +373,8 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
         }
 
         // Level up check — only reports leveledUp when stored level actually advances
-        // (Rule 1 fix: plan pseudocode omitted max-level guard; test spec requires
-        // leveledUp=false when starting at LEVEL_NAMES.length - 1 even if XP crosses
-        // the next threshold, because the stored level cannot advance further)
-        const newLevel = Math.floor(xpData.value.totalXp / XP_PER_LEVEL)
-        const atMaxLevel = xpData.value.level >= LEVEL_NAMES.length - 1
-        const leveledUp = !atMaxLevel && newLevel > xpData.value.level
-        if (leveledUp) {
-            xpData.value.level = Math.min(newLevel, LEVEL_NAMES.length - 1)
-            levelUpTriggered.value = true
-            setTimeout(() => {
-                levelUpTriggered.value = false
-            }, 1000)
-        }
+        // (max-level guard 见 applyLevelUp：满级时 leveledUp 保持 false)
+        const leveledUp = applyLevelUp()
 
         // NOTE: does not modify masteredTopics — task completion ≠ topic mastery
         return { xpGained: awardedXp, leveledUp }
@@ -411,7 +403,6 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
         xpData,
         sessionStreak,
         levelUpTriggered,
-        xpForDifficulty,
         resetSessionStreak
     }
 }

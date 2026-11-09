@@ -1,8 +1,11 @@
-import { mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { enableAutoUnmount, mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { nextTick } from 'vue'
 import KnowledgeDetail from '@/components/knowledge/KnowledgeDetail.vue'
 import type { KnowledgeTopic } from '@/composables/useKnowledgeGraph'
 import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'
+
+enableAutoUnmount(afterEach)
 
 const mockTopic: KnowledgeTopic = {
     id: 'joins',
@@ -77,7 +80,7 @@ describe('KnowledgeDetail', () => {
         expect(w.emitted('close')).toBeTruthy()
     })
 
-    // ── task tracking () ──────────────────────────────────
+    // ── task tracking (Phase 09) ──────────────────────────────────
 
     const mockTask: KnowledgeTask = {
         id: 'task-1',
@@ -203,7 +206,7 @@ describe('KnowledgeDetail', () => {
         await w.find('.knowledge-detail__history-toggle').trigger('click')
     })
 
-    // ── Locate topic button (-06) ──────────────────────────
+    // ── Locate topic button (Phase 09-06) ──────────────────────────
 
     it('shows locate button when topic is provided', () => {
         localStorage.setItem('ai-knowledge-tasks', JSON.stringify([]))
@@ -228,5 +231,56 @@ describe('KnowledgeDetail', () => {
             props: { topic: null, isMastered: false }
         })
         expect(w.find('.knowledge-detail__locate-btn').exists()).toBe(false)
+    })
+
+    it('creating a task from the form adds it to the topic and closes the form', async () => {
+        localStorage.setItem('ai-knowledge-tasks', JSON.stringify([]))
+        const w = mount(KnowledgeDetail, {
+            props: { topic: mockTopic, isMastered: false }
+        })
+        await w.find('.knowledge-detail__add-task-btn').trigger('click')
+        const form = w.find('.task-create-form')
+        await form.find('.task-create-form__input--title').setValue('写一个 INNER JOIN')
+        await form.find('.task-create-form__input--notes').setValue('notes here')
+        await form.find('.task-create-form__btn--primary').trigger('click')
+
+        // Form closes and the new task is listed for the topic
+        expect(w.find('.task-create-form').exists()).toBe(false)
+        expect(w.text()).toContain('写一个 INNER JOIN')
+
+        // The task reached the store with the right topic
+        const stored = JSON.parse(localStorage.getItem('ai-knowledge-tasks') || '[]')
+        expect(stored).toHaveLength(1)
+        expect(stored[0]).toMatchObject({ title: '写一个 INNER JOIN', topicId: 'joins' })
+    })
+
+    it('deleting a task removes it from the topic list', async () => {
+        localStorage.setItem('ai-knowledge-tasks', JSON.stringify([mockTask]))
+        const w = mount(KnowledgeDetail, {
+            props: { topic: mockTopic, isMastered: false }
+        })
+        expect(w.text()).toContain('练习 JOIN 查询')
+        // Relay through TaskItem's delete:task event (the AlertDialog confirm is
+        // covered by TaskItem's own tests)
+        await w.findComponent({ name: 'TaskItem' }).vm.$emit('delete:task', 'task-1')
+        await nextTick()
+        expect(w.text()).not.toContain('练习 JOIN 查询')
+        const stored = JSON.parse(localStorage.getItem('ai-knowledge-tasks') || '[]')
+        expect(stored).toHaveLength(0)
+    })
+
+    it('completing a task emits complete-task with the topic id', async () => {
+        localStorage.setItem('ai-knowledge-tasks', JSON.stringify([mockTask]))
+        const w = mount(KnowledgeDetail, {
+            props: { topic: mockTopic, isMastered: false }
+        })
+        const taskItem = w.findComponent({ name: 'TaskItem' })
+        taskItem.vm.$emit('complete:task', 'task-1')
+        taskItem.vm.$emit('complete:task', 'task-1')
+        await nextTick()
+        expect(w.emitted('complete-task')).toEqual([['joins']])
+        const stored = JSON.parse(localStorage.getItem('ai-knowledge-tasks') || '[]')
+        expect(stored[0].completedAt).toBeTruthy()
+        expect(w.emitted('complete-task')).toHaveLength(1)
     })
 })

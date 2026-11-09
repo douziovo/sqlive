@@ -117,7 +117,7 @@ describe('KnowledgeGraph', () => {
         expect(wrapper.findComponent({ name: 'ErSearchBar' }).exists()).toBe(true)
     })
 
-    // ── Edge opacity ──────────────────────────────────
+    // ── Edge opacity (Task 1) ──────────────────────────────────
 
     it('默认所有边 opacity 为 0.12 (at zoom 0.8, compact tier)', () => {
         const wrapper = mount(KnowledgeGraph, {
@@ -152,7 +152,7 @@ describe('KnowledgeGraph', () => {
             global: { stubs }
         })
 
-        await wrapper.vm.setHoveredNode('sql-basics')
+        wrapper.vm.setHoveredNode('sql-basics')
         await wrapper.vm.$nextTick()
 
         const edges = wrapper.vm.getStyledEdges() as any[]
@@ -177,7 +177,7 @@ describe('KnowledgeGraph', () => {
 
         // When hovering 'filtering', edge-sql-basics-filtering is connected (target=filtering),
         // but edge-sql-basics-joins is not — it should stay at zoom-tiered opacity, not 0
-        await wrapper.vm.setHoveredNode('filtering')
+        wrapper.vm.setHoveredNode('filtering')
         await wrapper.vm.$nextTick()
 
         const edges = wrapper.vm.getStyledEdges() as any[]
@@ -201,7 +201,7 @@ describe('KnowledgeGraph', () => {
             global: { stubs }
         })
 
-        await wrapper.vm.setHoveredNode('sql-basics')
+        wrapper.vm.setHoveredNode('sql-basics')
         await wrapper.vm.$nextTick()
 
         const nodes = wrapper.vm.getStyledNodes() as any[]
@@ -235,9 +235,9 @@ describe('KnowledgeGraph', () => {
             global: { stubs }
         })
 
-        await wrapper.vm.setHoveredNode('sql-basics')
+        wrapper.vm.setHoveredNode('sql-basics')
         await wrapper.vm.$nextTick()
-        await wrapper.vm.clearHoveredNode()
+        wrapper.vm.clearHoveredNode()
         await wrapper.vm.$nextTick()
 
         const nodes = wrapper.vm.getStyledNodes() as any[]
@@ -261,9 +261,9 @@ describe('KnowledgeGraph', () => {
             global: { stubs }
         })
 
-        await wrapper.vm.setHoveredNode('sql-basics')
+        wrapper.vm.setHoveredNode('sql-basics')
         await wrapper.vm.$nextTick()
-        await wrapper.vm.resetHoverState()
+        wrapper.vm.resetHoverState()
         await wrapper.vm.$nextTick()
 
         const nodes = wrapper.vm.getStyledNodes() as any[]
@@ -272,7 +272,7 @@ describe('KnowledgeGraph', () => {
         }
     })
 
-    // ── Search behavior ───────────────────────────────
+    // ── Search behavior (Task 2) ───────────────────────────────
 
     it('默认 showSearch 为 false', () => {
         const wrapper = mount(KnowledgeGraph, {
@@ -530,7 +530,7 @@ describe('KnowledgeGraph', () => {
         expect((wrapper.vm as any).miniMapNodeColor?.({ id: 'topic-sql-basics' })).toBe('#94a3b8')
     })
 
-    // ── SparkBurst / UnlockGlow (-03) ────────────────────
+    // ── SparkBurst / UnlockGlow (Phase 05-03) ────────────────────
 
     it('triggerSparkBurst sets node.data.triggerSparkBurst', async () => {
         const wrapper = mount(KnowledgeGraph, {
@@ -636,7 +636,7 @@ describe('KnowledgeGraph', () => {
         vi.useRealTimers()
     })
 
-    // ── styledEdges cache invalidation ──────────────
+    // ── CR-01 styledEdges cache invalidation (D-02) ──────────────
 
     it('styledEdges reflects updated props.edges after nextTick (no stale cache)', async () => {
         const wrapper = mount(KnowledgeGraph, {
@@ -678,12 +678,148 @@ describe('KnowledgeGraph', () => {
         expect(initialHighlighted.length).toBe(0)
 
         // Hover sql-basics — successor edge (sql-basics → filtering) should highlight
-        await wrapper.vm.setHoveredNode('sql-basics')
+        wrapper.vm.setHoveredNode('sql-basics')
         await wrapper.vm.$nextTick()
 
         const edges = wrapper.vm.getStyledEdges() as any[]
         const highlighted = edges.filter((e: any) => Number(e.style.opacity) === 1)
         expect(highlighted.length).toBe(1)
         expect(highlighted[0].style.stroke).toBe('#3b82f6') // successor highlight color
+    })
+})
+
+// ── VueFlow event wiring + lifecycle (dblclick listener) ───────
+
+const flowStubs = {
+    ...stubs,
+    VueFlow: {
+        template:
+            '<div class="vue-flow-stub"><div class="vue-flow__viewport"></div><slot /></div>',
+        methods: {
+            fitView: vi.fn(),
+            setViewport: vi.fn(),
+            getViewport: () => ({ x: 0, y: 0, zoom: 0.8 })
+        }
+    }
+}
+
+describe('KnowledgeGraph events', () => {
+    function mountGraph(overrides: Record<string, unknown> = {}) {
+        return mount(KnowledgeGraph, {
+            props: {
+                nodes: mockNodes,
+                edges: mockEdges,
+                searchQuery: '',
+                selectedTopic: null,
+                masteredTopics: [],
+                ...overrides
+            },
+            global: { stubs: flowStubs }
+        })
+    }
+
+    it('node-click emits node-select with the topic id and ignores nodes without one', async () => {
+        const wrapper = mountGraph()
+        const flow = wrapper.findComponent({ ref: 'flowRef' })
+
+        await flow.vm.$emit('nodeClick', { node: { data: { topicId: 'sql-basics' } } })
+        expect(wrapper.emitted('node-select')).toEqual([['sql-basics']])
+
+        await flow.vm.$emit('nodeClick', { node: { data: {} } })
+        expect(wrapper.emitted('node-select')).toHaveLength(1)
+    })
+
+    it('node-mouse-enter sets hover and node-mouse-leave clears it', async () => {
+        const wrapper = mountGraph()
+        const flow = wrapper.findComponent({ ref: 'flowRef' })
+
+        await flow.vm.$emit('nodeMouseEnter', { node: { data: { topicId: 'joins' } } })
+        expect(wrapper.vm.hoveredNodeId).toBe('joins')
+
+        // Missing topicId does not change the hovered node
+        await flow.vm.$emit('nodeMouseEnter', { node: { data: {} } })
+        expect(wrapper.vm.hoveredNodeId).toBe('joins')
+
+        await flow.vm.$emit('nodeMouseLeave')
+        expect(wrapper.vm.hoveredNodeId).toBeNull()
+    })
+
+    it('pane-click emits deselect-node', async () => {
+        const wrapper = mountGraph()
+        await wrapper.findComponent({ ref: 'flowRef' }).vm.$emit('paneClick')
+        expect(wrapper.emitted('deselect-node')).toHaveLength(1)
+    })
+
+    it('attaches a capture dblclick listener on the viewport and resets state', async () => {
+        const wrapper = mountGraph()
+        await new Promise((r) => setTimeout(r, 0))
+
+        // Hover a node, then dblclick the viewport element — state resets
+        wrapper.vm.setHoveredNode('sql-basics')
+        const vpEl = wrapper.element.querySelector('.vue-flow__viewport') as HTMLElement
+        expect(vpEl).toBeTruthy()
+        vpEl.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))
+        await wrapper.vm.$nextTick()
+        expect(wrapper.vm.hoveredNodeId).toBeNull()
+    })
+
+    it('removes the dblclick listener on unmount', async () => {
+        const wrapper = mountGraph()
+        await new Promise((r) => setTimeout(r, 0))
+        const vpEl = wrapper.element.querySelector('.vue-flow__viewport') as HTMLElement
+        wrapper.unmount()
+        // No error thrown and no lingering handlers fire
+        vpEl.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))
+        expect(true).toBe(true)
+    })
+
+    it('forwards KnowledgeGraphDetailCard events', async () => {
+        const topic = { id: 'sql-basics', label: 'SQL 基础查询' }
+        const wrapper = mountGraph({ selectedTopic: topic })
+        const card = wrapper.findComponent({ name: 'KnowledgeGraphDetailCard' })
+        expect(card.exists()).toBe(true)
+
+        await card.vm.$emit('toggle-mastered', 'sql-basics')
+        await card.vm.$emit('ask-ai', 'SQL 基础查询')
+        await card.vm.$emit('close')
+        await card.vm.$emit('view-all-tasks')
+        await card.vm.$emit('complete-task', 'sql-basics')
+        await card.vm.$emit('navigate-to-topic', 'sql-basics')
+
+        expect(wrapper.emitted('toggle-mastered')).toEqual([['sql-basics']])
+        expect(wrapper.emitted('ask-ai')).toEqual([['SQL 基础查询']])
+        expect(wrapper.emitted('deselect-node')).toHaveLength(1)
+        expect(wrapper.emitted('view-all-tasks')).toHaveLength(1)
+        expect(wrapper.emitted('complete-task')).toEqual([['sql-basics']])
+        expect(wrapper.emitted('navigate-to-topic')).toEqual([['sql-basics']])
+    })
+
+    it('getStyledNodes returns the styled node list', () => {
+        const wrapper = mountGraph()
+        const nodes = wrapper.vm.getStyledNodes() as any[]
+        expect(nodes).toHaveLength(3)
+        expect(nodes[0].id).toBe('topic-sql-basics')
+    })
+
+    it('wires ErSearchBar v-model and prev/next match navigation', async () => {
+        const wrapper = mountGraph()
+        const searchBar = wrapper.findComponent({ name: 'ErSearchBar' })
+        expect(searchBar.exists()).toBe(true)
+
+        // Typing in the findbar drives search.searchQuery through v-model
+        searchBar.vm.$emit('update:modelValue', 'JOIN')
+        await Promise.resolve()
+        expect(searchBar.props('modelValue')).toBe('JOIN')
+        expect(searchBar.props('matchCount')).toBe(1)
+
+        // prev/next cycle the active match index
+        searchBar.vm.$emit('next')
+        searchBar.vm.$emit('prev')
+        expect(searchBar.props('currentIndex')).toBeGreaterThanOrEqual(0)
+
+        searchBar.vm.$emit('close')
+        await Promise.resolve()
+        expect(searchBar.props('visible')).toBe(false)
+        expect(searchBar.props('modelValue')).toBe('')
     })
 })

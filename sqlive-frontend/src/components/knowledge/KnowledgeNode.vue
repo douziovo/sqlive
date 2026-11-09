@@ -121,7 +121,7 @@ watch(
     filter: brightness(1.05);
 }
 
-/* keyboard focus equivalent — same visual cue as :hover plus outline */
+/* D-12: keyboard focus equivalent — same visual cue as :hover plus outline */
 .kg-node:focus-visible {
     z-index: 30;
     filter: brightness(1.05);
@@ -129,7 +129,7 @@ watch(
     outline-offset: 2px;
 }
 
-/* label truncate — long titles (e.g. "CTE 公共表表达式") clip with ellipsis;
+/* D-07: label truncate — long titles (e.g. "CTE 公共表表达式") clip with ellipsis;
    full title shown via native tooltip from :title attribute on the span. */
 .kg-node__label {
     max-width: 140px;
@@ -140,60 +140,67 @@ watch(
 }
 
 /* Status colours */
+/* 以下状态类名由模板 :class="`kg-node--${data.status} kg-node--d${data.difficulty}`" 动态拼接，静态检查器无法识别，均不可删除 */
+/*noinspection CssUnusedSymbol*/
 .kg-node--mastered.kg-node--d1 {
     background: var(--node-mastered-d1-bg);
     border-color: var(--node-mastered-d1-border);
     color: var(--node-mastered-d1-text);
 }
+/*noinspection CssUnusedSymbol*/
 .kg-node--mastered.kg-node--d2 {
     background: var(--node-mastered-d2-bg);
     border-color: var(--node-mastered-d2-border);
     color: var(--node-mastered-d2-text);
 }
+/*noinspection CssUnusedSymbol*/
 .kg-node--mastered.kg-node--d3 {
     background: var(--node-mastered-d3-bg);
     border-color: var(--node-mastered-d3-border);
     color: var(--node-mastered-d3-text);
 }
 
+/*noinspection CssUnusedSymbol*/
 .kg-node--in-progress.kg-node--d1 {
     background: var(--node-progress-d1-bg);
     border-color: var(--node-progress-d1-border);
     color: var(--node-progress-d1-text);
 }
+/*noinspection CssUnusedSymbol*/
 .kg-node--in-progress.kg-node--d2 {
     background: var(--node-progress-d2-bg);
     border-color: var(--node-progress-d2-border);
     color: var(--node-progress-d2-text);
 }
+/*noinspection CssUnusedSymbol*/
 .kg-node--in-progress.kg-node--d3 {
     background: var(--node-progress-d3-bg);
     border-color: var(--node-progress-d3-border);
     color: var(--node-progress-d3-text);
 }
 
+/*noinspection CssUnusedSymbol*/
 .kg-node--unlearned.kg-node--d1 {
     background: var(--node-unlearned-bg);
     border-color: var(--node-unlearned-border);
     color: var(--node-unlearned-text);
 }
+/*noinspection CssUnusedSymbol*/
 .kg-node--unlearned.kg-node--d2 {
     background: var(--node-unlearned-bg);
     border-color: var(--node-unlearned-border);
     color: var(--node-unlearned-text);
 }
+/*noinspection CssUnusedSymbol*/
 .kg-node--unlearned.kg-node--d3 {
     background: var(--node-unlearned-bg);
     border-color: var(--node-unlearned-border);
     color: var(--node-unlearned-text);
 }
 
-.kg-node--locked {
-    opacity: 0.45;
-    filter: grayscale(0.5);
-}
-
 /* Focused */
+/* 模板 :class 对象里绑定了 kg-node--focused，静态检查器无法识别，不可删除 */
+/*noinspection CssUnusedSymbol*/
 .kg-node--focused {
     transform: scale(1.15) !important;
     z-index: 30 !important;
@@ -203,21 +210,29 @@ watch(
 }
 
 /* Highlighted */
+/* 同上：模板 :class 对象里绑定了 kg-node--highlighted */
+/*noinspection CssUnusedSymbol*/
 .kg-node--highlighted {
     outline: 2px solid rgba(99, 102, 241, 0.15);
     outline-offset: 1px;
 }
 
 /* Dimmed */
+/* 同上：模板 :class 对象里绑定了 kg-node--dimmed */
+/*noinspection CssUnusedSymbol*/
 .kg-node--dimmed {
     opacity: 0.12;
     pointer-events: none;
 }
 
 /* Search pulse */
+/* 同上：模板 :class 对象里绑定了 kg-node--search-match */
+/*noinspection CssUnusedSymbol*/
 .kg-node--search-match {
     animation: kg-pulse 1.5s ease-in-out infinite;
 }
+/* 同上：模板 :class 对象里绑定了 kg-node--active-match */
+/*noinspection CssUnusedSymbol*/
 .kg-node--active-match {
     animation: kg-pulse 0.8s ease-in-out infinite;
 }
@@ -266,13 +281,15 @@ watch(
 }
 
 /* Unlock glow */
+/* 模板 :class 对象里绑定了 kg-node--unlock-glow，静态检查器无法识别，不可删除 */
+/*noinspection CssUnusedSymbol*/
 .kg-node--unlock-glow {
     animation: unlockGlow 1s ease-out 3;
 }
 @keyframes unlockGlow {
     0% {
         outline: 3px solid rgba(99, 102, 241, 0.5);
-        outline-offset: 0px;
+        outline-offset: 0;
     }
     50% {
         outline: 3px solid rgba(99, 102, 241, 0);
@@ -280,7 +297,7 @@ watch(
     }
     100% {
         outline: 3px solid rgba(99, 102, 241, 0);
-        outline-offset: 0px;
+        outline-offset: 0;
     }
 }
 </style>

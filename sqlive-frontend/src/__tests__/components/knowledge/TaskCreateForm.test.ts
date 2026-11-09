@@ -65,4 +65,18 @@ describe('TaskCreateForm', () => {
         await wrapper.find('.task-create-form__btn--cancel').trigger('click')
         expect(wrapper.emitted('cancel')).toHaveLength(1)
     })
+
+    it('picking another topic in the selector drives the created task topicId', async () => {
+        const topics = [topic, { ...topic, id: 'aggregation', label: '聚合' }]
+        const wrapper = mount(TaskCreateForm, {
+            props: { mode: 'global', topics, topicId: 'joins' }
+        })
+        await wrapper.find('.task-topic-selector').setValue('aggregation')
+        await wrapper.find('input[type="text"]').setValue('练习 GROUP BY')
+        await wrapper.find('.task-create-form__btn--primary').trigger('click')
+        expect(wrapper.emitted('create')?.[0]?.[0]).toMatchObject({
+            title: '练习 GROUP BY',
+            topicId: 'aggregation'
+        })
+    })
 })

@@ -1,6 +1,7 @@
-import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { nextTick } from 'vue'
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { jsonOk } from '../../test-utils'
+import { effectScope, nextTick } from 'vue'
 import KnowledgePanel from '@/components/knowledge/KnowledgePanel.vue'
 import KnowledgeGraph from '@/components/knowledge/KnowledgeGraph.vue'
 import TaskJournalPanel from '@/components/knowledge/TaskJournalPanel.vue'
@@ -8,6 +9,14 @@ import AchievementToast from '@/components/knowledge/AchievementToast.vue'
 import ConfettiOverlay from '@/components/knowledge/ConfettiOverlay.vue'
 import ChapterCard from '@/components/knowledge/ChapterCard.vue'
 import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
+import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
+
+enableAutoUnmount(afterEach)
+let taskConsumerScope: ReturnType<typeof effectScope> | undefined
+afterEach(() => {
+    taskConsumerScope?.stop()
+    taskConsumerScope = undefined
+})
 
 const mockFetch = vi.fn()
 globalThis.fetch = mockFetch
@@ -53,10 +62,7 @@ const mockTopics = [
 ]
 
 const mockResolve = (topics = mockTopics) => {
-    mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ topics })
-    })
+    mockFetch.mockResolvedValueOnce(jsonOk({ topics }))
 }
 
 async function mountWithData(topics = mockTopics) {
@@ -71,6 +77,50 @@ async function mountWithData(topics = mockTopics) {
 }
 
 describe('KnowledgePanel', () => {
+    it('completes real task steps through the button and awards XP once after reopening', async () => {
+        const w = await mountWithData()
+        const journalTab = w.findAll('.knowledge-panel__tab')[1]
+        await journalTab.trigger('click')
+        let journal = w.findComponent(TaskJournalPanel)
+        taskConsumerScope = effectScope()
+        const store = taskConsumerScope.run(() => useKnowledgeTasks())!
+        store.tasks.value = []
+        const task = store.addTask({
+            topicId: 'a',
+            title: 'Explicit completion',
+            notes: '',
+            priority: 'low',
+            substeps: ['Read', 'Try']
+        })
+        await nextTick()
+        // Select the new task after removing the presets selected on mount.
+        journal.findComponent({ name: 'JournalTaskList' }).vm.$emit('select', task.id)
+        await nextTick()
+        expect(journal.find('.journal__btn--complete').exists()).toBe(false)
+        await journal.findAll('.step-progress__node')[0].trigger('click')
+        await journal.findAll('.step-progress__node')[1].trigger('click')
+        expect(store.tasks.value[0].status).toBe('in-progress')
+        expect(journal.find('.journal__btn--complete').exists()).toBe(true)
+        await journal.find('.journal__btn--complete').trigger('click')
+        expect(journal.emitted('completeTask')).toEqual([['a']])
+        expect(store.tasks.value[0].completedAt).toBeTruthy()
+        const xp = () => JSON.parse(localStorage.getItem('ai-knowledge-xp') || '{}').totalXp
+        expect(xp()).toBe(40)
+        const taskToast = w.findAllComponents(AchievementToast)[1]
+        taskToast.vm.$emit('close')
+        await nextTick()
+        journal = w.findComponent(TaskJournalPanel)
+        await journal.findAll('.step-progress__node')[0].trigger('click')
+        expect(store.tasks.value[0].status).toBe('in-progress')
+        expect(store.tasks.value[0].completedAt).toBeUndefined()
+        expect(journal.find('.journal__btn--complete').exists()).toBe(false)
+        await journal.findAll('.step-progress__node')[0].trigger('click')
+        await journal.find('.journal__btn--complete').trigger('click')
+        expect(journal.emitted('completeTask')).toEqual([['a']])
+        expect(xp()).toBe(40)
+        expect(taskToast.props('visible')).toBe(false)
+    })
+
     beforeEach(() => {
         vi.clearAllMocks()
         localStorage.clear()
@@ -283,12 +333,12 @@ describe('KnowledgePanel', () => {
         expect(edges.length).toBe(0)
     })
 
-    // ── xpBarPercent negative guard ─────────────────
+    // ── WR-06: xpBarPercent negative guard (D-10) ─────────────────
     it('xpBarPercent returns 0 (not negative) with corrupted localStorage level:99', async () => {
         // Corrupted localStorage: level=99, totalXp=100. Without guards:
         //   currentLevelXp = 99 * 750 = 74250
         //   xpInLevel = 100 - 74250 = -74150 → xpBarPercent would be ~-9873
-        // With guards (xpData.level clamp + Math.max on xpInLevel):
+        // With D-10 guards (xpData.level clamp + Math.max on xpInLevel):
         //   level clamps to 3 → currentLevelXp = 2250 → xpInLevel = 100-2250 = -2150
         //   Math.max(0, -2150) = 0 → xpBarPercent = 0
         localStorage.setItem(

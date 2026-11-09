@@ -19,7 +19,15 @@
             <span v-if="isOverdue" class="task-item__overdue-badge">已逾期</span>
         </span>
 
-        <button class="task-item__status" :class="statusBadgeClass" @click="handleStatusToggle">
+        <button
+            class="task-item__status"
+            :class="statusBadgeClass"
+            :disabled="
+                task.status === 'in-progress' &&
+                task.substeps.some((step) => step.status !== 'done')
+            "
+            @click="handleStatusToggle"
+        >
             {{ statusLabel }}
         </button>
 
@@ -96,7 +104,7 @@ const emit = defineEmits<{
 
 const { isVisible: isRedDotVisible } = useRedDot()
 
-// AlertDialog replaces native confirm() — dialog open state
+// D-13: AlertDialog replaces native confirm() — dialog open state
 const showDeleteDialog = ref(false)
 
 const accentColor = computed(() => {
@@ -139,18 +147,18 @@ const statusBadgeClass = computed(
 )
 
 function handleStatusToggle(): void {
-    const nextStatus =
-        props.task.status === 'todo'
-            ? 'in-progress'
-            : props.task.status === 'in-progress'
-              ? 'done'
-              : 'todo'
+    if (props.task.status === 'in-progress') {
+        if (props.task.substeps.every((step) => step.status === 'done')) {
+            emit('complete:task', props.task.id)
+        }
+        return
+    }
+    const nextStatus = props.task.status === 'todo' ? 'in-progress' : 'todo'
     emit('update:task', props.task.id, { status: nextStatus } as Partial<KnowledgeTask>)
-    if (nextStatus === 'done') emit('complete:task', props.task.id)
 }
 
 function handleDelete(): void {
-    // open AlertDialog instead of native confirm()
+    // D-13: open AlertDialog instead of native confirm()
     showDeleteDialog.value = true
 }
 
@@ -169,8 +177,7 @@ function handlePinClick(): void {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 12px;
-    padding-left: 9px;
+    padding: 8px 12px 8px 9px;
     border-radius: 8px;
     font-size: 13px;
     transition: background 0.15s;
@@ -245,16 +252,22 @@ function handlePinClick(): void {
     opacity: 0.8;
 }
 
+/* statusBadgeClass 计算属性在运行时拼接这些类名，静态检查器无法识别，不可删除 */
+/*noinspection CssUnusedSymbol*/
 .task-item__status--todo {
     background: var(--muted);
     color: var(--muted-foreground);
 }
 
+/* 同上：由 statusBadgeClass 动态返回 */
+/*noinspection CssUnusedSymbol*/
 .task-item__status--in-progress {
     background: rgba(59, 130, 246, 0.12);
     color: #3b82f6;
 }
 
+/* 同上：由 statusBadgeClass 动态返回 */
+/*noinspection CssUnusedSymbol*/
 .task-item__status--done {
     background: rgba(16, 185, 129, 0.12);
     color: #10b981;
@@ -293,7 +306,7 @@ function handlePinClick(): void {
     background: rgba(239, 68, 68, 0.08);
 }
 
-/* ── AlertDialog delete confirmation styles ─────────── */
+/* ── D-13: AlertDialog delete confirmation styles ─────────── */
 
 .task-item__dialog-overlay {
     position: fixed;

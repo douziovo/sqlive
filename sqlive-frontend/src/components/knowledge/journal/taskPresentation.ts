@@ -25,14 +25,11 @@ export interface TaskCreatePayload {
 }
 
 export function allSubstepsDone(task: KnowledgeTask): boolean {
-    if (task.substeps.length === 0) return false
     return task.substeps.every((s) => s.status === 'done')
 }
 
-export function getTaskXp(task: KnowledgeTask): number {
-    const baseXp = { low: 20, medium: 30, high: 50 }[task.priority] ?? 30
-    const substepBonus = task.substeps.filter((s) => s.status === 'done').length * 5
-    return baseXp + substepBonus
+export function getTaskXp(difficulty = 1): number {
+    return ({ 1: 30, 2: 50, 3: 80 }[difficulty] ?? 30) + 10
 }
 
 export function priorityDotClass(priority: string): string {

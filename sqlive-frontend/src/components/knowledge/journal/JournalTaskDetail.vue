@@ -21,7 +21,9 @@
             @toggle-step="(substepId: string) => emit('toggle-step', substepId)"
         />
 
-        <div class="journal__detail-reward">奖励：+{{ getTaskXp(task) }} XP</div>
+        <div class="journal__detail-reward">
+            首次完成此知识点任务奖励：+{{ getTaskXp(topic?.difficulty) }} XP
+        </div>
 
         <div class="journal__detail-actions">
             <button class="journal__btn journal__btn--primary" @click="emit('navigate')">
@@ -42,7 +44,7 @@
 
     <!-- Right: empty state -->
     <div v-else class="journal__detail-empty">
-        <!-- guided empty state when no tasks exist at all -->
+        <!-- D-06: guided empty state when no tasks exist at all -->
         <template v-if="totalTaskCount === 0">
             <ClipboardList class="journal__detail-empty-icon" :size="56" />
             <p class="journal__detail-empty-heading">还没有学习任务</p>
@@ -57,7 +59,7 @@
                 @cancel="showCreateForm = false"
             />
         </template>
-        <!-- will default-select first task in 10-03; this branch is rare post--->
+        <!-- D-08 will default-select first task in 10-03; this branch is rare post-D-08 -->
         <template v-else>
             <ClipboardList class="journal__detail-empty-icon" :size="56" />
             <p>选择一个任务查看详情</p>
@@ -91,7 +93,7 @@ const emit = defineEmits<{
     (e: 'create', payload: TaskCreatePayload): void
 }>()
 
-// controls TaskCreateForm visibility in empty-state right panel
+// D-06: controls TaskCreateForm visibility in empty-state right panel
 const showCreateForm = ref(false)
 
 function handleCreate(payload: TaskCreatePayload): void {
@@ -160,7 +162,7 @@ function handleCreate(payload: TaskCreatePayload): void {
 }
 
 .journal__detail-empty-icon {
-    /* SVG icon (ClipboardList) replaces 📋 emoji */
+    /* D-06: SVG icon (ClipboardList) replaces 📋 emoji */
     color: var(--muted-foreground);
     opacity: 0.25;
 }

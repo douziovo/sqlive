@@ -1,7 +1,10 @@
-import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { jsonOk } from '../../test-utils'
 import LearningCompanion from '@/components/knowledge/LearningCompanion.vue'
 import { useKnowledgeGraph } from '@/composables/useKnowledgeGraph'
+
+enableAutoUnmount(afterEach)
 
 const mockFetch = vi.fn()
 globalThis.fetch = mockFetch
@@ -10,20 +13,43 @@ describe('LearningCompanion', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         localStorage.clear()
-        // reset module-level graphData/selectedNode so each test starts fresh
+        // D-02: reset module-level graphData/selectedNode so each test starts fresh
         const kg = useKnowledgeGraph()
         kg.graphData.value = null
         kg.selectedNode.value = null
     })
 
+    /** 挂载组件：写入任务列表、对图数据请求 stub 一次空 topics，然后 flush 一次 */
+    async function mountCompanion(tasks: unknown[]) {
+        localStorage.setItem('ai-knowledge-tasks', JSON.stringify(tasks))
+        mockFetch.mockResolvedValueOnce(jsonOk({ topics: [] }))
+        const w = mount(LearningCompanion)
+        await flushPromises()
+        return w
+    }
+
+    /** pinned 任务字面量；各用例只覆盖 substeps/title 等差异字段 */
+    function makePinnedTask(overrides: Record<string, unknown> = {}) {
+        return {
+            id: 'task-1',
+            topicId: 'joins',
+            title: '练习 JOIN',
+            notes: '',
+            status: 'in-progress',
+            priority: 'medium',
+            createdAt: new Date().toISOString(),
+            category: 'core',
+            substeps: [{ id: 's1', label: 'step 1', status: 'active' }],
+            isPinned: true,
+            ...overrides
+        }
+    }
+
     it('renders count/total from kg.progress (mastered count / graphData total)', async () => {
-        // count = mastered topics that appear in graphData; total = graphData.topics.length
+        // D-02: count = mastered topics that appear in graphData; total = graphData.topics.length
         // Set mastered IDs to match mock graph topics so count=2
         localStorage.setItem('ai-mastered-topics', JSON.stringify(['a', 'b']))
-        mockFetch.mockResolvedValueOnce({
-            ok: true,
-            json: () => Promise.resolve({ topics: [{ id: 'a' }, { id: 'b' }, { id: 'c' }] })
-        })
+        mockFetch.mockResolvedValueOnce(jsonOk({ topics: [{ id: 'a' }, { id: 'b' }, { id: 'c' }] }))
 
         const w = mount(LearningCompanion)
         await flushPromises()
@@ -33,12 +59,9 @@ describe('LearningCompanion', () => {
     })
 
     it('displays levelName from kg.progress (not local percentage-based level)', async () => {
-        // level comes from kg.progress.value.levelName (XP-based, not percentage)
+        // D-02: level comes from kg.progress.value.levelName (XP-based, not percentage)
         // Default xpData = { totalXp: 0, level: 0 } → levelName = '初级学者'
-        mockFetch.mockResolvedValueOnce({
-            ok: true,
-            json: () => Promise.resolve({ topics: [{ id: 'a' }, { id: 'b' }, { id: 'c' }] })
-        })
+        mockFetch.mockResolvedValueOnce(jsonOk({ topics: [{ id: 'a' }, { id: 'b' }, { id: 'c' }] }))
 
         const w = mount(LearningCompanion)
         await flushPromises()
@@ -48,14 +71,11 @@ describe('LearningCompanion', () => {
         expect(w.find('.companion-level').text()).toBe('初级学者')
     })
 
-    it('does not call fetchTotal (removed duplicate fetch)', async () => {
-        // LearningCompanion should not have its own fetchTotal function
+    it('does not call fetchTotal (D-02: removed duplicate fetch)', async () => {
+        // D-02: LearningCompanion should not have its own fetchTotal function
         // It may call kg.fetchGraph() defensively, but only if graphData is null
         // After kg.fetchGraph() succeeds, a second mount should not fetch again
-        mockFetch.mockResolvedValueOnce({
-            ok: true,
-            json: () => Promise.resolve({ topics: [{ id: 'a' }] })
-        })
+        mockFetch.mockResolvedValueOnce(jsonOk({ topics: [{ id: 'a' }] }))
 
         mount(LearningCompanion)
         await flushPromises()
@@ -70,14 +90,14 @@ describe('LearningCompanion', () => {
     })
 
     it('emits open on click', async () => {
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ topics: [] }) })
+        mockFetch.mockResolvedValueOnce(jsonOk({ topics: [] }))
         const w = mount(LearningCompanion)
         await flushPromises()
         await w.find('button.learning-companion').trigger('click')
         expect(w.emitted('open')).toBeTruthy()
     })
 
-    // ── task badge () ─────────────────────────────────────
+    // ── task badge (Phase 09) ─────────────────────────────────────
 
     it('shows badge when pending tasks exist', async () => {
         const tasks = [
@@ -110,7 +130,7 @@ describe('LearningCompanion', () => {
             }
         ]
         localStorage.setItem('ai-knowledge-tasks', JSON.stringify(tasks))
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ topics: [] }) })
+        mockFetch.mockResolvedValueOnce(jsonOk({ topics: [] }))
         const w = mount(LearningCompanion)
         await flushPromises()
         const badge = w.find('.companion-badge')
@@ -119,10 +139,7 @@ describe('LearningCompanion', () => {
     })
 
     it('hides badge when no pending tasks', async () => {
-        localStorage.setItem('ai-knowledge-tasks', JSON.stringify([]))
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ topics: [] }) })
-        const w = mount(LearningCompanion)
-        await flushPromises()
+        const w = await mountCompanion([])
         expect(w.find('.companion-badge').exists()).toBe(false)
     })
 
@@ -136,94 +153,63 @@ describe('LearningCompanion', () => {
             priority: 'medium' as const,
             createdAt: new Date().toISOString()
         }))
-        localStorage.setItem('ai-knowledge-tasks', JSON.stringify(tasks))
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ topics: [] }) })
-        const w = mount(LearningCompanion)
-        await flushPromises()
+        const w = await mountCompanion(tasks)
         const badge = w.find('.companion-badge')
         expect(badge.exists()).toBe(true)
         expect(badge.text()).toBe('99+')
     })
 
     it('badge has correct styling', async () => {
-        localStorage.setItem(
-            'ai-knowledge-tasks',
-            JSON.stringify([
-                {
-                    id: '1',
-                    topicId: 'a',
-                    title: 't',
-                    notes: '',
-                    status: 'todo',
-                    priority: 'medium',
-                    createdAt: new Date().toISOString()
-                }
-            ])
-        )
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ topics: [] }) })
-        const w = mount(LearningCompanion)
-        await flushPromises()
+        const w = await mountCompanion([
+            {
+                id: '1',
+                topicId: 'a',
+                title: 't',
+                notes: '',
+                status: 'todo',
+                priority: 'medium',
+                createdAt: new Date().toISOString()
+            }
+        ])
         const badge = w.find('.companion-badge')
         expect(badge.exists()).toBe(true)
         // Check key CSS properties via element style or classes
         expect(badge.attributes('class')).toContain('companion-badge')
     })
 
-    // ── ActiveTaskTracker integration (-06) ────────────────
+    // ── ActiveTaskTracker integration (Phase 09-06) ────────────────
 
     it('hides ActiveTaskTracker when no pinned task', async () => {
-        localStorage.setItem('ai-knowledge-tasks', JSON.stringify([]))
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ topics: [] }) })
-        const w = mount(LearningCompanion)
-        await flushPromises()
+        const w = await mountCompanion([])
         expect(w.find('.active-tracker').exists()).toBe(false)
     })
 
     it('renders ActiveTaskTracker when pinned task exists', async () => {
-        const tasks = [
-            {
-                id: 'task-1',
-                topicId: 'joins',
-                title: '练习 JOIN',
-                notes: '',
-                status: 'in-progress',
-                priority: 'medium',
-                createdAt: new Date().toISOString(),
-                category: 'core',
-                substeps: [{ id: 's1', label: 'step 1', status: 'active' }],
-                isPinned: true
-            }
-        ]
-        localStorage.setItem('ai-knowledge-tasks', JSON.stringify(tasks))
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ topics: [] }) })
-        const w = mount(LearningCompanion)
-        await flushPromises()
+        const w = await mountCompanion([makePinnedTask()])
         expect(w.find('.active-tracker').exists()).toBe(true)
         expect(w.text()).toContain('练习 JOIN')
         expect(w.text()).toContain('继续学习')
     })
 
     it('emits navigate when tracker continue button clicked', async () => {
-        const tasks = [
-            {
-                id: 'task-1',
-                topicId: 'joins',
-                title: '练习 JOIN',
-                notes: '',
-                status: 'in-progress',
-                priority: 'medium',
-                createdAt: new Date().toISOString(),
-                category: 'core',
-                substeps: [{ id: 's1', label: 'step 1', status: 'active' }],
-                isPinned: true
-            }
-        ]
-        localStorage.setItem('ai-knowledge-tasks', JSON.stringify(tasks))
-        mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ topics: [] }) })
-        const w = mount(LearningCompanion)
-        await flushPromises()
+        const w = await mountCompanion([makePinnedTask()])
         await w.find('.active-tracker__btn--primary').trigger('click')
         expect(w.emitted('navigate')).toBeTruthy()
         expect(w.emitted('navigate')?.[0]).toEqual(['joins'])
+    })
+
+    it('shows the active substep label in the tracker', async () => {
+        const w = await mountCompanion([
+            makePinnedTask({ substeps: [{ id: 's1', label: '写第一条 JOIN', status: 'active' }] })
+        ])
+        expect(w.text()).toContain('写第一条 JOIN')
+    })
+
+    it('unpins the pinned task from the tracker ghost button', async () => {
+        const w = await mountCompanion([makePinnedTask({ substeps: [] })])
+        expect(w.find('.active-tracker').exists()).toBe(true)
+        await w.find('.active-tracker__btn--ghost').trigger('click')
+        await flushPromises()
+        expect(w.find('.active-tracker').exists()).toBe(false)
     })
 })

@@ -31,7 +31,7 @@ describe('TaskItem', () => {
     })
 
     afterEach(() => {
-        // AlertDialog teleports to body — clean up between tests
+        // D-13: AlertDialog teleports to body — clean up between tests
         document.body.innerHTML = ''
     })
 
@@ -104,9 +104,27 @@ describe('TaskItem', () => {
         await w.find('.task-item__status').trigger('click')
         expect(w.emitted('complete:task')).toBeTruthy()
         expect(w.emitted('complete:task')?.[0]).toEqual(['task-1'])
+        expect(w.emitted('update:task')).toBeUndefined()
     })
 
-    // ── delete (AlertDialog replaces native confirm) ────
+    it('does not complete a task with unfinished steps', async () => {
+        const w = mount(TaskItem, {
+            props: {
+                task: {
+                    ...mockTask,
+                    status: 'in-progress',
+                    substeps: [{ id: 's', label: 'Read', status: 'active' }]
+                },
+                topicLabel: 'JOIN',
+                isOverdue: false
+            }
+        })
+        await w.find('.task-item__status').trigger('click')
+        expect(w.emitted('complete:task')).toBeUndefined()
+        expect(w.emitted('update:task')).toBeUndefined()
+    })
+
+    // ── delete (D-13: AlertDialog replaces native confirm) ────
 
     it('clicking delete opens AlertDialog instead of native confirm', async () => {
         const confirmSpy = vi.fn(() => true)
@@ -116,7 +134,7 @@ describe('TaskItem', () => {
         })
         await w.find('.task-item__delete').trigger('click')
         await vi.dynamicImportSettled()
-        // native confirm must NOT be called — AlertDialog replaces it
+        // D-13: native confirm must NOT be called — AlertDialog replaces it
         expect(confirmSpy).not.toHaveBeenCalled()
         // AlertDialog content should be present in DOM (teleported to body)
         const dialogContent = document.body.querySelector('.task-item__dialog-content')
@@ -166,7 +184,7 @@ describe('TaskItem', () => {
         expect(w.find('.task-item--completed').exists()).toBe(true)
     })
 
-    // ── New: accent border color (var() tokens) ──
+    // ── New: accent border color (Task 3 / D-04 var() tokens) ──
 
     it('shows accent border color for core category using var(--task-core)', () => {
         const task = { ...mockTask, category: 'core' as const }
@@ -174,7 +192,7 @@ describe('TaskItem', () => {
             props: { task, topicLabel: 'JOIN 查询', isOverdue: false }
         })
         const item = w.find('.task-item')
-        // accentColor now returns var(--task-core) string from shared taskCategories.ts
+        // D-04: accentColor now returns var(--task-core) string from shared taskCategories.ts
         expect(item.attributes('style')).toContain('var(--task-core)')
     })
 
@@ -184,7 +202,7 @@ describe('TaskItem', () => {
             props: { task, topicLabel: 'JOIN 查询', isOverdue: false }
         })
         const item = w.find('.task-item')
-        // accentColor now returns var(--task-deep) string from shared taskCategories.ts
+        // D-04: accentColor now returns var(--task-deep) string from shared taskCategories.ts
         expect(item.attributes('style')).toContain('var(--task-deep)')
     })
 
@@ -194,11 +212,11 @@ describe('TaskItem', () => {
             props: { task, topicLabel: 'JOIN 查询', isOverdue: false }
         })
         const item = w.find('.task-item')
-        // accentColor now returns var(--task-daily) string from shared taskCategories.ts
+        // D-04: accentColor now returns var(--task-daily) string from shared taskCategories.ts
         expect(item.attributes('style')).toContain('var(--task-daily)')
     })
 
-    // ── New: step progress count ───────────────────────
+    // ── New: step progress count (Task 3) ───────────────────────
 
     it('shows step progress count when task has substeps', () => {
         const task = {
@@ -225,7 +243,7 @@ describe('TaskItem', () => {
         expect(w.find('.task-item__steps').exists()).toBe(false)
     })
 
-    // ── New: pin button emit ───────────────────────────
+    // ── New: pin button emit (Task 3) ───────────────────────────
 
     it('emits pin:task when pin button clicked', async () => {
         const w = mount(TaskItem, {
@@ -236,7 +254,7 @@ describe('TaskItem', () => {
         expect(w.emitted('pin:task')?.[0]).toEqual(['task-1'])
     })
 
-    // ── New: pin icon shows pinned state ───────────────
+    // ── New: pin icon shows pinned state (Task 3) ───────────────
 
     it('shows filled pin icon when task is pinned', () => {
         const task = { ...mockTask, isPinned: true }

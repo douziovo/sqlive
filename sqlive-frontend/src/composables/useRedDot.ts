@@ -3,7 +3,7 @@ import { computed } from 'vue'
 
 export function useRedDot() {
     const redDots = useLocalStorage<Record<string, boolean>>('ai-knowledge-reddot', {})
-    // keyParents stores key → parent chain so clear() can propagate upward
+    // D-03: keyParents stores key → parent chain so clear() can propagate upward
     // when the last child of a parent is cleared.
     const keyParents = useLocalStorage<Record<string, string[]>>('ai-knowledge-reddot-parents', {})
 
@@ -40,7 +40,7 @@ export function useRedDot() {
                 ([childKey, childParents]) =>
                     Array.isArray(childParents) &&
                     childParents.includes(p) &&
-                    redDots.value[childKey] === true
+                    Boolean(redDots.value[childKey])
             )
             if (!hasOtherChild) {
                 clear(p)
@@ -49,17 +49,18 @@ export function useRedDot() {
     }
 
     function isVisible(key: string): boolean {
-        return redDots.value[key] === true
+        // Map 取值运行时可能是 undefined，用真值判断并显式收窄为 boolean
+        return Boolean(redDots.value[key])
     }
 
     function clearAll(prefix: string): void {
-        // implement clearAll as a loop over clear(key) for each matching
+        // D-06: implement clearAll as a loop over clear(key) for each matching
         // visible key. Reuses clear's parent-cascade logic (hasOtherChild check +
         // recursive clear(p)) so removing the last child of a parent auto-clears
         // the parent. Previously clearAll dropped parent registrations but left
         // parent dots visible (asymmetric with clear).
         const matchingKeys = Object.keys(redDots.value).filter(
-            (k) => k.startsWith(prefix) && redDots.value[k] === true
+            (k) => k.startsWith(prefix) && Boolean(redDots.value[k])
         )
         for (const key of matchingKeys) {
             clear(key)
@@ -67,11 +68,13 @@ export function useRedDot() {
     }
 
     // Hierarchical red dot: any child visible → parent also visible
-    const hasAnyDot = computed(() => Object.values(redDots.value).some((v) => v === true))
+    const hasAnyDot = computed(() => Object.values(redDots.value).some(Boolean))
 
-    // prefix query for parent-level visibility checks
+    // D-03: prefix query for parent-level visibility checks
     function hasDotInPrefix(prefix: string): boolean {
-        return Object.entries(redDots.value).some(([k, v]) => v === true && k.startsWith(prefix))
+        return Object.entries(redDots.value).some(
+            ([k, v]) => Boolean(v) && k.startsWith(prefix)
+        )
     }
 
     return { redDots, keyParents, show, clear, isVisible, clearAll, hasAnyDot, hasDotInPrefix }

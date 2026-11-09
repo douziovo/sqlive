@@ -47,14 +47,13 @@ export function useKnowledgePanelFilters(
         const visibleIds = new Set(
             nodes.value
                 .filter((n) => {
-                    if (
-                        activeDifficulty.value &&
-                        n.data.difficulty !== parseInt(activeDifficulty.value, 10)
-                    )
-                        return false
-                    if (activeCategory.value && n.data.category !== activeCategory.value)
-                        return false
-                    return true
+                    // 直接用真值表达式替代 `if (cond) return false; return true`（TrivialIfJS）
+                    const difficultyMatch =
+                        !activeDifficulty.value ||
+                        n.data.difficulty === parseInt(activeDifficulty.value, 10)
+                    const categoryMatch =
+                        !activeCategory.value || n.data.category === activeCategory.value
+                    return difficultyMatch && categoryMatch
                 })
                 .map((n) => n.id)
         )
