@@ -2,7 +2,7 @@
 
 左侧 Monaco 编辑器编写 SQL → 右侧表格即时展示结果。在表格中编辑数据，自动反向修改 SQL 源码，两侧始终保持一致。支持 AI 辅助编写、多 Tab 隔离运行、ER 图与知识图谱导航。专为 SQL 教学场景研发。学生开浏览器即用，无需搭建本地环境；AI 对话解释 SQL 语义，充当即时辅导；知识图谱引导学习路径，避免盲目刷题。
 
-![主界面](docs/screenshots/01-editor-tables.png)
+![主界面](screenshots/01-editor-tables.png)
 
 ## 功能特性
 
@@ -17,31 +17,31 @@
 - 切换 AI 后端（DeepSeek、OpenAI 兼容、Ollama、LM Studio），对话解释 SQL 语义、分析错误原因，充当即时辅导，流式输出逐字显示。
 - 新增提供商只需实现一个接口，不影响已有代码。
 
-![AI 对话](docs/screenshots/07-ai-chat.png)
+![AI 对话](screenshots/07-ai-chat.png)
 
 ### 多 Tab 隔离 + ER 图导航
 
 - 每个浏览器 Tab 拥有独立的 SQLite 内存数据库，空闲自动回收。
 - 根据建表语句自动生成 ER 图，展示表间外键关系，点击节点即可跳转浏览对应表数据。
 
-![ER 图](docs/screenshots/02-er-diagram.png)
+![ER 图](screenshots/02-er-diagram.png)
 
 ### 数据可视化
 
 - 表格支持排序、过滤、分页，查询结果可用柱状图、折线图、饼图展示。
 - 浏览索引、视图、触发器、外键关系等数据库元数据。
 
-![图表视图](docs/screenshots/03-chart-view.png)
-![索引](docs/screenshots/04-indexes.png)
-![视图](docs/screenshots/05-views.png)
-![触发器](docs/screenshots/06-triggers.png)
+![图表视图](screenshots/03-chart-view.png)
+![索引](screenshots/04-indexes.png)
+![视图](screenshots/05-views.png)
+![触发器](screenshots/06-triggers.png)
 
 ### 结构化学习路径
 
 - 24 个 SQL 知识点按前置关系排列，学生知道从哪开始、下一步学什么，追踪每个知识点的学习进度。
 
-![知识图谱细节](docs/screenshots/08-knowledge-graph.png)
-![知识图谱](docs/screenshots/09-knowledge-graph-detail.png)
+![知识图谱细节](screenshots/08-knowledge-graph.png)
+![知识图谱](screenshots/09-knowledge-graph-detail.png)
 
 ## 关键设计决策
 
