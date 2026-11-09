@@ -54,6 +54,10 @@ jobs:
         working-directory: sqlive-frontend
         run: pnpm install --frozen-lockfile
 
+      - name: Check frontend formatting
+        working-directory: sqlive-frontend
+        run: pnpm run format:check
+
       - name: Run frontend lint
         working-directory: sqlive-frontend
         run: pnpm run lint

@@ -22,6 +22,7 @@ fi
 cd "$ROOT_DIR/sqlive-backend"
 ./gradlew test --no-daemon
 cd "$ROOT_DIR/sqlive-frontend"
+pnpm run format:check
 pnpm run lint
 pnpm test
 pnpm run build

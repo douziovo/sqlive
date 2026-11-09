@@ -53,6 +53,12 @@ SQLite JDBC 需要加载本地库。`bootRun`、测试任务和 Docker 启动命
 
 ## 修改约定
 
-保持相邻代码风格。前端在 `sqlive-frontend` 执行 `pnpm run lint`（oxlint）和 `pnpm run format:check`（oxfmt）；需要格式化时运行 `pnpm run format`。测试命令和覆盖范围见 [TESTING.md](TESTING.md)。
+前端在 `sqlive-frontend` 执行 `pnpm run lint`（Oxlint + Stylelint）和 `pnpm run format:check`（Oxfmt）；两项检查均在 CI 阻断失败。运行 `pnpm run lint:fix` 修复可自动处理的问题，`pnpm run format` 写入格式；修复后仍须检查 diff 和运行相关测试。
+
+Oxfmt 没有名为 strict 的开关。项目通过统一配置、全量规范化和 CI 格式检查落实严格要求：4 空格、单引号、无分号、LF、自动排序导入与 package.json，副作用导入保持原顺序。前端目录中的 TS/JS、Vue/HTML、CSS/SCSS/Less、JSON/JSONC/JSON5、YAML、Markdown/MDX、TOML 和 GraphQL 使用同一入口；支持的嵌入代码自动格式化，生成目录排除。
+
+Tailwind CSS v4 的类名排序读取 `src/input.css` 的主题，覆盖静态 `class`、Vue `:class`/`v-bind:class` 与 `cn`、`clsx`、`cva`、`twMerge`，去除重复类和多余空白。CSS import 使用字符串形式，确保 Tailwind 及排序器正确读取依赖。Stylelint 检查独立 CSS 和 Vue `<style>`，接受 v4 的 `@theme`、`@utility`、`@apply` 等指令以及 Vue `:deep()`/`v-bind()`，其余未知属性、指令和函数仍报错。
+
+Oxlint 开启 correctness、suspicious、pedantic、perf 错误级别与 `oxlint-tsgolint` 原生 Go 类型分析，禁止浮动 Promise、错误 await 和未使用的禁用注释，warning 也阻断。为 Vue 可变引用、SQL 数字解析和空字符串回退保留有意例外；测试允许动态 mock 和夹具分支，但要求实际断言。局部禁用须附理由。Oxlint 的 Vue 支持限于脚本，模板类型仍由 `vue-tsc` 的 Go 桥接链检查。测试命令和覆盖范围见 [TESTING.md](TESTING.md)。
 
 提交前核对 diff，按变更运行相关检查并说明既有失败和未验证范围。CI 的分支触发条件以 workflow 为准，不从部署分支推断 PR 目标。

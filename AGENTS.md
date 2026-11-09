@@ -13,7 +13,7 @@ From `sqlive-frontend/`:
 - `pnpm install --frozen-lockfile`: install locked dependencies.
 - `pnpm dev`: start Vite on port 5173.
 - `pnpm build`: check types with the TypeScript 7 Go engine, then produce `dist/`; `pnpm typecheck` runs the same checks alone (vue-tsc uses typescript-native-bridge for Vue SFCs, native TypeScript 7 checks Vite/E2E).
-- `pnpm lint` / `pnpm format:check`: run oxlint / oxfmt checks.
+- `pnpm lint` / `pnpm format:check`: run strict Oxlint (native Go type-aware rules) + Stylelint / Oxfmt checks; both block CI.
 - `pnpm test`: run Vitest.
 - `pnpm test:e2e`: run Playwright against installed Chrome and Edge; starts both services.
 
@@ -22,6 +22,8 @@ From `sqlive-backend/`, use `.\gradlew.bat bootRun` to serve port 8080, `.\gradl
 ## Coding Style & Naming Conventions
 
 Frontend formatting uses four spaces, single quotes, no semicolons, no trailing commas, and LF endings. Use PascalCase for Vue components, `useXxx.ts` for composables, and camelCase for functions/variables. Java uses PascalCase classes and camelCase methods; match adjacent indentation. Keep changes focused; avoid repository-wide formatting churn.
+
+Oxfmt sorts imports and Tailwind v4 classes using `src/input.css`, including Vue class bindings and class helper functions. Keep CSS imports in string notation. Stylelint checks CSS and Vue styles with Tailwind v4 directives enabled. Preserve intentional empty-string fallbacks and signed int32 hashes when applying lint fixes; inspect diffs and run regression tests. Local lint disables need a reason; unused disables are errors. See `docs/DEVELOPMENT.md` for language coverage and scoped rule exceptions.
 
 ## Testing Guidelines
 
