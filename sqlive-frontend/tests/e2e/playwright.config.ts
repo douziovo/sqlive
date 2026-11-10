@@ -8,12 +8,17 @@ const isWindows = process.platform === 'win32'
 export default defineConfig({
     testDir: './specs',
     testMatch: '**/*.spec.ts',
-    workers: 6,
+    workers: process.env.CI ? 2 : 6,
+    forbidOnly: Boolean(process.env.CI),
+    globalTimeout: process.env.CI ? 15 * 60_000 : 0,
     timeout: 30_000,
     expect: { timeout: 10_000 },
+    reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : [['list']],
     use: {
         baseURL: 'http://127.0.0.1:5173',
-        viewport: { width: 1440, height: 900 }
+        viewport: { width: 1440, height: 900 },
+        trace: 'retain-on-failure',
+        screenshot: 'only-on-failure'
     },
     projects: [
         {
@@ -37,18 +42,23 @@ export default defineConfig({
     ],
     webServer: [
         {
+            name: 'Backend',
             command:
                 process.env.BACKEND_BOOT_CMD ??
                 (isWindows ? 'cmd /c ".\\gradlew.bat bootRun"' : './gradlew bootRun'),
             cwd: path.resolve(import.meta.dirname, '../../../sqlive-backend'),
             url: 'http://127.0.0.1:8080/health',
             reuseExistingServer: !process.env.CI,
-            timeout: 180_000
+            timeout: 180_000,
+            gracefulShutdown: { signal: 'SIGTERM', timeout: 5_000 }
         },
         {
-            command: 'pnpm run dev -- --port 5173 --strictPort',
+            name: 'Frontend',
+            command: 'node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 5173 --strictPort',
+            cwd: path.resolve(import.meta.dirname, '../..'),
             url: 'http://127.0.0.1:5173',
-            reuseExistingServer: !process.env.CI
+            reuseExistingServer: !process.env.CI,
+            gracefulShutdown: { signal: 'SIGTERM', timeout: 5_000 }
         }
     ]
 })

@@ -27,7 +27,6 @@ jobs:
         # IDE 离线无法解析 action.yml，with 输入会被误报为未定义形参
         #noinspection UndefinedParamsPresent
         with:
-          build-root-directory: sqlive-backend
           cache-read-only: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/future' }}
       - run: ./gradlew test
 
@@ -77,8 +76,10 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     needs: frontend-test
+    timeout-minutes: 25
     env:
-      BACKEND_BOOT_CMD: ./gradlew bootRun
+      BACKEND_BOOT_CMD: ./gradlew --no-daemon bootRun
+      DEBUG: pw:webserver,pw:test:task
     steps:
       - uses: actions/checkout@v4
 
@@ -93,7 +94,6 @@ jobs:
         # IDE 离线无法解析 action.yml，with 输入会被误报为未定义形参
         #noinspection UndefinedParamsPresent
         with:
-          build-root-directory: sqlive-backend
           cache-read-only: true
 
       - uses: pnpm/action-setup@v6
@@ -130,4 +130,16 @@ jobs:
 
       - name: Run E2E tests
         working-directory: sqlive-frontend
+        timeout-minutes: 20
         run: pnpm exec playwright test --config tests/e2e/playwright.config.ts --project=chromium --project=edge
+
+      - name: Upload E2E diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-diagnostics
+          path: |
+            sqlive-frontend/playwright-report/
+            sqlive-frontend/test-results/
+          if-no-files-found: ignore
+          retention-days: 7

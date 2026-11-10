@@ -23,6 +23,8 @@ pnpm exec playwright test --config tests/e2e/playwright.config.ts --project=edge
 
 CI 安装 Chromium 和 Edge，运行 `--project=chromium --project=edge`。浏览器 channel 说明见 [Playwright 文档](https://playwright.dev/docs/browsers#google-chrome--microsoft-edge)。
 
+CI 使用 2 个浏览器 worker，逐条输出测试结果，整轮 Playwright 限时 15 分钟；测试步骤与任务分别限时 20、25 分钟。失败截图、trace 和 HTML 报告保存在 `e2e-diagnostics` artifact（保留 7 天）。服务先接收 SIGTERM，5 秒内未退出则强制停止；前端直接调用 Vite，后端 CI 使用 `--no-daemon`，减少启动器子进程。`DEBUG=pw:webserver,pw:test:task` 日志用于区分测试、worker 退出和服务清理阶段。
+
 已有 Bash 环境可从根目录运行 `bash scripts/verify.sh`，顺序执行后端测试、前端格式检查、前端 lint、前端测试、前端构建，失败即停止；`--smoke` 只跑冒烟测试。Windows 可直接用上表命令，无需为验证安装 Bash。
 
 ## 测试位置
