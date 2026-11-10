@@ -1,7 +1,7 @@
 import DOMPurify from 'dompurify'
 
 /**
- * Shared DOMPurify sanitize config (D-09).
+ * Shared DOMPurify sanitize config.
  *
  * Used by AiChatPanel.vue (markdown render) and MarkdownRenderer.vue (docs pages)
  * to eliminate the inline-config double source.
@@ -38,7 +38,7 @@ export const sanitizeConfig = {
 }
 
 /**
- * Tab-nabbing defense (Pitfall 9): force target=_blank + rel=noopener noreferrer
+ * Tab-nabbing defense (): force target=_blank + rel=noopener noreferrer
  * on every anchor tag after sanitize. Single-point config — all consumers benefit.
  */
 DOMPurify.addHook('afterSanitizeAttributes', (node: Element) => {

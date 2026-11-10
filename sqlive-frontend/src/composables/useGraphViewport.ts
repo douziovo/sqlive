@@ -1,7 +1,10 @@
+import type { VueFlowStore, ViewportTransform } from '@vue-flow/core'
+import { useTimeoutFn } from '@vueuse/core'
 import type { Ref } from 'vue'
 import { getCurrentInstance, nextTick, onMounted, reactive, ref } from 'vue'
-import { useTimeoutFn } from '@vueuse/core'
+
 import type { KnowledgeNode } from '@/composables/useKnowledgeGraph'
+import { STORAGE_KEYS } from '@/constants/storageKeys'
 
 // D-19 (IN-08): extracted node half-dimensions for centering math.
 // Node size assumed 120x60 (KnowledgeNode.vue width/height).
@@ -31,16 +34,13 @@ const NODE_HALF_H = 30
  * can be unit-tested outside a component setup without Vue warnings.
  */
 export function useGraphViewport(
-    flowRef: Ref<any>,
+    flowRef: Ref<VueFlowStore | null>,
     displayNodes: Ref<KnowledgeNode[]>
 ): {
     zoomLevel: Ref<number>
     viewportPos: { x: number; y: number }
     isSettling: Ref<boolean>
-    onMove: (moveEvent: {
-        event: any
-        flowTransform: { x: number; y: number; zoom: number }
-    }) => void
+    onMove: (moveEvent: { event: unknown; flowTransform: ViewportTransform }) => void
     fitView: () => void
     focusNode: (topicId: string) => void
     flyToNode: (topicId: string) => void
@@ -58,9 +58,9 @@ export function useGraphViewport(
         { immediate: false }
     )
     const { start: saveViewport } = useTimeoutFn(
-        (vp: { x: number; y: number; zoom: number }) => {
+        (vp: ViewportTransform) => {
             try {
-                localStorage.setItem('kg-viewport', JSON.stringify(vp))
+                localStorage.setItem(STORAGE_KEYS.graphViewport, JSON.stringify(vp))
             } catch {
                 /* localStorage unavailable — skip persist */
             }
@@ -69,10 +69,7 @@ export function useGraphViewport(
         { immediate: false }
     )
 
-    function onMove(moveEvent: {
-        event: any
-        flowTransform: { x: number; y: number; zoom: number }
-    }): void {
+    function onMove(moveEvent: { event: unknown; flowTransform: ViewportTransform }): void {
         const vp = moveEvent.flowTransform
         viewportPos.x = vp.x
         viewportPos.y = vp.y
@@ -92,7 +89,7 @@ export function useGraphViewport(
     function fitView(): void {
         // T-10-11: guard against null flowRef (composable mounted before VueFlow)
         if (!flowRef.value) return
-        flowRef.value?.fitView?.({ duration: 300 })
+        void flowRef.value?.fitView?.({ duration: 300 })
     }
 
     function focusNode(topicId: string): void {
@@ -100,7 +97,7 @@ export function useGraphViewport(
         const nodeId = `topic-${topicId}`
         const node = displayNodes.value.find((n) => n.id === nodeId)
         if (node) {
-            flowRef.value?.setCenter?.(
+            void flowRef.value?.setCenter?.(
                 node.position.x + NODE_HALF_W,
                 node.position.y + NODE_HALF_H,
                 {
@@ -117,7 +114,7 @@ export function useGraphViewport(
         const node = displayNodes.value.find((n) => n.id === nodeId)
         if (!node) return
 
-        flowRef.value?.setCenter?.(
+        void flowRef.value?.setCenter?.(
             // D-19: zoom 1.5 crops tighter — +75/+20 shifts node slightly up-left
             // so the label stays visible below center. focusNode (zoom 1.2) uses
             // NODE_HALF_W/H directly; flyToNode's offset is intentionally different.
@@ -135,14 +132,14 @@ export function useGraphViewport(
             // D-31: auto-fit on first visit when no saved viewport exists.
             // Viewport restore (when saved) happens in onPaneReady after layout.
             try {
-                const saved = localStorage.getItem('kg-viewport')
+                const saved = localStorage.getItem(STORAGE_KEYS.graphViewport)
                 if (!saved) {
                     await nextTick()
-                    flowRef.value?.fitView?.({ duration: 300 })
+                    void flowRef.value?.fitView?.({ duration: 300 })
                 }
             } catch {
                 await nextTick()
-                flowRef.value?.fitView?.({ duration: 300 })
+                void flowRef.value?.fitView?.({ duration: 300 })
             }
         })
     }

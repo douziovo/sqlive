@@ -23,10 +23,9 @@ export function useSortFilter<T>(
     const sortDir = ref<'asc' | 'desc' | null>(null)
     const filterText = ref('')
 
-    const pageSize = computed({
-        get: () => toValue(pagination?.pageSize) ?? 10,
-        set: () => {} // readonly from our side — synced via watch
-    })
+    // Readonly view of the caller's page size (the caller keeps the writable ref;
+    // useTablePipeline binds it to v-model directly, so this computed has no setter).
+    const pageSize = computed(() => toValue(pagination?.pageSize) ?? 10)
     const currentPage = ref(1)
 
     const debouncedFilter = ref('')
@@ -68,7 +67,7 @@ export function useSortFilter<T>(
             const field = resolvedSortFields.value.find((sf) => sf.key === sortKey.value)
             if (field) {
                 const dir = sortDir.value
-                data = [...data].sort((a, b) => {
+                data = [...data].toSorted((a, b) => {
                     const cmp = field.compare(a, b)
                     return dir === 'asc' ? cmp : -cmp
                 })
@@ -89,6 +88,22 @@ export function useSortFilter<T>(
     const filteredCount = computed(() => filtered.value.length)
     const totalPages = computed(() =>
         pagination ? Math.max(1, Math.ceil(filteredCount.value / pageSize.value)) : 1
+    )
+
+    // Keep the page valid before a consumer renders, even when pagination disappears.
+    watch(
+        pageSize,
+        () => {
+            currentPage.value = 1
+        },
+        { flush: 'sync' }
+    )
+    watch(
+        [totalPages, currentPage],
+        ([pages, page]) => {
+            currentPage.value = Math.max(1, Math.min(page, pages))
+        },
+        { flush: 'sync' }
     )
 
     return {

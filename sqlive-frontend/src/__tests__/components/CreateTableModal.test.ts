@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
+
 import CreateTableModal from '../../components/CreateTableModal.vue'
 
 // Dialog (reka-ui) uses Teleport / v-if — stub so content renders inline for testing
@@ -67,14 +68,10 @@ describe('CreateTableModal', () => {
         const wrapper = mountOpen()
         const buttons = wrapper.findAll('button')
         // Cancel button contains "取消"
-        for (const btn of buttons) {
-            if (btn.text().includes('取消')) {
-                await btn.trigger('click')
-                expect(wrapper.emitted('update:open')?.[0]).toEqual([false])
-                return
-            }
-        }
-        expect.fail('Cancel button not found')
+        const cancel = buttons.find((btn) => btn.text().includes('取消'))
+        expect(cancel).toBeDefined()
+        await cancel!.trigger('click')
+        expect(wrapper.emitted('update:open')?.[0]).toEqual([false])
     })
 
     it('emits submit with correct payload', async () => {
@@ -93,7 +90,7 @@ describe('CreateTableModal', () => {
         expect(submitCalls).toBeTruthy()
         expect(submitCalls?.[0][0]).toMatchObject({
             name: 'users',
-            columns: ['id INTEGER']
+            columns: ['"id" INTEGER']
         })
     })
 
@@ -138,6 +135,88 @@ describe('CreateTableModal', () => {
 
         const preview = wrapper.find('pre')
         expect(preview.exists()).toBe(true)
-        expect(preview.text()).toContain('CREATE TABLE t(')
+        expect(preview.text()).toContain('CREATE TABLE "t"(')
+    })
+})
+
+describe('CreateTableModal — rows and SQL preview', () => {
+    it('quotes special names in preview and retains actual data keys on submit', async () => {
+        const wrapper = mountOpen()
+        await wrapper.find('input[placeholder*="请输入表名"]').setValue('order "中文')
+        await wrapper.find('input[placeholder*="int"]').setValue('TEXT')
+        await wrapper.find('input[placeholder*="id"]').setValue('full "name')
+        await wrapper.find('input[placeholder="空"]').setValue('Alice')
+
+        expect(wrapper.find('pre').text()).toContain('CREATE TABLE "order ""中文"(')
+        expect(wrapper.find('pre').text()).toContain('"full ""name" TEXT')
+        const submit = wrapper
+            .findAll('button')
+            .find((button) => button.text().includes('立即创建'))
+        await submit!.trigger('click')
+        expect(wrapper.emitted('submit')![0][0]).toEqual({
+            name: 'order "中文',
+            columns: ['"full ""name" TEXT'],
+            data: [{ 'full "name': 'Alice' }]
+        })
+    })
+    it('removes a row when its delete button is clicked', async () => {
+        const wrapper = mountOpen()
+        const addBtn = wrapper.findAll('button').find((b) => b.text().includes('添加新字段'))
+        await addBtn!.trigger('click')
+        expect(wrapper.findAll('input[placeholder*="int"]').length).toBe(2)
+
+        const delBtn = wrapper.find('button[title="删除此行"]')
+        await delBtn.trigger('click')
+        expect(wrapper.findAll('input[placeholder*="int"]').length).toBe(1)
+    })
+
+    it('preview includes an INSERT with NULL for empty values and literals for filled ones', async () => {
+        const wrapper = mountOpen()
+        await wrapper.find('input[placeholder*="请输入表名"]').setValue('users')
+        const typeInputs = wrapper.findAll('input[placeholder*="int"]')
+        await typeInputs[0].setValue('INTEGER')
+        await wrapper.find('input[placeholder*="id"]').setValue('id')
+        await wrapper.find('input[placeholder="空"]').setValue('42')
+
+        // Second row: type + name, no value → NULL in INSERT
+        const addBtn = wrapper.findAll('button').find((b) => b.text().includes('添加新字段'))
+        await addBtn!.trigger('click')
+        const types = wrapper.findAll('input[placeholder*="int"]')
+        await types[1].setValue('TEXT')
+        await wrapper.findAll('input[placeholder*="id"]')[1].setValue('name')
+
+        const preview = wrapper.text()
+        expect(preview).toContain('CREATE TABLE "users"(')
+        expect(preview).toContain('INSERT INTO "users" VALUES (42, NULL);')
+    })
+
+    it('preview omits the INSERT statement when no row has a value', async () => {
+        const wrapper = mountOpen()
+        await wrapper.find('input[placeholder*="请输入表名"]').setValue('users')
+        await wrapper.find('input[placeholder*="int"]').setValue('INTEGER')
+        await wrapper.find('input[placeholder*="id"]').setValue('id')
+
+        expect(wrapper.text()).toContain('CREATE TABLE "users"(')
+        expect(wrapper.text()).not.toContain('INSERT INTO')
+    })
+
+    it('submit maps row values into a single data record', async () => {
+        const wrapper = mountOpen()
+        await wrapper.find('input[placeholder*="请输入表名"]').setValue('users')
+        await wrapper.find('input[placeholder*="int"]').setValue('INTEGER')
+        await wrapper.find('input[placeholder*="id"]').setValue('id')
+        await wrapper.find('input[placeholder="空"]').setValue('7')
+
+        const submitBtn = wrapper.findAll('button').find((b) => b.text().includes('立即创建'))
+        await submitBtn!.trigger('click')
+
+        const events = wrapper.emitted('submit')
+        expect(events).toBeTruthy()
+        expect(events![0][0]).toEqual({
+            name: 'users',
+            columns: ['"id" INTEGER'],
+            data: [{ id: '7' }]
+        })
+        expect(wrapper.emitted('update:open')).toEqual([[false]])
     })
 })

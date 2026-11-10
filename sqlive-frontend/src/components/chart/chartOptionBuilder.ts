@@ -26,9 +26,9 @@ function getMagnitude(val: number): number {
 
 function getMedian(vals: number[]): number {
     if (vals.length === 0) return 0
-    const sorted = [...vals].sort((a, b) => a - b)
+    const sorted = [...vals].toSorted((a, b) => a - b)
     const mid = Math.floor(sorted.length / 2)
-    return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
+    return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
 }
 
 export function decideDualAxis(
@@ -45,7 +45,7 @@ export function decideDualAxis(
     }
 
     const mags = datasets.map((ds, i) => {
-        const nums = ds.data.filter((v) => v != null && !Number.isNaN(v)) as number[]
+        const nums = ds.data.filter((v): v is number => v != null && !Number.isNaN(v))
         return { index: i, name: ds.name, mag: getMagnitude(getMedian(nums)) }
     })
     mags.sort((a, b) => a.mag - b.mag)
@@ -66,20 +66,12 @@ export function decideDualAxis(
         }
     }
 
-    // Tie-breaker: first occurrence of max gap
+    // Tie-breaker: first occurrence of max gap.
+    // cutIdx is always in [1, mags.length - 1]: indexOf returns a valid gaps
+    // index (< mags.length - 1), so both slices below are provably non-empty.
     const cutIdx = gaps.indexOf(maxGap) + 1
     const leftMags = mags.slice(0, cutIdx)
     const rightMags = mags.slice(cutIdx)
-
-    if (leftMags.length === 0 || rightMags.length === 0) {
-        return {
-            enabled: false,
-            leftIndices: [],
-            rightIndices: [],
-            leftAxisName: '',
-            rightAxisName: ''
-        }
-    }
 
     function axisName(entries: typeof leftMags): string {
         if (entries.length === 1) return entries[0].name
@@ -115,9 +107,7 @@ const IS_CARTESIAN = new Set(['bar', 'line', 'area'])
 export function buildEChartsOption(config: ChartConfig): ChartOption {
     const { chartType, labels, datasets, stacked } = config
     const eType = echartType(chartType)
-    const dualAxis = IS_CARTESIAN.has(chartType)
-        ? decideDualAxis(datasets)
-        : ({ enabled: false } as DualAxisDecision)
+    const dualAxis = IS_CARTESIAN.has(chartType) ? decideDualAxis(datasets) : decideDualAxis([])
 
     if (chartType === 'radar') {
         const allVals: number[] = []
@@ -210,7 +200,7 @@ export function buildEChartsOption(config: ChartConfig): ChartOption {
     return {
         xAxis: { type: 'category', data: labels },
         yAxis,
-        series: series as ChartOption['series'],
+        series: series,
         tooltip: { trigger: 'axis' },
         grid: { left: '3%', right: dualAxis.enabled ? '8%' : '4%', containLabel: true }
     }

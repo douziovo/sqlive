@@ -35,7 +35,7 @@ class KnowledgeGraphServiceTest {
 	}
 
 	@Test
-	void shouldHandleMalformedJsonGracefully() throws Exception {
+	void shouldHandleMalformedJsonGracefully() {
 		var mockMapper = mock(ObjectMapper.class);
 		when(mockMapper.readTree(any(java.io.InputStream.class)))
 				.thenThrow(new JacksonException("bad json") {
@@ -47,7 +47,7 @@ class KnowledgeGraphServiceTest {
 	}
 
 	@Test
-	void shouldHandleEmptyNodesArray() throws Exception {
+	void shouldHandleEmptyNodesArray() {
 		// Load service with the real resource (has 2 nodes), then verify we can also handle empty
 		var service = new KnowledgeGraphService(realMapper);
 		service.load();

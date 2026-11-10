@@ -2,6 +2,7 @@
 import { reactiveOmit } from '@vueuse/core'
 import type { SeparatorProps } from 'reka-ui'
 import type { HTMLAttributes } from 'vue'
+
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 
@@ -18,7 +19,7 @@ const delegatedProps = reactiveOmit(props, 'class')
         :orientation="props.orientation"
         :class="
             cn(
-                'bg-input relative !m-0 self-stretch data-[orientation=vertical]:h-auto',
+                'relative !m-0 self-stretch bg-input data-[orientation=vertical]:h-auto',
                 props.class
             )
         "

@@ -31,8 +31,9 @@
 </template>
 
 <script setup lang="ts">
-import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'
 import { computed } from 'vue'
+
+import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'
 
 const props = defineProps<{
     pinnedTask: KnowledgeTask | null
@@ -67,7 +68,7 @@ function handleUnpin(): void {
     border-radius: 12px;
     padding: 12px 14px;
     width: 260px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 10%);
     backdrop-filter: blur(8px);
     animation: tracker-slide-up 0.25s ease-out;
 }
@@ -77,6 +78,7 @@ function handleUnpin(): void {
         opacity: 0;
         transform: translateY(8px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);

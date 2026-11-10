@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from 'vue'
+
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -24,7 +25,7 @@ function handleClick() {
 
 <template>
     <Button
-        :class="cn('cursor-pointer rounded-full px-4 min-w-0', props.class)"
+        :class="cn('min-w-0 cursor-pointer rounded-full px-4', props.class)"
         :size="props.size"
         type="button"
         :variant="props.variant"

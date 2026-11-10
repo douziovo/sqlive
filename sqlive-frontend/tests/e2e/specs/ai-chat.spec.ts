@@ -8,7 +8,7 @@ test.describe('AI Chat', () => {
 
             if (url.includes('/chat')) {
                 // SSE streaming response
-                route.fulfill({
+                void route.fulfill({
                     status: 200,
                     contentType: 'text/event-stream',
                     body: [
@@ -24,7 +24,7 @@ test.describe('AI Chat', () => {
                 })
             } else {
                 // JSON responses for analyze/fix/explain/optimize/suggest
-                route.fulfill({
+                void route.fulfill({
                     status: 200,
                     contentType: 'application/json',
                     body: JSON.stringify({
@@ -93,7 +93,7 @@ test.describe('AI Chat', () => {
         // Override mock to return error
         await page.unroute('**/api/ai/**')
         await page.route('**/api/ai/**', (route) => {
-            route.fulfill({
+            void route.fulfill({
                 status: 503,
                 contentType: 'application/json',
                 body: JSON.stringify({
@@ -125,7 +125,7 @@ test.describe('AI Chat', () => {
         // Override mock with markdown content
         await page.unroute('**/api/ai/**')
         await page.route('**/api/ai/chat', (route) => {
-            route.fulfill({
+            void route.fulfill({
                 status: 200,
                 contentType: 'text/event-stream',
                 body: [

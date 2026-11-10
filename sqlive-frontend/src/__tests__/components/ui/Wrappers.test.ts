@@ -1,6 +1,6 @@
 import { shallowMount } from '@vue/test-utils'
-import type { Component } from 'vue'
 import { describe, expect, it } from 'vitest'
+import type { Component } from 'vue'
 
 const wrappers = Object.entries(
     import.meta.glob<{ default: Component }>('../../../components/ui/**/*.vue', { eager: true })

@@ -2,7 +2,7 @@
  * useGraphLOD — Level-of-detail helper for the knowledge graph.
  *
  * Pure-function module that maps a zoom level to an edge opacity.
- * Node-level label opacity stays in `KnowledgeNode.vue` (D-10 scope
+ * Node-level label opacity stays in `KnowledgeNode.vue` (scope
  * excludes it from this composable).
  */
 export function useGraphLOD() {

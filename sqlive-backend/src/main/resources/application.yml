@@ -77,3 +77,15 @@ pool:
   max-databases: ${SQLIVE_POOL_MAX_DB:500}
   idle-timeout: ${SQLIVE_POOL_IDLE_TIMEOUT:30m}
   cleanup-interval: ${SQLIVE_POOL_CLEANUP_INTERVAL:5m}
+
+sqlive:
+  cors:
+    allowed-origin-patterns:
+      - "http://localhost:*"
+      - "http://127.0.0.1:*"
+      # [::1] 是本地回环地址，开发期 CORS 源只能是明文 http，这里的有意为之
+      - "http://[::1]:*" #noinspection HttpUrlsUsage
+  rate-limit:
+    ai-per-minute: 100
+    sql-per-minute: 500
+    window-ms: 60000

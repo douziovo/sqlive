@@ -55,7 +55,9 @@ test.describe('Table Editing & Bidirectional Sync', () => {
         await sqlEditor.replaceAll(
             'CREATE TABLE recovered (id INTEGER); INSERT INTO recovered VALUES (42);'
         )
-        expect((await (await recoveredResponse).json()).success).toBe(true)
+        const response = await recoveredResponse
+        expect(response.ok()).toBe(true)
+        expect((await response.json()).error).toBeFalsy()
         await expect(page.locator('#table-recovered')).toBeVisible()
     })
 
@@ -115,24 +117,33 @@ test.describe('Table Editing & Bidirectional Sync', () => {
         await expect(page.locator('.monaco-editor')).toBeVisible()
     })
 
-    test('drops a table and removes all related statements', async ({ page, sqlEditor }) => {
+    test('drops a table explicitly while preserving the original script', async ({
+        page,
+        sqlEditor
+    }) => {
         await gotoApp(page)
         await expect(page.locator('#table-type_demo')).toBeVisible({ timeout: 30_000 })
+        const originalSql = await sqlEditor.getText()
 
         page.once('dialog', (dialog) => dialog.accept())
 
         const dropBtn = page.locator('#table-type_demo button[title="删除表格"]')
-        if (await dropBtn.isVisible().catch(() => false)) {
-            const responsePromise = page.waitForResponse(
-                (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',
-                { timeout: 15_000 }
-            )
-            await dropBtn.click()
-            await responsePromise
-        }
+        await dropBtn.scrollIntoViewIfNeeded()
+        await expect(dropBtn).toBeVisible()
+        const responsePromise = page.waitForResponse(
+            (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',
+            { timeout: 15_000 }
+        )
+        await dropBtn.click()
+        const response = await responsePromise
+        expect(response.ok()).toBe(true)
+        expect((await response.json()).error).toBeFalsy()
 
         const newSql = await sqlEditor.getText()
-        expect(newSql).not.toContain('type_demo')
+        expect(newSql).toContain(originalSql)
+        expect(newSql).toContain('DROP TABLE "type_demo";')
+        await expect(page.locator('#table-type_demo')).toHaveCount(0)
+        await expect(page.locator('#table-departments')).toBeVisible()
     })
 
     test('edits multiple rows in sequence', async ({ page }) => {

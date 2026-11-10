@@ -1,9 +1,12 @@
-import * as monaco from 'monaco-editor/esm/vs/editor/editor.api'
-import { type Ref, watch } from 'vue'
 import { useTimeoutFn } from '@vueuse/core'
-import 'monaco-editor/esm/vs/basic-languages/sql/sql.contribution'
-import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
+import 'monaco-editor/features/contextmenu/register'
+import * as monaco from 'monaco-editor/editor/editor.api'
+// oxlint-disable-next-line import/default -- Vite's ?worker transform provides the default constructor.
+import editorWorker from 'monaco-editor/editor/editor.worker?worker'
+import 'monaco-editor/languages/definitions/sql/register'
 import { format } from 'sql-formatter'
+import { type Ref, watch } from 'vue'
+
 import type { AiActions } from './useAiChat'
 
 self.MonacoEnvironment = {
@@ -93,7 +96,7 @@ export function useMonacoEditor(
         // Expose monaco on window for E2E tests — Playwright keyboard.type()
         // cannot reliably type spaces/special chars into Monaco.
         if (typeof window !== 'undefined' && window.location.search.includes('e2e=1')) {
-            ;(window as any).monaco = monaco
+            window.monaco = monaco
         }
 
         editor = monaco.editor.create(container.value, {
@@ -144,7 +147,9 @@ export function useMonacoEditor(
             keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyT],
             contextMenuGroupId: '9_sql',
             contextMenuOrder: 0,
-            run: () => emit('submit')
+            run: () => {
+                emit('submit')
+            }
         })
 
         // Format: Ctrl+Shift+L
@@ -154,7 +159,9 @@ export function useMonacoEditor(
             keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KeyL],
             contextMenuGroupId: '9_sql',
             contextMenuOrder: 1,
-            run: () => formatSql()
+            run: () => {
+                formatSql()
+            }
         })
 
         // Import
@@ -172,7 +179,9 @@ export function useMonacoEditor(
             label: '导出当前标签页',
             contextMenuGroupId: '9_sql',
             contextMenuOrder: 3,
-            run: () => emit('export-tab')
+            run: () => {
+                emit('export-tab')
+            }
         })
 
         // Export all tabs
@@ -181,7 +190,9 @@ export function useMonacoEditor(
             label: '导出全部标签页',
             contextMenuGroupId: '9_sql',
             contextMenuOrder: 4,
-            run: () => emit('export-all')
+            run: () => {
+                emit('export-all')
+            }
         })
 
         // AI context menu actions
@@ -225,8 +236,9 @@ export function useMonacoEditor(
         // before the web font is ready, the cached char-width (fallback font) drifts
         // the caret left of the text. Always re-measure once fonts are ready.
         if (document.fonts) {
-            document.fonts.ready.then(() => {
+            void document.fonts.ready.then(() => {
                 monaco.editor.remeasureFonts()
+                return null
             })
         }
     }

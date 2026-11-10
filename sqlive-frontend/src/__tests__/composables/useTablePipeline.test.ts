@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
+
 import { useTablePipeline } from '@/composables/useTablePipeline'
 import type { Row } from '@/model/DatabaseTypes'
 
@@ -79,8 +80,8 @@ describe('useTablePipeline', () => {
     it('pushes null values to the end on sort', () => {
         const { paginatedData, toggleSort } = useTablePipeline(makeData, makeColumnTypes)
         toggleSort('salary')
-        const last = paginatedData.value[paginatedData.value.length - 1]
-        expect(last.salary).toBeNull()
+        const last = paginatedData.value.at(-1)
+        expect(last?.salary).toBeNull()
     })
 
     it('filters by text column', async () => {

@@ -47,55 +47,47 @@
                 />
             </VueFlow>
 
-            <Transition name="card-pop">
-                <KnowledgeDetail
-                    v-if="selectedTopic"
-                    class="knowledge-graph__detail-card"
-                    :topic="selectedTopic"
-                    :is-mastered="masteredTopics.includes(selectedTopic!.id)"
-                    @toggle-mastered="handleToggleMastered"
-                    @ask-ai="handleAskAi"
-                    @close="handleDetailClose"
-                    @view-all-tasks="handleViewAllTasks"
-                    @complete-task="handleTaskCompleteFromDetail"
-                    @navigate-to-topic="(topicId: string) => emit('navigate-to-topic', topicId)"
-                />
-            </Transition>
+            <KnowledgeGraphDetailCard
+                :topic="selectedTopic"
+                :mastered-topics="masteredTopics"
+                @toggle-mastered="handleToggleMastered"
+                @ask-ai="handleAskAi"
+                @close="handleDetailClose"
+                @view-all-tasks="handleViewAllTasks"
+                @complete-task="handleTaskCompleteFromDetail"
+                @navigate-to-topic="(topicId: string) => emit('navigate-to-topic', topicId)"
+            />
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
 import { Background } from '@vue-flow/background'
-import { MiniMap } from '@vue-flow/minimap'
 import { VueFlow } from '@vue-flow/core'
-import {
-    computed,
-    markRaw,
-    nextTick,
-    onMounted,
-    onUnmounted,
-    provide,
-    ref,
-    shallowRef,
-    triggerRef,
-    watch
-} from 'vue'
+import type { VueFlowStore } from '@vue-flow/core'
+import type { Edge } from '@vue-flow/core'
+import { MiniMap } from '@vue-flow/minimap'
+
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import '@vue-flow/minimap/dist/style.css'
-import type { Edge } from '@vue-flow/core'
-import { layoutNodes } from '@/composables/useDagreLayout'
+import { markRaw, nextTick, onMounted, onUnmounted, provide, shallowRef } from 'vue'
+
+import ErSearchBar from '@/components/er/ErSearchBar.vue'
 import { useGraphHover } from '@/composables/useGraphHover'
-import { useGraphViewport } from '@/composables/useGraphViewport'
-import { useGraphSearch } from '@/composables/useGraphSearch'
 import { useGraphLOD } from '@/composables/useGraphLOD'
+import { useGraphSearch } from '@/composables/useGraphSearch'
+import { useGraphViewport } from '@/composables/useGraphViewport'
 import type {
     KnowledgeNode as KnowledgeFlowNode,
     KnowledgeTopic
 } from '@/composables/useKnowledgeGraph'
-import ErSearchBar from '@/components/er/ErSearchBar.vue'
-import KnowledgeDetail from './KnowledgeDetail.vue'
+
+import KnowledgeGraphDetailCard from './graph/KnowledgeGraphDetailCard.vue'
+import { useGraphEdgeStyling } from './graph/useGraphEdgeStyling'
+import { useGraphLayoutManager } from './graph/useGraphLayoutManager'
+import { useGraphNodeStyling } from './graph/useGraphNodeStyling'
+import { useNodeCelebrationEffects } from './graph/useNodeCelebrationEffects'
 import KnowledgeNode from './KnowledgeNode.vue'
 
 const props = defineProps<{
@@ -116,11 +108,16 @@ const emit = defineEmits<{
     (e: 'navigate-to-topic', topicId: string): void
 }>()
 
+// `as any`: vue-flow's NodeComponent type does not structurally accept custom
+// SFC node components (known upstream typing friction).
 const nodeTypes = markRaw({ 'knowledge-node': KnowledgeNode }) as any
-const flowRef = ref<any>(null)
+// Template ref on <VueFlow>: exposes the store's methods (fitView/setCenter/...)
+// plus the component's $el (used for layout measurement). shallowRef keeps the
+// store's nested ComputedRefs from being deeply unwrapped by ref()'s UnwrapRef.
+const flowRef = shallowRef<(VueFlowStore & { $el?: HTMLElement }) | null>(null)
 const displayNodes = shallowRef<KnowledgeFlowNode[]>([...props.nodes])
 
-// ── Composables (D-10 split: hover/viewport/search/LOD) ───────
+// ── Composables (split: hover/viewport/search/LOD) ───────
 // NOTE: onResetView injects onPaneDblClick into useGraphSearch so Ctrl+0
 // can reset the view without the composable knowing about hover/viewport.
 
@@ -134,156 +131,39 @@ provide('viewportPos', viewport.viewportPos)
 
 // ── Styled edges (zoom-tiered opacity + hover path highlight) ──
 
-// ── D-02: styledEdges cache (watch+ref pattern, computed stays pure) ──
-// Watch writes to styledEdgesCache; computed reads ref.value. Avoids cache
-// heuristic that lost reactivity to props.edges (CR-01). { immediate: true }
-// ensures cache is populated on mount before first render.
-const styledEdgesCache = ref<Edge[]>([])
-
-watch(
-    [
-        () => props.edges,
-        () => lod.edgeOpacityForZoom(viewport.zoomLevel.value),
-        () => hover.hoveredNodeId.value
-    ],
-    () => {
-        const baseOpacity = lod.edgeOpacityForZoom(viewport.zoomLevel.value)
-
-        // 计算 hover 时前驱/后继路径集合（仅一层）
-        let predSet = new Set<string>()
-        let succSet = new Set<string>()
-        if (hover.hoveredNodeId.value) {
-            predSet = hover.immediatePredecessors(hover.hoveredNodeId.value)
-            succSet = hover.immediateSuccessors(hover.hoveredNodeId.value)
-        }
-
-        styledEdgesCache.value = props.edges.map((edge) => {
-            const sourceId = edge.source.replace(/^topic-/, '')
-            const targetId = edge.target.replace(/^topic-/, '')
-
-            // 大陆连线：跨 category 的连线，更宽更明显
-            const srcData = hover.nodeDataMap.value.get(sourceId)
-            const tgtData = hover.nodeDataMap.value.get(targetId)
-            const isContinent = srcData && tgtData && srcData.category !== tgtData.category
-
-            const isPred =
-                hover.hoveredNodeId.value &&
-                predSet.has(sourceId) &&
-                targetId === hover.hoveredNodeId.value
-            const isSucc =
-                hover.hoveredNodeId.value &&
-                succSet.has(targetId) &&
-                sourceId === hover.hoveredNodeId.value
-
-            if (isSucc) {
-                return {
-                    ...edge,
-                    style: {
-                        ...edge.style,
-                        opacity: 1,
-                        stroke: '#3b82f6',
-                        strokeWidth: 2,
-                        strokeDasharray: 'none',
-                        filter: 'drop-shadow(0 0 5px rgba(59,130,246,0.5))'
-                    }
-                }
-            }
-
-            if (isPred) {
-                return {
-                    ...edge,
-                    style: {
-                        ...edge.style,
-                        opacity: 1,
-                        stroke: '#f59e0b',
-                        strokeWidth: 2,
-                        strokeDasharray: 'none',
-                        filter: 'drop-shadow(0 0 5px rgba(245,158,11,0.5))'
-                    }
-                }
-            }
-
-            // 默认：大陆宽虚线 / 前置边近透明 / 节点内部细虚线
-            const prereq = (edge as any).data?.isPrereq
-            return {
-                ...edge,
-                type: 'smoothstep',
-                style: {
-                    ...edge.style,
-                    opacity: isContinent ? baseOpacity * 1.2 : prereq ? 0.06 : baseOpacity,
-                    stroke: isContinent ? '#94a3b8' : prereq ? '#e2e8f0' : '#cbd5e1',
-                    strokeWidth: isContinent ? 2.5 : 1,
-                    strokeDasharray: isContinent ? '8 4' : prereq ? '1 8' : '3 6'
-                }
-            }
-        })
-    },
-    { immediate: true }
-)
-
-const styledEdges = computed<Edge[]>(() => styledEdgesCache.value)
-
-// Sync displayNodes when props.nodes change, re-run dagre TB layout
-watch(
-    () => props.nodes,
-    async (newNodes) => {
-        displayNodes.value = [...newNodes]
-        if (newNodes.length === 0) return
-        await nextTick()
-        const el = flowRef.value?.$el as HTMLElement | undefined
-        displayNodes.value = layoutNodes(displayNodes.value, props.edges, el, {
-            rankdir: 'TB',
-            ranksep: 120,
-            nodesep: 80,
-            marginx: 60,
-            marginy: 60
-        })
-    },
-    { deep: true }
-)
-
-const styledNodes = computed<KnowledgeFlowNode[]>(() => {
-    const matches = search.matchNodes.value
-    const matchIdSet = new Set(matches.map((m) => m.id))
-    const activeId = search.currentIndex.value >= 0 ? matches[search.currentIndex.value]?.id : null
-
-    return displayNodes.value.map((node) => {
-        let data = { ...node.data }
-        let style = { ...node.style }
-        let searchDimmed = false
-
-        // Step 1: Local search filter
-        if (search.searchQuery.value) {
-            const isMatch = matchIdSet.has(node.id)
-            const isActive = activeId === node.id
-            style = { ...style, opacity: isMatch ? 1 : 0.2 }
-            searchDimmed = !isMatch
-            data = { ...data, isSearchMatch: isMatch, isActiveMatch: isActive }
-        } else {
-            data = { ...data, isSearchMatch: undefined, isActiveMatch: undefined }
-        } // Step 2: Hover state (overrides search opacity for connected nodes)
-        if (hover.hoveredNodeId.value) {
-            const tid = data.topicId
-            const adj = hover.adjacencyMap.value.get(hover.hoveredNodeId.value) || new Set()
-            if (tid === hover.hoveredNodeId.value) {
-                data = { ...data, isFocused: true, isHighlighted: false, isDimmed: false }
-                style = { ...style, opacity: 1 }
-            } else if (adj.has(tid)) {
-                data = { ...data, isHighlighted: true, isFocused: false, isDimmed: false }
-                style = { ...style, opacity: 1 }
-            } else {
-                data = { ...data, isDimmed: true, isFocused: false, isHighlighted: false }
-                style = { ...style, opacity: 0.12 }
-            }
-        } else {
-            data = { ...data, isFocused: false, isHighlighted: false, isDimmed: false }
-            if (!searchDimmed && !('opacity' in style)) style = { ...style, opacity: 1 }
-        }
-
-        data = { ...data, isPathHighlighted: false }
-        return { ...node, data, style }
-    })
+const { styledEdges } = useGraphEdgeStyling({
+    edgesGetter: () => props.edges,
+    zoomLevel: viewport.zoomLevel,
+    edgeOpacityForZoom: lod.edgeOpacityForZoom,
+    hoveredNodeId: hover.hoveredNodeId,
+    nodeDataMap: hover.nodeDataMap,
+    immediatePredecessors: hover.immediatePredecessors,
+    immediateSuccessors: hover.immediateSuccessors
 })
+
+// ── Layout sync + viewport restore (dagre TB) ─────────────────
+
+const { onPaneReady } = useGraphLayoutManager({
+    flowRef,
+    displayNodes,
+    nodesGetter: () => props.nodes,
+    edgesGetter: () => props.edges
+})
+
+// ── Styled nodes (search dimming + hover focus/highlight) ──────
+
+const { styledNodes } = useGraphNodeStyling({
+    displayNodes,
+    searchQuery: search.searchQuery,
+    matchNodes: search.matchNodes,
+    currentIndex: search.currentIndex,
+    hoveredNodeId: hover.hoveredNodeId,
+    adjacencyMap: hover.adjacencyMap
+})
+
+// ── Spark particles / Unlock glow (-03) ────────────────
+
+const { triggerSparkBurst, triggerUnlockGlow } = useNodeCelebrationEffects(displayNodes)
 
 // ── VueFlow event handlers ─────────────────────────────────────
 
@@ -304,7 +184,7 @@ function onPaneClick(): void {
     emit('deselect-node')
 }
 function onPaneDblClick(): void {
-    // D-32: reset all interaction state + fitView animation.
+    // reset all interaction state + fitView animation.
     // Called via dblclick listener and via useGraphSearch Ctrl+0 → opts.onResetView.
     hover.resetHoverState()
     if (search.showSearch.value) search.closeSearch()
@@ -319,34 +199,6 @@ function getStyledEdges(): Edge[] {
 }
 function getStyledNodes(): KnowledgeFlowNode[] {
     return styledNodes.value
-}
-
-// ── Spark particles / Unlock glow (Phase 05-03) ────────────────
-
-function triggerSparkBurst(topicId: string): void {
-    const node = displayNodes.value.find((n) => n.id === `topic-${topicId}`)
-    if (!node) return
-    node.data = { ...node.data, triggerSparkBurst: true }
-    triggerRef(displayNodes)
-    setTimeout(() => {
-        node.data = { ...node.data, triggerSparkBurst: false }
-        triggerRef(displayNodes)
-    }, 700)
-}
-
-function triggerUnlockGlow(topicId: string): void {
-    const topic = displayNodes.value.find((n) => n.data.topicId === topicId)
-    if (!topic) return
-    for (const nextId of topic.data.nextTopics || []) {
-        const nextNode = displayNodes.value.find((n) => n.data.topicId === nextId)
-        if (!nextNode) continue
-        nextNode.data = { ...nextNode.data, triggerUnlockGlow: true }
-        triggerRef(displayNodes)
-        setTimeout(() => {
-            nextNode.data = { ...nextNode.data, triggerUnlockGlow: false }
-            triggerRef(displayNodes)
-        }, 800)
-    }
 }
 
 // ── KnowledgeDetail event forwarding ───────────────────────────
@@ -367,35 +219,12 @@ function handleTaskCompleteFromDetail(topicId: string): void {
     emit('complete-task', topicId)
 }
 
-// ── Layout + viewport restore on pane ready ───────────────────
-
-async function onPaneReady(): Promise<void> {
-    await nextTick()
-    const el = flowRef.value?.$el as HTMLElement | undefined
-    displayNodes.value = layoutNodes(displayNodes.value, props.edges, el, {
-        rankdir: 'TB',
-        ranksep: 120,
-        nodesep: 80
-    })
-    // D-31: restore saved viewport after layout
-    try {
-        const saved = localStorage.getItem('kg-viewport')
-        if (saved) {
-            const vp = JSON.parse(saved) as { x: number; y: number; zoom: number }
-            await nextTick()
-            flowRef.value?.setViewport?.(vp, { duration: 0 })
-        }
-    } catch {
-        /* localStorage unavailable */
-    }
-}
-
 // ── Lifecycle: viewport dblclick listener only ────────────────
 // document keydown listener moved to useGraphSearch onMounted.
 // localStorage restore + initial fitView moved to useGraphViewport onMounted.
 
 onMounted(async () => {
-    // D-32: native dblclick on the viewport pane (vue-flow has no @pane-dblclick event).
+    // native dblclick on the viewport pane (vue-flow has no @pane-dblclick event).
     // Must use capture phase — D3 zoom intercepts bubble-phase dblclick.
     await nextTick()
     const vpEl = flowRef.value?.$el?.querySelector?.('.vue-flow__viewport') as
@@ -459,45 +288,19 @@ defineExpose({
     justify-content: center;
 }
 
-.knowledge-graph__detail-card {
-    position: absolute;
-    bottom: 16px;
-    right: 16px;
-    width: 320px;
-    max-height: 60vh;
-    z-index: 10;
-}
-
-.card-pop-enter-active {
-    transition:
-        opacity 0.2s ease-out,
-        transform 0.2s ease-out;
-}
-.card-pop-leave-active {
-    transition:
-        opacity 0.15s ease-in,
-        transform 0.15s ease-in;
-}
-.card-pop-enter-from {
-    opacity: 0;
-    transform: translateY(12px) scale(0.95);
-}
-.card-pop-leave-to {
-    opacity: 0;
-    transform: translateY(12px) scale(0.95);
-}
-
 @keyframes knowledge-pulse {
     0% {
-        outline: 2px solid rgba(59, 130, 246, 0.7);
+        outline: 2px solid rgb(59 130 246 / 70%);
         outline-offset: 2px;
     }
+
     50% {
-        outline: 4px solid rgba(59, 130, 246, 0);
+        outline: 4px solid rgb(59 130 246 / 0%);
         outline-offset: 6px;
     }
+
     100% {
-        outline: 2px solid rgba(59, 130, 246, 0.7);
+        outline: 2px solid rgb(59 130 246 / 70%);
         outline-offset: 2px;
     }
 }
@@ -511,6 +314,7 @@ defineExpose({
         stroke-width 0.25s ease,
         stroke-dasharray 0.25s ease;
 }
+
 .knowledge-graph-container.is-settling .vue-flow__edge path {
     transition: none;
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { DatabaseModel, TableSchema } from '@/model/DatabaseTypes'
+
 import { useHighlight } from '@/composables/useHighlight'
+import type { DatabaseModel, TableSchema } from '@/model/DatabaseTypes'
 
 vi.mock('@/utils/sqlStatements', () => ({
     extractSqlStatements: vi.fn((script: string) => {
@@ -14,7 +15,7 @@ vi.mock('@/utils/sqlStatements', () => ({
         })
     }),
     compareValuesForHighlight: vi.fn((cellVal: any, op: string, target: string) => {
-        const cleanTarget = target.replace(/^'|'$/g, '')
+        const cleanTarget = target.replaceAll(/^'|'$/gu, '')
         switch (op) {
             case '=':
                 return String(cellVal) === cleanTarget

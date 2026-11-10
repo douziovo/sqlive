@@ -1,11 +1,6 @@
 .git
 .gitignore
-.planning
-.claude
 .idea
-.gated-pipeline-checkpoint
-.superpowers
-.playwright-mcp
 .github
 docs
 logs

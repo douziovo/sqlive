@@ -3,7 +3,7 @@ export interface Row {
     _highlightId?: number
     _rawSql?: string
 
-    [key: string]: any
+    [key: string]: unknown
 }
 
 export interface TableSchema {
@@ -112,9 +112,9 @@ export interface CreateTableEvent {
 }
 
 export interface TruncationInfo {
-    value: any
+    value: unknown
     wasTruncated: boolean
-    originalValue?: any
+    originalValue?: unknown
     maxLength?: number
     column?: string
 }

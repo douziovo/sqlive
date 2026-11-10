@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Concurrent safety tests for {@link DatabasePoolManager}.
  *
- * <p>Verifies two R0-002 invariants:
+ * <p>Verifies two invariants:
  * <ul>
  *   <li>TOCTOU: concurrent {@code getOrCreateJdbcTemplate} + {@code evictToTarget}
  *       must not hand out a closed {@code JdbcTemplate}.</li>

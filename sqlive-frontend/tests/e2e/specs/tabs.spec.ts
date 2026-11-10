@@ -1,4 +1,5 @@
 import { expect, gotoApp, test } from '../fixtures/sql-editor.fixture'
+import { openNewTab } from '../helpers/tabs'
 
 test.describe('Multi-Tab System @smoke', () => {
     test.beforeEach(async ({ page }) => {
@@ -7,23 +8,12 @@ test.describe('Multi-Tab System @smoke', () => {
     })
 
     test('adds a new tab', async ({ page }) => {
-        const addBtn = page.locator('button[title="新建标签页"]')
-        await addBtn.click()
-
-        // New tab should appear (default name "查询 1" or similar)
-        await expect(page.locator('[data-testid="tab-close-btn"]')).toHaveCount(2, {
-            timeout: 5_000
-        })
+        await openNewTab(page)
     })
 
     test('switches between tabs and shows different content', async ({ page, sqlEditor }) => {
-        const addBtn = page.locator('button[title="新建标签页"]')
-        await addBtn.click()
         // New tab has empty code — our empty-code guard skips the API call.
-        // Wait for new tab to be active
-        await expect(page.locator('[data-testid="tab-close-btn"]')).toHaveCount(2, {
-            timeout: 5_000
-        })
+        await openNewTab(page)
 
         // Type distinct SQL in the new tab
         const responsePromise = page.waitForResponse(
@@ -51,10 +41,7 @@ test.describe('Multi-Tab System @smoke', () => {
     })
 
     test('closes a tab', async ({ page }) => {
-        await page.locator('button[title="新建标签页"]').click()
-        await expect(page.locator('[data-testid="tab-close-btn"]')).toHaveCount(2, {
-            timeout: 5_000
-        })
+        await openNewTab(page)
 
         const closeButtons = page.locator('button:has-text("✕")')
         const count = await closeButtons.count()
@@ -75,12 +62,8 @@ test.describe('Multi-Tab System @smoke', () => {
     })
 
     test('tabs with distinct SQL show different tables', async ({ page, sqlEditor }) => {
-        const addBtn = page.locator('button[title="新建标签页"]')
-        await addBtn.click()
         // New tab has empty code — our empty-code guard skips the API call.
-        await expect(page.locator('[data-testid="tab-close-btn"]')).toHaveCount(2, {
-            timeout: 5_000
-        })
+        await openNewTab(page)
 
         const responsePromise = page.waitForResponse(
             (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',
@@ -110,11 +93,7 @@ test.describe('Multi-Tab System @smoke', () => {
     })
 
     test('tab rename preserves content', async ({ page, sqlEditor }) => {
-        const addBtn = page.locator('button[title="新建标签页"]')
-        await addBtn.click()
-        await expect(page.locator('[data-testid="tab-close-btn"]')).toHaveCount(2, {
-            timeout: 5_000
-        })
+        await openNewTab(page)
 
         // Wait for auto-execute after new tab — may timeout, that's OK
         try {
@@ -143,11 +122,7 @@ test.describe('Multi-Tab System @smoke', () => {
     })
 
     test('empty tab submit does not crash', async ({ page }) => {
-        const addBtn = page.locator('button[title="新建标签页"]')
-        await addBtn.click()
-        await expect(page.locator('[data-testid="tab-close-btn"]')).toHaveCount(2, {
-            timeout: 5_000
-        })
+        await openNewTab(page)
 
         // Wait for auto-execute — may timeout, that's OK
         try {
@@ -207,7 +182,10 @@ test.describe('Multi-Tab System @smoke', () => {
                     `CREATE TABLE isolated (value INTEGER); INSERT INTO isolated VALUES (${value});`
                 )
                 const response = await executed
-                expect((await response.json()).success).toBe(true)
+                const result = await response.json()
+                expect(response.ok()).toBe(true)
+                expect(result.error).toBeFalsy()
+                expect(result.data).toBeTruthy()
                 names.push(response.request().postDataJSON().dbName)
                 await expect(page.locator('#table-isolated')).toBeVisible()
             }
@@ -218,7 +196,8 @@ test.describe('Multi-Tab System @smoke', () => {
                     data: { sql: 'SELECT value FROM isolated;', dbName, reset: false }
                 })
                 const result = await response.json()
-                expect(result.success).toBe(true)
+                expect(response.ok()).toBe(true)
+                expect(result.error).toBeFalsy()
                 expect(result.data.queryResults[0].data).toEqual([{ value: index === 0 ? 11 : 22 }])
             }
         })
@@ -227,11 +206,7 @@ test.describe('Multi-Tab System @smoke', () => {
             page,
             sqlEditor
         }) => {
-            const addBtn = page.locator('button[title="新建标签页"]')
-            await addBtn.click()
-            await expect(page.locator('[data-testid="tab-close-btn"]')).toHaveCount(2, {
-                timeout: 5_000
-            })
+            await openNewTab(page)
 
             // Wait for auto-execute after setText
             let responsePromise = page.waitForResponse(
@@ -261,11 +236,7 @@ test.describe('Multi-Tab System @smoke', () => {
         })
 
         test('cancel prompt does not commit dbName', async ({ page }) => {
-            const addBtn = page.locator('button[title="新建标签页"]')
-            await addBtn.click()
-            await expect(page.locator('[data-testid="tab-close-btn"]')).toHaveCount(2, {
-                timeout: 5_000
-            })
+            await openNewTab(page)
 
             page.once('dialog', async (dialog) => {
                 await dialog.dismiss()
@@ -292,11 +263,7 @@ test.describe('Multi-Tab System @smoke', () => {
             await expect(page.locator('#table-only_in_a')).toBeVisible({ timeout: 10_000 })
 
             // Tab 2: create a new tab (gets its own database) and create only_in_b
-            const addBtn = page.locator('button[title="新建标签页"]')
-            await addBtn.click()
-            await expect(page.locator('[data-testid="tab-close-btn"]')).toHaveCount(2, {
-                timeout: 5_000
-            })
+            await openNewTab(page)
 
             responsePromise = page.waitForResponse(
                 (r) => r.url().includes('/api/execute') && r.request().method() === 'POST',

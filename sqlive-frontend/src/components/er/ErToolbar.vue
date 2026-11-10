@@ -81,8 +81,9 @@ defineEmits<{
     border-color: var(--border);
     border-radius: 8px;
     padding: 4px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 6%);
 }
+
 .er-toolbar-btn {
     display: flex;
     align-items: center;
@@ -99,10 +100,12 @@ defineEmits<{
         background-color 0.15s,
         border-color 0.15s;
 }
+
 .er-toolbar-btn:hover {
     background: var(--muted);
     color: var(--primary);
 }
+
 .er-toolbar-btn-active {
     background: var(--primary) / 0.1;
     color: var(--primary);

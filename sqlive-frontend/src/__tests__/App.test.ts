@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
+
 import App from '@/App.vue'
 import { AI_ACTIONS_KEY, SQL_CONTEXT_KEY } from '@/model/injectionKeys'
 

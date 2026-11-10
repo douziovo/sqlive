@@ -23,6 +23,7 @@ describe('DocsSidebar', () => {
         // D-05: sidebar renders every NavItem from navigation.ts
         const w = mount(DocsSidebar)
         const text = w.text()
+        //noinspection DuplicatedCode -- 与 tests/e2e/specs/docs-navigation.spec.ts 的导航标题断言字面相同，但一处是 jsdom 单测、一处是真实浏览器 e2e，跨层抽 helper 会把两套断言耦合在一起
         expect(text).toContain('项目介绍')
         expect(text).toContain('编辑器')
         expect(text).toContain('数据可视化')

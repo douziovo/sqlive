@@ -1,4 +1,5 @@
 import type { ComputedRef, InjectionKey, Ref } from 'vue'
+
 import type { AiActions } from '../composables/useAiChat'
 import type { DatabaseModel, HighlightState, InsertResult, TruncationInfo } from './DatabaseTypes'
 import type { SchemaTableInfo } from './SchemaTypes'

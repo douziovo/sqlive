@@ -28,14 +28,14 @@ class OpenApiIntegrationTest {
 	@Value("${local.server.port}")
 	private int port;
 
-	private String url(String path) {
-		return "http://localhost:" + port + path;
+	private String url() {
+		return "http://localhost:" + port + "/v3/api-docs";
 	}
 
 	@Test
 	void shouldExposeOpenApiJson() {
 		ResponseEntity<String> resp = restTemplate.exchange(
-				url("/v3/api-docs"), HttpMethod.GET, HttpEntity.EMPTY, String.class);
+				url(), HttpMethod.GET, HttpEntity.EMPTY, String.class);
 
 		assertEquals(HttpStatus.OK, resp.getStatusCode(),
 				"/v3/api-docs should return 200");

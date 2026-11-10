@@ -2,8 +2,10 @@
 import { ChevronDownIcon, LoaderIcon } from '@lucide/vue'
 import type { HTMLAttributes } from 'vue'
 import { computed } from 'vue'
+
 import { CollapsibleTrigger } from '@/components/ui/collapsible'
 import { cn } from '@/lib/utils'
+
 import { Shimmer } from '../shimmer'
 import { useReasoningContext } from './context'
 
@@ -29,17 +31,16 @@ const thinkingMessage = computed(() => {
 
 const thinkingTitle = computed(() => {
     if (!props.reasoning) return ''
-    // const clean = stripMarkdown(props.reasoning)
     const clean = props.reasoning
     const lines = clean.split('\n').filter((l) => l.trim())
     if (lines.length === 0) return ''
-    const meaningful = lines.filter((l) => l.replace(/^[\d*.•\- ]+/, '').trim().length > 3)
+    const meaningful = lines.filter((l) => l.replace(/^[\d*.•\- ]+/u, '').trim().length > 3)
     return (
         meaningful
             .pop()
-            ?.replace(/^[\d*.•\- ]+/, '')
+            ?.replace(/^[\d*.•\- ]+/u, '')
             .trim()
-            .substring(0, 80) || ''
+            .slice(0, 80) || ''
     )
 })
 </script>
@@ -48,26 +49,26 @@ const thinkingTitle = computed(() => {
     <CollapsibleTrigger
         :class="
             cn(
-                'flex w-full items-center gap-2 text-muted-foreground text-xs transition-colors hover:text-foreground',
+                'flex w-full items-center gap-2 text-xs text-muted-foreground transition-colors hover:text-foreground',
                 props.class
             )
         "
     >
         <slot>
             <template v-if="thinkingMessage === 'thinking'">
-                <LoaderIcon class="size-3.5 animate-spin text-primary shrink-0" />
+                <LoaderIcon class="size-3.5 shrink-0 animate-spin text-primary" />
                 <Shimmer :duration="1" class="shrink-0"> Thinking... </Shimmer>
                 <ChevronDownIcon
                     :class="
                         cn(
-                            'size-4 transition-transform shrink-0',
+                            'size-4 shrink-0 transition-transform',
                             isOpen ? 'rotate-180' : 'rotate-0'
                         )
                     "
                 />
                 <span
                     v-if="thinkingTitle"
-                    class="text-xs text-muted-foreground/50 italic truncate max-w-[70%] mr-2"
+                    class="mr-2 max-w-[70%] truncate text-xs text-muted-foreground/50 italic"
                     :title="thinkingTitle"
                     >{{ thinkingTitle }}</span
                 >
@@ -78,7 +79,7 @@ const thinkingTitle = computed(() => {
                 <ChevronDownIcon
                     :class="
                         cn(
-                            'size-4 transition-transform shrink-0',
+                            'size-4 shrink-0 transition-transform',
                             isOpen ? 'rotate-180' : 'rotate-0'
                         )
                     "
@@ -90,7 +91,7 @@ const thinkingTitle = computed(() => {
                 <ChevronDownIcon
                     :class="
                         cn(
-                            'size-4 transition-transform shrink-0',
+                            'size-4 shrink-0 transition-transform',
                             isOpen ? 'rotate-180' : 'rotate-0'
                         )
                     "

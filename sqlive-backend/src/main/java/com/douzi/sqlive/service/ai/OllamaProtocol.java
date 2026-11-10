@@ -82,7 +82,7 @@ public class OllamaProtocol implements Protocol {
 
 			return Flux.fromIterable(chunks);
 		} catch (Exception e) {
-			log.trace("Failed to parse stream chunk", e);
+			log.warn("Failed to parse stream chunk: {}", Protocol.abbreviateForLog(line), e);
 			return Flux.empty();
 		}
 	}

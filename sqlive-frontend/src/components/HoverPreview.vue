@@ -3,14 +3,14 @@
         <div
             v-show="visible"
             ref="popupRef"
-            class="fixed z-50 bg-card border border-border rounded-lg shadow-xl text-sm overflow-hidden"
+            class="fixed z-50 overflow-hidden rounded-lg border border-border bg-card text-sm shadow-xl"
             :style="popupStyle"
             @mouseenter="emit('mouseenter')"
             @mouseleave="emit('mouseleave')"
             @keydown="onKeydown"
         >
             <!-- Title bar -->
-            <div class="px-3 py-2 border-b border-border flex items-center justify-between">
+            <div class="flex items-center justify-between border-b border-border px-3 py-2">
                 <div class="flex items-center gap-2">
                     <span class="text-lg">{{ displayIcon }}</span>
                     <span class="font-semibold text-secondary-foreground">{{ displayTitle }}</span>
@@ -19,15 +19,15 @@
             </div>
 
             <!-- Filter input (JetBrains-style: type to filter) -->
-            <div class="px-2 py-2 border-b border-border bg-muted/30">
-                <div class="flex items-center gap-2 bg-card border border-border rounded px-2 py-1">
+            <div class="border-b border-border bg-muted/30 px-2 py-2">
+                <div class="flex items-center gap-2 rounded border border-border bg-card px-2 py-1">
                     <span class="text-xs text-muted-foreground/70">&#x1F50D;</span>
                     <input
                         ref="filterInputRef"
                         v-model="filterText"
                         type="text"
                         placeholder="输入以过滤..."
-                        class="text-xs bg-transparent outline-none flex-1 text-muted-foreground placeholder-muted-foreground/50"
+                        class="flex-1 bg-transparent text-xs text-muted-foreground placeholder-muted-foreground/50 outline-none"
                         @keydown.stop="onKeydown"
                     />
                     <span v-if="filterText" class="text-xs text-muted-foreground/70"
@@ -36,7 +36,7 @@
                     <button
                         v-if="filterText"
                         @click="clearFilter"
-                        class="text-muted-foreground/50 hover:text-muted-foreground text-xs leading-none"
+                        class="text-xs leading-none text-muted-foreground/50 hover:text-muted-foreground"
                     >
                         &#x2715;
                     </button>
@@ -44,17 +44,17 @@
             </div>
 
             <!-- Item list -->
-            <div ref="listRef" class="max-h-[320px] overflow-y-auto custom-scrollbar">
+            <div ref="listRef" class="custom-scrollbar max-h-[320px] overflow-y-auto">
                 <div
                     v-if="filteredItems.length === 0"
-                    class="px-3 py-6 text-center text-muted-foreground/70 text-xs"
+                    class="px-3 py-6 text-center text-xs text-muted-foreground/70"
                 >
                     无匹配项
                 </div>
                 <div
                     v-for="(item, fi) in filteredItems"
                     :key="item.id"
-                    class="px-3 py-2 cursor-pointer transition-colors border-l-2"
+                    class="cursor-pointer border-l-2 px-3 py-2 transition-colors"
                     :class="[
                         item.accent === 'blue' ? 'border-primary/60' : 'border-transparent',
                         hoveredIndex === fi || keyboardIndex === fi
@@ -67,7 +67,7 @@
                     @mouseleave="hoveredIndex = null"
                     @click="onItemClick(item)"
                 >
-                    <div class="flex items-center gap-2 mb-1">
+                    <div class="mb-1 flex items-center gap-2">
                         <span class="text-sm">{{ item.icon }}</span>
                         <span
                             class="font-semibold text-foreground"
@@ -77,19 +77,19 @@
                     <div
                         v-for="(meta, mi) in item.meta"
                         :key="mi"
-                        class="text-xs text-muted-foreground/70 ml-5"
+                        class="ml-5 text-xs text-muted-foreground/70"
                     >
                         {{ meta }}
                     </div>
                     <div
                         v-if="item.sqlPreview"
-                        class="text-xs text-muted-foreground/70 font-mono truncate mt-1 ml-5"
+                        class="mt-1 ml-5 truncate font-mono text-xs text-muted-foreground/70"
                     >
                         {{ item.sqlPreview }}
                     </div>
                     <div v-if="item.tag" class="mt-1 ml-5">
                         <span
-                            class="text-xs px-2 py-1 rounded bg-amber-50 text-amber-600 font-medium"
+                            class="rounded bg-amber-50 px-2 py-1 text-xs font-medium text-amber-600"
                             >{{ item.tag }}</span
                         >
                     </div>
@@ -98,18 +98,18 @@
 
             <!-- Bottom action bar -->
             <div
-                class="px-3 py-2 border-t border-border bg-muted/50 flex items-center justify-between"
+                class="flex items-center justify-between border-t border-border bg-muted/50 px-3 py-2"
             >
                 <button
                     @click="emit('navigate-all')"
-                    class="text-xs text-primary hover:text-primary hover:bg-primary/10 px-2 py-1 rounded transition-colors"
+                    class="rounded px-2 py-1 text-xs text-primary transition-colors hover:bg-primary/10 hover:text-primary"
                 >
                     查看全部{{ displayCategoryName }}
                 </button>
                 <button
                     v-if="selectedItem"
                     @click="onItemClick(selectedItem)"
-                    class="text-xs text-primary hover:text-primary hover:bg-primary/10 px-2 py-1 rounded transition-colors"
+                    class="rounded px-2 py-1 text-xs text-primary transition-colors hover:bg-primary/10 hover:text-primary"
                 >
                     查看 {{ selectedItem.label }}
                 </button>
@@ -120,6 +120,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
+
 import { type PreviewItem, useFilteredList } from '../composables/useFilteredList'
 import { highlightMatch } from '../utils/html'
 
@@ -313,7 +314,6 @@ function onKeydown(e: KeyboardEvent) {
         e.preventDefault()
         const item = selectedItem.value
         if (item) onItemClick(item)
-        return
     }
 }
 
@@ -330,9 +330,11 @@ function scrollToKeyboardItem() {
 .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-track {
     background: transparent;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb {
     background-color: #d1d5db;
     border-radius: 3px;

@@ -98,7 +98,7 @@ public class LmStudioProtocol implements Protocol {
 				default -> Flux.empty();
 			};
 		} catch (Exception e) {
-			log.trace("Failed to parse stream chunk", e);
+			log.warn("Failed to parse stream chunk: {}", Protocol.abbreviateForLog(event.data()), e);
 			return Flux.empty();
 		}
 	}

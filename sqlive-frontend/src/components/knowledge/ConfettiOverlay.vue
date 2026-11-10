@@ -70,7 +70,7 @@ watch(
                 }
             })
         } else {
-            // D-20: clear particles on deactivate. Previously old pieces remained
+            // clear particles on deactivate. Previously old pieces remained
             // in the particles ref even after v-if removed the DOM container,
             // causing stale state on the next active=true cycle.
             particles.value = []
@@ -100,9 +100,11 @@ watch(
         transform: translateY(0) rotate(0deg) scale(1);
         opacity: 1;
     }
+
     80% {
         opacity: 1;
     }
+
     100% {
         transform: translateY(var(--fall-dist)) rotate(var(--spin)) scale(0.3);
         opacity: 0;

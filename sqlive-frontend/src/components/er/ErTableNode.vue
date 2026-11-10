@@ -2,7 +2,7 @@
     <div
         class="er-table-node"
         :class="{
-            'opacity-30 pointer-events-none': data.isFiltered,
+            'pointer-events-none opacity-30': data.isFiltered,
             'er-table-node-match': data.isMatchHighlight,
             'er-table-node-active': data.isActiveMatch
         }"
@@ -66,6 +66,7 @@
 
 <script setup lang="ts">
 import { Handle, Position } from '@vue-flow/core'
+
 import type { ErTableNodeData } from '@/model/DatabaseTypes'
 
 const props = defineProps({
@@ -90,7 +91,7 @@ function handleDoubleClick() {
     border-radius: 8px;
     overflow: hidden;
     min-width: 200px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 6%);
     font-family:
         'Geist Mono', ui-monospace, SFMono-Regular, 'Cascadia Code', 'Fira Code', monospace;
     transition:
@@ -99,9 +100,10 @@ function handleDoubleClick() {
         background 0.2s;
     cursor: pointer;
 }
+
 .er-table-node:hover {
     border-color: #60a5fa;
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+    box-shadow: 0 2px 8px rgb(59 130 246 / 15%);
 }
 
 .er-table-header {
@@ -128,6 +130,7 @@ function handleDoubleClick() {
     transition: background 0.15s;
     gap: 4px;
 }
+
 .er-column-row:hover {
     background: color-mix(in srgb, var(--primary) 10%, transparent) !important;
 }
@@ -174,14 +177,17 @@ function handleDoubleClick() {
     line-height: 16px;
     letter-spacing: 0;
 }
+
 .er-badge-pk {
     background: #fef3c7;
     color: #b45309;
 }
+
 .er-badge-fk {
     background: #dbeafe;
     color: #1d4ed8;
 }
+
 .er-badge-uq {
     background: #ede9fe;
     color: #6d28d9;
@@ -196,14 +202,17 @@ function handleDoubleClick() {
     transition: opacity 0.15s;
     z-index: 10;
 }
+
 .er-handle-source {
     background: var(--primary);
     right: -4px;
 }
+
 .er-handle-target {
     background: #f59e0b;
     left: -4px;
 }
+
 .er-column-row:hover .er-handle {
     opacity: 1;
 }
@@ -215,15 +224,15 @@ function handleDoubleClick() {
 
 .er-table-node-match {
     border: 2px solid #eab308;
-    box-shadow: 0 0 6px rgba(234, 179, 8, 0.25);
+    box-shadow: 0 0 6px rgb(234 179 8 / 25%);
     background: #fefce8;
 }
 
 .er-table-node-active {
     border: 2px solid #f97316;
     box-shadow:
-        0 0 10px rgba(249, 115, 22, 0.35),
-        0 2px 12px rgba(249, 115, 22, 0.2);
+        0 0 10px rgb(249 115 22 / 35%),
+        0 2px 12px rgb(249 115 22 / 20%);
     background: #fff7ed;
     animation: er-match-pulse 0.3s ease-out;
 }
@@ -231,13 +240,14 @@ function handleDoubleClick() {
 @keyframes er-match-pulse {
     0% {
         box-shadow:
-            0 0 16px rgba(249, 115, 22, 0.5),
-            0 4px 20px rgba(249, 115, 22, 0.3);
+            0 0 16px rgb(249 115 22 / 50%),
+            0 4px 20px rgb(249 115 22 / 30%);
     }
+
     100% {
         box-shadow:
-            0 0 10px rgba(249, 115, 22, 0.35),
-            0 2px 12px rgba(249, 115, 22, 0.2);
+            0 0 10px rgb(249 115 22 / 35%),
+            0 2px 12px rgb(249 115 22 / 20%);
     }
 }
 </style>

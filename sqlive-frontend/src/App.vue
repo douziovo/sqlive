@@ -1,8 +1,8 @@
 <template>
     <Splitpanes class="default-theme h-full" :class="{ 'no-animate': noAnimate }">
         <Pane :size="28" :min-size="20">
-            <div class="h-full flex flex-col relative">
-                <div class="flex-1 min-h-0">
+            <div class="relative flex h-full flex-col">
+                <div class="min-h-0 flex-1">
                     <CodeEditor
                         v-model:code="code"
                         @switch-tab="engine.switchTab"
@@ -20,10 +20,10 @@
         </Pane>
 
         <Pane :min-size="20">
-            <div class="h-full relative">
+            <div class="relative h-full">
                 <div
                     v-if="isLoading"
-                    class="absolute top-4 right-4 bg-primary text-primary-foreground px-3 py-1 rounded-full text-xs font-bold shadow-lg z-50 animate-pulse pointer-events-none"
+                    class="pointer-events-none absolute top-4 right-4 z-50 animate-pulse rounded-full bg-primary px-3 py-1 text-xs font-bold text-primary-foreground shadow-lg"
                 >
                     正在执行...
                 </div>
@@ -73,6 +73,7 @@
 <script setup lang="ts">
 import { Pane, Splitpanes } from 'splitpanes'
 import { computed, nextTick, onMounted, provide, ref, watch } from 'vue'
+
 import 'splitpanes/dist/splitpanes.css'
 import AiChatPanel from './components/AiChatPanel.vue'
 import CodeEditor from './components/CodeEditor.vue'
@@ -96,7 +97,7 @@ import type { SchemaTableInfo } from './model/SchemaTypes'
 const engine = useSqlEngine()
 const { code } = engine
 
-// D-07: Show recovery toast when backend signals session recreation
+// Show recovery toast when backend signals session recreation
 watch(
     () => engine.sessionRecreated.value,
     async (recreated) => {
@@ -130,7 +131,7 @@ const { analyzeError, fixCode, explain, optimize, generateSql } = useInlineActio
 })
 
 // ── Derived ─────────────────────────────────────────────────────
-// D-R2-005: schemaTables computed 显式声明依赖 via named tablesSource getter
+// schemaTables computed 显式声明依赖 via named tablesSource getter
 // (matches the useAiChat/useInlineActions callsite pattern + useErDiagram L92 范式).
 // Avoids implicit `engine.db?.tables` reads so adding/removing a DatabaseModel
 // field is caught at the getter callsite, not silently dropped in computed body.

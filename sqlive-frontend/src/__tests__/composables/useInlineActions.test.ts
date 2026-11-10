@@ -1,10 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Ref } from 'vue'
 import { ref } from 'vue'
-import type { DatabaseModel } from '@/model/DatabaseTypes'
+
 import type { AiMessage } from '@/composables/useAiChat'
 import type { DisplayHandler } from '@/composables/useInlineActions'
 import { useInlineActions } from '@/composables/useInlineActions'
+import type { DatabaseModel } from '@/model/DatabaseTypes'
+
+import { jsonOk } from '../test-utils'
 
 vi.mock('@/utils/aiFormatter', () => ({
     formatErrorAnalysis: vi.fn((data: any) => `formatted-error: ${data.summary || data.content}`),
@@ -45,19 +48,11 @@ function makeDisplay(): DisplayHandler & { calls: any[] } {
 }
 
 function mockFetchSuccess(data: any) {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve({ success: true, data })
-    }) as any
+    globalThis.fetch = vi.fn().mockImplementation(() => jsonOk({ success: true, data })) as any
 }
 
 function mockFetchFailure(error: string) {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve({ success: false, error })
-    }) as any
+    globalThis.fetch = vi.fn().mockImplementation(() => jsonOk({ success: false, error })) as any
 }
 
 function mockFetchNetworkError(err: Error) {
@@ -73,9 +68,9 @@ function makeState(
     // D-R2-004: composable now takes tablesSource getter instead of whole DatabaseModel
     const db = makeDb()
     return {
-        isLoading: ref(false) as Ref<boolean>,
+        isLoading: ref(false),
         messages: ref([]) as Ref<AiMessage[]>,
-        code: ref(overrides?.code ?? 'SELECT 1;') as Ref<string>,
+        code: ref(overrides?.code ?? 'SELECT 1;'),
         tablesSource: () => db.tables,
         error: ref(overrides?.error ?? null) as Ref<{ line: number; message: string } | null>
     }
@@ -87,6 +82,18 @@ describe('useInlineActions', () => {
     })
 
     describe('analyzeError', () => {
+        /** 断言失败路径下 analyzeError 上报到 display.onError 并复位 isLoading */
+        async function expectAnalyzeErrorReported() {
+            const state = makeState()
+            const display = makeDisplay()
+            const { analyzeError } = useInlineActions(state)
+
+            await analyzeError({ line: 1, message: 'error' }, display)
+
+            expect(display.calls.some((c) => c.type === 'error')).toBe(true)
+            expect(state.isLoading.value).toBe(false)
+        }
+
         it('calls API and displays formatted error analysis on success', async () => {
             mockFetchSuccess({
                 summary: 'syntax error analysis',
@@ -111,27 +118,13 @@ describe('useInlineActions', () => {
         it('displays error on API failure response', async () => {
             mockFetchFailure('AI service unavailable')
 
-            const state = makeState()
-            const display = makeDisplay()
-            const { analyzeError } = useInlineActions(state)
-
-            await analyzeError({ line: 1, message: 'error' }, display)
-
-            expect(display.calls.some((c) => c.type === 'error')).toBe(true)
-            expect(state.isLoading.value).toBe(false)
+            await expectAnalyzeErrorReported()
         })
 
         it('handles network error gracefully', async () => {
             mockFetchNetworkError(new Error('Connection refused'))
 
-            const state = makeState()
-            const display = makeDisplay()
-            const { analyzeError } = useInlineActions(state)
-
-            await analyzeError({ line: 1, message: 'error' }, display)
-
-            expect(display.calls.some((c) => c.type === 'error')).toBe(true)
-            expect(state.isLoading.value).toBe(false)
+            await expectAnalyzeErrorReported()
         })
 
         it('sets isLoading to true during API call', async () => {
@@ -330,6 +323,150 @@ describe('useInlineActions', () => {
 
             expect(result).toBeNull()
             expect(display.calls.some((c) => c.type === 'error')).toBe(true)
+        })
+    })
+
+    it('sends the stored API key with inline requests', async () => {
+        localStorage.setItem('ai_api_key', 'test-key')
+        try {
+            mockFetchSuccess({ fixedCode: 'SELECT 1' })
+            await useInlineActions(makeState()).fixCode(makeDisplay())
+
+            expect(fetch).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.objectContaining({
+                    headers: expect.any(Headers)
+                })
+            )
+            expect(vi.mocked(fetch).mock.calls[0][1]?.headers).toBeInstanceOf(Headers)
+            expect(new Headers(vi.mocked(fetch).mock.calls[0][1]?.headers).get('X-API-Key')).toBe(
+                'test-key'
+            )
+        } finally {
+            localStorage.removeItem('ai_api_key')
+        }
+    })
+
+    it('reports HTTP errors while generating SQL', async () => {
+        globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 503 }) as any
+        const display = makeDisplay()
+        const result = await useInlineActions(makeState()).generateSql('create a table', display)
+
+        expect(result).toBeNull()
+        expect(display.calls).toContainEqual({
+            type: 'error',
+            message: expect.stringContaining('503')
+        })
+    })
+
+    it('reports network failures for explanations and optimizations', async () => {
+        mockFetchNetworkError(new Error('offline'))
+        const state = makeState()
+        const display = makeDisplay()
+        const actions = useInlineActions(state)
+
+        await actions.explain('SELECT 1', display)
+        expect(await actions.optimize('SELECT 1', display)).toBeNull()
+
+        expect(display.calls.filter((c) => c.type === 'error')).toEqual([
+            { type: 'error', message: expect.stringContaining('offline') },
+            { type: 'error', message: expect.stringContaining('offline') }
+        ])
+        expect(state.isLoading.value).toBe(false)
+    })
+    describe('edge branches', () => {
+        it('maps a degenerate tables source to an empty schema payload', async () => {
+            let captured: any
+            globalThis.fetch = vi.fn().mockImplementation((_url: string, init: any) => {
+                captured = JSON.parse(init.body)
+                return Promise.resolve({
+                    ok: true,
+                    status: 200,
+                    json: () => Promise.resolve({ success: true, data: { content: 'ok' } })
+                })
+            }) as any
+
+            const state = {
+                isLoading: ref(false),
+                messages: ref([]),
+                code: ref('SELECT 1;'),
+                tablesSource: () => null,
+                error: ref(null)
+            }
+            // @ts-expect-error deliberate null source to exercise the fallback
+            await useInlineActions(state).explain('SELECT 1', makeDisplay())
+            expect(captured.schema).toEqual([])
+
+            // Table entries missing columns/columnTypes fall back to empty values
+            const state2 = {
+                ...state,
+                tablesSource: () => [{ name: 'odd' }]
+            }
+            // @ts-expect-error deliberate partial table from an older saved payload
+            await useInlineActions(state2).explain('SELECT 1', makeDisplay())
+            expect(captured.schema).toEqual([{ table: 'odd', columns: [], columnTypes: {} }])
+        })
+
+        it('uses the generic failure text when the API omits the error field', async () => {
+            globalThis.fetch = vi.fn().mockImplementation(() => jsonOk({ success: false })) as any
+            const display = makeDisplay()
+            const actions = useInlineActions(makeState())
+
+            await actions.analyzeError({ line: 1, message: 'boom' }, display)
+            expect(await actions.fixCode(display)).toBeNull()
+            await actions.explain('SELECT 1', display)
+            expect(await actions.optimize('SELECT 1', display)).toBeNull()
+            expect(await actions.generateSql('make sql', display)).toBeNull()
+
+            const errors = display.calls.filter((c) => c.type === 'error')
+            expect(errors.map((e: any) => e.message)).toEqual([
+                'AI 分析失败：未知错误',
+                'AI 修复失败：未知错误',
+                '解释失败：未知错误',
+                '优化失败：未知错误',
+                '无法生成 SQL：未知错误'
+            ])
+        })
+
+        it('normalizes non-Error rejections through the transport', async () => {
+            globalThis.fetch = vi.fn().mockRejectedValue('plain string') as any
+            const display = makeDisplay()
+            await useInlineActions(makeState()).analyzeError({ line: 1, message: 'x' }, display)
+            expect(display.calls).toContainEqual({
+                type: 'error',
+                message: expect.stringContaining('plain string')
+            })
+        })
+
+        it('returns null fixedCode when the fix response has none', async () => {
+            mockFetchSuccess({ content: 'already fine', fixedCode: undefined })
+            const display = makeDisplay()
+            const result = await useInlineActions(makeState()).fixCode(display)
+            expect(result).toBeNull()
+            expect(display.calls.some((c) => c.type === 'result')).toBe(true)
+        })
+
+        it('uses the formatted content when the explain summary is empty', async () => {
+            mockFetchSuccess({ summary: '', content: 'plain content' })
+            const state = makeState()
+            await useInlineActions(state).explain('SELECT 1', makeDisplay())
+            expect(state.messages.value[0].content).toBe('formatted-explain: plain content')
+        })
+
+        it('omits the apply-fix action when optimization returns no code', async () => {
+            mockFetchSuccess({ content: 'no better version', fixedCode: undefined })
+            const display = makeDisplay()
+            const result = await useInlineActions(makeState()).optimize('SELECT 1', display)
+            expect(result).toBeNull()
+            const resultCall = display.calls.find((c) => c.type === 'result')!
+            expect(resultCall.actions).toEqual([{ label: '💬 追问', action: 'follow-up' }])
+        })
+
+        it('uses the summary for the persisted error-analysis message when present', async () => {
+            mockFetchSuccess({ summary: 'short summary', content: 'long content' })
+            const state = makeState()
+            await useInlineActions(state).analyzeError({ line: 2, message: 'bad' }, makeDisplay())
+            expect(state.messages.value[0].content).toContain('short summary')
         })
     })
 })

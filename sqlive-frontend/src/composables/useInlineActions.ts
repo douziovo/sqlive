@@ -1,6 +1,7 @@
 import { computed, type Ref } from 'vue'
-import { API_BASE } from '../config'
-import type { AiSchemaInfo } from '../model/ApiTypes'
+
+import { createAiClient } from '../lib/http'
+import type { AiResponse, AiSchemaInfo } from '../model/ApiTypes'
 import type { TableSchema } from '../model/DatabaseTypes'
 import {
     formatErrorAnalysis,
@@ -9,9 +10,11 @@ import {
     formatGenerateSql,
     formatOptimize
 } from '../utils/aiFormatter'
+import { apiErrorMessage } from '../utils/apiError'
 import type { AiMessage, AiPanelMode } from './useAiChat'
 
 let msgCounter = 0
+const aiClient = createAiClient()
 
 export interface DisplayHandler {
     onLoading: (mode: AiPanelMode) => void
@@ -37,24 +40,14 @@ export function useInlineActions(state: {
         }))
     )
 
-    async function apiCall<T>(endpoint: string, body: unknown): Promise<T> {
-        // CR-02: wire X-API-Key so the backend ApiKeyFilter authorizes /api/ai/** in
-        // production (AI_API_KEY set). Build-time env var takes precedence; fall back
-        // to localStorage so end users can paste a key without rebuilding. typeof
-        // guard keeps the composable testable in non-browser contexts.
-        const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-        const apiKey =
-            import.meta.env.VITE_AI_API_KEY ||
-            (typeof localStorage !== 'undefined' ? localStorage.getItem('ai_api_key') : null)
-        if (apiKey) headers['X-API-Key'] = apiKey
-
-        const resp = await fetch(`${API_BASE}${endpoint}`, {
+    async function apiCall<T>(
+        endpoint: string,
+        body: Record<string, unknown>
+    ): Promise<AiResponse<T>> {
+        return aiClient<AiResponse<T>>(endpoint, {
             method: 'POST',
-            headers,
-            body: JSON.stringify(body)
+            body
         })
-        if (!resp.ok) throw new Error(`API error: ${resp.status}`)
-        return resp.json()
     }
 
     async function analyzeError(
@@ -66,15 +59,11 @@ export function useInlineActions(state: {
 
         try {
             const resp = await apiCall<{
-                success: boolean
-                data?: {
-                    content?: string
-                    summary?: string
-                    fixedCode?: string
-                    tips?: string[]
-                    relatedTopics?: { id: string; label: string; difficulty: number }[]
-                }
-                error?: string
+                content?: string
+                summary?: string
+                fixedCode?: string
+                tips?: string[]
+                relatedTopics?: { id: string; label: string; difficulty: number }[]
             }>('/analyze-error', {
                 error: { message: error.message, line: error.line },
                 currentSql: state.code.value,
@@ -97,7 +86,7 @@ export function useInlineActions(state: {
                     metadata: { type: 'error-analysis', context: { sql: state.code.value, error } }
                 })
             } else {
-                display.onError(`AI 分析失败：${resp.error || '未知错误'}`)
+                display.onError(`AI 分析失败：${apiErrorMessage(resp.error)}`)
             }
         } catch (e: unknown) {
             const errMsg = e instanceof Error ? e.message : '未知错误'
@@ -115,14 +104,10 @@ export function useInlineActions(state: {
 
         try {
             const resp = await apiCall<{
-                success: boolean
-                data?: {
-                    content?: string
-                    fixedCode?: string
-                    summary?: string
-                    explanation?: string
-                }
-                error?: string
+                content?: string
+                fixedCode?: string
+                summary?: string
+                explanation?: string
             }>('/fix-code', {
                 error: error ? { message: error.message, line: error.line } : undefined,
                 currentSql: state.code.value,
@@ -138,7 +123,7 @@ export function useInlineActions(state: {
                 display.onResult(content, actions)
                 result = resp.data.fixedCode ?? null
             } else {
-                display.onError(`AI 修复失败：${resp.error || '未知错误'}`)
+                display.onError(`AI 修复失败：${apiErrorMessage(resp.error)}`)
             }
         } catch (e: unknown) {
             const errMsg = e instanceof Error ? e.message : '未知错误'
@@ -155,14 +140,10 @@ export function useInlineActions(state: {
 
         try {
             const resp = await apiCall<{
-                success: boolean
-                data?: {
-                    content?: string
-                    summary?: string
-                    stepByStep?: { step: number; what: string; why: string }[]
-                    tips?: string[]
-                }
-                error?: string
+                content?: string
+                summary?: string
+                stepByStep?: { step: number; what: string; why: string }[]
+                tips?: string[]
             }>('/explain', { selectedCode, schema: currentSchema.value })
 
             if (resp.success && resp.data) {
@@ -178,7 +159,7 @@ export function useInlineActions(state: {
                     metadata: { type: 'explain', context: { sql: selectedCode } }
                 })
             } else {
-                display.onError(`解释失败：${resp.error || '未知错误'}`)
+                display.onError(`解释失败：${apiErrorMessage(resp.error)}`)
             }
         } catch (e: unknown) {
             const errMsg = e instanceof Error ? e.message : '未知错误'
@@ -195,14 +176,10 @@ export function useInlineActions(state: {
 
         try {
             const resp = await apiCall<{
-                success: boolean
-                data?: {
-                    content?: string
-                    summary?: string
-                    explanation?: string
-                    fixedCode?: string
-                }
-                error?: string
+                content?: string
+                summary?: string
+                explanation?: string
+                fixedCode?: string
             }>('/optimize', { selectedCode, schema: currentSchema.value })
 
             if (resp.success && resp.data) {
@@ -215,7 +192,7 @@ export function useInlineActions(state: {
                 display.onResult(content, actions)
                 result = optimizedCode || null
             } else {
-                display.onError(`优化失败：${resp.error || '未知错误'}`)
+                display.onError(`优化失败：${apiErrorMessage(resp.error)}`)
             }
         } catch (e: unknown) {
             const errMsg = e instanceof Error ? e.message : '未知错误'
@@ -236,9 +213,9 @@ export function useInlineActions(state: {
 
         try {
             const resp = await apiCall<{
-                success: boolean
-                data?: { content?: string; fixedCode?: string; summary?: string }
-                error?: string
+                content?: string
+                fixedCode?: string
+                summary?: string
             }>('/chat', {
                 mode: 'chat',
                 message: `请根据以下需求生成 SQLite SQL 代码：\n${description}\n\n当前数据库表：${currentSchema.value.map((t) => `${t.table}(${t.columns.join(', ')})`).join(', ')}`,
@@ -249,7 +226,7 @@ export function useInlineActions(state: {
 
             if (resp.success && resp.data) {
                 const generatedCode =
-                    resp.data.content?.match(/```sql\n([\s\S]*?)\n```/)?.[1] ||
+                    resp.data.content?.match(/```sql\n([\s\S]*?)\n```/u)?.[1] ||
                     resp.data.fixedCode ||
                     resp.data.content ||
                     undefined
@@ -267,7 +244,7 @@ export function useInlineActions(state: {
                     display.onError('无法生成 SQL，请重试。')
                 }
             } else {
-                display.onError(`无法生成 SQL：${resp.error || '未知错误'}`)
+                display.onError(`无法生成 SQL：${apiErrorMessage(resp.error)}`)
             }
         } catch (e: unknown) {
             const errMsg = e instanceof Error ? e.message : '未知错误'

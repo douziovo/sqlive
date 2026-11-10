@@ -11,7 +11,7 @@
             <span v-for="i in 3" :key="i" :class="{ 'opacity-20': i > topic.difficulty }"
                 >&#9733;</span
             >
-            <span class="text-xs text-muted-foreground ml-1">{{ diffLabel }}</span>
+            <span class="ml-1 text-xs text-muted-foreground">{{ diffLabel }}</span>
         </span>
 
         <p class="knowledge-detail__desc">{{ topic.description }}</p>
@@ -112,9 +112,11 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+
 import type { KnowledgeTopic } from '@/composables/useKnowledgeGraph'
 import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'
 import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
+
 import TaskCreateForm from './TaskCreateForm.vue'
 import TaskItem from './TaskItem.vue'
 
@@ -198,8 +200,8 @@ function handleTaskDelete(id: string): void {
 }
 
 function handleTaskComplete(id: string): void {
-    completeTask(id)
-    if (props.topic) emit('complete-task', props.topic.id)
+    const result = completeTask(id)
+    if (result) emit('complete-task', result.task.topicId)
 }
 
 function handleViewAllTasks(): void {
@@ -222,7 +224,7 @@ function toggleHistory(): void {
     background: white;
     border: 1px solid var(--border);
     border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 8px 32px rgb(0 0 0 / 15%);
     padding: 16px 20px;
     display: flex;
     flex-direction: column;
@@ -251,6 +253,7 @@ function toggleHistory(): void {
     line-height: 1;
     padding: 0 2px;
 }
+
 .knowledge-detail__close:hover {
     color: var(--foreground);
 }
@@ -292,6 +295,7 @@ function toggleHistory(): void {
     color: var(--foreground);
     border: 1px solid var(--border);
 }
+
 .knowledge-detail__btn--master:hover {
     background: var(--muted);
 }
@@ -301,6 +305,7 @@ function toggleHistory(): void {
     color: white;
     border: none;
 }
+
 .knowledge-detail__btn--ai:hover {
     opacity: 0.9;
 }

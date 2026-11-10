@@ -28,7 +28,6 @@ public class SqlController {
 
 	@PostMapping("/execute")
 	@Operation(summary = "执行 SQL 脚本", description = "接收 SQL 脚本，在指定数据库内执行，返回表数据 + 元数据")
-	@SuppressWarnings("UastIncorrectHttpHeaderInspection")
 	public SqlResponse executeSql(@Valid @RequestBody SqlRequest request,
 	                              HttpServletRequest httpRequest,
 	                              HttpServletResponse httpResponse) {
@@ -50,7 +49,8 @@ public class SqlController {
 		}
 
 		long elapsed = System.currentTimeMillis() - start;
-		if (response.isSuccess()) {
+		// success is derived: a response is successful iff it carries no error payload
+		if (response.getError() == null) {
 			var data = response.getData();
 			int tableCount = data != null && data.getTables() != null ? data.getTables().size() : 0;
 			int stmtCount = data != null && data.getMetadata() != null ? data.getMetadata().getStatementCount() : 0;

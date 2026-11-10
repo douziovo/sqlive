@@ -4,10 +4,12 @@ import com.douzi.sqlive.config.PoolProperties;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -171,6 +173,20 @@ class DatabasePoolManagerTest {
 	}
 
 	@Test
+	void shouldAllowLocalhostShortFormsToBypassPerIpLimit() {
+		var mgr = createManager();
+		// "localhost" name and IPv6 short form "::1" must bypass the per-IP limit
+		// just like "127.0.0.1" / "0:0:0:0:0:0:0:1" (both exceed MAX_PER_IP = 50).
+		for (int i = 0; i < 55; i++) {
+			assertNotNull(mgr.getOrCreateJdbcTemplate("lhname_db_" + i, "localhost").jdbcTemplate());
+		}
+		for (int i = 0; i < 55; i++) {
+			assertNotNull(mgr.getOrCreateJdbcTemplate("lh6_db_" + i, "::1").jdbcTemplate());
+		}
+		assertEquals(110, mgr.getPoolSize());
+	}
+
+	@Test
 	void shouldRefCountCorrectly() {
 		var mgr = createManager();
 		mgr.getOrCreateJdbcTemplate("ref_db");
@@ -210,5 +226,27 @@ class DatabasePoolManagerTest {
 		// db3 (MRU) retained → re-access returns existing pool (isNew=false)
 		assertFalse(mgr.getOrCreateJdbcTemplate("lru_db3", null).isNew(),
 				"db3 should be retained (MRU) — isNew=false means pool still exists");
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	void shouldEvictOnlyReleasedIdlePoolsAndReturnIpQuota() {
+		var props = new PoolProperties();
+		props.setMaxDatabases(2);
+		props.setIdleTimeout(Duration.ZERO);
+		props.setCleanupInterval(Duration.ofHours(1));
+		var mgr = new DatabasePoolManager(props);
+		managers.add(mgr);
+		var held = mgr.getOrCreateJdbcTemplate("held", "203.0.113.1");
+		mgr.getOrCreateJdbcTemplate("idle", "203.0.113.1");
+		mgr.release("idle");
+
+		ReflectionTestUtils.invokeMethod(mgr, "evictIdlePools");
+		assertEquals(1, mgr.getPoolSize());
+		assertEquals(1, held.jdbcTemplate().queryForObject("SELECT 1", Integer.class));
+		Map<String, Integer> ipCounts = (Map<String, Integer>) ReflectionTestUtils.getField(mgr, "ipCounts");
+		assertNotNull(ipCounts);
+		assertEquals(1, ipCounts.get("203.0.113.1"));
+		assertTrue(mgr.getOrCreateJdbcTemplate("idle", "203.0.113.1").isNew());
 	}
 }

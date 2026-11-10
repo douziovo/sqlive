@@ -9,12 +9,12 @@ services:
     autoDeploy: true
     envVars:
       - key: PORT
-        value: 8080
+        value: '8080'
       - key: JAVA_TOOL_OPTIONS
-        value: -Xmx384m -Xms128m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC
+        value: '-Xmx384m -Xms128m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC'
       - key: DEEPSEEK_API_KEY
         sync: false
       - key: SQLIVE_SQLITE_URL
-        value: jdbc:sqlite:file:playground?mode=memory&cache=shared
+        value: 'jdbc:sqlite:file:playground?mode=memory&cache=shared'
       - key: SQLIVE_POOL_MAX_DB
-        value: 50
+        value: '50'

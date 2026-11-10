@@ -3,14 +3,14 @@
         <!-- Desktop sidebar: CSS-driven visibility (W6 fix — visible ≥768px via
          md:flex, hidden below 768px via hidden; NOT v-if conditional render).
          AppHeader is NOT rendered here — RootLayout already provides it. -->
-        <DocsSidebar class="hidden md:flex w-[240px] shrink-0 border-r border-border bg-sidebar" />
+        <DocsSidebar class="hidden w-[240px] shrink-0 border-r border-border bg-sidebar md:flex" />
 
         <!-- Mobile drawer: Reka-ui Dialog (D-12). Trigger visible only below 768px
          via md:hidden. Drawer auto-closes on navigate (@navigate handler). -->
         <Dialog v-model:open="drawerOpen">
             <DialogTrigger as-child>
                 <button
-                    class="md:hidden fixed bottom-4 right-4 z-40 size-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center"
+                    class="fixed right-4 bottom-4 z-40 flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg md:hidden"
                     data-testid="mobile-menu-btn"
                     aria-label="打开文档导航"
                     :aria-expanded="drawerOpen"
@@ -19,24 +19,27 @@
                 </button>
             </DialogTrigger>
             <DialogContent
-                class="fixed left-0 top-0 h-full w-[240px] max-w-none translate-x-0 translate-y-0 rounded-none rounded-r-lg p-0 gap-0 border-r bg-card"
+                class="fixed top-0 left-0 h-full w-[240px] max-w-none translate-x-0 translate-y-0 gap-0 rounded-none rounded-r-lg border-r bg-card p-0"
                 :show-close-button="false"
             >
                 <DocsSidebar @navigate="handleDrawerNavigate" />
             </DialogContent>
         </Dialog>
 
-        <main class="flex-1 min-w-0 overflow-auto bg-background">
+        <main class="min-w-0 flex-1 overflow-auto bg-background">
+            <!-- router-view 是 Vue Router 的内置组件而非 HTML 标签，非错误 -->
+            <!--suppress HtmlUnknownTag -->
             <router-view />
         </main>
     </div>
 </template>
 
 <script setup lang="ts">
+import { Menu } from '@lucide/vue'
+import { useMediaQuery } from '@vueuse/core'
 import { ref, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
-import { useMediaQuery } from '@vueuse/core'
-import { Menu } from '@lucide/vue'
+
 import DocsSidebar from '@/components/docs/DocsSidebar.vue'
 import { Dialog, DialogTrigger, DialogContent } from '@/components/ui/dialog'
 

@@ -32,6 +32,7 @@
 
 <script setup lang="ts">
 import { computed, inject, ref, unref, watch } from 'vue'
+
 import type { KnowledgeNodeData } from '@/composables/useKnowledgeGraph'
 
 const SPARK_COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#f59e0b', '#22c55e', '#3b82f6', '#ec4899']
@@ -140,98 +141,134 @@ watch(
 }
 
 /* Status colours */
+
+/* 以下状态类名由模板 :class="`kg-node--${data.status} kg-node--d${data.difficulty}`" 动态拼接，静态检查器无法识别，均不可删除 */
+
+/* noinspection CssUnusedSymbol */
 .kg-node--mastered.kg-node--d1 {
     background: var(--node-mastered-d1-bg);
     border-color: var(--node-mastered-d1-border);
     color: var(--node-mastered-d1-text);
 }
+
+/* noinspection CssUnusedSymbol */
 .kg-node--mastered.kg-node--d2 {
     background: var(--node-mastered-d2-bg);
     border-color: var(--node-mastered-d2-border);
     color: var(--node-mastered-d2-text);
 }
+
+/* noinspection CssUnusedSymbol */
 .kg-node--mastered.kg-node--d3 {
     background: var(--node-mastered-d3-bg);
     border-color: var(--node-mastered-d3-border);
     color: var(--node-mastered-d3-text);
 }
 
+/* noinspection CssUnusedSymbol */
 .kg-node--in-progress.kg-node--d1 {
     background: var(--node-progress-d1-bg);
     border-color: var(--node-progress-d1-border);
     color: var(--node-progress-d1-text);
 }
+
+/* noinspection CssUnusedSymbol */
 .kg-node--in-progress.kg-node--d2 {
     background: var(--node-progress-d2-bg);
     border-color: var(--node-progress-d2-border);
     color: var(--node-progress-d2-text);
 }
+
+/* noinspection CssUnusedSymbol */
 .kg-node--in-progress.kg-node--d3 {
     background: var(--node-progress-d3-bg);
     border-color: var(--node-progress-d3-border);
     color: var(--node-progress-d3-text);
 }
 
+/* noinspection CssUnusedSymbol */
 .kg-node--unlearned.kg-node--d1 {
     background: var(--node-unlearned-bg);
     border-color: var(--node-unlearned-border);
     color: var(--node-unlearned-text);
 }
+
+/* noinspection CssUnusedSymbol */
 .kg-node--unlearned.kg-node--d2 {
     background: var(--node-unlearned-bg);
     border-color: var(--node-unlearned-border);
     color: var(--node-unlearned-text);
 }
+
+/* noinspection CssUnusedSymbol */
 .kg-node--unlearned.kg-node--d3 {
     background: var(--node-unlearned-bg);
     border-color: var(--node-unlearned-border);
     color: var(--node-unlearned-text);
 }
 
-.kg-node--locked {
-    opacity: 0.45;
-    filter: grayscale(0.5);
-}
-
 /* Focused */
+
+/* 模板 :class 对象里绑定了 kg-node--focused，静态检查器无法识别，不可删除 */
+
+/* noinspection CssUnusedSymbol */
 .kg-node--focused {
     transform: scale(1.15) !important;
     z-index: 30 !important;
     border-color: #6366f1 !important;
-    outline: 4px solid rgba(99, 102, 241, 0.25);
+    outline: 4px solid rgb(99 102 241 / 25%);
     outline-offset: 2px;
 }
 
 /* Highlighted */
+
+/* 同上：模板 :class 对象里绑定了 kg-node--highlighted */
+
+/* noinspection CssUnusedSymbol */
 .kg-node--highlighted {
-    outline: 2px solid rgba(99, 102, 241, 0.15);
+    outline: 2px solid rgb(99 102 241 / 15%);
     outline-offset: 1px;
 }
 
 /* Dimmed */
+
+/* 同上：模板 :class 对象里绑定了 kg-node--dimmed */
+
+/* noinspection CssUnusedSymbol */
 .kg-node--dimmed {
     opacity: 0.12;
     pointer-events: none;
 }
 
 /* Search pulse */
+
+/* 同上：模板 :class 对象里绑定了 kg-node--search-match */
+
+/* noinspection CssUnusedSymbol */
 .kg-node--search-match {
     animation: kg-pulse 1.5s ease-in-out infinite;
 }
+
+/* 同上：模板 :class 对象里绑定了 kg-node--active-match */
+
+/* noinspection CssUnusedSymbol */
 .kg-node--active-match {
     animation: kg-pulse 0.8s ease-in-out infinite;
 }
+
 @keyframes kg-pulse {
     0% {
-        outline: 2px solid rgba(59, 130, 246, 0.7);
+        outline: 2px solid rgb(59 130 246 / 70%);
         outline-offset: 2px;
     }
+
     50% {
-        outline: 4px solid rgba(59, 130, 246, 0);
+        outline: 4px solid rgb(59 130 246 / 0%);
         outline-offset: 6px;
     }
+
     100% {
-        outline: 2px solid rgba(59, 130, 246, 0.7);
+        outline: 2px solid rgb(59 130 246 / 70%);
         outline-offset: 2px;
     }
 }
@@ -244,6 +281,7 @@ watch(
     z-index: 50;
     overflow: visible;
 }
+
 .kg-spark {
     position: absolute;
     left: 50%;
@@ -254,11 +292,13 @@ watch(
     animation: sparkBurst 0.7s ease-out forwards;
     pointer-events: none;
 }
+
 @keyframes sparkBurst {
     0% {
         transform: translate(0, 0) scale(1);
         opacity: 1;
     }
+
     100% {
         transform: translate(var(--sx), var(--sy)) scale(0);
         opacity: 0;
@@ -266,21 +306,28 @@ watch(
 }
 
 /* Unlock glow */
+
+/* 模板 :class 对象里绑定了 kg-node--unlock-glow，静态检查器无法识别，不可删除 */
+
+/* noinspection CssUnusedSymbol */
 .kg-node--unlock-glow {
     animation: unlockGlow 1s ease-out 3;
 }
+
 @keyframes unlockGlow {
     0% {
-        outline: 3px solid rgba(99, 102, 241, 0.5);
-        outline-offset: 0px;
+        outline: 3px solid rgb(99 102 241 / 50%);
+        outline-offset: 0;
     }
+
     50% {
-        outline: 3px solid rgba(99, 102, 241, 0);
+        outline: 3px solid rgb(99 102 241 / 0%);
         outline-offset: 12px;
     }
+
     100% {
-        outline: 3px solid rgba(99, 102, 241, 0);
-        outline-offset: 0px;
+        outline: 3px solid rgb(99 102 241 / 0%);
+        outline-offset: 0;
     }
 }
 </style>

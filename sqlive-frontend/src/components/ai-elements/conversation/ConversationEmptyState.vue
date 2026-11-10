@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from 'vue'
+
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -30,10 +31,10 @@ const props = withDefaults(defineProps<Props>(), {
             </div>
 
             <div class="space-y-1">
-                <h3 class="font-medium text-sm">
+                <h3 class="text-sm font-medium">
                     {{ props.title }}
                 </h3>
-                <p v-if="props.description" class="text-muted-foreground text-sm">
+                <p v-if="props.description" class="text-sm text-muted-foreground">
                     {{ props.description }}
                 </p>
             </div>

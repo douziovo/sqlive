@@ -85,22 +85,11 @@ public class OpenAiCompatibleProvider implements AiProvider {
 		return builder.build();
 	}
 
-	private static String sanitizeErrorMessage(String message) {
-		if (message == null) return null;
-		return message.replaceAll("(?i)Authorization:\\s*Bearer\\s+\\S+", "Authorization: Bearer [REDACTED]");
-	}
-
-	private String redactErrorMessage(String message, String apiKey) {
-		String sanitized = sanitizeErrorMessage(message);
-		if (message != null && apiKey != null && !apiKey.isBlank()) {
-			// CR-01: Ollama/LMStudio providers don't require an API key — config.getApiKey()
-			// returns null for them. String.replace((CharSequence) null, ...) throws NPE
-			// inside the catch block, masking the original error and propagating to
-			// AiService.executeNonStreaming which returns a generic "AI service error".
-			// Guard with the same null/blank check AiService.streamChat uses.
-			sanitized = sanitized.replace(apiKey, "[REDACTED]");
-		}
-		return sanitized;
+	private static String redactErrorMessage(String message, String apiKey) {
+		// null/blank apiKey (Ollama/LM Studio don't require one) must be skipped —
+		// String.replace((CharSequence) null, ...) throws NPE inside the catch block,
+		// masking the original error. ApiKeyRedactor guards for this.
+		return ApiKeyRedactor.redact(message, apiKey);
 	}
 
 	@Override

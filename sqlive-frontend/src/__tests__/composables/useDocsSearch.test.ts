@@ -27,6 +27,7 @@ const mockMinisearch = vi.hoisted(() => {
                 if (shouldThrow.value) throw new Error('MiniSearch init failed')
             }
 
+            //noinspection JSUnusedGlobalSymbols -- MiniSearch mock 形状：useDocsSearch 建索引时调用 index.addAll，静态分析看不到该调用
             addAll() {}
 
             search(q: string) {

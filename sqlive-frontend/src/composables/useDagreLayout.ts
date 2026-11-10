@@ -25,7 +25,7 @@ export function layoutNodes<TNode extends { id: string; position: { x: number; y
     g.setDefaultEdgeLabel(() => ({}))
 
     const elMap = new Map<string, HTMLElement>()
-    const root = containerEl || document
+    const root = containerEl ?? document
     root.querySelectorAll<HTMLElement>('[data-id]').forEach((el) => {
         if (el.dataset.id) elMap.set(el.dataset.id, el)
     })
@@ -49,6 +49,6 @@ export function layoutNodes<TNode extends { id: string; position: { x: number; y
         return {
             ...node,
             position: { x: pos.x - pos.width / 2, y: pos.y - pos.height / 2 }
-        } as TNode
+        }
     })
 }

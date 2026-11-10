@@ -6,13 +6,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * OpenAPI metadata for springdoc 3.x (D-11).
+ * OpenAPI metadata for springdoc 3.x.
  *
  * <p>springdoc auto-scans {@code @RestController} classes for {@code @Tag} and
  * {@code @Operation} annotations and generates the {@code /v3/api-docs} OpenAPI
  * JSON. This {@code @Bean} only supplies document metadata (title, version,
  * description) — it does not modify endpoint discovery or the default
- * {@code /v3/api-docs} path (D-11: application.yml is NOT modified).
+ * {@code /v3/api-docs} path (application.yml is NOT modified).
  */
 @Configuration
 public class OpenApiConfig {

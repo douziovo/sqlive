@@ -1,5 +1,7 @@
+import type { VueFlowStore } from '@vue-flow/core'
 import type { ComputedRef, Ref } from 'vue'
 import { computed, getCurrentInstance, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+
 import type { KnowledgeNode } from '@/composables/useKnowledgeGraph'
 
 /**
@@ -23,7 +25,7 @@ import type { KnowledgeNode } from '@/composables/useKnowledgeGraph'
  * can be unit-tested outside a component setup without Vue warnings.
  */
 export function useGraphSearch(
-    flowRef: Ref<any>,
+    flowRef: Ref<VueFlowStore | null>,
     displayNodes: Ref<KnowledgeNode[]>,
     opts?: { onResetView?: () => void }
 ): {
@@ -60,7 +62,7 @@ export function useGraphSearch(
 
     function restoreViewport(): void {
         if (previousViewport.value) {
-            flowRef.value?.setViewport?.(previousViewport.value, { duration: 200 })
+            void flowRef.value?.setViewport?.(previousViewport.value, { duration: 200 })
             previousViewport.value = null
         }
     }
@@ -76,7 +78,7 @@ export function useGraphSearch(
         if (matchNodes.value.length === 0 || index < 0 || index >= matchNodes.value.length) return
         const node = matchNodes.value[index]
         if (node) {
-            flowRef.value?.setCenter?.(node.position.x + 60, node.position.y + 30, {
+            void flowRef.value?.setCenter?.(node.position.x + 60, node.position.y + 30, {
                 zoom: 1.2,
                 duration: 300
             })
@@ -138,7 +140,9 @@ export function useGraphSearch(
     watch(searchQuery, (val) => {
         if (val) {
             matchIndex.value = 0
-            nextTick(() => centerOnMatch(0))
+            void nextTick(() => {
+                centerOnMatch(0)
+            })
         } else {
             matchIndex.value = 0
         }

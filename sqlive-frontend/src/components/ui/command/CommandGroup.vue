@@ -4,7 +4,9 @@ import type { ListboxGroupProps } from 'reka-ui'
 import { ListboxGroup, ListboxGroupLabel, useId } from 'reka-ui'
 import type { HTMLAttributes } from 'vue'
 import { computed, onMounted, onUnmounted } from 'vue'
+
 import { cn } from '@/lib/utils'
+
 import { provideCommandGroupContext, useCommand } from '.'
 
 const props = defineProps<
@@ -19,7 +21,7 @@ const delegatedProps = reactiveOmit(props, 'class')
 const { allGroups, filterState } = useCommand()
 const id = useId()
 
-const isRender = computed(() => (!filterState.search ? true : filterState.filtered.groups.has(id)))
+const isRender = computed(() => (filterState.search ? filterState.filtered.groups.has(id) : true))
 
 provideCommandGroupContext({ id })
 onMounted(() => {
@@ -35,7 +37,7 @@ onUnmounted(() => {
         v-bind="delegatedProps"
         :id="id"
         data-slot="command-group"
-        :class="cn('text-foreground overflow-hidden p-1', props.class)"
+        :class="cn('overflow-hidden p-1 text-foreground', props.class)"
         :hidden="isRender ? undefined : true"
     >
         <ListboxGroupLabel

@@ -4,7 +4,7 @@
             <div class="er-findbar-input-wrap">
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    class="h-3.5 w-3.5 text-muted-foreground/70 shrink-0"
+                    class="h-3.5 w-3.5 shrink-0 text-muted-foreground/70"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -84,7 +84,7 @@
 
 <script setup lang="ts">
 import { useDebounceFn } from '@vueuse/core'
-import { nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 
 const props = withDefaults(
     defineProps<{
@@ -113,14 +113,13 @@ const debouncedEmit = useDebounceFn((value: string) => {
     emit('update:modelValue', value)
 }, 150)
 
-const filterCountText = ref('')
-
-watch([() => props.matchCount, () => props.currentIndex], ([mc, ci]) => {
-    if (mc > 0 && props.modelValue) {
-        filterCountText.value = ci >= 0 ? `${ci + 1}/${mc}` : `${mc}/${props.totalCount}`
-    } else {
-        filterCountText.value = ''
+const filterCountText = computed(() => {
+    if (props.matchCount > 0 && props.modelValue) {
+        return props.currentIndex >= 0
+            ? `${props.currentIndex + 1}/${props.matchCount}`
+            : `${props.matchCount}/${props.totalCount}`
     }
+    return ''
 })
 
 watch(
@@ -176,7 +175,7 @@ function onNext() {
     border: 1px solid #cbd5e1;
     border-radius: 8px;
     padding: 2px 4px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 12%);
     min-width: 280px;
 }
 
@@ -243,11 +242,17 @@ function onNext() {
     color: #ef4444;
 }
 
+/* <Transition name="findbar-slide"> 运行时生成的过渡类，静态检查器无法识别，不可删除 */
+
+/* noinspection CssUnusedSymbol */
 .findbar-slide-enter-active,
 .findbar-slide-leave-active {
     transition: all 0.2s ease;
 }
 
+/* 同上：Transition 运行时生成的进入起始态与离开结束态 */
+
+/* noinspection CssUnusedSymbol */
 .findbar-slide-enter-from,
 .findbar-slide-leave-to {
     opacity: 0;

@@ -13,19 +13,19 @@
   CLAUDE.md gotcha: handleRetry is a handler function, not inline @click.
 -->
 <template>
-    <div class="p-4 min-h-full">
+    <div class="min-h-full p-4">
         <!-- Loading state (Error Handling 4.2) -->
-        <div v-if="loading" class="text-muted-foreground text-sm animate-pulse">
+        <div v-if="loading" class="animate-pulse text-sm text-muted-foreground">
             加载 API 文档...
         </div>
 
         <!-- Error state -->
         <div v-else-if="error" class="text-destructive">
             <p>API 文档暂时不可用</p>
-            <p class="text-xs mt-1">无法加载 OpenAPI 规范（{{ error }}）</p>
+            <p class="mt-1 text-xs">无法加载 OpenAPI 规范（{{ error }}）</p>
             <button
                 @click="handleRetry"
-                class="mt-2 px-3 py-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded text-sm"
+                class="mt-2 rounded bg-primary px-3 py-1 text-sm text-primary-foreground hover:bg-primary/90"
                 aria-label="重新加载 API 文档"
             >
                 重新加载 API 文档
@@ -42,7 +42,7 @@
         <!-- Fallback: Scalar load failed, show raw JSON (Error Handling 4.7) -->
         <pre
             v-else-if="openApiJson"
-            class="bg-secondary text-secondary-foreground p-4 rounded-md overflow-x-auto text-sm font-mono"
+            class="overflow-x-auto rounded-md bg-secondary p-4 font-mono text-sm text-secondary-foreground"
             >{{ JSON.stringify(openApiJson, null, 2) }}</pre>
     </div>
 </template>
@@ -50,7 +50,6 @@
 <script setup lang="ts">
 // W7 fix: dist/style.css confirmed present (Step 1a verified post-install).
 import '@scalar/api-reference/style.css'
-
 import { onMounted, ref, shallowRef } from 'vue'
 
 // shallowRef avoids deep reactivity on the Scalar component ref (per plan Step 1).
@@ -84,13 +83,19 @@ async function fetchOpenApi() {
     error.value = null
     try {
         const res = await fetch('/v3/api-docs')
+        // 此处 throw 用于跳转下方 catch 执行重试/兜底逻辑，catch 内有附加逻辑而非单纯 rethrow，故保留
+        //noinspection ExceptionCaughtLocallyJS
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         openApiJson.value = await res.json()
     } catch (e: any) {
         // Retry once after 500ms
-        await new Promise((r) => setTimeout(r, 500))
+        await new Promise((r) => {
+            setTimeout(r, 500)
+        })
         try {
             const res = await fetch('/v3/api-docs')
+            // 同上：throw 交由 catch 写入 error.value 并结束加载态
+            //noinspection ExceptionCaughtLocallyJS
             if (!res.ok) throw new Error(`HTTP ${res.status}`, { cause: e })
             openApiJson.value = await res.json()
         } catch (e2: any) {

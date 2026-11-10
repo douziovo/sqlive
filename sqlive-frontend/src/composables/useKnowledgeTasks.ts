@@ -1,8 +1,11 @@
-import { useLocalStorage } from '@vueuse/core'
-import { computed } from 'vue'
+import { createSharedComposable, useLocalStorage } from '@vueuse/core'
 import { nanoid } from 'nanoid'
-import { useRedDot } from './useRedDot'
+import { computed } from 'vue'
+
+import { STORAGE_KEYS } from '@/constants/storageKeys'
 import { buildPresetTasks } from '@/data/presetTasks'
+
+import { useRedDot } from './useRedDot'
 
 // ── TaskSubstep interface ────────────────────────────────────────
 
@@ -42,8 +45,8 @@ type AddTaskInput = Omit<
 
 // ── useKnowledgeTasks composable ─────────────────────────────────
 
-export function useKnowledgeTasks() {
-    const tasks = useLocalStorage<KnowledgeTask[]>('ai-knowledge-tasks', [])
+export const useKnowledgeTasks = createSharedComposable(() => {
+    const tasks = useLocalStorage<KnowledgeTask[]>(STORAGE_KEYS.knowledgeTasks, [])
 
     // D-11: hoist useRedDot to setup scope so useLocalStorage's storage event
     // listener registers under the component's effect scope and cleans up on
@@ -59,14 +62,16 @@ export function useKnowledgeTasks() {
         // Normalize substeps: string[] → TaskSubstep[], first active, rest locked
         let substeps: TaskSubstep[] = []
         if (Array.isArray(input.substeps) && input.substeps.length > 0) {
-            if (typeof input.substeps[0] === 'string') {
-                substeps = (input.substeps as string[]).map((label, i) => ({
+            if (input.substeps.every((step): step is string => typeof step === 'string')) {
+                substeps = input.substeps.map((label, i) => ({
                     id: nanoid(),
                     label,
                     status: i === 0 ? 'active' : 'locked'
                 }))
             } else {
-                substeps = input.substeps as TaskSubstep[]
+                substeps = input.substeps.filter(
+                    (step): step is TaskSubstep => typeof step !== 'string'
+                )
             }
         }
 
@@ -94,6 +99,8 @@ export function useKnowledgeTasks() {
         const idx = tasks.value.findIndex((t) => t.id === id)
         if (idx !== -1) {
             tasks.value[idx] = { ...tasks.value[idx], ...updates }
+            if (updates.status && updates.status !== 'done')
+                tasks.value[idx].completedAt = undefined
             tasks.value = [...tasks.value]
         }
     }
@@ -108,7 +115,12 @@ export function useKnowledgeTasks() {
 
     function completeTask(id: string): { task: KnowledgeTask; xpGained: number } | null {
         const idx = tasks.value.findIndex((t) => t.id === id)
-        if (idx === -1 || tasks.value[idx].status === 'done') return null
+        if (
+            idx === -1 ||
+            tasks.value[idx].status === 'done' ||
+            tasks.value[idx].substeps.some((step) => step.status !== 'done')
+        )
+            return null
 
         const task: KnowledgeTask = {
             ...tasks.value[idx],
@@ -134,6 +146,9 @@ export function useKnowledgeTasks() {
 
         const newSubsteps = [...task.substeps]
         newSubsteps[substepIdx] = { ...newSubsteps[substepIdx], status }
+        if (status === 'done' && newSubsteps[substepIdx + 1]?.status === 'locked') {
+            newSubsteps[substepIdx + 1] = { ...newSubsteps[substepIdx + 1], status: 'active' }
+        }
 
         // Mark red dots when substep transitions from locked → active
         if (oldStatus === 'locked' && status === 'active') {
@@ -147,9 +162,9 @@ export function useKnowledgeTasks() {
 
         const allDone = newSubsteps.every((s) => s.status === 'done')
         const updates: Partial<KnowledgeTask> = { substeps: newSubsteps }
-        if (allDone && task.status !== 'done') {
-            updates.status = 'done'
-            updates.completedAt = new Date().toISOString()
+        if (task.status !== 'done' || !allDone) {
+            updates.status = 'in-progress'
+            updates.completedAt = undefined
         }
 
         tasks.value[taskIdx] = { ...task, ...updates }
@@ -202,7 +217,7 @@ export function useKnowledgeTasks() {
 
     /**
      * Seeds 8 built-in preset tasks on the very first run.
-     * Idempotent — guarded by `ai-knowledge-tasks-seeded` localStorage flag.
+     * Idempotent — guarded by the `knowledgeTasksSeeded` localStorage flag.
      * Returns true if seeding happened, false if already seeded.
      *
      * Call this once at app startup (e.g., in KnowledgePanel's setup).
@@ -210,7 +225,7 @@ export function useKnowledgeTasks() {
      * will NOT happen because the flag remains 'true'.
      */
     function seedPresetTasksIfFirstRun(): boolean {
-        const flag = localStorage.getItem('ai-knowledge-tasks-seeded')
+        const flag = localStorage.getItem(STORAGE_KEYS.knowledgeTasksSeeded)
         if (flag === 'true') return false
         // Only seed when flag is null (never run before). If flag was set to
         // 'false' explicitly (e.g., user wiped via a future "reset" action),
@@ -219,7 +234,7 @@ export function useKnowledgeTasks() {
 
         const preset = buildPresetTasks()
         tasks.value = [...tasks.value, ...preset]
-        localStorage.setItem('ai-knowledge-tasks-seeded', 'true')
+        localStorage.setItem(STORAGE_KEYS.knowledgeTasksSeeded, 'true')
         return true
     }
 
@@ -240,4 +255,4 @@ export function useKnowledgeTasks() {
         isOverdue,
         seedPresetTasksIfFirstRun
     }
-}
+})

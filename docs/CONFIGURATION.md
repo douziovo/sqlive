@@ -42,7 +42,7 @@ spring:
     driver-class-name: org.sqlite.JDBC
 ```
 
-The SQLite database runs entirely in memory with shared cache mode enabled. Each tab session uses a separate in-memory database keyed by session ID.
+This setting configures Spring's datasource. SQL execution sessions are created separately by `DatabasePoolManager`, using `jdbc:sqlite:file:{dbName}?mode=memory&busy_timeout=5000` with one JDBC connection per pool. Requests with the same dbName reuse that pool; changing `spring.datasource.url` does not change these per-session URLs. See [RUNBOOK.md](RUNBOOK.md) for pool limits, locking, and eviction settings.
 
 #### Logging
 

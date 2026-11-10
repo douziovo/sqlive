@@ -57,7 +57,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	}
 
 	/**
-	 * SPA fallback for vue-router deep-link refresh (D-10).
+	 * SPA fallback for vue-router deep-link refresh.
 	 *
 	 * <p>Spring Boot 4 raises {@link NoResourceFoundException} when no static
 	 * resource matches the request path. The default handler returns a 404
@@ -65,7 +65,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	 * {@code /docs/usage/editor}, we instead forward to {@code /index.html}
 	 * so the frontend router can resolve the URL client-side.
 	 *
-	 * <p>Whitelist (Pitfall 5): forward only when {@code Accept} contains
+	 * <p>Whitelist (): forward only when {@code Accept} contains
 	 * {@code text/html} AND the path is not under {@code /api/**},
 	 * {@code /v3/api-docs}, {@code /swagger-ui}, {@code /static/}, or
 	 * {@code /error}. API paths must return JSON 404 (not HTML) so frontend

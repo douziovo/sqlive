@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue'
+
 import type { Row } from '../model/DatabaseTypes'
 import { isNumericType } from '../utils/sql'
 import { useSortFilter } from './useSortFilter'
@@ -27,6 +28,7 @@ export function useTablePipeline(data: () => Row[], columnTypes: () => Record<st
                 ) {
                     return Number(av) - Number(bv)
                 }
+                // oxlint-disable-next-line typescript/no-base-to-string -- SQL cell values retain their existing JavaScript string representation.
                 return String(av).localeCompare(String(bv))
             }
         }))
@@ -36,6 +38,7 @@ export function useTablePipeline(data: () => Row[], columnTypes: () => Record<st
         const cols = filterColumns.value.length > 0 ? filterColumns.value : Object.keys(row)
         return cols.some((col) => {
             const val = row[col]
+            // oxlint-disable-next-line typescript/no-base-to-string -- SQL cell values retain their existing JavaScript string representation.
             return val !== null && val !== undefined && String(val).toLowerCase().includes(filter)
         })
     }

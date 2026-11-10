@@ -22,19 +22,19 @@ const tps = computed(() => {
 </script>
 
 <template>
-    <div v-if="totalTime" class="flex items-center gap-2 text-xs mt-1 flex-wrap">
+    <div v-if="totalTime" class="mt-1 flex flex-wrap items-center gap-2 text-xs">
         <span
-            class="inline-flex items-center gap-1 bg-secondary rounded-full px-2 py-1 text-muted-foreground"
+            class="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-1 text-muted-foreground"
         >
             {{ tps ? tps + ' token/s' : '— token/s' }}
         </span>
         <span
-            class="inline-flex items-center gap-1 bg-secondary rounded-full px-2 py-1 text-muted-foreground"
+            class="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-1 text-muted-foreground"
         >
             {{ usage ? usage.totalTokens + ' tokens' : '— tokens' }}
         </span>
         <span
-            class="inline-flex items-center gap-1 bg-secondary rounded-full px-2 py-1 text-muted-foreground"
+            class="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-1 text-muted-foreground"
         >
             {{ totalTime }}s
         </span>

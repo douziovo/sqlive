@@ -1,8 +1,11 @@
 import type { Edge, Node } from '@vue-flow/core'
 import { useLocalStorage } from '@vueuse/core'
 import { computed, ref, watch } from 'vue'
+
 import { KNOWLEDGE_API_BASE } from '@/config'
+import { STORAGE_KEYS } from '@/constants/storageKeys'
 import { getChapterById } from '@/data/learningChapters'
+import { http } from '@/lib/http'
 
 export interface KnowledgeTopic {
     id: string
@@ -71,7 +74,7 @@ const sessionStreak = ref(0)
 export const LEVEL_NAMES = ['初级学者', '进阶学者', 'SQL 大师', '数据库传奇']
 
 export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
-    const masteredTopics = useLocalStorage<string[]>('ai-mastered-topics', [])
+    const masteredTopics = useLocalStorage<string[]>(STORAGE_KEYS.masteredTopics, [])
 
     // ── XP/Level/Combo system (Phase 05-03) ──────────────────────
 
@@ -101,15 +104,11 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
     // sessionStreak is module-level (D-08) — see declaration above.
     const levelUpTriggered = ref(false)
 
-    function xpForDifficulty(difficulty: number): number {
-        return XP_PER_DIFFICULTY[difficulty] ?? 30
-    }
-
     // ── Selected node ────────────────────────────────────────────
 
     const selectedNodeData = computed(() => {
         if (!selectedNode.value || !graphData.value) return null
-        return graphData.value.topics.find((t) => t.id === selectedNode.value) || null
+        return graphData.value.topics.find((t) => t.id === selectedNode.value) ?? null
     })
 
     const progress = computed(() => {
@@ -164,7 +163,7 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
 
             const patternMatch = (topic.patterns || []).some((pat) => {
                 try {
-                    return new RegExp(pat, 'i').test(sql)
+                    return new RegExp(pat, 'iu').test(sql)
                 } catch {
                     return false
                 }
@@ -274,12 +273,10 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
 
     async function fetchGraph(): Promise<void> {
         try {
-            const resp = await fetch(`${KNOWLEDGE_API_BASE}/graph`)
-            if (!resp.ok) return
             // D-04: shape validation — malformed 200 response (e.g., {}, { topics: null },
             // CDN/proxy error page) must not crash nodes computed. Only assign graphData
             // when the response has a non-null array `topics` field.
-            const data = await resp.json()
+            const data = await http<KnowledgeGraphData>(`${KNOWLEDGE_API_BASE}/graph`)
             if (data && Array.isArray(data.topics)) {
                 graphData.value = data
             }
@@ -288,6 +285,26 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
         } catch {
             // Silently fail - non-critical feature
         }
+    }
+
+    /**
+     * 共用的等级提升判定（toggleMastered / addTaskXp 原本各有一份完全相同实现，
+     * 抽为文件内私有 helper；行为与逐字复制版一致）。
+     * D-03: max-level guard — 满级时存储等级无法再前进，即使 totalXp 越过下一阈值，
+     * leveledUp 也必须为 false（防止误触发 confetti）。
+     */
+    function applyLevelUp(): boolean {
+        const newLevel = Math.floor(xpData.value.totalXp / XP_PER_LEVEL)
+        const atMaxLevel = xpData.value.level >= LEVEL_NAMES.length - 1
+        const leveledUp = !atMaxLevel && newLevel > xpData.value.level
+        if (leveledUp) {
+            xpData.value.level = Math.min(newLevel, LEVEL_NAMES.length - 1)
+            levelUpTriggered.value = true
+            setTimeout(() => {
+                levelUpTriggered.value = false
+            }, 1000)
+        }
+        return leveledUp
     }
 
     function toggleMastered(topicId: string): {
@@ -321,28 +338,15 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
             xpData.value.streak = Math.max(xpData.value.streak, sessionStreak.value)
 
             // Check level up
-            const newLevel = Math.floor(xpData.value.totalXp / XP_PER_LEVEL)
-            // D-03: max-level guard — mirrors addTaskXp (Phase 10 D-14) pattern.
-            // At max level the stored level cannot advance, so leveledUp must be false
-            // even when totalXp crosses the next threshold (prevents false confetti).
-            const atMaxLevel = xpData.value.level >= LEVEL_NAMES.length - 1
-            const leveledUp = !atMaxLevel && newLevel > xpData.value.level
-            if (leveledUp) {
-                xpData.value.level = Math.min(newLevel, LEVEL_NAMES.length - 1)
-                levelUpTriggered.value = true
-                setTimeout(() => {
-                    levelUpTriggered.value = false
-                }, 1000)
-            }
+            const leveledUp = applyLevelUp()
 
             return { action: 'master', xpGained: awardedXp, leveledUp, streak: sessionStreak.value }
-        } else {
-            current.delete(topicId)
-            masteredTopics.value = [...current]
-            sessionStreak.value = 0
-
-            return { action: 'unmaster', xpGained: 0, leveledUp: false, streak: 0 }
         }
+        current.delete(topicId)
+        masteredTopics.value = [...current]
+        sessionStreak.value = 0
+
+        return { action: 'unmaster', xpGained: 0, leveledUp: false, streak: 0 }
     }
 
     function resetSessionStreak(): void {
@@ -369,19 +373,8 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
         }
 
         // Level up check — only reports leveledUp when stored level actually advances
-        // (Rule 1 fix: plan pseudocode omitted max-level guard; test spec requires
-        // leveledUp=false when starting at LEVEL_NAMES.length - 1 even if XP crosses
-        // the next threshold, because the stored level cannot advance further)
-        const newLevel = Math.floor(xpData.value.totalXp / XP_PER_LEVEL)
-        const atMaxLevel = xpData.value.level >= LEVEL_NAMES.length - 1
-        const leveledUp = !atMaxLevel && newLevel > xpData.value.level
-        if (leveledUp) {
-            xpData.value.level = Math.min(newLevel, LEVEL_NAMES.length - 1)
-            levelUpTriggered.value = true
-            setTimeout(() => {
-                levelUpTriggered.value = false
-            }, 1000)
-        }
+        // (max-level guard 见 applyLevelUp：满级时 leveledUp 保持 false)
+        const leveledUp = applyLevelUp()
 
         // NOTE: does not modify masteredTopics — task completion ≠ topic mastery
         return { xpGained: awardedXp, leveledUp }
@@ -410,7 +403,6 @@ export function useKnowledgeGraph(opts?: { sqlSource?: () => string }) {
         xpData,
         sessionStreak,
         levelUpTriggered,
-        xpForDifficulty,
         resetSessionStreak
     }
 }

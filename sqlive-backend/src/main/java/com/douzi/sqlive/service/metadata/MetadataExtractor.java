@@ -15,6 +15,10 @@ import java.util.*;
 @Component
 @Slf4j
 public class MetadataExtractor {
+	// Preserve the unqualified-name API and SQLite's TEMP-first name resolution.
+	private static final String VISIBLE_SCHEMA_OBJECTS = "(SELECT 'temp' AS schema_name, * FROM temp.sqlite_master " +
+			"UNION ALL SELECT 'main' AS schema_name, m.* FROM main.sqlite_master m " +
+			"WHERE NOT EXISTS (SELECT 1 FROM temp.sqlite_master t WHERE t.name = m.name COLLATE NOCASE AND t.type = m.type))";
 
 	private static final Set<String> CONSTRAINT_KEYWORDS = Set.of(
 			"PRIMARY", "FOREIGN", "UNIQUE", "CHECK", "CONSTRAINT");
@@ -39,7 +43,8 @@ public class MetadataExtractor {
 		List<String> tableNames = new ArrayList<>();
 
 		List<Map<String, Object>> rows = jdbc.queryForList(
-				"SELECT name, type, sql, tbl_name FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name");
+				"SELECT schema_name, name, type, sql, tbl_name FROM " + VISIBLE_SCHEMA_OBJECTS +
+				" WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name");
 
 		for (var row : rows) {
 			String type = (String) row.get("type");
@@ -122,7 +127,7 @@ public class MetadataExtractor {
 			Map<String, String> constraintsMap = extractConstraintsFromSql(createSql);
 			try {
 				TableSchema schema = jdbc.query(
-						"SELECT * FROM " + quoteIdentifier(tableName),
+						"SELECT * FROM " + quoteIdentifier((String) row.getOrDefault("schema_name", "main")) + "." + quoteIdentifier(tableName),
 						(ResultSetExtractor<TableSchema>) rs -> extractTableSchema(rs, tableName));
 				if (!constraintsMap.isEmpty()) {
 					Map<String, String> enrichedTypes = new LinkedHashMap<>(schema.getColumnTypes());
@@ -155,7 +160,7 @@ public class MetadataExtractor {
 				continue;
 			}
 			List<String> columns = jdbc.query(
-					"PRAGMA index_info(" + quoteIdentifier(indexName) + ")",
+					"PRAGMA " + quoteIdentifier((String) row.getOrDefault("schema_name", "main")) + ".index_info(" + quoteIdentifier(indexName) + ")",
 					(rs, rowNum) -> rs.getString("name"));
 			info.setColumns(columns);
 			indexes.add(info);
@@ -165,7 +170,7 @@ public class MetadataExtractor {
 
 	private List<ViewInfo> getViews(JdbcTemplate jdbc) {
 		return jdbc.query(
-				"SELECT name, sql FROM sqlite_master WHERE type='view' AND sql IS NOT NULL ORDER BY name",
+				"SELECT name, sql FROM " + VISIBLE_SCHEMA_OBJECTS + " WHERE type='view' AND sql IS NOT NULL ORDER BY name",
 				(rs, rowNum) -> {
 					ViewInfo info = new ViewInfo();
 					info.setName(rs.getString("name"));
@@ -176,7 +181,7 @@ public class MetadataExtractor {
 
 	private List<TriggerInfo> getTriggers(JdbcTemplate jdbc) {
 		return jdbc.query(
-				"SELECT name, tbl_name, sql FROM sqlite_master WHERE type='trigger' AND sql IS NOT NULL ORDER BY tbl_name, name",
+				"SELECT name, tbl_name, sql FROM " + VISIBLE_SCHEMA_OBJECTS + " WHERE type='trigger' AND sql IS NOT NULL ORDER BY tbl_name, name",
 				(rs, rowNum) -> {
 					TriggerInfo info = new TriggerInfo();
 					info.setName(rs.getString("name"));

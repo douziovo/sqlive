@@ -1,2 +1,7 @@
 allowBuilds:
     vue-demi: true
+overrides:
+    typescript: npm:typescript-native-bridge@6.0.3-bridge.19.tsgo.7.0.2
+peerDependencyRules:
+    allowedVersions:
+        typescript: 6.0.3-bridge.19.tsgo.7.0.2

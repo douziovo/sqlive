@@ -16,8 +16,8 @@ export interface ExecuteRequest {
     reset?: boolean
 }
 
+// Backend SqlResponse: success is implied — `error` is non-null iff execution failed.
 export interface ExecuteResponse {
-    success: boolean
     data?: ExecuteDataPayload
     error?: ExecuteErrorPayload
 }
@@ -45,4 +45,10 @@ export interface AiSchemaInfo {
     table: string
     columns: string[]
     columnTypes: Record<string, string>
+}
+
+export interface AiResponse<T> {
+    success: boolean
+    data?: T
+    error?: { message: string; line?: number } | string
 }

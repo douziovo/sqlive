@@ -50,7 +50,7 @@ describe('AppHeader', () => {
         expect(push).toHaveBeenCalledWith('/')
     })
 
-    it('wraps GitHub label in a span with class "hidden md:inline" (mobile icon only per D-12)', () => {
+    it('wraps GitHub label in a span with class "hidden md:inline" (mobile icon only)', () => {
         const w = mount(AppHeader)
         const a = w.find('[data-testid="github-link"]')
         expect(a.exists()).toBe(true)

@@ -1,16 +1,16 @@
 # 测试与验证
 
-运行环境：Node.js LTS、pnpm 12.6.0、JDK 21。先在 `sqlive-frontend` 执行 `pnpm install --frozen-lockfile`。后端使用 Gradle wrapper；Windows 将 `./gradlew` 换为 `.\gradlew.bat`，确保 `JAVA_HOME` 指向 JDK。
+运行环境：Node.js LTS、pnpm 12.6.0、JDK 25。先在 `sqlive-frontend` 执行 `pnpm install --frozen-lockfile`。后端使用 Gradle wrapper 9.2.1 和 JaCoCo 0.8.14（正式支持 Java 25）；Windows 将 `./gradlew` 换为 `.\gradlew.bat`，确保 `JAVA_HOME` 指向 JDK 25。
 
 ## 入口
 
 | 目录 | 命令 | 范围 |
 | --- | --- | --- |
-| `sqlive-frontend` | `pnpm run lint` | oxlint 静态检查（`.oxlintrc.json`） |
+| `sqlive-frontend` | `pnpm run lint` | Oxlint 严格检查 + Go 类型规则，以及 Stylelint CSS/Vue 样式检查；warning 阻断 |
 | `sqlive-frontend` | `pnpm run format:check` | oxfmt 格式检查（`.oxfmtrc.json`），`pnpm format` 写入 |
 | `sqlive-frontend` | `pnpm test` | Vitest 单元/组件测试 |
-| `sqlive-frontend` | `pnpm run typecheck` | 独立类型检查 |
-| `sqlive-frontend` | `pnpm run build` | Vite 生产构建，不含类型检查 |
+| `sqlive-frontend` | `pnpm run typecheck` | 应用和 Vue 模板经 native bridge 使用 Go 类型引擎，官方 TS7 原生 tsc 检查 Vite/E2E；build 和 CI 同样执行 |
+| `sqlive-frontend` | `pnpm run build` | Go 引擎类型检查后执行 Vite 生产构建 |
 | `sqlive-frontend` | `pnpm run test:e2e` | 本机 Chrome + Edge E2E，自动启停前后端 |
 | `sqlive-frontend` | `pnpm run test:e2e -- --grep '@smoke'` | SQL 执行、建表、多标签冒烟测试 |
 | `sqlive-backend` | `./gradlew test` | JUnit 测试 |
@@ -23,7 +23,9 @@ pnpm exec playwright test --config tests/e2e/playwright.config.ts --project=edge
 
 CI 安装 Chromium 和 Edge，运行 `--project=chromium --project=edge`。浏览器 channel 说明见 [Playwright 文档](https://playwright.dev/docs/browsers#google-chrome--microsoft-edge)。
 
-已有 Bash 环境可从根目录运行 `bash scripts/verify.sh`，顺序执行后端测试、前端 lint、前端测试、前端构建，失败即停止；`--smoke` 只跑冒烟测试。Windows 可直接用上表命令，无需为验证安装 Bash。
+CI 使用 2 个浏览器 worker，逐条输出测试结果，整轮 Playwright 限时 15 分钟；测试步骤与任务分别限时 20、25 分钟。失败截图、trace 和 HTML 报告保存在 `e2e-diagnostics` artifact（保留 7 天）。服务先接收 SIGTERM，5 秒内未退出则强制停止；前端直接调用 Vite，后端 CI 使用 `--no-daemon`，减少启动器子进程。`DEBUG=pw:webserver,pw:test:task` 日志用于区分测试、worker 退出和服务清理阶段。
+
+已有 Bash 环境可从根目录运行 `bash scripts/verify.sh`，顺序执行后端测试、前端格式检查、前端 lint、前端测试、前端构建，失败即停止；`--smoke` 只跑冒烟测试。Windows 可直接用上表命令，无需为验证安装 Bash。
 
 ## 测试位置
 
@@ -34,11 +36,11 @@ CI 安装 Chromium 和 Edge，运行 `--project=chromium --project=edge`。浏�
 
 ## CI 与覆盖率
 
-[CI 配置](../.github/workflows/ci.yml) 在 push 到 `main`/`future`、PR 目标为 `main` 时运行前端 lint、前后端单测和 Chromium + Edge E2E。部署分支另见 `render.yaml`。
+[CI 配置](../.github/workflows/ci.yml) 在 push 到 `master`/`future`、PR 目标为 `master` 时运行前端格式检查、脚本/样式 lint、类型检查、生产构建、前后端单测和 Chromium + Edge E2E。部署分支另见 `render.yaml`。
 
-- CI 当前不执行格式检查、前端构建、类型检查或覆盖率门禁；不能把单测通过称为这些检查通过。
-- 格式化工具为 oxfmt，风格对齐现有代码（无分号、单引号、4 空格缩进）。存量文件尚未全量格式化，`pnpm format:check` 会列出全部待格式化文件，因此 CI 暂不执行；全量 `pnpm format` 后可再纳入。
-- 前端覆盖率阈值在 `vite.config.ts`，默认 `pnpm test` 不启用 coverage。手动运行 `pnpm exec vitest run --coverage` 前需要匹配 Vitest 版本的 `@vitest/coverage-v8`，当前 manifest 未安装该包。
-- 后端 `test` 在 `CI=true` 或 `-Djacoco=true` 时生成报告。要执行配置中的覆盖率门禁，运行 `./gradlew test jacocoTestCoverageVerification -Djacoco=true`；CI 的 `test` 不执行门禁。
+- CI 执行格式检查，当前不执行覆盖率门禁；不能把单测通过称为覆盖率检查通过。
+- Oxfmt 已全量规范化前端，检查 Tailwind v4 类名排序、导入排序和多语言格式；详细范围与规则例外见 [DEVELOPMENT.md](DEVELOPMENT.md#修改约定)。Stylelint 使用 `postcss-html` 读取 Vue 样式，不将模板中的 Tailwind 类误作 CSS 选择器。
+- 前端覆盖率阈值在 `vite.config.ts`，默认 `pnpm test` 不启用 coverage。manifest 已安装与 Vitest 5.0.5 匹配的 `@vitest/coverage-v8`，运行 `pnpm exec vitest run --coverage` 生成报告并执行阈值检查。
+- 后端 `test` 在 `CI=true`、`-Djacoco=true` 或 `-Pjacoco=true` 时生成报告。运行 `./gradlew build -Pjacoco=true` 编译、测试、打包并执行覆盖率门禁；当前行/分支阈值均为 98%，仅排除启动类。CI 的 `test` 不执行门禁。
 
 验证记录只写实际命令、结果和未覆盖范围；UI 操作与布局时序按需做真实浏览器验证，不以 mock 单测替代。

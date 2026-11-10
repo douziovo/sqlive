@@ -1,14 +1,18 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick, reactive, ref } from 'vue'
+
 import type {
     HighlightState,
     InsertResult,
     TableSchema,
     TruncationInfo
 } from '@/model/DatabaseTypes'
+import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
+
+import HoverPreview from '../../components/HoverPreview.vue'
+import TablePagination from '../../components/table/TablePagination.vue'
 import TableSection from '../../components/TableSection.vue'
-import { SQL_CONTEXT_KEY } from '../../model/injectionKeys'
 
 const mockTable: TableSchema = {
     name: 'users',
@@ -54,6 +58,31 @@ function mountTable(overrides: Record<string, any> = {}) {
 }
 
 describe('TableSection', () => {
+    it('keeps content visible when deleting the last page or replacing data hides pagination', async () => {
+        const table = reactive({
+            ...mockTable,
+            data: Array.from({ length: 21 }, (_, i) => ({
+                id: i + 1,
+                name: `User ${i + 1}`,
+                salary: i
+            }))
+        })
+        const wrapper = mountTable({ table })
+        const pagination = () => wrapper.findComponent(TablePagination)
+        pagination().vm.$emit('update:currentPage', 3)
+        await nextTick()
+        expect(wrapper.text()).toContain('User 21')
+        table.data.pop()
+        await nextTick()
+        expect(pagination().props('currentPage')).toBe(2)
+        expect(wrapper.text()).toContain('User 20')
+        table.data = table.data.slice(0, 3)
+        await nextTick()
+        expect(pagination().exists()).toBe(false)
+        expect(wrapper.text()).toContain('User 1')
+        expect(wrapper.text()).toContain('User 3')
+        wrapper.unmount()
+    })
     it('renders table name', () => {
         const wrapper = mountTable()
         expect(wrapper.text()).toContain('users')
@@ -89,21 +118,29 @@ describe('TableSection', () => {
     })
 
     it('shows "无匹配数据" when filter has no matches', async () => {
-        const wrapper = mountTable()
-        const filterInput = wrapper.find('input[placeholder="过滤..."]')
-        await filterInput.setValue('zzz_nonexistent')
-        await nextTick()
-        // After debounce the filter effect propagates
+        vi.useFakeTimers()
+        try {
+            const wrapper = mountTable()
+            const filterInput = wrapper.find('input[placeholder="过滤..."]')
+            await filterInput.setValue('zzz_nonexistent')
+            vi.advanceTimersByTime(201)
+            await nextTick()
+            expect(wrapper.text()).toContain('无匹配数据')
+            expect(wrapper.findAll('button[title="删除此行"]')).toHaveLength(0)
+            wrapper.unmount()
+        } finally {
+            vi.useRealTimers()
+        }
     })
 
     it('emits drop-table when delete table button is clicked', async () => {
         const wrapper = mountTable()
         // Find the delete button (trash icon) by title
         const deleteBtn = wrapper.find('button[title="删除表格"]')
-        if (deleteBtn.exists()) {
-            await deleteBtn.trigger('click')
-            expect(wrapper.emitted('drop-table')?.[0]).toEqual(['users'])
-        }
+        expect(deleteBtn.exists()).toBeTruthy()
+
+        await deleteBtn.trigger('click')
+        expect(wrapper.emitted('drop-table')?.[0]).toEqual(['users'])
     })
 
     it('emits update-cell on cell edit and blur', async () => {
@@ -115,49 +152,49 @@ describe('TableSection', () => {
             return !ph && t.element.value !== ''
         })
 
-        if (dataTextareas.length > 0) {
-            // Use the second textarea (name column = TEXT, allows non-numeric values)
-            const nameCell = dataTextareas[1] || dataTextareas[0]
-            const el = nameCell.element as HTMLTextAreaElement
-            el.value = 'UpdatedName'
-            el.dispatchEvent(new Event('input'))
-            await nameCell.trigger('blur')
+        expect(dataTextareas.length > 0).toBeTruthy()
 
-            const updateCellEvents = wrapper.emitted('update-cell')
-            expect(updateCellEvents).toBeTruthy()
-            expect(updateCellEvents?.[0][0]).toMatchObject({
-                tableName: 'users',
-                oldRow: expect.objectContaining({ name: 'Alice' }),
-                newRow: expect.objectContaining({ name: 'UpdatedName' })
-            })
-        }
+        // Use the second textarea (name column = TEXT, allows non-numeric values)
+        const nameCell = dataTextareas[1] || dataTextareas[0]
+        const el = nameCell.element as HTMLTextAreaElement
+        el.value = 'UpdatedName'
+        el.dispatchEvent(new Event('input'))
+        await nameCell.trigger('blur')
+
+        const updateCellEvents = wrapper.emitted('update-cell')
+        expect(updateCellEvents).toBeTruthy()
+        expect(updateCellEvents?.[0][0]).toMatchObject({
+            tableName: 'users',
+            oldRow: expect.objectContaining({ name: 'Alice' }),
+            newRow: expect.objectContaining({ name: 'UpdatedName' })
+        })
     })
 
     it('does not emit update-cell on blur with unchanged value', async () => {
         const wrapper = mountTable()
         const textareas = wrapper.findAll('textarea')
         const dataTextareas = textareas.filter((t) => !t.attributes('placeholder'))
-        if (dataTextareas.length > 0) {
-            const firstCell = dataTextareas[0]
-            await firstCell.trigger('blur')
-            // Since we didn't change the value, no emit should happen
-            expect(wrapper.emitted('update-cell')).toBeFalsy()
-        }
+        expect(dataTextareas.length > 0).toBeTruthy()
+
+        const firstCell = dataTextareas[0]
+        await firstCell.trigger('blur')
+        // Since we didn't change the value, no emit should happen
+        expect(wrapper.emitted('update-cell')).toBeFalsy()
     })
 
     it('emits delete-row when row delete button is clicked', async () => {
         const wrapper = mountTable()
         // Hover over a row to reveal delete buttons (they are opacity-0 by default)
         const deleteBtns = wrapper.findAll('button[title="删除此行"]')
-        if (deleteBtns.length > 0) {
-            await deleteBtns[0].trigger('click')
-            const deleteRowEvents = wrapper.emitted('delete-row')
-            expect(deleteRowEvents).toBeTruthy()
-            expect(deleteRowEvents?.[0][0]).toMatchObject({
-                tableName: 'users',
-                row: expect.objectContaining({ id: 1 })
-            })
-        }
+        expect(deleteBtns.length > 0).toBeTruthy()
+
+        await deleteBtns[0].trigger('click')
+        const deleteRowEvents = wrapper.emitted('delete-row')
+        expect(deleteRowEvents).toBeTruthy()
+        expect(deleteRowEvents?.[0][0]).toMatchObject({
+            tableName: 'users',
+            row: expect.objectContaining({ id: 1 })
+        })
     })
 
     it('shows ghost row for insertion', () => {
@@ -169,11 +206,12 @@ describe('TableSection', () => {
     it('emits insert-row on ghost row submit with data', async () => {
         const wrapper = mountTable()
         const ghostTextareas = wrapper.findAll('textarea[placeholder="+"]')
-        if (ghostTextareas.length > 0) {
-            await ghostTextareas[0].setValue('4')
-            await ghostTextareas[0].trigger('keydown.enter')
-            // Ghost submit may need all required columns filled
-        }
+        await ghostTextareas[0].setValue('4')
+        await ghostTextareas[1].setValue('Dana')
+        await ghostTextareas[0].trigger('keydown.enter')
+        expect(wrapper.emitted('insert-row')?.[0]).toEqual([
+            { tableName: 'users', newRow: { id: '4', name: 'Dana' } }
+        ])
     })
 
     it('shows pagination when data exceeds page size', async () => {
@@ -207,16 +245,16 @@ describe('TableSection', () => {
         })
         // Find the index badge and click it
         const buttons = wrapper.findAll('span')
-        const badgeEls = buttons.filter((b) => b.text().includes('📋'))
-        if (badgeEls.length > 0) {
-            await badgeEls[0].trigger('click')
-            const navEvents = wrapper.emitted('navigate-tab')
-            expect(navEvents).toBeTruthy()
-            expect(navEvents?.[0][0]).toMatchObject({
-                tab: expect.any(String),
-                targetId: expect.any(String)
-            })
-        }
+        const badgeEls = buttons.filter((b) => b.text().includes('📇'))
+        expect(badgeEls.length > 0).toBeTruthy()
+
+        await badgeEls[0].trigger('click')
+        const navEvents = wrapper.emitted('navigate-tab')
+        expect(navEvents).toBeTruthy()
+        expect(navEvents?.[0][0]).toMatchObject({
+            tab: expect.any(String),
+            targetId: undefined
+        })
     })
 
     describe('truncation tooltip', () => {
@@ -276,6 +314,56 @@ describe('TableSection', () => {
             expect(tooltip).toBeTruthy()
             expect(tooltip.style.display).toBe('none')
         })
+
+        it('positions the tooltip beside the truncated cell and hides it after the delay', async () => {
+            vi.useFakeTimers()
+            const cell = document.createElement('div')
+            cell.dataset.column = 'name'
+            vi.spyOn(cell, 'getBoundingClientRect').mockReturnValue({
+                top: 100,
+                bottom: 120,
+                left: 50,
+                width: 100
+            } as DOMRect)
+            document.body.append(cell)
+            try {
+                const truncRef = ref<TruncationInfo[]>([])
+                wrappers.push(mountTable({ lastTruncations: truncRef }))
+                truncRef.value = [
+                    {
+                        value: 'Ali',
+                        originalValue: 'Alice',
+                        maxLength: 3,
+                        wasTruncated: true,
+                        column: 'name'
+                    }
+                ]
+                await nextTick()
+                await nextTick()
+                await nextTick()
+
+                const tooltip = document.body.querySelector('.bg-amber-50') as HTMLElement
+                expect(tooltip.style.top).toBe('124px')
+                expect(tooltip.textContent).toContain('原始长度 5 字符')
+
+                truncRef.value = [
+                    {
+                        value: 'Bo',
+                        originalValue: 'Bobby',
+                        maxLength: 2,
+                        wasTruncated: true,
+                        column: 'name'
+                    }
+                ]
+                await nextTick()
+                vi.advanceTimersByTime(3000)
+                await nextTick()
+                expect(tooltip.style.display).toBe('none')
+            } finally {
+                cell.remove()
+                vi.useRealTimers()
+            }
+        })
     })
 
     describe('ghost row insert result', () => {
@@ -285,16 +373,31 @@ describe('TableSection', () => {
             wrappers = []
         })
 
-        it('preserves ghost row inputs when insert fails', async () => {
+        /** 挂载表格并在幽灵行填入 value 后回车提交，返回 insertResult ref 与首次查到的幽灵行输入框 */
+        async function mountWithGhostRowFill(value = '4') {
             const insertResultRef = ref<InsertResult | null>(null)
             wrappers.push(mountTable({ insertResult: insertResultRef }))
 
             // Fill ghost row textareas
             const ghostTextareas = wrappers[0].findAll('textarea[placeholder="+"]')
-            if (ghostTextareas.length > 0) {
-                await ghostTextareas[0].setValue('4')
-                await ghostTextareas[0].trigger('keydown.enter')
-            }
+            expect(ghostTextareas.length > 0).toBeTruthy()
+
+            await ghostTextareas[0].setValue(value)
+            await ghostTextareas[0].trigger('keydown.enter')
+
+            return { insertResultRef, ghostTextareas }
+        }
+
+        /** 断言幽灵行首个输入框的值；幽灵行必须存在 */
+        function expectGhostRowValue(expected: string) {
+            const ghostTextareasAfter = wrappers[0].findAll('textarea[placeholder="+"]')
+            expect(ghostTextareasAfter.length > 0).toBeTruthy()
+
+            expect((ghostTextareasAfter[0].element as HTMLTextAreaElement).value).toBe(expected)
+        }
+
+        it('preserves ghost row inputs when insert fails', async () => {
+            const { insertResultRef } = await mountWithGhostRowFill()
 
             // Simulate failed insert
             insertResultRef.value = {
@@ -306,10 +409,7 @@ describe('TableSection', () => {
             await nextTick()
 
             // Ghost row inputs should still be present
-            const ghostTextareasAfter = wrappers[0].findAll('textarea[placeholder="+"]')
-            if (ghostTextareasAfter.length > 0) {
-                expect((ghostTextareasAfter[0].element as HTMLTextAreaElement).value).toBe('4')
-            }
+            expectGhostRowValue('4')
 
             // Verify failure styling
             const ghostRow = wrappers[0].find('[data-testid="ghost-row"]')
@@ -322,15 +422,7 @@ describe('TableSection', () => {
         })
 
         it('clears ghost row when insert succeeds', async () => {
-            const insertResultRef = ref<InsertResult | null>(null)
-            wrappers.push(mountTable({ insertResult: insertResultRef }))
-
-            // Fill ghost row textareas
-            const ghostTextareas = wrappers[0].findAll('textarea[placeholder="+"]')
-            if (ghostTextareas.length > 0) {
-                await ghostTextareas[0].setValue('4')
-                await ghostTextareas[0].trigger('keydown.enter')
-            }
+            const { insertResultRef } = await mountWithGhostRowFill()
 
             // Simulate successful insert
             insertResultRef.value = { success: true, tableName: 'users' }
@@ -338,22 +430,11 @@ describe('TableSection', () => {
             await nextTick()
 
             // Ghost row inputs should be cleared
-            const ghostTextareasAfter = wrappers[0].findAll('textarea[placeholder="+"]')
-            if (ghostTextareasAfter.length > 0) {
-                expect((ghostTextareasAfter[0].element as HTMLTextAreaElement).value).toBe('')
-            }
+            expectGhostRowValue('')
         })
 
         it('ignores insertResult for different tableName', async () => {
-            const insertResultRef = ref<InsertResult | null>(null)
-            wrappers.push(mountTable({ insertResult: insertResultRef }))
-
-            // Fill ghost row textareas
-            const ghostTextareas = wrappers[0].findAll('textarea[placeholder="+"]')
-            if (ghostTextareas.length > 0) {
-                await ghostTextareas[0].setValue('4')
-                await ghostTextareas[0].trigger('keydown.enter')
-            }
+            const { insertResultRef } = await mountWithGhostRowFill()
 
             // Simulate result for a different table
             insertResultRef.value = { success: false, tableName: 'products', error: 'test' }
@@ -361,10 +442,7 @@ describe('TableSection', () => {
             await nextTick()
 
             // Ghost row should NOT be cleared (wrong table)
-            const ghostTextareasAfter = wrappers[0].findAll('textarea[placeholder="+"]')
-            if (ghostTextareasAfter.length > 0) {
-                expect((ghostTextareasAfter[0].element as HTMLTextAreaElement).value).toBe('4')
-            }
+            expectGhostRowValue('4')
 
             // No failure styling should appear
             const ghostRow = wrappers[0].find('[data-testid="ghost-row"]')
@@ -372,15 +450,7 @@ describe('TableSection', () => {
         })
 
         it('auto-dismisses failure styling after typing in ghost row', async () => {
-            const insertResultRef = ref<InsertResult | null>(null)
-            wrappers.push(mountTable({ insertResult: insertResultRef }))
-
-            // Submit empty ghost row (just trigger failure)
-            const ghostTextareas = wrappers[0].findAll('textarea[placeholder="+"]')
-            if (ghostTextareas.length > 0) {
-                await ghostTextareas[0].setValue('test')
-                await ghostTextareas[0].trigger('keydown.enter')
-            }
+            const { insertResultRef, ghostTextareas } = await mountWithGhostRowFill('test')
 
             // Simulate failed insert
             insertResultRef.value = { success: false, tableName: 'users', error: 'test error' }
@@ -392,10 +462,10 @@ describe('TableSection', () => {
             expect(ghostRow.classes()).toContain('ghost-failure')
 
             // User types in ghost row textarea — should dismiss
-            if (ghostTextareas.length > 0) {
-                await ghostTextareas[0].trigger('input')
-                await nextTick()
-            }
+            expect(ghostTextareas.length > 0).toBeTruthy()
+
+            await ghostTextareas[0].trigger('input')
+            await nextTick()
 
             // Verify failure styling removed
             ghostRow = wrappers[0].find('[data-testid="ghost-row"]')
@@ -434,6 +504,39 @@ describe('TableSection', () => {
             // Find a td with flash-overlay class
             const flashTds = tds.filter((td) => td.classes().includes('flash-overlay'))
             expect(flashTds.length).toBeGreaterThan(0)
+        })
+
+        it('ends the flash animation after the 1s timer', async () => {
+            const highlight = reactive<HighlightState>({
+                ...defaultHighlight,
+                flashingRows: ['users:1']
+            })
+            const wrapper = mountTable({ highlight })
+            highlight.refreshSeed += 1
+            await nextTick()
+            expect(
+                wrapper.findAll('td').filter((td) => td.classes().includes('flash-overlay')).length
+            ).toBeGreaterThan(0)
+
+            vi.advanceTimersByTime(1100)
+            await nextTick()
+            expect(
+                wrapper.findAll('td').filter((td) => td.classes().includes('flash-overlay')).length
+            ).toBe(0)
+        })
+
+        it('clears a pending animation timer on unmount', async () => {
+            const highlight = reactive<HighlightState>({
+                ...defaultHighlight,
+                flashingRows: ['users:1']
+            })
+            const wrapper = mountTable({ highlight })
+            highlight.refreshSeed += 1
+            await nextTick()
+            // Unmount while the 1s animation timer is still pending
+            wrapper.unmount()
+            vi.advanceTimersByTime(1100)
+            expect(vi.getTimerCount()).toBe(0)
         })
 
         it('VIRTUAL column gets bg-primary/10 class', () => {
@@ -526,5 +629,151 @@ describe('TableSection', () => {
             expect(wrapper.text()).toContain('Bob')
             expect(wrapper.text()).toContain('Charlie')
         })
+    })
+
+    it('sorts visible rows and moves between pages with the selected page size', async () => {
+        const table = {
+            ...mockTable,
+            data: Array.from({ length: 25 }, (_, i) => ({
+                id: 25 - i,
+                name: `User ${25 - i}`,
+                salary: i
+            }))
+        }
+        const wrapper = mountTable({ table })
+        const firstId = () =>
+            (wrapper.find('tbody tr textarea').element as HTMLTextAreaElement).value
+        expect(firstId()).toBe('25')
+
+        await wrapper.findAll('th')[0].trigger('click')
+        expect(firstId()).toBe('1')
+        await wrapper.findAll('th')[0].trigger('click')
+        expect(firstId()).toBe('25')
+
+        expect(
+            wrapper
+                .findAll('button')
+                .find((b) => b.text().includes('上一页'))
+                ?.attributes('disabled')
+        ).toBeDefined()
+        await wrapper
+            .findAll('button')
+            .find((b) => b.text().includes('下一页'))!
+            .trigger('click')
+        expect(firstId()).toBe('15')
+        expect(wrapper.text()).toContain('2 / 3')
+
+        await wrapper
+            .findAll('button')
+            .find((b) => b.text().includes('上一页'))!
+            .trigger('click')
+        await wrapper.find('select').setValue('25')
+        expect(wrapper.text()).not.toContain('2 / 3')
+        expect(wrapper.findAll('button[title="删除此行"]')).toHaveLength(25)
+    })
+
+    it('previews related indexes, triggers, views and navigates to the selected item', async () => {
+        const wrapper = mountTable({
+            indexes: [
+                {
+                    name: 'idx_users_name',
+                    tableName: 'users',
+                    columns: ['name', 'id'],
+                    unique: true,
+                    sql: 'CREATE UNIQUE INDEX idx_users_name ON users(name, id)'
+                }
+            ],
+            triggers: [
+                {
+                    name: 'trg_users',
+                    tableName: 'users',
+                    sql: 'CREATE TRIGGER trg_users AFTER INSERT ON users BEGIN SELECT 1; END'
+                }
+            ],
+            views: [{ name: 'v_users', sql: 'SELECT * FROM users' }]
+        })
+        const badges = wrapper.findAll('span.cursor-pointer')
+        expect(badges).toHaveLength(3)
+        const preview = wrapper.findComponent(HoverPreview)
+
+        await badges[0].trigger('mouseenter')
+        expect(preview.props('title')).toBe('索引 · users 表')
+        expect(preview.props('items')[0]).toMatchObject({
+            id: 'index-idx_users_name',
+            label: 'idx_users_name'
+        })
+        await badges[0].trigger('click')
+        expect(wrapper.emitted('navigate-tab')?.at(-1)).toEqual([
+            { tab: 'indexes', targetId: undefined }
+        ])
+        preview.vm.$emit('select', 'index-idx_users_name')
+        expect(wrapper.emitted('navigate-tab')?.at(-1)).toEqual([
+            { tab: 'indexes', targetId: 'index-idx_users_name' }
+        ])
+
+        await badges[1].trigger('mouseenter')
+        expect(preview.props('title')).toBe('触发器 · users 表')
+        expect(preview.props('items')[0].id).toBe('trigger-trg_users')
+        await badges[1].trigger('click')
+        expect(wrapper.emitted('navigate-tab')?.at(-1)).toEqual([
+            { tab: 'triggers', targetId: undefined }
+        ])
+        preview.vm.$emit('navigate-all')
+        expect(wrapper.emitted('navigate-tab')?.at(-1)).toEqual([{ tab: 'triggers' }])
+
+        await badges[2].trigger('mouseenter')
+        expect(preview.props('title')).toBe('视图 · 引用 users 表')
+        expect(preview.props('items')[0].id).toBe('view-v_users')
+        await badges[2].trigger('click')
+        expect(wrapper.emitted('navigate-tab')?.at(-1)).toEqual([
+            { tab: 'views', targetId: undefined }
+        ])
+
+        const columnBadge = wrapper
+            .findAll('th')
+            .find((th) => th.text().includes('name'))!
+            .find('div.cursor-pointer')
+        await columnBadge.trigger('mouseenter')
+        expect(preview.props('title')).toBe('索引 · name 列')
+        expect(preview.props('items')[0].meta).toContain('其他列: id')
+        await columnBadge.trigger('click')
+        expect(wrapper.emitted('navigate-tab')?.at(-1)).toEqual([
+            { tab: 'indexes', targetId: undefined }
+        ])
+        wrapper.unmount()
+    })
+
+    it('keeps a hover preview open while moving from badge to preview, then closes it', async () => {
+        vi.useFakeTimers()
+        try {
+            const wrapper = mountTable({
+                indexes: [
+                    {
+                        name: 'idx_users',
+                        tableName: 'users',
+                        columns: ['id'],
+                        unique: false,
+                        sql: ''
+                    }
+                ]
+            })
+            const badge = wrapper.find('span.cursor-pointer')
+            const preview = wrapper.findComponent(HoverPreview)
+            await badge.trigger('mouseenter')
+            expect(preview.props('show')).toBe(true)
+            await badge.trigger('mouseleave')
+            preview.vm.$emit('mouseenter')
+            vi.advanceTimersByTime(201)
+            await nextTick()
+            expect(preview.props('show')).toBe(true)
+
+            preview.vm.$emit('mouseleave')
+            vi.advanceTimersByTime(201)
+            await nextTick()
+            expect(preview.props('show')).toBe(false)
+            wrapper.unmount()
+        } finally {
+            vi.useRealTimers()
+        }
     })
 })

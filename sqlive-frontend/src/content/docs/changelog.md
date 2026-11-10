@@ -14,15 +14,15 @@
 
 ## v0.13 — 维护者审查修复（2026-06-30）
 
-- CR-01：OpenAiCompatibleProvider.complete catch 块空指针保护
-- CR-02：前端 AI composable 从 env/localStorage 读取 X-API-Key
-- WR-01：DatabasePoolManager.createNewPool 修复 refCount 递增与 pools.put 的竞态窗口
-- WR-02：ApiKeyFilter 路径匹配模式对齐 Spring Security /api/ai/**
-- WR-03：SecurityConfig 集成 http.cors() + OPTIONS permitAll
-- WR-04：非 dev 环境缺少 AI_API_KEY 时启动打印警告
-- WR-05：WebConfig CORS allowedHeaders 添加 X-API-Key
-- WR-06：RUNBOOK / CLAUDE.md 中 SQLite URL 文档对齐实际代码
-- WR-07：重写 TOCTOU 并发测试为 acquire-release 循环 + evict
+- OpenAiCompatibleProvider.complete catch 块空指针保护
+- 前端 AI composable 从 env/localStorage 读取 X-API-Key
+- DatabasePoolManager.createNewPool 修复 refCount 递增与 pools.put 的竞态窗口
+- ApiKeyFilter 路径匹配模式对齐 Spring Security /api/ai/**
+- SecurityConfig 集成 http.cors + OPTIONS permitAll
+- 非 dev 环境缺少 AI_API_KEY 时启动打印警告
+- WebConfig CORS allowedHeaders 添加 X-API-Key
+- RUNBOOK / AGENTS.md 中 SQLite URL 文档对齐实际代码
+- 重写 TOCTOU 并发测试为 acquire-release 循环 + evict
 
 ## v0.12 — Token 管理 + 构建优化（2026-06-25）
 
@@ -32,7 +32,7 @@
 
 ## v0.11 — 代码审查修复（2026-06-24）
 
-- 批量修复 Phase 10 知识图谱重构引入的代码质量问题
+- 批量修复 知识图谱重构引入的代码质量问题
 - 前端目录结构规范化
 
 ## v0.10 — 知识图谱重构（2026-06-24）

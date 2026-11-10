@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
+
 import { useAiStreaming } from '@/composables/useAiStreaming'
 import { readSseStream } from '@/utils/sse'
 
@@ -24,15 +25,7 @@ function makeSseResponse(body: string = 'data: chunk1\n\ndata: chunk2\n\n') {
             controller.close()
         }
     })
-    return {
-        ok: true,
-        status: 200,
-        statusText: 'OK',
-        body: {
-            getReader: () => stream.getReader()
-        },
-        headers: { get: () => 'text/event-stream' }
-    }
+    return new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } })
 }
 
 describe('useAiStreaming', () => {
@@ -73,10 +66,7 @@ describe('useAiStreaming', () => {
             'http://localhost:8080/api/ai/chat',
             expect.objectContaining({
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'text/event-stream'
-                }
+                headers: expect.any(Headers)
             })
         )
     })
@@ -147,7 +137,7 @@ describe('useAiStreaming', () => {
         const { streamCall } = useAiStreaming('http://localhost:8080', isLoading)
 
         await expect(streamCall('/api/ai/chat', {}, vi.fn())).rejects.toThrow(
-            'SSE error: 500 Internal Server Error'
+            '500 Internal Server Error'
         )
     })
 

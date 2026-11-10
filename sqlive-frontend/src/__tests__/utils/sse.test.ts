@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+
 import { readSseStream } from '@/utils/sse'
 
 function createMockResponse(chunks: (string | Uint8Array)[]): Response {
@@ -130,7 +131,10 @@ describe('readSseStream', () => {
         const cancel = vi.fn()
         const response = new Response(new ReadableStream({ cancel }))
         const result = readSseStream(response, vi.fn(), controller.signal)
-        const assertion = expect(result).rejects.toMatchObject({ name: 'AbortError' })
+        // oxlint-disable-next-line vitest/valid-expect -- Awaited below, after triggering cancellation.
+        const assertion = Promise.resolve(
+            expect(result).rejects.toMatchObject({ name: 'AbortError' })
+        )
         controller.abort()
         await assertion
         expect(cancel).toHaveBeenCalledOnce()

@@ -1,7 +1,7 @@
 <template>
-    <header class="h-12 flex items-center justify-between px-4 border-b border-border bg-sidebar">
+    <header class="flex h-12 items-center justify-between border-b border-border bg-sidebar px-4">
         <button
-            class="text-xl font-semibold text-foreground hover:text-primary transition-colors"
+            class="text-xl font-semibold text-foreground transition-colors hover:text-primary"
             @click="handleWordmarkClick"
         >
             sqlive
@@ -10,10 +10,10 @@
             <button
                 data-testid="docs-link-btn"
                 @click="handleDocsClick"
-                class="px-2 py-1 text-sm font-semibold rounded transition-colors"
+                class="rounded px-2 py-1 text-sm font-semibold transition-colors"
                 :class="
                     isDocsRoute
-                        ? 'bg-primary/10 text-primary border border-primary/20'
+                        ? 'border border-primary/20 bg-primary/10 text-primary'
                         : 'bg-primary text-primary-foreground hover:bg-primary/90'
                 "
             >
@@ -24,7 +24,7 @@
                 target="_blank"
                 rel="noopener noreferrer"
                 data-testid="github-link"
-                class="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors shadow-sm bg-card border border-border text-muted-foreground hover:text-primary hover:border-primary/40"
+                class="flex items-center gap-1 rounded border border-border bg-card px-2 py-1 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:border-primary/40 hover:text-primary"
                 title="GitHub 仓库"
             >
                 <svg
@@ -56,6 +56,8 @@ const router = useRouter()
 const isDocsRoute = computed(() => route.path.startsWith('/docs'))
 
 // Handler functions (NOT inline @click="$emit" — per CLAUDE.md <script setup> gotcha).
+// vue-router 的 NavigationFailureType 中该值官方拼写即为 cancelled，此处指代该 API 值，保留原词
+//noinspection GrazieStyle
 // router.push rejections are NavigationFailure (aborted/duplicated/cancelled) —
 // silent per design spec §4.6.
 function handleDocsClick() {

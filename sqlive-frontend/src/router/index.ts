@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 
 /**
- * Route table (D-02 router, D-05 structure).
+ * Route table (router, structure).
  *
  * - `/` → App.vue (main playground, kept alive via RootLayout's KeepAlive)
  * - `/docs/*` → DocsLayout + nested article/api/not-found children (lazy chunk)
@@ -28,7 +28,7 @@ const routes: RouteRecordRaw[] = [
             {
                 path: 'usage/:article',
                 component: () => import('@/pages/docs/ArticlePage.vue'),
-                props: (route) => ({ slug: 'usage/' + route.params.article })
+                props: (route) => ({ slug: 'usage/' + String(route.params.article) })
             },
             {
                 path: 'api',

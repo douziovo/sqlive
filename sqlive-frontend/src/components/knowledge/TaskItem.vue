@@ -19,7 +19,15 @@
             <span v-if="isOverdue" class="task-item__overdue-badge">已逾期</span>
         </span>
 
-        <button class="task-item__status" :class="statusBadgeClass" @click="handleStatusToggle">
+        <button
+            class="task-item__status"
+            :class="statusBadgeClass"
+            :disabled="
+                task.status === 'in-progress' &&
+                task.substeps.some((step) => step.status !== 'done')
+            "
+            @click="handleStatusToggle"
+        >
             {{ statusLabel }}
         </button>
 
@@ -64,9 +72,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'
-import { useRedDot } from '@/composables/useRedDot'
 import {
     AlertDialogRoot,
     AlertDialogPortal,
@@ -77,7 +82,12 @@ import {
     AlertDialogCancel,
     AlertDialogAction
 } from 'reka-ui'
+import { computed, ref } from 'vue'
+
+import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'
+import { useRedDot } from '@/composables/useRedDot'
 import { TASK_CATEGORY_COLORS } from '@/data/taskCategories'
+
 import RedDotBadge from './RedDotBadge.vue'
 
 const props = defineProps<{
@@ -139,14 +149,14 @@ const statusBadgeClass = computed(
 )
 
 function handleStatusToggle(): void {
-    const nextStatus =
-        props.task.status === 'todo'
-            ? 'in-progress'
-            : props.task.status === 'in-progress'
-              ? 'done'
-              : 'todo'
+    if (props.task.status === 'in-progress') {
+        if (props.task.substeps.every((step) => step.status === 'done')) {
+            emit('complete:task', props.task.id)
+        }
+        return
+    }
+    const nextStatus = props.task.status === 'todo' ? 'in-progress' : 'todo'
     emit('update:task', props.task.id, { status: nextStatus } as Partial<KnowledgeTask>)
-    if (nextStatus === 'done') emit('complete:task', props.task.id)
 }
 
 function handleDelete(): void {
@@ -169,8 +179,7 @@ function handlePinClick(): void {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 12px;
-    padding-left: 9px;
+    padding: 8px 12px 8px 9px;
     border-radius: 8px;
     font-size: 13px;
     transition: background 0.15s;
@@ -179,15 +188,6 @@ function handlePinClick(): void {
 
 .task-item:hover {
     background: var(--secondary);
-}
-
-.task-item--completed .task-item__title {
-    opacity: 0.6;
-    text-decoration: line-through;
-}
-
-.task-item--completed .task-item__priority-dot {
-    visibility: hidden;
 }
 
 .task-item__priority-dot {
@@ -204,6 +204,15 @@ function handlePinClick(): void {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.task-item--completed .task-item__title {
+    opacity: 0.6;
+    text-decoration: line-through;
+}
+
+.task-item--completed .task-item__priority-dot {
+    visibility: hidden;
 }
 
 .task-item__steps {
@@ -227,7 +236,7 @@ function handlePinClick(): void {
     border-radius: 3px;
     font-size: 10px;
     color: #ef4444;
-    background: rgba(239, 68, 68, 0.1);
+    background: rgb(239 68 68 / 10%);
 }
 
 .task-item__status {
@@ -245,18 +254,27 @@ function handlePinClick(): void {
     opacity: 0.8;
 }
 
+/* statusBadgeClass 计算属性在运行时拼接这些类名，静态检查器无法识别，不可删除 */
+
+/* noinspection CssUnusedSymbol */
 .task-item__status--todo {
     background: var(--muted);
     color: var(--muted-foreground);
 }
 
+/* 同上：由 statusBadgeClass 动态返回 */
+
+/* noinspection CssUnusedSymbol */
 .task-item__status--in-progress {
-    background: rgba(59, 130, 246, 0.12);
+    background: rgb(59 130 246 / 12%);
     color: #3b82f6;
 }
 
+/* 同上：由 statusBadgeClass 动态返回 */
+
+/* noinspection CssUnusedSymbol */
 .task-item__status--done {
-    background: rgba(16, 185, 129, 0.12);
+    background: rgb(16 185 129 / 12%);
     color: #10b981;
 }
 
@@ -273,7 +291,7 @@ function handlePinClick(): void {
 }
 
 .task-item__pin:hover {
-    background: rgba(250, 204, 21, 0.12);
+    background: rgb(250 204 21 / 12%);
 }
 
 .task-item__delete {
@@ -290,7 +308,7 @@ function handlePinClick(): void {
 }
 
 .task-item__delete:hover {
-    background: rgba(239, 68, 68, 0.08);
+    background: rgb(239 68 68 / 8%);
 }
 
 /* ── D-13: AlertDialog delete confirmation styles ─────────── */
@@ -298,7 +316,7 @@ function handlePinClick(): void {
 .task-item__dialog-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgb(0 0 0 / 40%);
     z-index: 200;
 }
 
@@ -315,19 +333,19 @@ function handlePinClick(): void {
     z-index: 201;
     min-width: 320px;
     max-width: calc(100% - 2rem);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    box-shadow: 0 8px 32px rgb(0 0 0 / 18%);
 }
 
 .task-item__dialog-title {
     font-size: 16px;
     font-weight: 700;
-    margin: 0 0 8px 0;
+    margin: 0 0 8px;
 }
 
 .task-item__dialog-description {
     font-size: 13px;
     color: var(--muted-foreground);
-    margin: 0 0 16px 0;
+    margin: 0 0 16px;
     line-height: 1.5;
 }
 

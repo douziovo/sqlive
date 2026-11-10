@@ -26,12 +26,8 @@ class SqlControllerValidationTest {
 		dbSuffix = UUID.randomUUID().toString().substring(0, 8);
 	}
 
-	private String db(String prefix) {
-		return prefix + "_" + dbSuffix;
-	}
-
-	private String url() {
-		return SqlControllerTestSupport.url(port);
+	private String db() {
+		return "val_test_" + dbSuffix;
 	}
 
 	private ResponseEntity<SqlResponse> post(SqlRequest req) {
@@ -45,7 +41,7 @@ class SqlControllerValidationTest {
 
 		ResponseEntity<SqlResponse> resp = post(req);
 		assertNotNull(resp.getBody());
-		assertFalse(resp.getBody().isSuccess());
+		assertFalse(resp.getBody().getError() == null);
 		assertTrue(resp.getBody().getError().getMessage().contains("SQL cannot be empty"));
 	}
 
@@ -56,7 +52,7 @@ class SqlControllerValidationTest {
 
 		ResponseEntity<SqlResponse> resp = post(req);
 		assertNotNull(resp.getBody());
-		assertFalse(resp.getBody().isSuccess());
+		assertFalse(resp.getBody().getError() == null);
 		assertTrue(resp.getBody().getError().getMessage().contains("SQL cannot be empty"));
 	}
 
@@ -67,7 +63,7 @@ class SqlControllerValidationTest {
 
 		ResponseEntity<SqlResponse> resp = post(req);
 		assertNotNull(resp.getBody());
-		assertFalse(resp.getBody().isSuccess());
+		assertFalse(resp.getBody().getError() == null);
 		assertTrue(resp.getBody().getError().getMessage().contains("SQL cannot be empty"));
 	}
 
@@ -75,12 +71,12 @@ class SqlControllerValidationTest {
 	void shouldAcceptValidSql() {
 		SqlRequest req = new SqlRequest();
 		req.setSql("SELECT 1;");
-		req.setDbName(db("val_test"));
+		req.setDbName(db());
 		req.setReset(true);
 
 		ResponseEntity<SqlResponse> resp = post(req);
 		assertNotNull(resp.getBody());
-		assertTrue(resp.getBody().isSuccess());
+		assertTrue(resp.getBody().getError() == null);
 	}
 
 	@Test
@@ -91,7 +87,7 @@ class SqlControllerValidationTest {
 
 		ResponseEntity<SqlResponse> resp = post(req);
 		assertNotNull(resp.getBody());
-		assertFalse(resp.getBody().isSuccess());
+		assertFalse(resp.getBody().getError() == null);
 		assertTrue(resp.getBody().getError().getMessage().contains("dbName must be 1-64"));
 	}
 }

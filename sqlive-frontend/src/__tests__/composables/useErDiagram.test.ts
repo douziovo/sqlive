@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { determineCardinality, foreignKeysToEdges, tablesToNodes } from '@/composables/useErDiagram'
+
+import {
+    buildColumnMeta,
+    determineCardinality,
+    foreignKeysToEdges,
+    tablesToNodes
+} from '@/composables/useErDiagram'
 import type { ForeignKeyInfo, TableSchema } from '@/model/DatabaseTypes'
 
 // ── Test Data ──
@@ -234,5 +240,25 @@ describe('search filtering', () => {
         expect(results[0].data.isFiltered).toBe(false)
         // departments: neither table name nor columns match 'dept_id'
         expect(results[1].data.isFiltered).toBe(true)
+    })
+    it('treats a column missing from columnTypes as plain TEXT-like', () => {
+        const table: TableSchema = {
+            name: 't',
+            columns: ['ghost'],
+            columnTypes: {},
+            data: []
+        }
+        const meta = buildColumnMeta(table, new Map())
+        expect(meta[0]).toEqual({
+            name: 'ghost',
+            type: '',
+            isPrimaryKey: false,
+            isForeignKey: false,
+            isUnique: false
+        })
+    })
+
+    it('determineCardinality handles missing tables gracefully', () => {
+        expect(determineCardinality(undefined, undefined, 'a', 'b')).toBe('多对一')
     })
 })

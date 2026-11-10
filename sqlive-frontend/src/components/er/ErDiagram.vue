@@ -2,9 +2,9 @@
     <div ref="wrapperRef" class="er-diagram-wrapper" tabindex="-1">
         <div
             v-if="tables.length === 0"
-            class="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground/70 z-10 pointer-events-none"
+            class="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center text-muted-foreground/70"
         >
-            <div class="text-3xl mb-2">&#x1F4ED;</div>
+            <div class="mb-2 text-3xl">&#x1F4ED;</div>
             <p class="text-sm">暂无数据表，无法生成 ER 图</p>
         </div>
 
@@ -57,14 +57,17 @@
 <script setup lang="ts">
 import { Background } from '@vue-flow/background'
 import { VueFlow } from '@vue-flow/core'
+import type { Node, NodeMouseEvent, VueFlowStore } from '@vue-flow/core'
 import { MiniMap } from '@vue-flow/minimap'
 import { computed, markRaw, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import '@vue-flow/minimap/dist/style.css'
 
 import { useErDiagram } from '@/composables/useErDiagram'
 import type { ForeignKeyInfo, TableSchema } from '@/model/DatabaseTypes'
+
 import ErSearchBar from './ErSearchBar.vue'
 import ErTableNode from './ErTableNode.vue'
 import ErToolbar from './ErToolbar.vue'
@@ -76,6 +79,8 @@ const props = defineProps<{
 
 const emit = defineEmits<(e: 'navigate-tab', payload: { tab: string; targetId?: string }) => void>()
 
+// `as any`: vue-flow's NodeComponent type does not structurally accept custom
+// SFC node components (known upstream typing friction).
 const nodeTypes = markRaw({ table: ErTableNode }) as any
 
 const { filteredNodes, edges, searchQuery, showMinimap, autoLayout, setContainerRef } =
@@ -85,7 +90,7 @@ const { filteredNodes, edges, searchQuery, showMinimap, autoLayout, setContainer
     )
 
 const wrapperRef = ref<HTMLElement | null>(null)
-const flowRef = ref<any>(null)
+const flowRef = ref<VueFlowStore | null>(null)
 const paneReady = ref(false)
 
 const showSearch = ref(false)
@@ -95,7 +100,7 @@ const totalTableCount = computed(() => props.tables.length)
 
 const matchCount = computed(() => {
     if (!searchQuery.value) return 0
-    return (filteredNodes.value as any[]).filter((n: any) => !n.data?.isFiltered).length
+    return filteredNodes.value.filter((n) => !n.data.isFiltered).length
 })
 
 const currentIndex = computed(() => {
@@ -111,9 +116,7 @@ const activeMatchNodeId = computed(() => {
 
 const matchNodeIds = computed(() => {
     if (!searchQuery.value) return new Set<string>()
-    return new Set(
-        (filteredNodes.value as any[]).filter((n: any) => !n.data?.isFiltered).map((n: any) => n.id)
-    )
+    return new Set(filteredNodes.value.filter((n) => !n.data.isFiltered).map((n) => n.id))
 })
 
 const displayEdges = computed(() => (paneReady.value ? edges.value : []))
@@ -121,7 +124,7 @@ const displayEdges = computed(() => (paneReady.value ? edges.value : []))
 const displayNodes = computed(() => {
     if (!paneReady.value) return []
     if (!searchQuery.value) return filteredNodes.value
-    return (filteredNodes.value as any[]).map((n: any) => ({
+    return filteredNodes.value.map((n) => ({
         ...n,
         data: {
             ...n.data,
@@ -131,11 +134,11 @@ const displayNodes = computed(() => {
     }))
 })
 
-function miniMapNodeColor(_node: any) {
+function miniMapNodeColor(_node: Node) {
     return '#3b82f6'
 }
 
-function onNodeDoubleClick(event: any) {
+function onNodeDoubleClick(event: NodeMouseEvent) {
     const tableName = event.node?.data?.tableName
     if (tableName) {
         emit('navigate-tab', { tab: 'tables', targetId: `table-${tableName}` })
@@ -183,8 +186,8 @@ function closeSearch() {
     matchIndex.value = 0
 }
 
-function getMatchNodes(): any[] {
-    return (filteredNodes.value as any[]).filter((n: any) => !n.data?.isFiltered)
+function getMatchNodes() {
+    return filteredNodes.value.filter((n) => !n.data.isFiltered)
 }
 
 function centerOnMatch(index: number) {

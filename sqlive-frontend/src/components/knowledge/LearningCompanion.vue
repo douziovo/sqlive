@@ -13,19 +13,21 @@
                 {{ pendingCount > 99 ? '99+' : pendingCount }}
             </span>
             <GraduationCap class="companion-ring-bg" :size="20" />
-            <div class="companion-info">
+            <span class="companion-info">
                 <span class="companion-count">{{ kgProgress.count }}/{{ kgProgress.total }}</span>
                 <span class="companion-level">{{ kgProgress.levelName }}</span>
-            </div>
+            </span>
         </button>
     </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
 import { GraduationCap } from '@lucide/vue'
-import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
+import { computed, onMounted } from 'vue'
+
 import { useKnowledgeGraph } from '@/composables/useKnowledgeGraph'
+import { useKnowledgeTasks } from '@/composables/useKnowledgeTasks'
+
 import ActiveTaskTracker from './ActiveTaskTracker.vue'
 
 const props = withDefaults(
@@ -101,7 +103,7 @@ function handleTrackerNavigate(topicId: string): void {
     border-radius: 50%;
     background: white;
     border: 2px solid #e2e8f0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 12%);
     cursor: pointer;
     display: flex;
     flex-direction: column;
@@ -115,7 +117,7 @@ function handleTrackerNavigate(topicId: string): void {
 
 .learning-companion:hover {
     transform: scale(1.1);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+    box-shadow: 0 4px 16px rgb(0 0 0 / 18%);
 }
 
 .companion-badge {
@@ -133,7 +135,7 @@ function handleTrackerNavigate(topicId: string): void {
     align-items: center;
     justify-content: center;
     padding: 0 4px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 20%);
     z-index: 1;
 }
 

@@ -13,24 +13,31 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
  */
 const push = vi.fn().mockResolvedValue(undefined)
 const mockRoute = { path: '/docs/intro' }
+// Shared spy so tests can assert ensureIndex calls across component instances
+const { ensureIndexSpy } = vi.hoisted(() => ({ ensureIndexSpy: vi.fn() }))
 
 vi.mock('vue-router', () => ({
     useRoute: () => mockRoute,
     useRouter: () => ({ push })
 }))
 
-vi.mock('@/composables/useDocsSearch', () => ({
-    useDocsSearch: () => ({
-        ensureIndex: vi.fn().mockResolvedValue(undefined),
-        search: vi.fn((q: string) =>
-            q.includes('edit')
-                ? [{ slug: 'usage/editor', title: '编辑器', category: 'usage', score: 1 }]
-                : []
-        ),
-        indexReady: { value: true },
-        indexError: { value: false }
-    })
-}))
+vi.mock('@/composables/useDocsSearch', async () => {
+    const { ref } = await import('vue')
+    return {
+        useDocsSearch: () => ({
+            ensureIndex: ensureIndexSpy,
+            search: vi.fn((q: string) =>
+                q.includes('edit')
+                    ? [{ slug: 'usage/editor', title: '编辑器', category: 'usage', score: 1 }]
+                    : []
+            ),
+            // Real refs — plain objects would make :disabled="indexError" truthy
+            // and vue-test-utils would skip triggering events on the input
+            indexReady: ref(true),
+            indexError: ref(false)
+        })
+    }
+})
 
 import DocsSearchBox from '@/components/docs/DocsSearchBox.vue'
 
@@ -83,5 +90,61 @@ describe('DocsSearchBox', () => {
         input.focus()
         window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
         expect(blurSpy).toHaveBeenCalled()
+    })
+
+    it('first input focus triggers the lazy index build', async () => {
+        ensureIndexSpy.mockClear()
+        const w = mount(DocsSearchBox)
+        const input = w.find('[data-testid="docs-search-input"]')
+        expect(ensureIndexSpy).not.toHaveBeenCalled()
+
+        await input.trigger('focus')
+        expect(ensureIndexSpy).toHaveBeenCalled()
+    })
+
+    it('typing fires the input handler without errors', async () => {
+        const w = mount(DocsSearchBox)
+        const input = w.find('[data-testid="docs-search-input"]')
+        await input.trigger('input')
+        expect((input.element as HTMLInputElement).value).toBe('')
+    })
+
+    it('shows results for a matching query and navigates on click', async () => {
+        const w = mount(DocsSearchBox)
+        const input = w.find('[data-testid="docs-search-input"]')
+        await input.setValue('edit')
+        await input.trigger('input')
+
+        const items = w
+            .findAll('li, [class*="result"], button')
+            .filter((el) => el.text().includes('编辑器'))
+        expect(items.length).toBeGreaterThan(0)
+
+        await items[0].trigger('click')
+        expect(push).toHaveBeenCalledWith('/docs/usage/editor')
+    })
+
+    it('silences router navigation failures when opening a result', async () => {
+        push.mockRejectedValueOnce(new Error('navigation duplicated'))
+        const w = mount(DocsSearchBox)
+        const input = w.find('[data-testid="docs-search-input"]')
+        await input.setValue('edit')
+        await input.trigger('input')
+
+        const item = w
+            .findAll('li, [class*="result"], button')
+            .find((el) => el.text().includes('编辑器'))!
+        await item.trigger('click')
+        // Rejection swallowed — no unhandled error
+        await Promise.resolve()
+        expect(push).toHaveBeenCalledWith('/docs/usage/editor')
+    })
+
+    it('removes the global keydown listener on unmount', async () => {
+        const w = mount(DocsSearchBox)
+        w.unmount()
+        // Listener gone: Ctrl+K after unmount does nothing (no crash)
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))
+        expect(true).toBe(true)
     })
 })

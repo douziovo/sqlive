@@ -2,8 +2,10 @@
 import { useVModel } from '@vueuse/core'
 import type { HTMLAttributes } from 'vue'
 import { computed, provide, ref, watch } from 'vue'
+
 import { Collapsible } from '@/components/ui/collapsible'
 import { cn } from '@/lib/utils'
+
 import { ReasoningKey } from './context'
 
 interface Props {
@@ -89,9 +91,6 @@ watch(
 provide(ReasoningKey, {
     isStreaming: computed(() => props.isStreaming),
     isOpen,
-    setIsOpen: (val: boolean) => {
-        isOpen.value = val
-    },
     duration: computed(() => internalDuration.value)
 })
 </script>

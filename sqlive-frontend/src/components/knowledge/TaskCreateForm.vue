@@ -67,8 +67,10 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'
+
 import type { KnowledgeTopic } from '@/composables/useKnowledgeGraph'
+import type { KnowledgeTask } from '@/composables/useKnowledgeTasks'
+
 import TaskTopicSelector from './TaskTopicSelector.vue'
 
 const props = withDefaults(

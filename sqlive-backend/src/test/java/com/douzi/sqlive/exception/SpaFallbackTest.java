@@ -12,17 +12,17 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Verifies the SPA fallback handler in {@link GlobalExceptionHandler} (D-10):
+ * Verifies the SPA fallback handler in {@link GlobalExceptionHandler}:
  * <ul>
  *   <li>HTML requests to non-API paths forward to {@code /index.html} so vue-router
  *       can resolve deep links on browser refresh.</li>
  *   <li>API paths ({@code /api/**}) return 404 JSON — not HTML — so frontend
  *       fetch/axios can parse error bodies.</li>
  *   <li>{@code /v3/api-docs} is whitelisted so springdoc serves JSON directly
- *       (Pitfall 5).</li>
+ *       ().</li>
  * </ul>
  *
- * <p>W2 fix: assertions strengthened — Test 1 checks the response body contains
+ * <p>assertions strengthened — Test 1 checks the response body contains
  * the SPA root marker {@code <div id="app">} (verifies the forward actually
  * reached the index.html stub, not a default 404 error page); Test 2 checks the
  * 404 body contains a {@code status} or {@code error} JSON field (verifies a

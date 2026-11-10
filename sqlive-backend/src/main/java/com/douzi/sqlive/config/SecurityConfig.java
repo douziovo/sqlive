@@ -13,7 +13,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 /**
- * Spring Security authorization for AI endpoints (D-R0-005 option A).
+ * Spring Security authorization for AI endpoints (option A).
  *
  * <p>{@code /api/ai/**} requires authentication (enforced by {@link ApiKeyFilter} via
  * the {@code X-API-Key} header). All other endpoints ({@code /api/execute},
@@ -43,7 +43,7 @@ public class SecurityConfig {
 	@Bean
 	SecurityFilterChain filterChain(HttpSecurity http, ApiKeyFilter apiKeyFilter) {
 		return http
-				// WR-03: integrate Spring Security with the WebMvc CORS configuration in
+				// integrate Spring Security with the WebMvc CORS configuration in
 				// WebConfig.addCorsMappings. Without http.cors(...), Spring Security filters
 				// run before the dispatcher servlet, so 401 responses from ApiKeyFilter never
 				// reach the CorsInterceptor — the browser sees an opaque CORS error instead
@@ -55,7 +55,7 @@ public class SecurityConfig {
 						// re-checking auth (the initial REQUEST already enforced it).
 						.dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
 						.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
-						// WR-03: permit CORS preflight (OPTIONS) on /api/ai/** so the
+						// permit CORS preflight (OPTIONS) on /api/ai/** so the
 						// browser can negotiate X-API-Key before sending the actual POST.
 						// Preflight requests don't carry X-API-Key, so without this
 						// exemption ApiKeyFilter would 401 the preflight and block the
@@ -81,5 +81,4 @@ public class SecurityConfig {
 		return registration;
 	}
 }
-
 

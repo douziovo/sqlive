@@ -28,8 +28,9 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { LearningChapter } from '@/data/learningChapters'
+
 import { LEVEL_NAMES } from '@/composables/useKnowledgeGraph'
+import type { LearningChapter } from '@/data/learningChapters'
 
 const props = defineProps<{
     chapter: LearningChapter
@@ -95,7 +96,7 @@ function handleOpenChapter(): void {
 .chapter-card__desc {
     font-size: 13px;
     color: var(--muted-foreground);
-    margin: 4px 0 0 0;
+    margin: 4px 0 0;
 }
 
 .chapter-card__progress {

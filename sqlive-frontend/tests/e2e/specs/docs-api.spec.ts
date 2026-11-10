@@ -1,14 +1,14 @@
 import { expect, test } from '../fixtures/sql-editor.fixture'
 
 /**
- * Docs API E2E (D-04 — Scalar renders /v3/api-docs; error state on fetch failure).
+ * Docs API E2E (— Scalar renders /v3/api-docs; error state on fetch failure).
  *
- * Test 1 requires the backend springdoc endpoint to be live (Plan 02 delivers this).
+ * Test 1 requires the backend springdoc endpoint to be live ( delivers this).
  * Test 2 mocks /v3/api-docs to return 500 → ApiPage shows error state + retry button.
  */
 test.describe('Docs API', () => {
     test('Scalar renders /api/execute endpoint', async ({ page }) => {
-        // D-04: /docs/api loads Scalar, fetches /v3/api-docs, renders /api/execute
+        // /docs/api loads Scalar, fetches /v3/api-docs, renders /api/execute
         await page.goto('/docs/api')
 
         // Wait for loading to finish and check that no fetch error is shown.
@@ -23,9 +23,9 @@ test.describe('Docs API', () => {
     })
 
     test('mock fetch failure shows error state + retry button', async ({ page }) => {
-        // D-04 Error Handling 4.2: both fetches fail → error state + retry button
+        // Error Handling 4.2: both fetches fail → error state + retry button
         await page.route('**/v3/api-docs', (route) => {
-            route.fulfill({ status: 500 })
+            void route.fulfill({ status: 500 })
         })
 
         await page.goto('/docs/api')

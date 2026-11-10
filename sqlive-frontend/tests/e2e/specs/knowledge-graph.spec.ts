@@ -1,4 +1,5 @@
 import { expect, gotoApp, test } from '../fixtures/sql-editor.fixture'
+import { openFirstNodeAndTeach, openKnowledgePanel } from '../helpers/knowledge-graph'
 
 test.describe('Knowledge Graph', () => {
     test.beforeEach(async ({ page }) => {
@@ -102,8 +103,7 @@ test.describe('Knowledge Graph', () => {
 
     test('T1.2 clicks a node and verifies detail panel', async ({ page }) => {
         // Open knowledge panel
-        await page.locator('.learning-companion').click()
-        await expect(page.locator('.knowledge-panel')).toBeVisible({ timeout: 8_000 })
+        await openKnowledgePanel(page)
 
         // Wait for graph nodes to render, with recovery path
         const nodes = page.locator('.vue-flow__node')
@@ -137,8 +137,7 @@ test.describe('Knowledge Graph', () => {
 
     test('T1.3 toggles mastery and updates count', async ({ page }) => {
         // Open knowledge panel
-        await page.locator('.learning-companion').click()
-        await expect(page.locator('.knowledge-panel')).toBeVisible({ timeout: 8_000 })
+        await openKnowledgePanel(page)
 
         // Wait for graph nodes, with recovery path
         const nodes = page.locator('.vue-flow__node')
@@ -182,7 +181,7 @@ test.describe('Knowledge Graph', () => {
     test('T1.4 "Teach me" triggers AI panel with preset message', async ({ page }) => {
         // Mock AI chat endpoint for SSE response
         await page.route('**/api/ai/chat', (route) => {
-            route.fulfill({
+            void route.fulfill({
                 status: 200,
                 contentType: 'text/event-stream',
                 body: [
@@ -197,8 +196,7 @@ test.describe('Knowledge Graph', () => {
         })
 
         // Open knowledge panel
-        await page.locator('.learning-companion').click()
-        await expect(page.locator('.knowledge-panel')).toBeVisible({ timeout: 8_000 })
+        await openKnowledgePanel(page)
 
         // Click first node to open detail, with recovery path
         const nodes = page.locator('.vue-flow__node')
@@ -211,14 +209,7 @@ test.describe('Knowledge Graph', () => {
             // Skip node-dependent assertions
             return
         }
-        await expect(nodes.first()).toBeVisible({ timeout: 5_000 })
-        await nodes.first().click()
-        await expect(page.locator('.knowledge-detail')).toBeVisible({ timeout: 5_000 })
-
-        // Click "让 AI 教我" button
-        const teachBtn = page.locator('.knowledge-detail__btn--ai')
-        await expect(teachBtn).toBeVisible({ timeout: 5_000 })
-        await teachBtn.click()
+        await openFirstNodeAndTeach(page)
 
         // Wait for AI panel to open
         await expect(page.locator('[data-testid="ai-chat-close"]')).toBeVisible({ timeout: 8_000 })
@@ -258,8 +249,7 @@ test.describe('Knowledge Graph', () => {
 
     test('T1.6 search filters nodes and clears to restore', async ({ page }) => {
         // Open knowledge panel
-        await page.locator('.learning-companion').click()
-        await expect(page.locator('.knowledge-panel')).toBeVisible({ timeout: 8_000 })
+        await openKnowledgePanel(page)
 
         // Wait for graph nodes, with recovery path
         const nodes = page.locator('.vue-flow__node')

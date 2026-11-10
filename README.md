@@ -2,7 +2,7 @@
 
 左侧 Monaco 编辑器编写 SQL → 右侧表格即时展示结果。在表格中编辑数据，自动反向修改 SQL 源码，两侧始终保持一致。支持 AI 辅助编写、多 Tab 隔离运行、ER 图与知识图谱导航。专为 SQL 教学场景研发。学生开浏览器即用，无需搭建本地环境；AI 对话解释 SQL 语义，充当即时辅导；知识图谱引导学习路径，避免盲目刷题。
 
-![主界面](docs/screenshots/01-editor-tables.png)
+![主界面](screenshots/01-editor-tables.png)
 
 ## 功能特性
 
@@ -17,31 +17,31 @@
 - 切换 AI 后端（DeepSeek、OpenAI 兼容、Ollama、LM Studio），对话解释 SQL 语义、分析错误原因，充当即时辅导，流式输出逐字显示。
 - 新增提供商只需实现一个接口，不影响已有代码。
 
-![AI 对话](docs/screenshots/07-ai-chat.png)
+![AI 对话](screenshots/07-ai-chat.png)
 
 ### 多 Tab 隔离 + ER 图导航
 
 - 每个浏览器 Tab 拥有独立的 SQLite 内存数据库，空闲自动回收。
 - 根据建表语句自动生成 ER 图，展示表间外键关系，点击节点即可跳转浏览对应表数据。
 
-![ER 图](docs/screenshots/02-er-diagram.png)
+![ER 图](screenshots/02-er-diagram.png)
 
 ### 数据可视化
 
 - 表格支持排序、过滤、分页，查询结果可用柱状图、折线图、饼图展示。
 - 浏览索引、视图、触发器、外键关系等数据库元数据。
 
-![图表视图](docs/screenshots/03-chart-view.png)
-![索引](docs/screenshots/04-indexes.png)
-![视图](docs/screenshots/05-views.png)
-![触发器](docs/screenshots/06-triggers.png)
+![图表视图](screenshots/03-chart-view.png)
+![索引](screenshots/04-indexes.png)
+![视图](screenshots/05-views.png)
+![触发器](screenshots/06-triggers.png)
 
 ### 结构化学习路径
 
 - 24 个 SQL 知识点按前置关系排列，学生知道从哪开始、下一步学什么，追踪每个知识点的学习进度。
 
-![知识图谱细节](docs/screenshots/08-knowledge-graph.png)
-![知识图谱](docs/screenshots/09-knowledge-graph-detail.png)
+![知识图谱细节](screenshots/08-knowledge-graph.png)
+![知识图谱](screenshots/09-knowledge-graph-detail.png)
 
 ## 关键设计决策
 
@@ -120,12 +120,16 @@
 
 使用 GSD（Get Stuff Done）工作流：research → requirements → roadmap → 每 phase `CONTEXT → RESEARCH → PLAN → 实施 → VERIFICATION → REVIEW`，带自动 code review + security audit 闭环，分支策略 `gsd/phase-{N}-{slug}`。
 
+<!--suppress MarkdownUnresolvedHeaderReference-->
+维护者从[当前焦点](docs/DEVELOPMENT.md#当前焦点)查看当前阶段、计划和阻塞项。状态以本机规划文件为准；文档中保留的阶段完成统计是历史记录。
+
 ## 技术栈
 
 | 层 | 技术 | 版本 |
 |---|------|------|
 | 前端框架 | Vue 3 (Composition API) | 3.5 |
 | 构建工具 | Vite | 8.x |
+| 类型检查 | TypeScript 7 Go 引擎 + vue-tsc（native bridge 接入 Vue 模板） | 7.0.2 / 3.3.14 |
 | 样式 | Tailwind CSS | 4.x |
 | 代码编辑器 | Monaco Editor | 0.55 |
 | UI 组件 | Reka-ui (Radix Vue) | 2.x |
@@ -133,7 +137,7 @@
 | 图表 | ECharts | 5.x |
 | AI 流式 | Vercel AI SDK | 6.x |
 | 后端框架 | Spring Boot | 4.0.6 |
-| JDK | Java 21 (Zulu) | 21 |
+| JDK | Java 25 (Zulu) | 25 |
 | 数据库 | SQLite (内存模式) | 3.51 |
 | 连接池 | HikariCP | — |
 | 响应式 | Spring WebFlux (Project Reactor) | — |
@@ -143,20 +147,23 @@
 
 ### 环境要求
 
-- **JDK 21**（推荐 Zulu JDK 21）
+- **JDK 25**（推荐 Zulu JDK 25）
 - **Node.js** 22+ (LTS)
 - **pnpm** 12.6.0
 
 ### 1. 启动后端
 
-```bash
+```pwsh
 cd sqlive-backend
 
-# Windows（指定 JDK 路径）
-set JAVA_HOME=C:\Program Files\Zulu\zulu-21
-gradlew.bat bootRun
+# Windows（pwsh，指定 JDK 路径）
+$env:JAVA_HOME = 'C:\Program Files\Zulu\zulu-25'
+.\gradlew.bat bootRun
+```
 
+```sh
 # Linux / macOS
+cd sqlive-backend
 ./gradlew bootRun
 ```
 
@@ -194,7 +201,8 @@ ai:
 
 ## 测试
 
-验证范围和 CI 说明见 [docs/TESTING.md](docs/TESTING.md)，agent 工作约定见 [docs/agents/README.md](docs/agents/README.md)。
+<!--suppress MarkdownUnresolvedHeaderReference-->
+验证范围和 CI 说明见 [docs/TESTING.md](docs/TESTING.md)，开发与维护入口见 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#当前焦点)。
 
 ```bash
 # 前端单元测试
@@ -214,12 +222,12 @@ cd sqlive-backend
 ```bash
 cd sqlive-backend
 ./gradlew bootJar      # 产物在 build/libs/，含前端静态资源
-java -jar build/libs/*.jar
+java --enable-native-access=ALL-UNNAMED -jar build/libs/*.jar
 ```
 
 ### Docker
 
-根目录 `Dockerfile` 多阶段构建（前端 `dist/` → Spring Boot `static/` → `eclipse-temurin:21-jre` 运行 jar），无需本地 JDK/Node：
+根目录 `Dockerfile` 多阶段构建（前端 `dist/` → Java 25 + Gradle wrapper 构建 Spring Boot `static/` → `eclipse-temurin:25-jre` 运行 jar），无需本地 JDK/Node：
 
 ```bash
 docker build -t sqlive .

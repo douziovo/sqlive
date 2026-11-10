@@ -1,4 +1,5 @@
 import { expect, gotoApp, test } from '../fixtures/sql-editor.fixture'
+import { openErDiagram } from '../helpers/er-diagram'
 
 test.describe('ER Diagram', () => {
     test.beforeEach(async ({ page }) => {
@@ -7,13 +8,7 @@ test.describe('ER Diagram', () => {
     })
 
     test('switches to ER diagram tab and renders nodes', async ({ page }) => {
-        await page.locator('button:has-text("ER 图")').click()
-        // Wait for VueFlow container to render
-        await expect(page.locator('.vue-flow')).toBeVisible({ timeout: 5_000 })
-
-        // VueFlow container should be visible
-        const erContainer = page.locator('.vue-flow')
-        await expect(erContainer).toBeVisible({ timeout: 5_000 })
+        await openErDiagram(page)
 
         // Table nodes should appear
         await expect(page.locator('text=departments').first()).toBeVisible()
@@ -21,9 +16,7 @@ test.describe('ER Diagram', () => {
     })
 
     test('shows PK and FK badges on table nodes', async ({ page }) => {
-        await page.locator('button:has-text("ER 图")').click()
-        // Wait for VueFlow container to render
-        await expect(page.locator('.vue-flow')).toBeVisible({ timeout: 5_000 })
+        await openErDiagram(page)
 
         // PK badges should exist
         const pkBadge = page.locator('text=主键')
@@ -35,9 +28,7 @@ test.describe('ER Diagram', () => {
     })
 
     test('renders foreign key edges between related tables', async ({ page }) => {
-        await page.locator('button:has-text("ER 图")').click()
-        // Wait for VueFlow container to render
-        await expect(page.locator('.vue-flow')).toBeVisible({ timeout: 5_000 })
+        await openErDiagram(page)
 
         // VueFlow edges should be present (smoothstep paths)
         const edges = page.locator('.vue-flow__edge')
@@ -46,9 +37,7 @@ test.describe('ER Diagram', () => {
     })
 
     test('search bar filters nodes', async ({ page }) => {
-        await page.locator('button:has-text("ER 图")').click()
-        // Wait for VueFlow container to render
-        await expect(page.locator('.vue-flow')).toBeVisible({ timeout: 5_000 })
+        await openErDiagram(page)
 
         // Open search bar with Ctrl+F
         const erWrapper = page.locator('.vue-flow').first()
@@ -89,12 +78,7 @@ test.describe('ER Diagram', () => {
     })
 
     test('zoom in and out via controls or scroll wheel', async ({ page }) => {
-        await page.locator('button:has-text("ER 图")').click()
-        // Wait for VueFlow container to render
-        await expect(page.locator('.vue-flow')).toBeVisible({ timeout: 5_000 })
-
-        const erContainer = page.locator('.vue-flow')
-        await expect(erContainer).toBeVisible({ timeout: 5_000 })
+        const erContainer = await openErDiagram(page)
 
         // Zoom in via scroll wheel (Ctrl+scroll)
         await erContainer.hover()
@@ -108,9 +92,7 @@ test.describe('ER Diagram', () => {
     })
 
     test('clicking a node highlights connected edges', async ({ page }) => {
-        await page.locator('button:has-text("ER 图")').click()
-        // Wait for VueFlow container to render
-        await expect(page.locator('.vue-flow')).toBeVisible({ timeout: 5_000 })
+        await openErDiagram(page)
 
         // Click on a table node
         const nodes = page.locator('.vue-flow__node')
@@ -133,12 +115,7 @@ test.describe('ER Diagram', () => {
     })
 
     test('minimap or controls are visible in ER view', async ({ page }) => {
-        await page.locator('button:has-text("ER 图")').click()
-        // Wait for VueFlow container to render
-        await expect(page.locator('.vue-flow')).toBeVisible({ timeout: 5_000 })
-
-        const erContainer = page.locator('.vue-flow')
-        await expect(erContainer).toBeVisible({ timeout: 5_000 })
+        await openErDiagram(page)
 
         // VueFlow controls/minimap may not be configured — verify ER renders at minimum
         await expect(page.locator('text=departments').first()).toBeVisible()

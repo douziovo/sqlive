@@ -2,7 +2,7 @@
     <!-- D-13: Ctrl+K global + `/` docs-scoped + Esc closes dropdown -->
     <div class="relative">
         <Search
-            class="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none"
+            class="pointer-events-none absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
         />
         <input
             data-testid="docs-search-input"
@@ -15,19 +15,19 @@
             :data-index-ready="indexReady ? 'true' : 'building'"
             :placeholder="indexError ? '搜索暂不可用' : '搜索文档... (Ctrl+K)'"
             :aria-label="'搜索文档'"
-            class="w-full pl-8 pr-3 py-2 text-sm bg-background border border-border rounded-md outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+            class="w-full rounded-md border border-border bg-background py-2 pr-3 pl-8 text-sm outline-none placeholder:text-muted-foreground focus:border-primary/60 focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
         />
         <!-- Dropdown results: shown when query produces matches -->
         <div
             v-if="results.length > 0"
             data-testid="search-results"
-            class="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg max-h-80 overflow-y-auto z-40"
+            class="absolute top-full right-0 left-0 z-40 mt-1 max-h-80 overflow-y-auto rounded-md border border-border bg-card shadow-lg"
         >
             <button
                 v-for="result in results"
                 :key="result.slug"
                 @click="handleOpen(result.slug)"
-                class="w-full text-left px-3 py-2 text-sm hover:bg-primary/10 transition-colors flex items-center justify-between gap-2"
+                class="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-primary/10"
             >
                 <span>{{ result.title }}</span>
                 <span class="text-xs text-muted-foreground">{{ result.category }}</span>
@@ -37,9 +37,10 @@
 </template>
 
 <script setup lang="ts">
+import { Search } from '@lucide/vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Search } from '@lucide/vue'
+
 import { useDocsSearch } from '@/composables/useDocsSearch'
 
 const route = useRoute()
@@ -66,6 +67,8 @@ function onInputFocus() {
 // Click result → navigate. NavigationFailure silenced per Pitfall 6.
 function handleOpen(slug: string) {
     router.push('/docs/' + slug).catch(() => {
+        // vue-router 的 NavigationFailureType 中该值官方拼写即为 cancelled，此处指代该 API 值，保留原词
+        //noinspection GrazieStyle
         // NavigationFailure (aborted/duplicated/cancelled) — silent per spec §4.6
     })
     query.value = ''

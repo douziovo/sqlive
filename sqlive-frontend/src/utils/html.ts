@@ -1,10 +1,10 @@
 export function escapeHtml(str: string): string {
     return str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;')
 }
 
 export function highlightMatch(
@@ -14,9 +14,9 @@ export function highlightMatch(
 ): string {
     if (!query?.trim()) return escapeHtml(text)
     const escaped = escapeHtml(text)
-    const escapedQuery = escapeHtml(query.trim()).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    return escaped.replace(
-        new RegExp(`(${escapedQuery})`, 'gi'),
+    const escapedQuery = escapeHtml(query.trim()).replaceAll(/[.*+?^${}()|[\]\\]/gu, '\\$&')
+    return escaped.replaceAll(
+        new RegExp(`(${escapedQuery})`, 'giu'),
         `<mark class="${className}">$1</mark>`
     )
 }

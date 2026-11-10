@@ -1,7 +1,7 @@
 import { expect, test } from '../fixtures/sql-editor.fixture'
 
 /**
- * Docs Mobile Responsive E2E (D-12 — sidebar hidden on mobile, hamburger opens drawer).
+ * Docs Mobile Responsive E2E (— sidebar hidden on mobile, hamburger opens drawer).
  *
  * Verifies:
  * - At 375px viewport, sidebar is hidden (CSS-driven md:flex/md:hidden).
@@ -13,7 +13,7 @@ test.describe('Docs Mobile Responsive', () => {
     test('mobile viewport hides sidebar, hamburger opens drawer, navigate auto-closes', async ({
         page
     }) => {
-        // D-12: 375px viewport → sidebar hidden, hamburger visible
+        // 375px viewport → sidebar hidden, hamburger visible
         await page.setViewportSize({ width: 375, height: 667 })
         await page.goto('/docs/intro')
         await expect(page.locator('article h1').first()).toBeVisible({ timeout: 10_000 })
@@ -24,7 +24,7 @@ test.describe('Docs Mobile Responsive', () => {
         const desktopSidebar = page.locator('nav[aria-label="文档导航"]').first()
         await expect(desktopSidebar).not.toBeVisible()
 
-        // Click hamburger (mobile-menu-btn from DocsLayout Plan 03)
+        // Click hamburger (mobile-menu-btn from DocsLayout )
         const hamburger = page.locator('[data-testid="mobile-menu-btn"]')
         await hamburger.click()
 
@@ -35,13 +35,13 @@ test.describe('Docs Mobile Responsive', () => {
         // Click an article → drawer auto-closes (@navigate handler)
         const editorNav = drawerSidebar.locator('[data-testid="nav-usage-editor"]')
         await editorNav.click()
-        await expect(page).toHaveURL(/\/docs\/usage\/editor/)
+        await expect(page).toHaveURL(/\/docs\/usage\/editor/u)
         // Drawer auto-closes after navigation
         await expect(drawerSidebar).not.toBeVisible({ timeout: 5_000 })
     })
 
     test('document.title changes per route', async ({ page }) => {
-        // D-12: document.title = '{H1} · sqlive docs' per route
+        // document.title = '{H1} · sqlive docs' per route
         await page.goto('/docs/intro')
         await expect(page.locator('article h1').first()).toBeVisible({ timeout: 10_000 })
         const introTitle = await page.title()

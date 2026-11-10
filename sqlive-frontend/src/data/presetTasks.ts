@@ -1,5 +1,6 @@
-import type { KnowledgeTask, TaskSubstep } from '@/composables/useKnowledgeTasks'
 import { nanoid } from 'nanoid'
+
+import type { KnowledgeTask, TaskSubstep } from '@/composables/useKnowledgeTasks'
 
 // ── Preset substep helper ─────────────────────────────────────────
 // Seeds substeps so the first one is active, the rest are locked.
@@ -31,7 +32,7 @@ export interface PresetTaskSeed {
 function daysFromNow(days: number): string {
     const d = new Date()
     d.setDate(d.getDate() + days)
-    // D-13: toLocaleDateString('en-CA') returns 'YYYY-MM-DD' in local time.
+    // toLocaleDateString('en-CA') returns 'YYYY-MM-DD' in local time.
     // Previously used toISOString().slice(0, 10) which returns UTC date —
     // off by 1 day in UTC+ timezones near midnight (e.g., UTC+8 23:00 local
     // on June 25 + 1 day → June 26 23:00 local → toISOString returns June 27).

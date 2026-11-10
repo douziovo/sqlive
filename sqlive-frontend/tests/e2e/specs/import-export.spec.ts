@@ -1,4 +1,9 @@
+import { readFile } from 'node:fs/promises'
+
+import type { Download } from '@playwright/test'
+
 import { expect, gotoApp, test } from '../fixtures/sql-editor.fixture'
+import { openNewTab } from '../helpers/tabs'
 
 test.describe('Import / Export', () => {
     test.beforeEach(async ({ page }) => {
@@ -6,25 +11,35 @@ test.describe('Import / Export', () => {
         await expect(page.locator('#table-departments')).toBeVisible({ timeout: 15_000 })
     })
 
-    test('exports current tab as .sql file', async ({ page }) => {
+    test('exports current tab as .sql file', async ({ page, sqlEditor }) => {
         // Right-click on editor to open context menu
-        await page.locator('.monaco-editor').first().click({ button: 'right' })
+        await sqlEditor.openContextMenu()
         await expect(page.locator('text=导出当前标签页')).toBeVisible({ timeout: 5_000 })
 
-        // App uses Blob URL + a.click() — Playwright can't intercept.
-        // Verify clicking export doesn't crash.
-        await page.locator('text=导出当前标签页').click()
-        await page.waitForTimeout(500)
+        const downloadPromise = page.waitForEvent('download')
+        await sqlEditor.clickContextMenuAction('导出当前标签页')
+        const download = await downloadPromise
+        expect(download.suggestedFilename()).toMatch(/\.sql$/u)
+        const filePath = await download.path()
+        expect(filePath).not.toBeNull()
+        expect(await readFile(filePath, 'utf8')).toContain('CREATE TABLE')
         await expect(page.locator('.monaco-editor')).toBeVisible()
     })
 
-    test('exports all tabs as multiple files', async ({ page }) => {
-        await page.locator('.monaco-editor').first().click({ button: 'right' })
+    test('exports all tabs as multiple files', async ({ page, sqlEditor }) => {
+        await openNewTab(page)
+        const downloads: Download[] = []
+        page.on('download', (download) => downloads.push(download))
+        await sqlEditor.openContextMenu()
         await expect(page.locator('text=导出全部标签页')).toBeVisible({ timeout: 5_000 })
 
-        // App uses Blob URL + a.click() — Playwright can't intercept.
-        await page.locator('text=导出全部标签页').click()
-        await page.waitForTimeout(500)
+        await sqlEditor.clickContextMenuAction('导出全部标签页')
+        await expect.poll(() => downloads.length).toBe(2)
+        expect(new Set(downloads.map((download) => download.suggestedFilename())).size).toBe(2)
+        for (const download of downloads) {
+            expect(download.suggestedFilename()).toMatch(/\.sql$/u)
+            expect(await download.failure()).toBeNull()
+        }
         await expect(page.locator('.monaco-editor')).toBeVisible()
     })
 
@@ -65,7 +80,7 @@ test.describe('Import / Export', () => {
 
         // Monaco context menu may not always show custom actions in test
         const importOption = page.locator('text=导入 .sql 文件')
-        const importVisible = await importOption.isVisible({ timeout: 3_000 }).catch(() => false)
+        const importVisible = await importOption.isVisible().catch(() => false)
 
         if (importVisible) {
             // Set up file chooser interception

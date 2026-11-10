@@ -1,5 +1,5 @@
 /**
- * Sidebar navigation data source (D-01, D-05).
+ * Sidebar navigation data source.
  *
  * Adding an article = drop a .md file under src/content/docs/ + add one entry here.
  * Zero component changes needed.

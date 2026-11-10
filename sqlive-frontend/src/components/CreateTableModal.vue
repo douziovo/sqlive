@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+
 import { toSqlLiteral } from '../utils/sql'
+import { quoteSqlIdentifier } from '../utils/sqlIdentifiers'
 import { Dialog, DialogContent } from './ui/dialog'
 
 const props = defineProps<{ open: boolean }>()
@@ -35,18 +37,18 @@ const isValid = computed(() => {
 const previewSql = computed(() => {
     if (!tableName.value) return ''
 
-    let sql = `CREATE TABLE ${tableName.value}(\n`
+    let sql = `CREATE TABLE ${quoteSqlIdentifier(tableName.value)}(\n`
 
     const validRows = rows.value.filter((r) => r.name && r.type)
     if (validRows.length === 0) return ''
 
-    const defs = validRows.map((r) => `  ${r.name} ${r.type}`)
+    const defs = validRows.map((r) => `  ${quoteSqlIdentifier(r.name)} ${r.type}`)
     sql += defs.join(',\n')
     sql += `\n);`
 
     const validValues = rows.value.filter((r) => r.name && r.value)
     if (validValues.length > 0) {
-        sql += `\n\nINSERT INTO ${tableName.value} VALUES (`
+        sql += `\n\nINSERT INTO ${quoteSqlIdentifier(tableName.value)} VALUES (`
         const vals = rows.value.map((r) => {
             const v = r.value.trim()
             if (!v) return 'NULL'
@@ -64,9 +66,9 @@ const close = () => {
 }
 
 const submit = () => {
-    const columns = rows.value.map((r) => `${r.name} ${r.type}`)
+    const columns = rows.value.map((r) => `${quoteSqlIdentifier(r.name)} ${r.type}`)
 
-    const rowData: any = {}
+    const rowData: Record<string, string> = {}
     rows.value.forEach((r) => {
         if (r.name) rowData[r.name] = r.value
     })
@@ -85,13 +87,13 @@ const submit = () => {
     <Dialog :open="open" @update:open="emit('update:open', $event)">
         <DialogContent>
             <!-- 顶部标题 -->
-            <div class="px-6 py-4 border-b bg-muted flex justify-between items-center">
+            <div class="flex items-center justify-between border-b bg-muted px-6 py-4">
                 <h3 class="text-xl font-semibold text-foreground">&#x1F6E0;&#xFE0F; 创建新表格</h3>
                 <button
                     @click="close"
-                    class="text-muted-foreground/70 hover:text-muted-foreground transition-colors"
+                    class="text-muted-foreground/70 transition-colors hover:text-muted-foreground"
                 >
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path
                             stroke-linecap="round"
                             stroke-linejoin="round"
@@ -102,28 +104,28 @@ const submit = () => {
                 </button>
             </div>
 
-            <div class="p-6 overflow-y-auto custom-scrollbar">
+            <div class="custom-scrollbar overflow-y-auto p-6">
                 <!-- 表格名称 -->
                 <div class="mb-6 text-center">
                     <label
-                        class="block text-sm font-semibold text-secondary-foreground mb-2 uppercase tracking-wide"
+                        class="mb-2 block text-sm font-semibold tracking-wide text-secondary-foreground uppercase"
                         >表格名称</label
                     >
                     <input
                         v-model="tableName"
                         type="text"
-                        class="w-1/2 text-center text-lg font-semibold border-b-2 border-primary focus:outline-none focus:border-primary py-1 transition-colors placeholder-muted-foreground/50"
+                        class="w-1/2 border-b-2 border-primary py-1 text-center text-lg font-semibold placeholder-muted-foreground/50 transition-colors focus:border-primary focus:outline-none"
                         placeholder="请输入表名 (如: users)"
                     />
                 </div>
 
                 <div class="mb-6">
                     <div
-                        class="grid grid-cols-[1fr_1fr_1fr_40px] gap-3 mb-2 text-sm font-semibold text-muted-foreground text-center items-end"
+                        class="mb-2 grid grid-cols-[1fr_1fr_1fr_40px] items-end gap-3 text-center text-sm font-semibold text-muted-foreground"
                     >
-                        <div class="pb-1 text-left pl-1">数据类型</div>
-                        <div class="pb-1 text-left pl-1">字段名</div>
-                        <div class="pb-1 text-left pl-1">初始值 (可选)</div>
+                        <div class="pb-1 pl-1 text-left">数据类型</div>
+                        <div class="pb-1 pl-1 text-left">字段名</div>
+                        <div class="pb-1 pl-1 text-left">初始值 (可选)</div>
                         <div></div>
                     </div>
 
@@ -131,33 +133,33 @@ const submit = () => {
                         <div
                             v-for="(row, index) in rows"
                             :key="index"
-                            class="grid grid-cols-[1fr_1fr_1fr_40px] gap-3 items-center group"
+                            class="group grid grid-cols-[1fr_1fr_1fr_40px] items-center gap-3"
                         >
                             <input
                                 v-model="row.type"
-                                class="border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none font-mono text-secondary-foreground shadow-sm"
+                                class="rounded border px-3 py-2 font-mono text-sm text-secondary-foreground shadow-sm outline-none focus:ring-2 focus:ring-primary"
                                 placeholder="如: int"
                             />
 
                             <input
                                 v-model="row.name"
-                                class="border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none font-semibold text-foreground shadow-sm"
+                                class="rounded border px-3 py-2 text-sm font-semibold text-foreground shadow-sm outline-none focus:ring-2 focus:ring-primary"
                                 placeholder="如: id"
                             />
 
                             <input
                                 v-model="row.value"
-                                class="border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none text-muted-foreground bg-muted shadow-sm"
+                                class="rounded border bg-muted px-3 py-2 text-sm text-muted-foreground shadow-sm outline-none focus:ring-2 focus:ring-primary"
                                 placeholder="空"
                             />
 
                             <button
                                 @click="removeRow(index)"
-                                class="w-9 h-9 flex items-center justify-center rounded-lg text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 transition-colors border border-transparent hover:border-destructive/20"
+                                class="flex h-9 w-9 items-center justify-center rounded-lg border border-transparent text-muted-foreground/70 transition-colors hover:border-destructive/20 hover:bg-destructive/10 hover:text-destructive"
                                 title="删除此行"
                             >
                                 <svg
-                                    class="w-5 h-5"
+                                    class="h-5 w-5"
                                     fill="none"
                                     stroke="currentColor"
                                     viewBox="0 0 24 24"
@@ -174,10 +176,10 @@ const submit = () => {
 
                         <button
                             @click="addRow"
-                            class="w-full py-2 border-2 border-dashed border-border rounded-lg text-muted-foreground hover:border-primary/60 hover:text-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-2 font-semibold mt-2"
+                            class="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border py-2 font-semibold text-muted-foreground transition-colors hover:border-primary/60 hover:bg-primary/10 hover:text-primary"
                         >
                             <svg
-                                class="w-5 h-5"
+                                class="h-5 w-5"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -196,13 +198,13 @@ const submit = () => {
 
                 <div class="mb-2">
                     <label
-                        class="block text-sm font-semibold text-secondary-foreground mb-2 text-center"
+                        class="mb-2 block text-center text-sm font-semibold text-secondary-foreground"
                         >SQL 预览</label
                     >
                     <div
-                        class="bg-muted border border-border rounded-lg p-4 font-mono text-sm text-foreground overflow-x-auto shadow-inner relative group min-h-[80px] flex items-center justify-center"
+                        class="group relative flex min-h-[80px] items-center justify-center overflow-x-auto rounded-lg border border-border bg-muted p-4 font-mono text-sm text-foreground shadow-inner"
                     >
-                        <pre v-if="previewSql" class="whitespace-pre-wrap w-full text-left">{{
+                        <pre v-if="previewSql" class="w-full text-left whitespace-pre-wrap">{{
                             previewSql
                         }}</pre>
                         <span v-else class="text-muted-foreground/70 italic">等待输入...</span>
@@ -210,16 +212,16 @@ const submit = () => {
                 </div>
             </div>
 
-            <div class="p-6 bg-muted border-t flex justify-end gap-3">
+            <div class="flex justify-end gap-3 border-t bg-muted p-6">
                 <button
                     @click="close"
-                    class="px-5 py-3 rounded-lg border border-border text-secondary-foreground hover:bg-secondary font-medium transition-colors"
+                    class="rounded-lg border border-border px-5 py-3 font-medium text-secondary-foreground transition-colors hover:bg-secondary"
                 >
                     取消
                 </button>
                 <button
                     @click="submit"
-                    class="px-5 py-3 rounded-lg bg-primary text-white hover:bg-primary/90 shadow-lg hover:shadow-primary/30 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="rounded-lg bg-primary px-5 py-3 font-medium text-white shadow-lg transition-colors hover:bg-primary/90 hover:shadow-primary/30 disabled:cursor-not-allowed disabled:opacity-50"
                     :disabled="!isValid"
                 >
                     立即创建
@@ -233,9 +235,11 @@ const submit = () => {
 .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-track {
     background: transparent;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb {
     background-color: #cbd5e1;
     border-radius: 3px;

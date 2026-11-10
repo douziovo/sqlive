@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import { extractH1, pathToSlug, stripMarkdown } from '@/utils/markdown'
 
 describe('extractH1', () => {

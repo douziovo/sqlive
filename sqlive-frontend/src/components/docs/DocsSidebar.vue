@@ -1,15 +1,15 @@
 <template>
     <nav
-        class="w-[240px] shrink-0 border-r border-border bg-sidebar flex flex-col"
+        class="flex w-[240px] shrink-0 flex-col border-r border-border bg-sidebar"
         aria-label="文档导航"
     >
-        <div class="p-2 border-b border-border">
+        <div class="border-b border-border p-2">
             <DocsSearchBox />
         </div>
-        <div class="flex-1 overflow-auto p-2 space-y-4">
+        <div class="flex-1 space-y-4 overflow-auto p-2">
             <ul v-for="group in groupedNav" :key="group.category" class="space-y-0.5">
                 <li
-                    class="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide"
+                    class="px-3 py-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase"
                 >
                     {{ group.label }}
                 </li>
@@ -18,9 +18,9 @@
                         :data-testid="`nav-${item.slug.replace('/', '-')}`"
                         @click="handleNavigate(item.path)"
                         :class="[
-                            'w-full text-left px-3 py-2 text-sm rounded-md transition-colors',
+                            'w-full rounded-md px-3 py-2 text-left text-sm transition-colors',
                             route.path === item.path
-                                ? 'bg-primary/10 text-primary font-semibold'
+                                ? 'bg-primary/10 font-semibold text-primary'
                                 : 'text-foreground hover:bg-secondary'
                         ]"
                         :aria-current="route.path === item.path ? 'page' : undefined"
@@ -36,7 +36,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+
 import { navigation, type NavCategory } from '@/content/docs/navigation'
+
 import DocsSearchBox from './DocsSearchBox.vue'
 
 // D-05: data-driven sidebar. Adding an article = drop .md + add navigation.ts entry.
@@ -67,6 +69,8 @@ const router = useRouter()
 const emit = defineEmits<{ navigate: [path: string] }>()
 
 // Handler function (NOT inline @click="$emit" — per CLAUDE.md <script setup> gotcha).
+// vue-router 的 NavigationFailureType 中该值官方拼写即为 cancelled，此处指代该 API 值，保留原词
+//noinspection GrazieStyle
 // NavigationFailure silenced per Pitfall 6 (aborted/duplicated/cancelled are normal).
 function handleNavigate(path: string) {
     router.push(path).catch(() => {})

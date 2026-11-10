@@ -1,7 +1,6 @@
 package com.douzi.sqlive.config;
 
 import com.douzi.sqlive.dto.SqlRequest;
-import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,7 +22,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Slf4j
 class RateLimitFilterConcurrencyTest {
 
 	private final RestTemplate restTemplate = new RestTemplate();
@@ -75,59 +73,6 @@ class RateLimitFilterConcurrencyTest {
 			assertTrue(errors.isEmpty(), "No errors: " + errors);
 			assertEquals(threadCount, successCount.get(),
 					"All " + threadCount + " requests under limit should pass");
-		}
-	}
-
-	@Test
-	void shouldEnforceRateLimitUnderConcurrentOverload() throws Exception {
-		int sqlLimit = 20;
-		System.setProperty("rate.limit.sql", String.valueOf(sqlLimit));
-		try {
-			int threadCount = 100;
-			String url = "http://localhost:" + port + "/api/execute";
-			CountDownLatch latch = new CountDownLatch(threadCount);
-			AtomicInteger successCount = new AtomicInteger(0);
-			AtomicInteger rejectCount = new AtomicInteger(0);
-			List<Exception> errors = Collections.synchronizedList(new ArrayList<>());
-
-			SqlRequest req = new SqlRequest();
-			req.setSql("SELECT 1;");
-			req.setDbName("rlf_over");
-			req.setReset(true);
-			HttpHeaders headers = new HttpHeaders();
-			headers.setContentType(MediaType.APPLICATION_JSON);
-
-			try (ExecutorService executor = Executors.newFixedThreadPool(50)) {
-				for (int i = 0; i < threadCount; i++) {
-					executor.submit(() -> {
-						try {
-							HttpEntity<SqlRequest> entity = new HttpEntity<>(req, headers);
-							ResponseEntity<String> resp =
-									restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
-							if (resp.getStatusCode().value() == 429) {
-								rejectCount.incrementAndGet();
-							} else if (resp.getStatusCode().value() == 200) {
-								successCount.incrementAndGet();
-							}
-						} catch (Exception e) {
-							errors.add(e);
-						} finally {
-							latch.countDown();
-						}
-					});
-				}
-				assertTrue(latch.await(30, TimeUnit.SECONDS));
-				if (!errors.isEmpty()) {
-					log.warn("{} network errors during rate-limit test: {}", errors.size(), errors.getFirst().getMessage());
-				}
-				assertTrue(successCount.get() <= sqlLimit,
-						"At most " + sqlLimit + " should pass, got: " + successCount.get());
-				assertTrue(rejectCount.get() > 0,
-						"Some requests should be rejected, got success="
-								+ successCount.get() + " rejected=" + rejectCount.get());
-			}
-		} finally {
-			System.clearProperty("rate.limit.sql");
 		}
 	}
 

@@ -2,6 +2,7 @@
 import { reactiveOmit } from '@vueuse/core'
 import type { HTMLAttributes } from 'vue'
 import { StickToBottom } from 'vue-stick-to-bottom'
+
 import { cn } from '@/lib/utils'
 
 interface Props {

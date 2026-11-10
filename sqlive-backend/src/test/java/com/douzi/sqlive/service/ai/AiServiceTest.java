@@ -192,7 +192,7 @@ class AiServiceTest {
 		assertEquals("error", chunks.getFirst().getType());
 	}
 
-	// ── streamChat error sanitization (D-R0-001 / SEC-02) ───
+	// ── streamChat error sanitization (/ SEC-02) ───
 
 	@Test
 	void streamChatErrorSanitizesAuthorizationHeader() {

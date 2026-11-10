@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
+
 import Textarea from '@/components/ui/textarea/Textarea.vue'
 
 describe('Textarea', () => {

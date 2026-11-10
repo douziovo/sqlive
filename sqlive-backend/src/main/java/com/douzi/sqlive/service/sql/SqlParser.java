@@ -12,12 +12,12 @@ import java.util.List;
  * <ul>
  *   <li>{@code endPos} = cursor position <b>after</b> the trailing semicolon (i.e. {@code i} after {@code i++; break;})</li>
  *   <li>All offsets are <b>UTF-16 code unit indices</b>, matching JS String.prototype.substring</li>
- *   <li>Single-quote {@code ''} and double-quote {@code ""} escapes are <b>asymmetric</b>:
- *       single-quote supports backslash escape ({@code E'\'}}, PostgreSQL-compat),
- *       double-quote does not</li>
+ *   <li>SQLite quotes escape by doubling the delimiter; backslashes are ordinary characters.
+ *       Square-bracket identifiers close at the first {@code ]}.</li>
  * </ul>
  *
- * <p>Depth tracking: {@code beginDepth} (BEGIN/END), {@code caseDepth} (CASE/END).
+ * <p>Depth tracking: {@code beginDepth} (CREATE TRIGGER bodies only), {@code caseDepth} (CASE/END).
+ * Transaction BEGIN/COMMIT/ROLLBACK/END remain separate executable statements.
  * {@code END} resolves to CASE first when {@code caseDepth > 0}.
  */
 @Component
@@ -30,144 +30,209 @@ public class SqlParser {
 	public List<SqlStatement> parseStatementsPrecise(String script) {
 		List<SqlStatement> list = new ArrayList<>();
 		int len = script.length();
-		int i = 0;
-		int line = 1;
+		Scanner sc = new Scanner(script);
 
-		while (i < len) {
+		while (sc.i < len) {
 			// 1. 跳过语句之间的空白和注释，并准确累加行号
-			int prevI = i;
-			i = skipWhitespaceAndComments(script, i);
-			while (prevI < i) {
-				if (script.charAt(prevI) == '\n') line++;
+			int prevI = sc.i;
+			sc.i = skipWhitespaceAndComments(script, sc.i);
+			while (prevI < sc.i) {
+				if (script.charAt(prevI) == '\n') sc.line++;
 				prevI++;
 			}
-			if (i >= len) break;
+			if (sc.i >= len) break;
 
-			int startLine = line;
-			int start = i;
-
-			boolean inSingleQuote = false; // 判定 '字符串'
-			boolean inDoubleQuote = false; // 判定 "标识符"（如列名、表名）
-			int beginDepth = 0;
-			int caseDepth = 0;
+			int startLine = sc.line;
+			int start = sc.i;
+			sc.inSingleQuote = false;
+			sc.inDoubleQuote = false;
+			sc.identifierQuote = 0;
+			sc.beginDepth = 0;
+			sc.caseDepth = 0;
+			sc.triggerStatement = isTriggerStatement(script, start);
 
 			// 2. 进入语句内部的动态扫描
-			while (i < len) {
-				char c = script.charAt(i);
+			scanStatementBody(sc, start);
 
-				// 随时记录换行
-				if (c == '\n') {
-					line++;
-				}
-
-				// 处理双引号标识符 (PostgreSQL 里的 "column_name")
-				if (inDoubleQuote) {
-					if (c == '"') {
-						// 标准 SQL 转义：双双引号表示一个双引号 ""
-						if (i + 1 < len && script.charAt(i + 1) == '"') {
-							i++;
-						} else {
-							inDoubleQuote = false;
-						}
-					}
-					i++;
-					continue;
-				}
-
-				// 处理单引号字符串
-				if (inSingleQuote) {
-					if (c == '\'') {
-						// 标准 SQL 转义：双单引号表示一个单引号 ''
-						if (i + 1 < len && script.charAt(i + 1) == '\'') {
-							i++;
-						} else {
-							inSingleQuote = false;
-						}
-					} else if (c == '\\' && i + 1 < len) {
-						// 兼容 PostgreSQL 允许的反斜杠转义（如 E'abc\'def'）
-						i++;
-					}
-					i++;
-					continue;
-				}
-
-				// 处理语句内部的【单行注释】
-				if (c == '-' && i + 1 < len && script.charAt(i + 1) == '-') {
-					int nextLine = script.indexOf('\n', i);
-					if (nextLine == -1) {
-						i = len;
-					} else {
-						i = nextLine; // 让外层循环在相遇 '\n' 时正确累加行号
-					}
-					continue;
-				}
-
-				// 处理语句内部的【块注释】
-				if (c == '/' && i + 1 < len && script.charAt(i + 1) == '*') {
-					int endComment = script.indexOf("*/", i);
-					int commentStart = i;
-					if (endComment == -1) {
-						i = len;
-					} else {
-						i = endComment + 2;
-					}
-					// 必须手动扫描并累加块注释内部包含的换行符
-					for (int j = commentStart; j < i; j++) {
-						if (script.charAt(j) == '\n') line++;
-					}
-					continue;
-				}
-
-				// 检测是否进入字符串或标识符
-				if (c == '\'') {
-					inSingleQuote = true;
-					i++;
-					continue;
-				}
-				if (c == '"') {
-					inDoubleQuote = true;
-					i++;
-					continue;
-				}
-
-				// 严格的双向词边界关键字匹配
-				if (isKeyword(script, i, start, "CASE")) {
-					caseDepth++;
-					i += 4;
-					continue;
-				}
-				if (isKeyword(script, i, start, "BEGIN")) {
-					beginDepth++;
-					i += 5;
-					continue;
-				}
-				if (isKeyword(script, i, start, "END")) {
-					// END ambiguity: prefer CASE/END closure (caseDepth > 0) over BEGIN/END closure.
-					// Rationale: CASE always appears inside expression context; BEGIN is statement-level.
-					if (caseDepth > 0) {
-						caseDepth--;
-					} else {
-						beginDepth = Math.max(0, beginDepth - 1);
-					}
-					i += 3;
-					continue;
-				}
-
-				// 语句切分终点：非字符串、非注释、深度为0的分号
-				if (c == ';' && beginDepth == 0 && caseDepth == 0) {
-					i++; // 吃掉这个分号
-					break;
-				}
-
-				i++;
-			}
-
-			String sql = script.substring(start, i);
+			String sql = script.substring(start, sc.i);
 			if (!sql.trim().isEmpty()) {
-				list.add(new SqlStatement(sql, startLine, start, i));
+				list.add(new SqlStatement(sql, startLine, start, sc.i));
 			}
 		}
 		return list;
+	}
+
+	// 语句内部的主扫描循环：分派给引号扫描、注释跳过、关键字深度跟踪等辅助方法
+	private void scanStatementBody(Scanner sc, int statementStart) {
+		String script = sc.script;
+		int len = script.length();
+		while (sc.i < len) {
+			char c = script.charAt(sc.i);
+
+			// 随时记录换行
+			if (c == '\n') {
+				sc.line++;
+			}
+
+			if (sc.inDoubleQuote) {
+				scanDoubleQuotedIdentifier(sc);
+				continue;
+			}
+			if (sc.inSingleQuote) {
+				scanSingleQuotedString(sc);
+				continue;
+			}
+			if (sc.identifierQuote != 0) {
+				if (c == sc.identifierQuote) {
+					if (c == '`' && sc.i + 1 < len && script.charAt(sc.i + 1) == '`') sc.i++;
+					else sc.identifierQuote = 0;
+				}
+				sc.i++;
+				continue;
+			}
+			if (isLineCommentStart(script, sc.i)) {
+				skipLineComment(sc);
+				continue;
+			}
+			if (isBlockCommentStart(script, sc.i)) {
+				skipBlockComment(sc);
+				continue;
+			}
+			if (c == '\'') {
+				sc.inSingleQuote = true;
+				sc.i++;
+				continue;
+			}
+			if (c == '"') {
+				sc.inDoubleQuote = true;
+				sc.i++;
+				continue;
+			}
+			if (c == '`' || c == '[') {
+				sc.identifierQuote = c == '[' ? ']' : '`';
+				sc.i++;
+				continue;
+			}
+			if (advanceKeyword(sc, statementStart)) {
+				continue;
+			}
+			// 语句切分终点：非字符串、非注释、深度为0的分号
+			if (c == ';' && sc.beginDepth == 0 && sc.caseDepth == 0) {
+				sc.i++; // 吃掉这个分号
+				break;
+			}
+			sc.i++;
+		}
+	}
+
+	// 处理 SQLite 双引号标识符
+	private void scanDoubleQuotedIdentifier(Scanner sc) {
+		String script = sc.script;
+		if (script.charAt(sc.i) == '"') {
+			// 标准 SQL 转义：双双引号表示一个双引号 ""
+			if (sc.i + 1 < script.length() && script.charAt(sc.i + 1) == '"') {
+				sc.i++;
+			} else {
+				sc.inDoubleQuote = false;
+			}
+		}
+		sc.i++;
+	}
+
+	// 处理单引号字符串
+	private void scanSingleQuotedString(Scanner sc) {
+		String script = sc.script;
+		char c = script.charAt(sc.i);
+		if (c == '\'') {
+			// 标准 SQL 转义：双单引号表示一个单引号 ''
+			if (sc.i + 1 < script.length() && script.charAt(sc.i + 1) == '\'') {
+				sc.i++;
+			} else {
+				sc.inSingleQuote = false;
+			}
+		}
+		sc.i++;
+	}
+
+	// 处理语句内部的【单行注释】：停在 '\n' 上，让外层循环在相遇 '\n' 时正确累加行号
+	private void skipLineComment(Scanner sc) {
+		int nextLine = sc.script.indexOf('\n', sc.i);
+		sc.i = nextLine == -1 ? sc.script.length() : nextLine;
+	}
+
+	// 处理语句内部的【块注释】：必须手动扫描并累加块注释内部包含的换行符
+	private void skipBlockComment(Scanner sc) {
+		String script = sc.script;
+		int commentStart = sc.i;
+		int endComment = script.indexOf("*/", sc.i);
+		sc.i = endComment == -1 ? script.length() : endComment + 2;
+		for (int j = commentStart; j < sc.i; j++) {
+			if (script.charAt(j) == '\n') sc.line++;
+		}
+	}
+
+	// 严格的双向词边界关键字匹配：跟踪 BEGIN/CASE 深度，END 优先闭合 CASE
+	private boolean advanceKeyword(Scanner sc, int statementStart) {
+		String script = sc.script;
+		if (isKeyword(script, sc.i, statementStart, "CASE")) {
+			sc.caseDepth++;
+			sc.i += 4;
+			return true;
+		}
+		if (isKeyword(script, sc.i, statementStart, "BEGIN")) {
+			if (sc.triggerStatement) sc.beginDepth++;
+			sc.i += 5;
+			return true;
+		}
+		if (isKeyword(script, sc.i, statementStart, "END")) {
+			// END ambiguity: prefer CASE/END closure (caseDepth > 0) over BEGIN/END closure.
+			// Rationale: CASE always appears inside expression context; BEGIN is statement-level.
+			if (sc.caseDepth > 0) {
+				sc.caseDepth--;
+			} else {
+				sc.beginDepth = Math.max(0, sc.beginDepth - 1);
+			}
+			sc.i += 3;
+			return true;
+		}
+		return false;
+	}
+
+	private boolean isTriggerStatement(String script, int start) {
+		int cursor = skipWhitespaceAndComments(script, start);
+		if (!isKeyword(script, cursor, start, "CREATE")) return false;
+		cursor = skipWhitespaceAndComments(script, cursor + 6);
+		if (isKeyword(script, cursor, start, "TEMPORARY")) {
+			cursor = skipWhitespaceAndComments(script, cursor + 9);
+		} else if (isKeyword(script, cursor, start, "TEMP")) {
+			cursor = skipWhitespaceAndComments(script, cursor + 4);
+		}
+		return isKeyword(script, cursor, start, "TRIGGER");
+	}
+
+	private static boolean isLineCommentStart(String script, int i) {
+		return script.charAt(i) == '-' && i + 1 < script.length() && script.charAt(i + 1) == '-';
+	}
+
+	private static boolean isBlockCommentStart(String script, int i) {
+		return script.charAt(i) == '/' && i + 1 < script.length() && script.charAt(i + 1) == '*';
+	}
+
+	// 手写词法扫描器的可变状态：当前位置、行号、引号状态与 BEGIN/CASE 深度
+	private static final class Scanner {
+		final String script;
+		int i;
+		int line = 1;
+		boolean inSingleQuote; // 判定 '字符串'
+		boolean inDoubleQuote; // 判定 "标识符"（如列名、表名）
+		char identifierQuote; // `identifier` or [identifier]
+		int beginDepth;
+		int caseDepth;
+		boolean triggerStatement;
+
+		Scanner(String script) {
+			this.script = script;
+		}
 	}
 
 	public int locateErrorLine(String statementSql, int startLine, String errorMessage) {

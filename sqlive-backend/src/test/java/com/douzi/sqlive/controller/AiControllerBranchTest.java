@@ -75,4 +75,16 @@ class AiControllerBranchTest {
 		assertSame(failure, controller.analyzeError(request));
 		assertEquals("analyze-error", request.getMode());
 	}
+
+	@Test
+	void successWithNullContentInDataPayloadIsLoggedAsZeroLength() {
+		// success=true, data present but content null — logAndReturn must not throw
+		var response = new AiChatResponse();
+		response.setSuccess(true);
+		response.setData(new AiChatResponse.DataPayload());
+		var request = new AiChatRequest();
+		when(service.executeNonStreaming(same(request))).thenReturn(response);
+		assertSame(response, controller.explain(request));
+		assertEquals("explain", request.getMode());
+	}
 }

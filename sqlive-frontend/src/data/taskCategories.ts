@@ -1,4 +1,4 @@
-// D-04: Shared task category color tokens and labels.
+// Shared task category color tokens and labels.
 // Colors are CSS var() references to --task-* variables defined in input.css :root.
 // This file is the single source of truth — TaskItem.vue and TaskJournalPanel.vue
 // both import from here to avoid duplicate definitions.

@@ -21,9 +21,10 @@ vi.mock('dompurify', () => ({
     }
 }))
 
-import { useDocArticle } from '@/composables/useDocArticle'
-import { marked } from 'marked'
 import DOMPurify from 'dompurify'
+import { marked } from 'marked'
+
+import { useDocArticle } from '@/composables/useDocArticle'
 
 describe('useDocArticle', () => {
     beforeEach(() => {
@@ -31,7 +32,7 @@ describe('useDocArticle', () => {
     })
 
     it('returns sanitized HTML when slug is found', () => {
-        // D-03: marked.parse + DOMPurify.sanitize with shared sanitizeConfig
+        // marked.parse + DOMPurify.sanitize with shared sanitizeConfig
         vi.mocked(marked.parse).mockReturnValueOnce('<h1>Intro</h1><p>content</p>')
         vi.mocked(DOMPurify.sanitize).mockReturnValueOnce('<h1>Intro</h1><p>content</p>')
 
@@ -41,6 +42,7 @@ describe('useDocArticle', () => {
         expect(html.value).toBe('<h1>Intro</h1><p>content</p>')
         // marked.parse called with the raw markdown content (contains H1 '项目介绍')
         expect(marked.parse).toHaveBeenCalledWith(expect.stringContaining('# 项目介绍'), {
+            async: false,
             breaks: true,
             gfm: true
         })
@@ -62,7 +64,7 @@ describe('useDocArticle', () => {
     })
 
     it('strips script tags via DOMPurify sanitize', () => {
-        // T-14-17: marked output with script tag, DOMPurify strips it
+        // marked output with script tag, DOMPurify strips it
         vi.mocked(marked.parse).mockReturnValueOnce('<script>alert(1)</script><p>safe</p>')
         vi.mocked(DOMPurify.sanitize).mockReturnValueOnce('<p>safe</p>')
 

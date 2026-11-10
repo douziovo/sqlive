@@ -1,9 +1,4 @@
-sqlive-backend/gradle
 misc
-.gated-pipeline-checkpoint
-graphify-out
-.chrome-devtools
-
 
 # IDE
 .idea/
@@ -11,19 +6,6 @@ graphify-out
 
 # Test
 coverage/
-
-# Claude Code
-.claude
-.claude/worktrees/
-.claude/scheduled_tasks.json
-.claude/settings.local.json
-
-# Claude local settings
-settings.local.json
-settings.local.*.json
-docs/superpowers
-.playwright-mcp
-.superpowers
 
 # Environment
 .env
@@ -39,9 +21,6 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 
-# GSD Planning (separate branch)
-.planning/
-
 # UAT artifacts
 uat-*.png
 uat-*.yml
@@ -55,3 +34,9 @@ logs/
 
 # Root node (if any)
 node_modules/
+
+# Local-only agent memory (do not commit)
+docs/agents/MEMORY.md
+
+# Local tool artifacts (reports, traces)
+output/

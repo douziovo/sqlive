@@ -4,5 +4,21 @@
     "singleQuote": true,
     "semi": false,
     "trailingComma": "none",
-    "ignorePatterns": []
+    "endOfLine": "lf",
+    "insertFinalNewline": true,
+    "embeddedLanguageFormatting": "auto",
+    "sortImports": {
+        "internalPattern": ["@/"],
+        "partitionByComment": true,
+        "sortSideEffects": false
+    },
+    "sortPackageJson": { "sortScripts": true },
+    "sortTailwindcss": {
+        "stylesheet": "./src/input.css",
+        "functions": ["cn", "clsx", "cva", "twMerge"],
+        "attributes": ["class", "className", ":class", "v-bind:class"],
+        "preserveDuplicates": false,
+        "preserveWhitespace": false
+    },
+    "ignorePatterns": ["dist/**", "coverage/**", "playwright-report/**", "test-results/**"]
 }

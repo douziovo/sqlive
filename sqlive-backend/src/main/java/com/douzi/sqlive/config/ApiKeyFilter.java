@@ -5,8 +5,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -38,10 +37,9 @@ import java.util.List;
  * <p>Key comparison uses {@link MessageDigest#isEqual(byte[], byte[])} for constant-time
  * comparison to mitigate timing attacks against the configured key (T-13-03b).
  */
+@Slf4j
 @Component
 public class ApiKeyFilter extends OncePerRequestFilter {
-
-	private static final Logger log = LoggerFactory.getLogger(ApiKeyFilter.class);
 
 	private static final String API_KEY_HEADER = "X-API-Key";
 	// WR-02: drop the trailing slash so the filter matches both "/api/ai" and

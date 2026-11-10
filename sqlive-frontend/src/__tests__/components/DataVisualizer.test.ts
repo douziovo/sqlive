@@ -1,6 +1,7 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
+
 import type {
     DatabaseModel,
     HighlightState,
@@ -8,8 +9,12 @@ import type {
     TriggerInfo,
     ViewInfo
 } from '@/model/DatabaseTypes'
+import { SQL_CONTEXT_KEY } from '@/model/injectionKeys'
+
+import CreateTableModal from '../../components/CreateTableModal.vue'
 import DataVisualizer from '../../components/DataVisualizer.vue'
-import { SQL_CONTEXT_KEY } from '../../model/injectionKeys'
+import SortFilterToolbar from '../../components/SortFilterToolbar.vue'
+import TableSection from '../../components/TableSection.vue'
 
 const mockDb: DatabaseModel = {
     tables: [
@@ -515,5 +520,220 @@ describe('DataVisualizer', () => {
 
         // Active tab should be 'tables'
         expect(wrapper.text()).toContain('users')
+    })
+
+    it('forwards table edits and create-table submission to the parent', async () => {
+        const wrapper = mount(DataVisualizer, {
+            global: { provide: provideContext(mockDb, defaultHighlight), stubs: minimalStubs }
+        })
+        const table = wrapper.findComponent(TableSection)
+        await table.find('button[title="删除表格"]').trigger('click')
+        await table.find('button[title="删除此行"]').trigger('click')
+        expect(wrapper.emitted('drop-table')?.[0]).toEqual(['users'])
+        expect(wrapper.emitted('delete-row')?.[0][0]).toMatchObject({
+            tableName: 'users',
+            row: { id: 1 }
+        })
+
+        const nameCell = table.findAll('tbody tr textarea')[1]
+        await nameCell.setValue('Alicia')
+        await nameCell.trigger('blur')
+        expect(wrapper.emitted('update-cell')?.[0][0]).toMatchObject({
+            tableName: 'users',
+            newRow: { name: 'Alicia' }
+        })
+
+        await table.find('textarea[placeholder="+"]').setValue('2')
+        await table.find('button[title="确认添加"]').trigger('click')
+        expect(wrapper.emitted('insert-row')?.[0][0]).toMatchObject({
+            tableName: 'users',
+            newRow: { id: '2' }
+        })
+
+        await wrapper
+            .findAll('button')
+            .find((b) => b.text().includes('添加新表格'))!
+            .trigger('click')
+        const modal = wrapper.findComponent(CreateTableModal)
+        expect(modal.props('open')).toBe(true)
+        const payload = { name: 'orders', columns: ['id'], data: [{ id: 1 }] }
+        modal.vm.$emit('submit', payload)
+        expect(wrapper.emitted('create-table')?.[0]).toEqual([payload])
+        modal.vm.$emit('update:open', false)
+        await nextTick()
+        expect(modal.props('open')).toBe(false)
+        wrapper.unmount()
+    })
+
+    it('scrolls to linked cards, flashes the target, and clears flash after the delay', async () => {
+        const wrapper = mount(DataVisualizer, {
+            attachTo: document.body,
+            global: { provide: provideContext(mockDb, defaultHighlight), stubs: minimalStubs }
+        })
+        const scroll = vi.fn()
+        Object.defineProperty(wrapper.find('#index-idx_users_name').element, 'scrollIntoView', {
+            value: scroll
+        })
+        Object.defineProperty(wrapper.find('#table-users').element, 'scrollIntoView', {
+            value: scroll
+        })
+        try {
+            wrapper.findComponent(TableSection).vm.$emit('navigate-tab', {
+                tab: 'indexes',
+                targetId: 'index-idx_users_name'
+            })
+            await flushPromises()
+            expect(wrapper.find('[data-testid="tab-indexes"]').classes()).toContain('text-primary')
+            expect(wrapper.find('#index-idx_users_name').classes()).toContain('animate-flash')
+            expect(scroll).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' })
+
+            //noinspection DuplicatedCode -- 与"连续 flash 重置计时器"用例的收尾断言同形，但本段是"点击后 flash 到期自动清除"的独立时序叙事，合并会混淆两个场景的前置条件
+            await wrapper.find('#index-idx_users_name').trigger('click')
+            await flushPromises()
+            expect(wrapper.findComponent(TableSection).props('flashTableName')).toBe('users')
+            vi.advanceTimersByTime(1000)
+            await nextTick()
+            expect(wrapper.findComponent(TableSection).props('flashTableName')).toBeNull()
+            expect(wrapper.find('#index-idx_users_name').classes()).not.toContain('animate-flash')
+        } finally {
+            wrapper.unmount()
+        }
+    })
+
+    it('sorts and filters indexes, views, and triggers using the toolbar', async () => {
+        const wrapper = mount(DataVisualizer, {
+            global: {
+                provide: provideContext(
+                    makeDb({ indexes: mockIndexes, views: mockViews, triggers: mockTriggers }),
+                    defaultHighlight
+                ),
+                stubs: minimalStubs
+            }
+        })
+        const cardIds = (prefix: string) =>
+            wrapper.findAll(`[id^="${prefix}-"]`).map((card) => card.attributes('id'))
+        await wrapper.find('[data-testid="tab-indexes"]').trigger('click')
+        const [indexToolbar, viewToolbar, triggerToolbar] =
+            wrapper.findAllComponents(SortFilterToolbar)
+
+        indexToolbar.vm.$emit('toggle-sort', 'cols')
+        await nextTick()
+        indexToolbar.vm.$emit('toggle-sort', 'cols')
+        await nextTick()
+        expect(cardIds('index')[0]).toBe('index-idx_users_name_dept')
+        await indexToolbar.find('input').setValue('email')
+        await vi.advanceTimersByTimeAsync(201)
+        expect(cardIds('index')).toEqual(['index-idx_users_email', 'index-idx_lower_email'])
+
+        await wrapper.find('[data-testid="tab-views"]').trigger('click')
+        viewToolbar.vm.$emit('toggle-sort', 'name')
+        await nextTick()
+        expect(cardIds('view')).toEqual(['view-v_active_users', 'view-v_user_stats'])
+        await viewToolbar.find('input').setValue('COUNT')
+        await vi.advanceTimersByTimeAsync(201)
+        expect(cardIds('view')).toEqual(['view-v_user_stats'])
+
+        await wrapper.find('[data-testid="tab-triggers"]').trigger('click')
+        triggerToolbar.vm.$emit('toggle-sort', 'name')
+        await nextTick()
+        await triggerToolbar.find('input').setValue('BEFORE')
+        await vi.advanceTimersByTimeAsync(201)
+        expect(cardIds('trigger')).toEqual(['trigger-trg_users_before_update'])
+        wrapper.unmount()
+    })
+
+    it('renders query results with their own tables on the results tab', async () => {
+        const wrapper = mount(DataVisualizer, {
+            global: {
+                provide: provideContext(
+                    makeDb({
+                        queryResults: [
+                            {
+                                name: '查询结果 1',
+                                columns: ['id', 'name'],
+                                columnTypes: { id: 'INTEGER', name: 'TEXT' },
+                                data: [{ id: 1, name: 'Alice' }]
+                            }
+                        ]
+                    }),
+                    defaultHighlight
+                ),
+                stubs: minimalStubs
+            }
+        })
+        await wrapper.find('[data-testid="tab-results"]').trigger('click')
+        expect(wrapper.text()).toContain('查询结果')
+        expect(wrapper.text()).toContain('Alice')
+        wrapper.unmount()
+    })
+
+    it('shows the empty results hint when there are no query results', async () => {
+        const wrapper = mount(DataVisualizer, {
+            global: { provide: provideContext(mockDb, defaultHighlight), stubs: minimalStubs }
+        })
+        await wrapper.find('[data-testid="tab-results"]').trigger('click')
+        expect(wrapper.text()).toContain('暂无查询结果')
+    })
+
+    it('resets a pending flash timer when another flash arrives', async () => {
+        const wrapper = mount(DataVisualizer, {
+            attachTo: document.body,
+            global: { provide: provideContext(mockDb, defaultHighlight), stubs: minimalStubs }
+        })
+        const nav = (tab: string, targetId: string) =>
+            wrapper.findComponent(TableSection).vm.$emit('navigate-tab', { tab, targetId })
+        try {
+            // tables → indexes: flash the index card (timer A for card flash pending)
+            //noinspection DuplicatedCode -- 本用例刻意用三段几乎相同的 nav()+flushPromises+expect 序列叙述"连续两次 flash 重置计时器"的时序场景，抽 helper 会掩盖计时器交替的先后关系
+            nav('indexes', 'index-idx_users_name')
+            await flushPromises()
+            expect(wrapper.find('#index-idx_users_name').classes()).toContain('animate-flash')
+
+            // indexes → indexes is no tab change; go back to tables first, then
+            // another card flash within the 1s window replaces the pending timer
+            nav('tables', 'table-users')
+            await flushPromises()
+            expect(wrapper.findComponent(TableSection).props('flashTableName')).toBe('users')
+            //noinspection DuplicatedCode -- 与上一段同形的 nav()+flushPromises 序列，用于验证"第二个 flash 落在 1s 窗口内会重置前一个待定计时器"，两次调用的先后顺序本身就是断言对象
+            nav('indexes', 'index-idx_users_name')
+            await flushPromises()
+            expect(wrapper.find('#index-idx_users_name').classes()).toContain('animate-flash')
+
+            // A second table flash within the pending window resets that timer too
+            nav('tables', 'table-users')
+            await flushPromises()
+            expect(wrapper.findComponent(TableSection).props('flashTableName')).toBe('users')
+
+            vi.advanceTimersByTime(1000)
+            await nextTick()
+            expect(wrapper.findComponent(TableSection).props('flashTableName')).toBeNull()
+            expect(wrapper.find('#index-idx_users_name').classes()).not.toContain('animate-flash')
+        } finally {
+            wrapper.unmount()
+        }
+    })
+
+    it('navigate without a target just switches the tab', async () => {
+        const wrapper = mount(DataVisualizer, {
+            global: {
+                provide: provideContext(
+                    makeDb({
+                        views: [
+                            { name: 'v_standalone', sql: 'CREATE VIEW v_standalone AS SELECT 1' }
+                        ]
+                    }),
+                    defaultHighlight
+                ),
+                stubs: minimalStubs
+            }
+        })
+        await wrapper.find('[data-testid="tab-views"]').trigger('click')
+        const card = wrapper.find('#view-v_standalone')
+        expect(card.exists()).toBe(true)
+        await card.trigger('click')
+        await flushPromises()
+        // Switched to the tables tab, but no scroll/flash target was queued
+        expect(wrapper.find('[data-testid="tab-tables"]').classes()).toContain('text-primary')
+        expect(wrapper.findComponent(TableSection).props('flashTableName')).toBeNull()
     })
 })
